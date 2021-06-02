@@ -2,7 +2,7 @@
 # coding: utf-8
 
 from sage.all import *
-from pylie import pylie
+import pylie
 import functools
 from operator import mul
 
