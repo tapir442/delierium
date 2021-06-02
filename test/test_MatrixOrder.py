@@ -41,7 +41,7 @@ l = [JB.Differential_Polynomial (_, ctx) for _ in flist]
 
 l1 = sorted(l,key=functools.cmp_to_key(
                   lambda item1, item2:
-                     M.sorter (item1, item2, ctx)
+                     M.sorter (item1._p[0], item2._p[0], ctx)
 ))
 print ("********************** Mlex *******************")
 for _ in l1:

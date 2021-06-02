@@ -56,11 +56,13 @@ class Context:
 
 def higher (d1,d2, context):
     '''Algorithm 2.3 from [Schwarz]'''
+    d1 = d1._d
+    d2 = d2._d
     if d1 == d2:
         return True
     d1idx = idx(d1, context._dependent, context._independent)
     d2idx = idx(d2, context._dependent, context._independent)
-
+    
     i1v = [0]*len(context._dependent)
     i2v = [0]*len(context._dependent)
     # pure function corresponds with all zeros
