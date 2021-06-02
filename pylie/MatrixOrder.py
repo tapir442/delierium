@@ -2,7 +2,7 @@
 # coding: utf-8
 
 from sage.all import *
-from pylie import pylie
+import pylie
 from functools import lru_cache
 
 #
@@ -74,7 +74,7 @@ def higher (d1,d2, context):
         i2 = vector(pylie.order_of_derivative(d2) + i2v)
     else:
         i2 = vector([0]*len(context._independent) + i2v)
-    r = context._weight(dependent, independent) * vector(i1-i2)
+    r = context._weight(context._dependent, context._independent) * vector(i1-i2)
     for entry in r:
         if entry:
             if entry > 0:

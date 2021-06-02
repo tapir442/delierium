@@ -1,9 +1,9 @@
 #%display latex
 import sys
 sys.path.insert (0, "../pylie")
-import pylie.pylie
-import pylie.MatrixOrder as M
-import pylie.JanetBasis as JB
+import pylie
+import MatrixOrder as M
+import JanetBasis as JB
 from collections.abc import Iterable
 import functools
 from operator import mul, sub
@@ -41,21 +41,33 @@ l = [JB.Differential_Polynomial (_, ctx) for _ in flist]
 
 l1 = sorted(l,key=functools.cmp_to_key(
                   lambda item1, item2:
-                     M.sorter (item1._d, item2._d , ctx)
+                     M.sorter (item1, item2, ctx)
 ))
+print ("********************** Mlex *******************")
+for _ in l1:
+    print (_)
+
 ########################################
-ctx = M.Context ((w,z), (x,y), M.grlex)
+ctx = M.Context ((w,z), (x,y), M.Mgrlex)
 l = [JB.Differential_Polynomial (_, ctx) for _ in flist]
 
 l2 = sorted(l,
             key=functools.cmp_to_key(
                   lambda item1, item2:
-                     M.sorter (item1._d, item2._d, ctx)
-))
-ctx = M.Context ((w,z), (x,y), M.grevlex)
+                     M.sorter (item1, item2, ctx)
+
+            ))
+print ("********************** Mgrlex *******************")
+for _ in l2:
+    print (_)
+
+ctx = M.Context ((w,z), (x,y), M.Mgrevlex)
 l = [JB.Differential_Polynomial (_, ctx) for _ in flist]
 
 l3 = sorted(l,key=functools.cmp_to_key(
                   lambda item1, item2:
-                     M.sorter (item1._d, item2._d , ctx)
+                     M.sorter (item1, item2 , ctx)
 ))
+print ("********************** Mgrevlex *******************")
+for _ in l3:
+    print (_)
