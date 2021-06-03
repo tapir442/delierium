@@ -54,12 +54,12 @@ class Context:
         self._dependent   = tuple(dependent)
         self._weight      = weight
 
-def higher (d1,d2, context):
+def higher (d1 ,d2, context):
     '''Algorithm 2.3 from [Schwarz]'''
-    d1 = d1._d
-    d2 = d2._d
     if d1 == d2:
         return True
+    d1 = d1._d
+    d2 = d2._d
     d1idx = idx(d1, context._dependent, context._independent)
     d2idx = idx(d2, context._dependent, context._independent)
     
@@ -79,17 +79,4 @@ def higher (d1,d2, context):
     r = context._weight(context._dependent, context._independent) * vector(i1-i2)
     for entry in r:
         if entry:
-            if entry > 0:
-                return True
-            else:
-                return False
-
-def sorter (d1, d2, context):
-    '''sorts two derivatives d1 and d2 using the weight matrix M
-according to the sort order given in the tuple of  dependent and independent variables
-'''
-    if d1 == d2:
-        return 0
-    if higher (d1, d2, context):
-        return 1
-    return -1
+            return entry > 0
