@@ -18,56 +18,48 @@ z = function ("z")(x,y)
 
 ctx = M.Context ((w, z), (x,y))
 
-dp = JB.Differential_Polynomial(x, ctx)
-print ("only variable", dp._p)
+j = JB.DTerm (w(x,y), ctx)
+
+#dp = JB.Differential_Polynomial(x, ctx)
+#print ("only variable", dp._p)
 
 dp = JB.Differential_Polynomial(w (x,y), ctx)
 print ("only function", dp._p)
 
 dp = JB.Differential_Polynomial(diff(w, x,y), ctx)
 print ("only derivative", dp._p)
-var("x, y")
-w = function("w")(x,y)
-z = function("z")(x,y)
+var("x, y, t")
+w = function("w")(x,y,t)
+z = function("z")(x,y,t)
+u = function("u")(x,y,t)
 
-ctx = M.Context ((w,z), (x,y))
+ctx = M.Context ((u,w,z), (x,y,t))
 
-#Differential_Polynomial(w(x,y), ctx)
+flist = [diff(w,x,x,t), 
+         diff(w, x,y), 
+         diff(w,y,y),
+         diff (w,y,t,t), 
+         diff(w,x),  w(x,y,t),
+     z(x,y,t), diff(z,x,t), diff(z, x,y), diff (z,y), diff(z,x), diff (z,y,y), diff(z,y,y,y),
+        u(x,y,t), diff(u,x,x,t), diff(u, x,y), diff (u,y), diff(u,x), diff (u,y,y), diff(u,y,y,y)]
 
-flist = [diff(w,x,x), diff(w, x,y), diff (w,y), diff(w,x), diff (w,y,y), w(x,y),
-     z(x,y), diff(z,x,x), diff(z, x,y), diff (z,y), diff(z,x), diff (z,y,y)]
-
-l = [JB.Differential_Polynomial (_, ctx) for _ in flist]
-
-l1 = sorted(l,key=functools.cmp_to_key(
-                  lambda item1, item2:
-                     M.sorter (item1._p[0], item2._p[0], ctx)
-))
 print ("********************** Mlex *******************")
-for _ in l1:
+l = [JB.Differential_Polynomial (_, ctx) for _ in flist]
+for _ in sorted (l):
     print (_)
 
-########################################
-ctx = M.Context ((w,z), (x,y), M.Mgrlex)
-l = [JB.Differential_Polynomial (_, ctx) for _ in flist]
-
-l2 = sorted(l,
-            key=functools.cmp_to_key(
-                  lambda item1, item2:
-                     M.sorter (item1, item2, ctx)
-
-            ))
 print ("********************** Mgrlex *******************")
-for _ in l2:
-    print (_)
-
-ctx = M.Context ((w,z), (x,y), M.Mgrevlex)
+ctx = M.Context ((u,w,z), (x,y,t), M.Mgrlex)
 l = [JB.Differential_Polynomial (_, ctx) for _ in flist]
 
-l3 = sorted(l,key=functools.cmp_to_key(
-                  lambda item1, item2:
-                     M.sorter (item1, item2 , ctx)
-))
+
+for _ in sorted (l):
+    print (_)
+
 print ("********************** Mgrevlex *******************")
-for _ in l3:
+ctx = M.Context ((u,w,z), (x,y,t), M.Mgrevlex)
+l = [JB.Differential_Polynomial (_, ctx) for _ in flist]
+
+
+for _ in sorted(l):
     print (_)

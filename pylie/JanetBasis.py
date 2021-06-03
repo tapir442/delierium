@@ -2,38 +2,37 @@
 # coding: utf-8
 
 from sage.all import *
-import pylie.pylie
-import pylie.MatrixOrder
+import pylie
+import MatrixOrder
 from pprint import pprint
-pprint (dir(pylie))
 import functools
 from operator import mul
 
 class DTerm:
     '''differential term'''
-    # XXX make it a local class within Derivative_Polynomial?
-    # than we maybe can  skip the damne 'o' paramter in self.ordertder
     def __init__ (self, e, context = None):
         self._coeff       = 1
         self._d           = 1
         self._context     = context
-        r = []
-        if pylie.pylie.is_derivative(e):
+        if pylie.is_derivative(e) or pylie.is_function(e):
             self._d = e
-        else :
+        else:
+            r = []
             for o in e.operands ():
-                if pylie.pylie.is_derivative (o):
+                if pylie.is_derivative (o):
                     self._d = o
                 else:
                     r.append (o)
             self._coeff = functools.reduce (mul, r, 1)
+            if not r:
+                raise ValueError("invalid expression '{}' for DTerm".format(e))
     def __str__ (self):
         return "{} * {}".format (self._coeff, self._d)
     def term(self):
         return self._coeff * self._d
     def order (self):
         if pylie.is_derivative(self._d):
-            return pylie.pylie.order_of_derivative (self._d)
+            return pylie.order_of_derivative (self._d)
         else:
             return [0] * len (context._independent)
     def is_coefficient(self):
@@ -41,13 +40,13 @@ class DTerm:
     def is_monic(self):
         return self._d != 1 and self._coeff == 1
     def __lt__ (self, other):
-        return pylie.MatrixOrder.higher (self._d, other._d,self._context) and not self._d == other._d
+        return MatrixOrder.higher (self, other,self._context) and not self == other
     def __le__ (self, other):
-        return pylie.MatrixOrder.higher (self._d, other._d,self._context)
+        return MatrixOrder.higher (self, other,self._context)
     def __ge__ (self, other):
-        return pylie.MatrixOrder.higher (self._d, other._d,self._context) 
+        return MatrixOrder.higher (self, other,self._context) 
     def __gt__ (self, other):
-        return pylie.MatrixOrder.higher (self._d, other._d,self._context) and not self._d == other._d
+        return MatrixOrder.higher (self, other,self._context) and not self == other
     def __eq__ (self, other):
         return self._d == other._d
     def __neq__ (self, other):
@@ -78,15 +77,7 @@ class Differential_Polynomial:
                 if not inserted :
                     res.append (dterm)
         if len(res) > 1:
-            res=sorted(res,
-                       key=functools.cmp_to_key(
-                           lambda item1, item2:
-                                MatrixOrder.sorter (item1, item2, self._context._weight,
-                                                    tuple(context._dependent),
-                                                    tuple(context._independent)
-                                                   )
-                       )
-                      )
+            res=sorted(res)
         self._p = res
         self.normalize()
 
@@ -115,7 +106,7 @@ class Differential_Polynomial:
             return self._p[0].is_monic()
         return True
     def normalize (self):
-        self._p = [ DTerm((_._coeff / self._p[0]._coeff, self._context) * _._d) for _ in self._p]
+        self._p = [ DTerm((_._coeff / self._p[0]._coeff) * _._d, self._context) for _ in self._p]
     def __str__ (self):
         return str(self._orig)
     def __lt__ (self, other):

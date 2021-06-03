@@ -52,6 +52,6 @@ def is_function(e):
     try :
         # XXX this must done more sagemathic if possible
         return "NewSymbolicFunction" in e.operator ().__class__.__name__ and \
-            e.operands()
+            e.operands() != []
     except AttributeError:
         return False
