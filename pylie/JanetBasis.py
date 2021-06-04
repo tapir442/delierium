@@ -3,7 +3,6 @@
 
 from sage.all import *
 from pylie import *
-#from MatrixOrder import higher
 from pprint import pprint
 import functools
 from operator import mul
@@ -107,6 +106,15 @@ class Differential_Polynomial:
         return True
     def normalize (self):
         # XXX how to avoid reals after division?
+        if not self._p:
+            return
+        print ("This is the divisor:", self._p[0]._coeff)
+        res = []
+        for _ in self._p:
+            print ("     Coeff:",_._coeff)
+            print ("         d:",_._d )
+            print ("       out:",     (_._coeff / self._p[0]._coeff))
+            print ("       res:",     (_._coeff / self._p[0]._coeff)*_._d)
         self._p = [ DTerm((_._coeff / self._p[0]._coeff) * _._d, self._context) for _ in self._p]
     def __str__ (self):
         return str(self._orig)
