@@ -53,6 +53,7 @@ class Context:
         self._independent = tuple(independent)
         self._dependent   = tuple(dependent)
         self._weight      = weight
+        self._basefield   = PolynomialRing(QQ, independent)
 
 def higher (d1 ,d2, context):
     '''Algorithm 2.3 from [Schwarz]'''
