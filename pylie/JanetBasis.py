@@ -10,19 +10,23 @@ from operator import mul
 class DTerm:
     '''differential term'''
     def __init__ (self, e, context = None):
-        from sage.symbolic.expression_conversions import AlgebraicConverter        
         self._coeff       = Rational(1)
         self._d           = Rational(1)
         self._context     = context
+        e = e.expand().simplify_full()
+        #print ("******************* Dterm {}".format(e))
+        #pprint (self.__dict__)
         if is_derivative(e) or is_function(e):
             self._d = e
         else:
             r = []
+         #   print (":::::::::::::operands()", e.operands())
             for o in e.operands ():
                 if is_derivative (o):
                     self._d = o
                 else:
                     r.append (o)
+          #  print ("================>r", r)
             self._coeff = functools.reduce (mul, r, 1)
             if not r:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
@@ -106,16 +110,6 @@ class Differential_Polynomial:
             return self._p[0].is_monic()
         return True
     def normalize (self):
-        # XXX how to avoid reals after division?
-        if not self._p:
-            return
-        print ("This is the divisor:", self._p[0]._coeff, self._p[0]._coeff.__class__)
-        res = []
-        for _ in self._p:
-            print ("     Coeff:",_._coeff, _._coeff.__class__)
-            print ("         d:",_._d, _._d.__class__ )
-            print ("       out:",     (_._coeff / self._p[0]._coeff), (_._coeff / self._p[0]._coeff).__class__ )
-            print ("       res:",     (_._coeff / self._p[0]._coeff)*_._d)
         self._p = [ DTerm((_._coeff / self._p[0]._coeff) * _._d, self._context) for _ in self._p]
     def __str__ (self):
         return str(self._orig)
