@@ -10,8 +10,9 @@ from operator import mul
 class DTerm:
     '''differential term'''
     def __init__ (self, e, context = None):
-        self._coeff       = 1
-        self._d           = 1
+        from sage.symbolic.expression_conversions import AlgebraicConverter        
+        self._coeff       = Rational(1)
+        self._d           = Rational(1)
         self._context     = context
         if is_derivative(e) or is_function(e):
             self._d = e
@@ -108,12 +109,12 @@ class Differential_Polynomial:
         # XXX how to avoid reals after division?
         if not self._p:
             return
-        print ("This is the divisor:", self._p[0]._coeff)
+        print ("This is the divisor:", self._p[0]._coeff, self._p[0]._coeff.__class__)
         res = []
         for _ in self._p:
-            print ("     Coeff:",_._coeff)
-            print ("         d:",_._d )
-            print ("       out:",     (_._coeff / self._p[0]._coeff))
+            print ("     Coeff:",_._coeff, _._coeff.__class__)
+            print ("         d:",_._d, _._d.__class__ )
+            print ("       out:",     (_._coeff / self._p[0]._coeff), (_._coeff / self._p[0]._coeff).__class__ )
             print ("       res:",     (_._coeff / self._p[0]._coeff)*_._d)
         self._p = [ DTerm((_._coeff / self._p[0]._coeff) * _._d, self._context) for _ in self._p]
     def __str__ (self):
