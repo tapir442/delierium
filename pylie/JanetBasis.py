@@ -6,6 +6,7 @@ from pylie import *
 from pprint import pprint
 import functools
 from operator import mul
+from IPython.core.debugger import set_trace
 
 class DTerm:
     '''differential term'''
@@ -13,23 +14,23 @@ class DTerm:
         self._coeff       = Rational(1)
         self._d           = Rational(1)
         self._context     = context
-        e = e.expand().simplify_full()
-        #print ("******************* Dterm {}".format(e))
-        #pprint (self.__dict__)
         if is_derivative(e) or is_function(e):
             self._d = e
         else:
             r = []
-         #   print (":::::::::::::operands()", e.operands())
             for o in e.operands ():
                 if is_derivative (o):
                     self._d = o
                 else:
-                    r.append (o)
-          #  print ("================>r", r)
+                    if is_function(o) and o in context._dependent:
+                        self._d = o  # zeroth derivative
+                    else:
+                        r.append (o)
             self._coeff = functools.reduce (mul, r, 1)
             if not r:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
+        if self._d == 1:
+            set_trace ()
     def __str__ (self):
         return "{} * {}".format (self._coeff, self._d)
     def term(self):
@@ -65,11 +66,12 @@ class Differential_Polynomial:
     def _init(self):
         res = []
         e = self._orig
-        if is_derivative(e) or is_function(e):
+        if is_derivative(e.expand()) or is_function(e.expand()):
             res = [DTerm(self._orig, self._context)]
         else:
             for operand in self._orig.operands():
-                dterm = DTerm(operand, self._context)
+                print ("================>", operand)
+                dterm = DTerm(operand.simplify_full(), self._context)
                 c, d  = dterm._coeff, dterm._d
                 inserted = False
                 for r in res:
