@@ -70,8 +70,7 @@ class Differential_Polynomial:
             res = [DTerm(self._orig, self._context)]
         else:
             for operand in self._orig.operands():
-                print ("================>", operand)
-                dterm = DTerm(operand.simplify_full(), self._context)
+                dterm = DTerm(operand, self._context)
                 c, d  = dterm._coeff, dterm._d
                 inserted = False
                 for r in res:
