@@ -26,7 +26,7 @@ class DTerm:
                         self._d = o  # zeroth derivative
                     else:
                         r.append (o)
-            self._coeff = functools.reduce (mul, r, 1)
+            self._coeff = functools.reduce (mul, r, 1).simplify_full()
             if not r:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
         if self._d == 1:
@@ -70,17 +70,7 @@ class Differential_Polynomial:
             res = [DTerm(self._orig, self._context)]
         else:
             for operand in self._orig.operands():
-                dterm = DTerm(operand, self._context)
-                c, d  = dterm._coeff, dterm._d
-                inserted = False
-                for r in res:
-                    if r._d == d:
-                        r._coeff += c
-                        inserted  = True
-                        # not very elegant but enough in first order
-                        break
-                if not inserted :
-                    res.append (dterm)
+                res.append(DTerm(operand, self._context))
         if len(res) > 1:
             res=sorted(res)
         self._p = res
@@ -126,3 +116,5 @@ class Differential_Polynomial:
         return self._p[0] == other._p[0]
     def __neq__ (self, other):
         return self._p[0] != other._p[0]
+    def show(self):
+        sum(_._coeff * _._d for _ in self._p).show()
