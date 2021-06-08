@@ -69,8 +69,7 @@ class Differential_Polynomial:
         if is_derivative(e.expand()) or is_function(e.expand()):
             res = [DTerm(self._orig, self._context)]
         else:
-            for operand in self._orig.operands():
-                res.append(DTerm(operand, self._context))
+            res = [DTerm(_, self._context) for _ in self._orig.operands()]
         if len(res) > 1:
             res=sorted(res)
         self._p = res
@@ -102,6 +101,8 @@ class Differential_Polynomial:
         return True
     def normalize (self):
         self._p = [ DTerm((_._coeff / self._p[0]._coeff) * _._d, self._context) for _ in self._p]
+        for t in self._p:
+            print (t._coeff, t._d)
     def __str__ (self):
         return str(self._orig)
     def __lt__ (self, other):
