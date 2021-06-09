@@ -41,6 +41,7 @@ class DTerm:
         else:
             return [0] * len (context._independent)
     def is_coefficient(self):
+        # XXX nonsense
         return self._d == 1
     def is_monic(self):
         return self._d != 1 and self._coeff == 1
@@ -56,6 +57,8 @@ class DTerm:
         return self._d == other._d
     def __neq__ (self, other):
         return self._d != other._d
+    def show(self):
+        self.term().show()
     
 class Differential_Polynomial:
     def __init__ (self, e, context):
@@ -100,9 +103,9 @@ class Differential_Polynomial:
             return self._p[0].is_monic()
         return True
     def normalize (self):
-        self._p = [ DTerm((_._coeff / self._p[0]._coeff) * _._d, self._context) for _ in self._p]
-        for t in self._p:
-            print (t._coeff, t._d)
+        c = self._p[0]._coeff
+        self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
+        assert sum(_._coeff * _._d for _ in self._p) == self._orig / c
     def __str__ (self):
         return str(self._orig)
     def __lt__ (self, other):
