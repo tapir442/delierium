@@ -15,6 +15,7 @@ class DTerm:
         self._d           = Rational(1)
         self._context     = context
         if is_derivative(e) or is_function(e):
+            # XXX put into _d only if in in context
             self._d = e
         else:
             r = []
