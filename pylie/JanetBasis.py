@@ -73,6 +73,8 @@ class Differential_Polynomial:
             res = [DTerm(self._orig, self._context)]
         else:
             res = [DTerm(_, self._context) for _ in self._orig.operands()]
+        # how to avoid zero ceffs a priori? this is not false here but smells
+        res = [_ for _ in res if _._coeff != 0]
         if len(res) > 1:
             res=sorted(res)
         self._p = res
@@ -104,8 +106,11 @@ class Differential_Polynomial:
         return True
     def normalize (self):
         c = self._p[0]._coeff
+        if c == 0:
+            set_trace ()
         self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
         assert sum(_._coeff * _._d for _ in self._p) == self._orig / c
+        self._orig /= c
     def __str__ (self):
         return str(self._orig)
     def __lt__ (self, other):
