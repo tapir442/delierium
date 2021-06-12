@@ -14,6 +14,7 @@ class DTerm:
         self._coeff       = Rational(1)
         self._d           = Rational(1)
         self._context     = context
+        print ("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC")
         if is_derivative(e) or is_function(e):
             # XXX put into _d only if in in context
             self._d = e
@@ -32,6 +33,7 @@ class DTerm:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
         if self._d == 1:
             set_trace ()
+        print (self._coeff , "------", self._d)
     def __str__ (self):
         return "{} * {}".format (self._coeff, self._d)
     def term(self):
@@ -63,19 +65,19 @@ class DTerm:
     
 class Differential_Polynomial:
     def __init__ (self, e, context):
-        self._orig    = e
         self._context = context
-        self._init()
+        self._init(e)
 
-    def _init(self):
+    def _init(self, e):
         res = []
-        e = self._orig
+        #set_trace ()
         if is_derivative(e.expand()) or is_function(e.expand()):
-            res = [DTerm(self._orig, self._context)]
+            res = [DTerm(e, self._context)]
         else:
-            res = [DTerm(_, self._context) for _ in self._orig.operands()]
+            res = [DTerm(_, self._context) for _ in e.operands()]
         # how to avoid zero ceffs a priori? this is not false here but smells
         res = [_ for _ in res if _._coeff != 0]
+        print ("LLLLLLLLLLLLLLLLLLLLLLLLLLL", len(res))
         if len(res) > 1:
             res=sorted(res)
         self._p = res
@@ -110,10 +112,6 @@ class Differential_Polynomial:
         if c == 0:
             set_trace ()
         self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
-        assert sum(_._coeff * _._d for _ in self._p) == self._orig / c
-        self._orig /= c
-    def __str__ (self):
-        return str(self._orig)
     def __lt__ (self, other):
         return self._p[0] < other._p[0]
     def __le__ (self, other):
@@ -123,8 +121,14 @@ class Differential_Polynomial:
     def __gt__ (self, other):
         return self._p[0] > other._p[0]
     def __eq__ (self, other):
-        return self._p[0] == other._p[0]
+        for a, b in zip (self._p, other._p):
+            if a != b: return False
+        return True
     def __neq__ (self, other):
         return self._p[0] != other._p[0]
     def show(self):
         sum(_._coeff * _._d for _ in self._p).show()
+    def __sub__ (self, other):
+        pass
+    def __add__ (self, other):
+        pass
