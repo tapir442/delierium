@@ -14,7 +14,6 @@ class DTerm:
         self._coeff       = Rational(1)
         self._d           = Rational(1)
         self._context     = context
-        print ("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC")
         if is_derivative(e) or is_function(e):
             # XXX put into _d only if in in context
             self._d = e
@@ -33,7 +32,6 @@ class DTerm:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
         if self._d == 1:
             set_trace ()
-        print (self._coeff , "------", self._d)
     def __str__ (self):
         return "{} * {}".format (self._coeff, self._d)
     def term(self):
@@ -77,7 +75,6 @@ class Differential_Polynomial:
             res = [DTerm(_, self._context) for _ in e.operands()]
         # how to avoid zero ceffs a priori? this is not false here but smells
         res = [_ for _ in res if _._coeff != 0]
-        print ("LLLLLLLLLLLLLLLLLLLLLLLLLLL", len(res))
         if len(res) > 1:
             res=sorted(res)
         self._p = res
@@ -108,10 +105,11 @@ class Differential_Polynomial:
             return self._p[0].is_monic()
         return True
     def normalize (self):
+        self._p = [_ for _ in self._p if _._coeff]
         c = self._p[0]._coeff
-        if c == 0:
-            set_trace ()
         self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
+    def expression (self):
+        return sum(_._coeff * _._d for _ in self._p)
     def __lt__ (self, other):
         return self._p[0] < other._p[0]
     def __le__ (self, other):
@@ -121,14 +119,42 @@ class Differential_Polynomial:
     def __gt__ (self, other):
         return self._p[0] > other._p[0]
     def __eq__ (self, other):
+        #todo pythonify
         for a, b in zip (self._p, other._p):
             if a != b: return False
         return True
     def __neq__ (self, other):
         return self._p[0] != other._p[0]
     def show(self):
-        sum(_._coeff * _._d for _ in self._p).show()
+        self.expression().show()
     def __sub__ (self, other):
-        pass
+        for o in other._p:
+            found = False
+            for s in self._p:
+                if s._d == o._d:
+                    s._coeff -= o._coeff
+                    found = True
+                    break
+            if not found:
+                self._p.append(o)
+                self._p[-1]._coeff *= Integer(-1)
+        self.normalize()
+        return Differential_Polynomial(self.expression(), self._context)
     def __add__ (self, other):
-        pass
+        for o in other._p:
+            found = False
+            for s in self._p:
+                if s._d == o._d:
+                    s._coeff += o._coeff
+                    found = True
+                    break
+            if not found:
+                self._p.append(o)
+        self.normalize()
+        return Differential_Polynomial(self.expression(), self._context)        
+    def __mul__ (self, other):
+        for t in self._p:
+             t._coeff *= other
+        self.normalize()
+        return Differential_Polynomial(self.expression(), self._context)
+        
