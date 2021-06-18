@@ -60,6 +60,8 @@ class DTerm:
         return self._d != other._d
     def show(self):
         self.term().show()
+
+        
     
 class Differential_Polynomial:
     def __init__ (self, e, context):
@@ -68,7 +70,6 @@ class Differential_Polynomial:
 
     def _init(self, e):
         res = []
-        #set_trace ()
         if is_derivative(e.expand()) or is_function(e.expand()):
             res = [DTerm(e, self._context)]
         else:
@@ -135,9 +136,9 @@ class Differential_Polynomial:
                     s._coeff -= o._coeff
                     found = True
                     break
-            if not found:
-                self._p.append(o)
-                self._p[-1]._coeff *= Integer(-1)
+        if not found:
+            self._p.append(o)
+            self._p[-1]._coeff *= Integer(-1)
         self.normalize()
         return Differential_Polynomial(self.expression(), self._context)
     def __add__ (self, other):
@@ -157,4 +158,5 @@ class Differential_Polynomial:
              t._coeff *= other
         self.normalize()
         return Differential_Polynomial(self.expression(), self._context)
+    
         
