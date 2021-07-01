@@ -41,7 +41,7 @@ def __lt__ (a,b):
     return 0
 
 def is_derivative(e):
-    '''checks whether an expression e is a deriviative'''
+    '''checks whether an expression 'e' is a derivative'''
     try :
         return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
     except AttributeError:
