@@ -30,8 +30,6 @@ class DTerm:
             self._coeff = functools.reduce (mul, r, 1).simplify_full()
             if not r:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
-        if self._d == 1:
-            set_trace ()
     def __str__ (self):
         return "{} * {}".format (self._coeff, self._d)
     def term(self):
@@ -55,12 +53,13 @@ class DTerm:
     def __gt__ (self, other):
         return higher (self, other,self._context) and not self == other
     def __eq__ (self, other):
-        return self._d == other._d
+        return self._d == other._d and self._coeff == other._coeff
     def __neq__ (self, other):
         return self._d != other._d
     def show(self):
         self.term().show()
-
+    def expression (self):
+        return self.term().expression()
         
     
 class Differential_Polynomial:
@@ -69,18 +68,42 @@ class Differential_Polynomial:
         self._init(e)
 
     def _init(self, e):
+        self._p = []
         res = []
-        if is_derivative(e.expand()) or is_function(e.expand()):
+        print ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        e.show()
+        e   = e.expand()
+        e.show()
+        if is_derivative(e) or is_function(e):
             res = [DTerm(e, self._context)]
         else:
-            res = [DTerm(_, self._context) for _ in e.operands()]
-        # how to avoid zero ceffs a priori? this is not false here but smells
-        res = [_ for _ in res if _._coeff != 0]
-        if len(res) > 1:
-            res=sorted(res)
-        self._p = res
+            for s in e.operands ():
+                coeff = []
+                d     = []
+                for item in s.operands():
+                    (d if is_derivative(item) else coeff).append(item)
+                coeff = functools.reduce (mul, coeff, 1)
+                if bool (coeff == 0):
+                    continue
+                found = False
+                for _p in self._p:
+                    if not d:
+                        continue
+                    if d and _p._d == d[0]:
+                        _p._coeff += coeff
+                        found = True
+                        break
+                if not found and d:
+                    self._p.append (DTerm(coeff * d[0], self._context))
+        print ("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSs")
+        self._p = sorted(self._p)
         self.normalize()
+        self.expression().show()
+        print ("EEEE"*10)
 
+    def _collect_terms (self, e):
+        pass
+        
     def Lterm (self):
         return self._p[0].term()
 
@@ -106,7 +129,7 @@ class Differential_Polynomial:
             return self._p[0].is_monic()
         return True
     def normalize (self):
-        self._p = [_ for _ in self._p if _._coeff]
+        self._p = [_ for _ in self._p if _._coeff and not bool(_._coeff == 0)]
         c = self._p[0]._coeff
         self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
     def expression (self):
@@ -139,7 +162,6 @@ class Differential_Polynomial:
         if not found:
             self._p.append(o)
             self._p[-1]._coeff *= Integer(-1)
-        self.normalize()
         return Differential_Polynomial(self.expression(), self._context)
     def __add__ (self, other):
         for o in other._p:
@@ -151,12 +173,11 @@ class Differential_Polynomial:
                     break
             if not found:
                 self._p.append(o)
-        self.normalize()
         return Differential_Polynomial(self.expression(), self._context)        
     def __mul__ (self, other):
         for t in self._p:
              t._coeff *= other
-        self.normalize()
-        return Differential_Polynomial(self.expression(), self._context)
-    
-        
+        return Differential_Polynomial(self.expression(), self._context)    
+    def __copy__(self):
+        newone = type(self)(self.expression(), self._context)
+        return newone
