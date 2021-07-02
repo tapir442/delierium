@@ -68,12 +68,9 @@ class Differential_Polynomial:
         self._init(e)
 
     def _init(self, e):
+        set_trace()
         self._p = []
         res = []
-        print ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-        e.show()
-        e   = e.expand()
-        e.show()
         if is_derivative(e) or is_function(e):
             res = [DTerm(e, self._context)]
         else:
@@ -81,7 +78,7 @@ class Differential_Polynomial:
                 coeff = []
                 d     = []
                 for item in s.operands():
-                    (d if is_derivative(item) else coeff).append(item)
+                    (d if is_derivative(item) or self.ctxfunc (e) else coeff).append(item)
                 coeff = functools.reduce (mul, coeff, 1)
                 if bool (coeff == 0):
                     continue
@@ -93,13 +90,18 @@ class Differential_Polynomial:
                         _p._coeff += coeff
                         found = True
                         break
-                if not found and d:
+                if d and not found:
                     self._p.append (DTerm(coeff * d[0], self._context))
-        print ("SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSs")
         self._p = sorted(self._p)
         self.normalize()
-        self.expression().show()
-        print ("EEEE"*10)
+    
+    def ctxfunc(self, e):
+        def func(e):    
+            try:
+                return e.operator().function()
+            except AttributeError:
+                return e.operator()  
+        return func(e) and func(e) in self._context._dependent    
 
     def _collect_terms (self, e):
         pass
@@ -129,9 +131,13 @@ class Differential_Polynomial:
             return self._p[0].is_monic()
         return True
     def normalize (self):
-        self._p = [_ for _ in self._p if _._coeff and not bool(_._coeff == 0)]
-        c = self._p[0]._coeff
-        self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
+        if self._p:
+            self._p = [_ for _ in self._p if _._coeff and not bool(_._coeff == 0)]
+            c = self._p[0]._coeff
+            self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
+        else:
+            self._p._d= 0
+            self._d._coeff = 0
     def expression (self):
         return sum(_._coeff * _._d for _ in self._p)
     def __lt__ (self, other):
