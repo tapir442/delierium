@@ -1,7 +1,7 @@
 #%display latex
 import sys
 sys.path.insert (0, "../pylie")
-import pylie
+import helpers
 import MatrixOrder as M
 import JanetBasis as JB
 from collections.abc import Iterable
