@@ -1,27 +1,25 @@
 #%display latex
 import sys
+# why manipulate the sys.path needed?
 sys.path.insert (0, "../pylie")
-import helpers
-import MatrixOrder as M
-import JanetBasis as JB
+import pylie.helpers
+import pylie.MatrixOrder as M
+import pylie.JanetBasis as JB
 from collections.abc import Iterable
 import functools
 from operator import mul, sub
 from pprint import pprint
 
 
-from sage.all import *
+#from sage.all import *
 
 var ("x y")
 w = function ("w")(x,y)
 z = function ("z")(x,y)
 
-ctx = M.Context ((w, z), (x,y))
+
 
 j = JB.DTerm (w(x,y), ctx)
-
-#dp = JB.Differential_Polynomial(x, ctx)
-#print ("only variable", dp._p)
 
 dp = JB.Differential_Polynomial(w (x,y), ctx)
 print ("only function", dp._p)

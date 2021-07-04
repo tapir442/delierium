@@ -77,8 +77,11 @@ class Differential_Polynomial:
             for s in e.operands ():
                 coeff = []
                 d     = []
-                for item in s.operands():
-                    (d if is_derivative(item) or self.ctxfunc (e) else coeff).append(item)
+                if is_derivative (s):
+                    d.append(s)
+                else:
+                    for item in s.operands():
+                        (d if (is_derivative(item) or self.ctxfunc (item)) else coeff).append(item)
                 coeff = functools.reduce (mul, coeff, 1)
                 if bool (coeff == 0):
                     continue
@@ -90,8 +93,11 @@ class Differential_Polynomial:
                         _p._coeff += coeff
                         found = True
                         break
-                if d and not found:
-                    self._p.append (DTerm(coeff * d[0], self._context))
+                if not found:
+                    if d:
+                        self._p.append (DTerm(coeff * d[0], self._context))
+                    else:
+                        self._p.append (DTerm(coeff, self._context))
         self._p = sorted(self._p)
         self.normalize()
     
@@ -187,3 +193,6 @@ class Differential_Polynomial:
     def __copy__(self):
         newone = type(self)(self.expression(), self._context)
         return newone
+
+# ToDo: Janet_Basis as class as this object has properties like rank, order ....
+

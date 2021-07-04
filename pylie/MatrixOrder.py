@@ -2,9 +2,8 @@
 # coding: utf-8
 
 from sage.all import *
-import pylie
 from functools import lru_cache
-
+import pylie.helpers as helpers
 #
 # standard weight matrices for lex, grlex and grevlex order
 # according to 'Term orders and Rankings' Schwarz, pp 43.
@@ -43,7 +42,7 @@ def idx (d, dependent, independent):
     '''helper function'''
     # this caching gains about 30 % of runtime,
     # but still pretty slow.
-    if pylie.is_derivative (d):
+    if helpers.is_derivative (d):
         return dependent.index(d.operator().function()(*list(independent)))
     return -1
 
@@ -69,12 +68,12 @@ def higher (d1 ,d2, context):
     # pure function corresponds with all zeros
     if d1idx >= 0:
         i1v[d1idx] = 1
-        i1 = vector(pylie.order_of_derivative(d1) + i1v)
+        i1 = vector(helpers.order_of_derivative(d1) + i1v)
     else:
         i1 = vector([0]*len(context._independent) + i1v)
     if d2idx >= 0:
         i2v[d2idx] = 1
-        i2 = vector(pylie.order_of_derivative(d2) + i2v)
+        i2 = vector(helpers.order_of_derivative(d2) + i2v)
     else:
         i2 = vector([0]*len(context._independent) + i2v)
     r = context._weight(context._dependent, context._independent) * vector(i1-i2)
