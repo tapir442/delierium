@@ -27,7 +27,7 @@ class DTerm:
                         self._d = o  # zeroth derivative
                     else:
                         r.append (o)
-            self._coeff = functools.reduce (mul, r, 1).simplify_full()
+            self._coeff = functools.reduce (mul, r, 1).simplify()
             if not r:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
     def __str__ (self):
@@ -53,7 +53,7 @@ class DTerm:
     def __gt__ (self, other):
         return higher (self, other,self._context) and not self == other
     def __eq__ (self, other):
-        return self._d == other._d and self._coeff == other._coeff
+        return self._d == other._d and bool(self._coeff == other._coeff)
     def __neq__ (self, other):
         return self._d != other._d
     def show(self):
@@ -65,10 +65,10 @@ class DTerm:
 class Differential_Polynomial:
     def __init__ (self, e, context):
         self._context = context
-        self._init(e)
+        self._init(e.expand())
 
     def _init(self, e):
-        set_trace()
+#        set_trace ()
         self._p = []
         res = []
         if is_derivative(e) or is_function(e):
