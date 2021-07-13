@@ -64,6 +64,7 @@ class DTerm:
     
 class Differential_Polynomial:
     def __init__ (self, e, context):
+        #set_trace()
         self._context = context
         self._init(e.expand())
 
