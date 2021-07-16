@@ -27,7 +27,11 @@ class DTerm:
                         self._d = o  # zeroth derivative
                     else:
                         r.append (o)
-            self._coeff = functools.reduce (mul, r, 1).simplify()
+            self._coeff = functools.reduce (mul, r, 1).expand().simplify_full()
+            if bool(self._coeff == Integer(1)):
+                self._coeff = 1
+            if bool(self._coeff == Integer(0)):
+                self._coeff = 0
             if not r:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
     def __str__ (self):
@@ -43,7 +47,7 @@ class DTerm:
         # XXX nonsense
         return self._d == 1
     def is_monic(self):
-        return self._d != 1 and self._coeff == 1
+        return self._d != 1 and bool(self._coeff == 1)
     def __lt__ (self, other):
         return higher (self, other,self._context) and not self == other
     def __le__ (self, other):
@@ -69,7 +73,6 @@ class Differential_Polynomial:
         self._init(e.expand())
 
     def _init(self, e):
-#        set_trace ()
         self._p = []
         res = []
         if is_derivative(e) or is_function(e):
@@ -112,7 +115,10 @@ class Differential_Polynomial:
 
     def _collect_terms (self, e):
         pass
-        
+    
+    def show_derivatives(self):
+        print ([x for x in self.derivatives()])
+    
     def Lterm (self):
         return self._p[0].term()
 
@@ -142,9 +148,8 @@ class Differential_Polynomial:
             self._p = [_ for _ in self._p if _._coeff and not bool(_._coeff == 0)]
             c = self._p[0]._coeff
             self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
-        else:
-            self._p._d= 0
-            self._d._coeff = 0
+    def __nonzero__ (self):
+        return self._p
     def expression (self):
         return sum(_._coeff * _._d for _ in self._p)
     def __lt__ (self, other):
