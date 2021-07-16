@@ -42,6 +42,7 @@ def idx (d, dependent, independent):
     '''helper function'''
     # this caching gains about 30 % of runtime,
     # but still pretty slow.
+    #import pdb; pdb.set_trace()
     if helpers.is_derivative (d):
         return dependent.index(d.operator().function()(*list(independent)))
     return -1
