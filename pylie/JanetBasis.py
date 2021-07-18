@@ -76,7 +76,7 @@ class Differential_Polynomial:
         self._p = []
         res = []
         if is_derivative(e) or is_function(e):
-            res = [DTerm(e, self._context)]
+            self._p.append(DTerm(e, self._context))
         else:
             for s in e.operands ():
                 coeff = []
