@@ -8,6 +8,9 @@ import functools
 from operator import mul
 from IPython.core.debugger import set_trace
 
+
+
+
 class DTerm:
     '''differential term'''
     def __init__ (self, e, context = None):
@@ -201,4 +204,85 @@ class Differential_Polynomial:
         return newone
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ....
+def Reorder (S, context, ascending = False):
+    res=sorted(S)
+    if ascending :
+        res.reverse()
+    return res
+def reduceS (e:Differential_Polynomial, S:list, context)->Differential_Polynomial:
+    S= Reorder (S, context, ascending = True)
+    reducing = True
+    gen = (_ for _ in S)
+    while reducing:
+        for p in gen:
+            enew = reduce (e, p, context)
+            if enew == e:
+                reducing = False
+            else:
+                e = enew
+                gen = (_ for _ in S)
+                reducing = True
+    return enew
+def reduce(e1: Differential_Polynomial,e2: Differential_Polynomial, context:Context)->Differential_Polynomial:
+    assert e2.is_monic()
+    def _order (der):
+        if der != 1:
+            ## XXX: user pylie namespace
+            return order_of_derivative(der)
+        else :
+            return [0]*len(context._independent)
+    def func(e):    
+        try:
+            return e.operator().function()
+        except AttributeError:
+            return e.operator()   
 
+    def _reduce (e, ld):
+        e2_order = _order (ld)
+        for t in e._p:
+            d = t._d
+            c = t._coeff
+            if func(ld) != func(d):
+                continue
+            e1_order = _order (d)
+            dif = [a-b for a, b in zip (e1_order, e2_order)]
+            if all (map (lambda h: h == 0, dif)) :
+                return Differential_Polynomial (e1.expression() - e2.expression() * c, context)
+            elif all (map (lambda h: h >= 0, dif)):         
+                variables_to_diff = []
+                for i in range (len(context._independent)):
+                    if dif [i] != 0:
+                        variables_to_diff.extend ([context._independent[i]]*abs(dif[i]))      
+                return Differential_Polynomial (e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
+            else:
+                pass
+        return e
+
+    _e1 = None
+    while True:
+        _e1 = _reduce (e1, e2.Lder())        
+        if bool(_e1 == e1):
+            return _e1
+        e1 = _e1
+        
+def Autoreduce(S, context):  
+    dps = list(S)
+    i = 0
+    while True:
+        p = dps[:i+1]
+        r = dps[i+1:]
+        if not r:
+            return dps
+        newdps = []
+        have_reduced = False
+        for _r in r:
+            rnew = reduceS(_r, p, context)
+            have_reduced = have_reduced or rnew != _r
+            newdps.append(rnew)
+        dps = Reorder(p + [_ for _  in newdps if _ not in p], context, ascending = True)
+        if not have_reduced:
+            # no reduction done
+            i += 1        
+        else:
+            # start from scratch
+            i = 0            
