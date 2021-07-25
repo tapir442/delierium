@@ -248,14 +248,12 @@ def reduce(e1: Differential_Polynomial,e2: Differential_Polynomial, context:Cont
             dif = [a-b for a, b in zip (e1_order, e2_order)]
             if all (map (lambda h: h == 0, dif)) :
                 return Differential_Polynomial (e1.expression() - e2.expression() * c, context)
-            elif all (map (lambda h: h >= 0, dif)):         
+            if all (map (lambda h: h >= 0, dif)):         
                 variables_to_diff = []
                 for i in range (len(context._independent)):
                     if dif [i] != 0:
                         variables_to_diff.extend ([context._independent[i]]*abs(dif[i]))      
                 return Differential_Polynomial (e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
-            else:
-                pass
         return e
 
     _e1 = None
@@ -286,3 +284,31 @@ def Autoreduce(S, context):
         else:
             # start from scratch
             i = 0            
+            
+            
+def degree(v, m)->Integer:
+    # returnd degree of variable 'v' in monomial 'm'
+    for operand in m.operands():
+        if bool(v == operand):
+            return 1
+        e = operand.operands()
+        if e and bool (e[0] == v):
+            return e[1]
+    return 0
+ 
+def multipliers(m, M, Vars):
+    assert (m in M)
+    d = max((degree (v, u) for u in M for v in Vars), default=0)
+    mult = []
+    if degree (Vars[0], m) == d:
+        mult.append (Vars[0])
+    for j in range (1, len (Vars)):
+        v = Vars[j]
+        dd = list (map (lambda x: degree (x,m), Vars[:j]))
+        V = []
+        for _u in M:
+            if [degree (_v, _u) for _v in Vars[:j]]==dd:
+                V.append (_u)
+        if degree (v, m) == max((degree (v, _u) for _u in V), default = 0):
+            mult.append (v)
+    return mult                
