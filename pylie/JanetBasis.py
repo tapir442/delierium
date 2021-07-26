@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+ #!/usr/bin/env python
 # coding: utf-8
 
 from sage.all import *
@@ -284,8 +284,7 @@ def Autoreduce(S, context):
         else:
             # start from scratch
             i = 0            
-            
-            
+
 def degree(v, m)->Integer:
     # returnd degree of variable 'v' in monomial 'm'
     for operand in m.operands():
@@ -295,7 +294,7 @@ def degree(v, m)->Integer:
         if e and bool (e[0] == v):
             return e[1]
     return 0
- 
+
 def multipliers(m, M, Vars):
     assert (m in M)
     d = max((degree (v, u) for u in M for v in Vars), default=0)
@@ -312,3 +311,22 @@ def multipliers(m, M, Vars):
         if degree (v, m) == max((degree (v, _u) for _u in V), default = 0):
             mult.append (v)
     return mult                
+
+def vec_degree(v, m)->Integer:
+    return m[v]
+
+def vec_multipliers(m, M, Vars):
+    d = max((vec_degree (v, u) for u in M for v in Vars), default=0)
+    mult = []
+    if vec_degree (Vars[0], m) == d:
+        mult.append (Vars[0])
+    for j in range (1, len (Vars)):
+        v = Vars[j]
+        dd = list (map (lambda x: vec_degree (x,m), Vars[:j]))
+        V = []
+        for _u in M:
+            if [vec_degree (_v, _u) for _v in Vars[:j]]==dd:
+                V.append (_u)
+        if vec_degree (v, m) == max((vec_degree (v, _u) for _u in V), default = 0):
+            mult.append (v)
+    return mult, set(Vars) - set(mult)
