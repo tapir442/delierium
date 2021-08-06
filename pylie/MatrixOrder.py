@@ -50,6 +50,9 @@ def idx (d, dependent, independent):
 class Context:
     # XXX replace by named tuple? or attr.ib
     def __init__ (self, dependent, independent, weight = Mlex):
+        """ sorting : (in)dependent [i] > dependent [i+i]        
+        """
+        # XXX maybe we can create the matrices here?
         self._independent = tuple(independent)
         self._dependent   = tuple(dependent)
         self._weight      = weight
