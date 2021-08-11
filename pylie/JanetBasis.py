@@ -1,5 +1,7 @@
- #!/usr/bin/env python
+# +
+# #!/usr/bin/env python
 # coding: utf-8
+# -
 
 from sage.all import *
 from pylie import *
@@ -11,6 +13,7 @@ from IPython.core.debugger import set_trace
 
 
 
+@functools.total_ordering
 class DTerm:
     '''differential term'''
     def __init__ (self, e, context = None):
@@ -53,25 +56,17 @@ class DTerm:
         return self._d != 1 and bool(self._coeff == 1)
     def __lt__ (self, other):
         return higher (self, other,self._context) and not self == other
-    def __le__ (self, other):
-        return higher (self, other,self._context)
-    def __ge__ (self, other):
-        return higher (self, other,self._context) 
-    def __gt__ (self, other):
-        return higher (self, other,self._context) and not self == other
     def __eq__ (self, other):
         return self._d == other._d and bool(self._coeff == other._coeff)
-    def __neq__ (self, other):
-        return self._d != other._d
     def show(self):
         self.term().show()
     def expression (self):
         return self.term().expression()
-        
-    
+
+
+@functools.total_ordering
 class Differential_Polynomial:
     def __init__ (self, e, context):
-        #set_trace()
         self._context = context
         self._init(e.expand())
 
@@ -139,6 +134,10 @@ class Differential_Polynomial:
         for p in self._p:
             yield p._d
 
+    def Ldervec (self):
+        # implement asap
+        pass
+            
     def coefficients (self):
         for p in self._p:
             yield p._coeff
@@ -148,57 +147,29 @@ class Differential_Polynomial:
         return True
     def normalize (self):
         if self._p:
-            self._p = [_ for _ in self._p if _._coeff and not bool(_._coeff == 0)]
-            c = self._p[0]._coeff
-            self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
+            if bool (self._p[0]._coeff == Integer (1)):
+                self._p[0]._coeff = 1
+            else:
+                self._p = [_ for _ in self._p if _._coeff and not bool(_._coeff == 0)]
+                c = self._p[0]._coeff
+                self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
     def __nonzero__ (self):
         return self._p
     def expression (self):
         return sum(_._coeff * _._d for _ in self._p)
     def __lt__ (self, other):
+        # XXX: is this correct ??
         return self._p[0] < other._p[0]
-    def __le__ (self, other):
-        return self._p[0] <= other._p[0]
-    def __ge__ (self, other):
-        return self._p[0] >= other._p[0]
-    def __gt__ (self, other):
-        return self._p[0] > other._p[0]
     def __eq__ (self, other):
-        #todo pythonify
-        for a, b in zip (self._p, other._p):
-            if a != b: return False
-        return True
-    def __neq__ (self, other):
-        return self._p[0] != other._p[0]
+        return all(bool(_[0] == _[1]) for _ in zip (self._p, other._p))
     def show(self):
         self.expression().show()
     def __sub__ (self, other):
-        for o in other._p:
-            found = False
-            for s in self._p:
-                if s._d == o._d:
-                    s._coeff -= o._coeff
-                    found = True
-                    break
-        if not found:
-            self._p.append(o)
-            self._p[-1]._coeff *= Integer(-1)
-        return Differential_Polynomial(self.expression(), self._context)
+        return Differential_Polynomial(self.expression() - other.expression(), self._context)
     def __add__ (self, other):
-        for o in other._p:
-            found = False
-            for s in self._p:
-                if s._d == o._d:
-                    s._coeff += o._coeff
-                    found = True
-                    break
-            if not found:
-                self._p.append(o)
-        return Differential_Polynomial(self.expression(), self._context)        
+        return Differential_Polynomial(self.expression() + other.expression(), self._context)        
     def __mul__ (self, other):
-        for t in self._p:
-             t._coeff *= other
-        return Differential_Polynomial(self.expression(), self._context)    
+        return Differential_Polynomial(self.expression() * other , self._context)    
     def __copy__(self):
         newone = type(self)(self.expression(), self._context)
         return newone
@@ -262,7 +233,7 @@ def reduce(e1: Differential_Polynomial,e2: Differential_Polynomial, context:Cont
         if bool(_e1 == e1):
             return _e1
         e1 = _e1
-        
+
 def Autoreduce(S, context):  
     dps = list(S)
     i = 0
@@ -296,7 +267,9 @@ def degree(v, m)->Integer:
     return 0
 
 def multipliers(m, M, Vars):
+    """Multipliers for Monomials"""
     assert (m in M)
+    # ToDo: convert to differential vectors and use vec_multipliers!
     d = max((degree (v, u) for u in M for v in Vars), default=0)
     mult = []
     if degree (Vars[0], m) == d:
@@ -310,12 +283,15 @@ def multipliers(m, M, Vars):
                 V.append (_u)
         if degree (v, m) == max((degree (v, _u) for _u in V), default = 0):
             mult.append (v)
-    return mult                
+    # XXX return nonmultipliers, too
+    return mult              
 
-def vec_degree(v, m)->Integer:
+def vec_degree(v, m)->Integer:    
     return m[v]
 
 def vec_multipliers(m, M, Vars):
+    """multipliers and nonmultipliers for differential vectors
+    """
     d = max((vec_degree (v, u) for u in M for v in Vars), default=0)
     mult = []
     if vec_degree (Vars[0], m) == d:
@@ -330,3 +306,78 @@ def vec_multipliers(m, M, Vars):
         if vec_degree (v, m) == max((vec_degree (v, _u) for _u in V), default = 0):
             mult.append (v)
     return mult, set(Vars) - set(mult)
+
+
+# +
+@functools.total_ordering
+class Differential_Vector:
+    """Differential Vector:
+       maps a partial derivative to a tuple representing this derivative
+    """
+    def __init__ (self,e, ctx):
+        """
+            e   : expression for the derivative
+            ctx : context object representing the order of variables
+        """
+        self._e = self.obj = e
+        # is this the right place to do ? 
+        if ctx._weight == Mlex:
+            M = matrix.identity(len(self._e))
+        elif ctx._weight == Mgrlex:
+            M = matrix (len(self._e))
+            for i in range(len(self._e)):
+                M [0, i] = 1
+            for i in range (len(self._e) - 1):
+                M [i+1, i] = 1
+        elif ctx._weight == Mgrevlex:
+            M = matrix (len(self._e))
+            for i in range(len(self._e)):
+                M [0, i] = 1
+            for i in range (1,len(self._e)):
+                M [len(self._e)-i, i] = -1
+        self.M = M
+        
+    #XXX use functools.cmp_to_key ?
+    def mycmp (self, a, b):
+        a = self.M*vector(a)
+        b = self.M*vector(b)
+        v = [_a - _b for _a,_b in zip (a, b)]
+        # XXX check order
+        for _ in v:
+            if _ < 0:
+                return 1
+            if _ > 0:
+                return -1
+        return 0
+    def __lt__(self, other):
+        return self.mycmp(self.obj, other.obj) < 0
+    def __eq__(self, other):
+        return self.mycmp(self.obj, other.obj) == 0
+    
+    
+def in_class (r, mclass, M, vars):
+    '''checks whether "r" is in the same class like "mclass"'''
+    mult, nonmult = vec_multipliers (mclass, M , vars)
+    return all (vec_degree (x, r) >= vec_degree (x, mclass) for x in mult)  and \
+        all (vec_degree(x, r) == vec_degree (x, mclass) for x in nonmult)
+
+def complete (l,ctx):
+    while True:
+        m0 = []
+        for m in l :
+            # XXX FixMe
+            _, nonmult = vec_multipliers (m , l , (2,1,0))
+            for nm in nonmult:
+                _m = list(m)
+                _m [nm] += 1
+                # XXX Fixme
+                if not any (in_class (tuple(_m), v, l, (2,1,0)) for v in l):
+                    m0.append (tuple(_m))
+        if set(m0) == set() or set(m0) == set(l):
+            return l
+        l.extend (m0)
+        l = reversed(sorted(map (lambda _ : Differential_Vector(_, ctx), list(set(l)))))
+        l = [_._e for _ in l]                
+# -
+
+
