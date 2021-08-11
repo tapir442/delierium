@@ -355,29 +355,7 @@ class Differential_Vector:
         return self.mycmp(self.obj, other.obj) == 0
     
     
-def in_class (r, mclass, M, vars):
-    '''checks whether "r" is in the same class like "mclass"'''
-    mult, nonmult = vec_multipliers (mclass, M , vars)
-    return all (vec_degree (x, r) >= vec_degree (x, mclass) for x in mult)  and \
-        all (vec_degree(x, r) == vec_degree (x, mclass) for x in nonmult)
-
-def complete (l,ctx):
-    while True:
-        m0 = []
-        for m in l :
-            # XXX FixMe
-            _, nonmult = vec_multipliers (m , l , (2,1,0))
-            for nm in nonmult:
-                _m = list(m)
-                _m [nm] += 1
-                # XXX Fixme
-                if not any (in_class (tuple(_m), v, l, (2,1,0)) for v in l):
-                    m0.append (tuple(_m))
-        if set(m0) == set() or set(m0) == set(l):
-            return l
-        l.extend (m0)
-        l = reversed(sorted(map (lambda _ : Differential_Vector(_, ctx), list(set(l)))))
-        l = [_._e for _ in l]                
+               
 # -
 
 
