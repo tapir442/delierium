@@ -154,14 +154,22 @@ class Differential_Polynomial:
                 c = self._p[0]._coeff
                 self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
     def __nonzero__ (self):
-        return self._p
+        return bool(self._p)
     def expression (self):
         return sum(_._coeff * _._d for _ in self._p)
     def __lt__ (self, other):
         # very slow ....
         return self._p[0] < other._p[0]
     def __eq__ (self, other):
-        return all(bool(_[0] == _[1]) for _ in zip (self._p, other._p))
+        if not self._p and not other._p:
+            return True
+        try:
+            if self._p and other._p:
+                return all(bool(_[0] == _[1]) for _ in zip (self._p, other._p))
+            else:
+                return False
+        except:
+            return False
     def show(self):
         self.expression().show()
     def __sub__ (self, other):
@@ -284,7 +292,7 @@ def multipliers(m, M, Vars):
         if degree (v, m) == max((degree (v, _u) for _u in V), default = 0):
             mult.append (v)
     # XXX return nonmultipliers, too
-    return mult              
+    return mult , set(Vars) - set(mult)            
 
 def vec_degree(v, m)->Integer:    
     return m[v]
