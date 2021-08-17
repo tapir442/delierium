@@ -72,7 +72,7 @@ class Differential_Polynomial:
 
     def _init(self, e):
         self._p = []
-        res = []
+        res     = []
         if is_derivative(e) or is_function(e):
             self._p.append(DTerm(e, self._context))
         else:
@@ -158,7 +158,7 @@ class Differential_Polynomial:
     def expression (self):
         return sum(_._coeff * _._d for _ in self._p)
     def __lt__ (self, other):
-        # XXX: is this correct ??
+        # very slow ....
         return self._p[0] < other._p[0]
     def __eq__ (self, other):
         return all(bool(_[0] == _[1]) for _ in zip (self._p, other._p))
@@ -355,7 +355,45 @@ class Differential_Vector:
         return self.mycmp(self.obj, other.obj) == 0
     
     
-               
+def in_class (r, mclass, M, vars):
+    '''checks whether "r" is in the same class like "mclass"'''
+    mult, nonmult = vec_multipliers (mclass, M , vars)
+    return all (vec_degree (x, r) >= vec_degree (x, mclass) for x in mult)  and \
+        all (vec_degree(x, r) == vec_degree (x, mclass) for x in nonmult)
+
+def derivative_to_vec (d, context):
+    return order_of_derivative (d)
+
+
+def complete (l,ctx):
+    ld         = [derivative_to_vec(_.Lder(), ctx) for _ in l]
+    sort_order = tuple(reversed([i for i in range(len(ctx._independent))]))
+    m0         = []        
+    for m, monomial in zip (ld, l):
+        _, nonmult = vec_multipliers (m , ld , sort_order)
+        for nm in nonmult:        
+            _m = list(m)
+            _m [nm] += 1
+            # XXX Fixme
+            if not any (in_class (tuple(_m), v, l, sort_order) for v in l):
+                m0.append (diff (monomial, ctx._independent[nm]))
+                    
+        if set(m0) == set():
+            return l
+        l.extend (m0)
+        l = reversed(sorted(map (lambda _ : Differential_Vector(_, ctx), list(set(l)))))
+        l = [_._e for _ in l]
+
+def CompleteSystem(S, context):
+    s = {}
+    for _ in S:
+        _fun = _.Lder().operator().function()
+        s.setdefault (_fun, []).append (_)
+    res = []
+    for k in s:
+        _ = complete (s[k], context)
+        res.extend (_)       
+    return Reorder(res, context, ascending = True)               
 # -
 
 
