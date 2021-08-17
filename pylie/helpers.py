@@ -23,10 +23,10 @@ def order_of_derivative (e):
     res = [opr.parameter_set().count(i) for i in range (len(opd))]
     return res
 
-def highest_order_of_derivative(e):
-    # xxx _of_ in function name is annyoing
-    e      = e if isinstance(e, Iterable) else [e]
-    return max([sum (order_of_derivative(_)) for _ in e])
+#def highest_order_of_derivative(e):
+#    # xxx _of_ in function name is annyoing
+#    e      = e if isinstance(e, Iterable) else [e]
+#    return max([sum (order_of_derivative(_)) for _ in e])
 
 def __lt__ (a,b):
     '''
@@ -41,7 +41,7 @@ def __lt__ (a,b):
     return 0
 
 def is_derivative(e):
-    '''checks whether an expression 'e' is a derivative'''
+    '''checks whether an expression 'e' is a pure derivative'''
     try :
         return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
     except AttributeError:

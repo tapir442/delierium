@@ -4,12 +4,15 @@
 from sage.all import *
 from functools import lru_cache
 import pylie.helpers as helpers
+import doctest
 #
 # standard weight matrices for lex, grlex and grevlex order
 # according to 'Term orders and Rankings' Schwarz, pp 43.
 #
 @lru_cache()
 def Mlex(f, v):
+    '''Generates the "cotes" according to Riquier for the lex ordering
+    '''
     m = len(f)
     n = len(v)
     i = matrix.identity(n)
@@ -42,7 +45,6 @@ def idx (d, dependent, independent):
     '''helper function'''
     # this caching gains about 30 % of runtime,
     # but still pretty slow.
-    #import pdb; pdb.set_trace()
     if helpers.is_derivative (d):
         return dependent.index(d.operator().function()(*list(independent)))
     return -1
@@ -84,3 +86,8 @@ def higher (d1 ,d2, context):
     for entry in r:
         if entry:
             return entry > 0
+    return False
+
+
+if __name__ == "__main__":
+    doctest.testmod()
