@@ -3,7 +3,7 @@
 
 from sage.all import *
 from functools import lru_cache
-import pylie.helpers as helpers
+import delirium.helpers as helpers
 import doctest
 #
 # standard weight matrices for lex, grlex and grevlex order

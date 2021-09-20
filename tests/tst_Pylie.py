@@ -7,7 +7,7 @@ with open ("/home/tapir/mausi.txt", "w") as f:
     f.write("%s" % sys.path)
 
 
-def testPylieFunction():
+def testDelieriumFunction():
     var('x')
     u = function ("u")(x)
     d = diff (u,x)

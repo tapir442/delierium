@@ -1,7 +1,7 @@
 import pytest
 import sys
-sys.path.insert (0, "../pylie")
-import pylie.MatrixOrder as M
+sys.path.insert (0, "../delierium")
+import delierium.MatrixOrder as M
 from sage.all import *
 
 @pytest.fixture

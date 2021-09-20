@@ -4,7 +4,7 @@
 # -
 
 from sage.all import *
-from pylie import *
+from delierium import *
 from pprint import pprint
 import functools
 from operator import mul
@@ -206,7 +206,7 @@ def reduce(e1: Differential_Polynomial,e2: Differential_Polynomial, context:Cont
     assert e2.is_monic()
     def _order (der):
         if der != 1:
-            ## XXX: user pylie namespace
+            ## XXX: user delierium namespace
             return order_of_derivative(der)
         else :
             return [0]*len(context._independent)
