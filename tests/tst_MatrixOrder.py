@@ -1,10 +1,10 @@
 #%display latex
 import sys
 # why manipulate the sys.path needed?
-sys.path.insert (0, "../pylie")
-import pylie.helpers
-import pylie.MatrixOrder as M
-import pylie.JanetBasis as JB
+sys.path.insert (0, "../delierium")
+import .helpers
+import delierium.MatrixOrder as M
+import delierium.JanetBasis as JB
 from collections.abc import Iterable
 import functools
 from operator import mul, sub
