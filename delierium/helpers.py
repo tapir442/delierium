@@ -2,6 +2,7 @@ import sage.all
 from collections.abc import Iterable
 import functools
 
+
 def tangent_vector(f):
     # https://doc.sagemath.org/html/en/reference/manifolds/sage/manifolds/differentiable/tangent_vector.html?highlight=partial%20differential
     # XXX:  There is TangentVector in Sage but a little bit more complicated. Does it pay to use that one ?
@@ -15,20 +16,23 @@ def tangent_vector(f):
     return [d.coefficient(_) for _ in newvars]
 
 #
-def order_of_derivative (e):
-    opr = e.operator ()
-    opd = e.operands ()
+
+
+def order_of_derivative(e):
+    opr = e.operator()
+    opd = e.operands()
     if not isinstance(opr, sage.symbolic.operators.FDerivativeOperator):
-        return [0] * len (e.variables())
-    res = [opr.parameter_set().count(i) for i in range (len(opd))]
+        return [0] * len(e.variables())
+    res = [opr.parameter_set().count(i) for i in range(len(opd))]
     return res
 
-#def highest_order_of_derivative(e):
+# def highest_order_of_derivative(e):
 #    # xxx _of_ in function name is annyoing
 #    e      = e if isinstance(e, Iterable) else [e]
 #    return max([sum (order_of_derivative(_)) for _ in e])
 
-def __lt__ (a,b):
+
+def __lt__(a, b):
     '''
     sorts functions lexicographically
     '''
@@ -40,18 +44,20 @@ def __lt__ (a,b):
         return 1
     return 0
 
+
 def is_derivative(e):
     '''checks whether an expression 'e' is a pure derivative'''
-    try :
+    try:
         return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
     except AttributeError:
         return False
 
+
 def is_function(e):
     '''checks whether an expression 'e' is a function'''
-    try :
+    try:
         # XXX this must done more sagemathic if possible
-        return "NewSymbolicFunction" in e.operator ().__class__.__name__ and \
+        return "NewSymbolicFunction" in e.operator().__class__.__name__ and \
             e.operands() != []
     except AttributeError:
         return False
