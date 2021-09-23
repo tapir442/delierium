@@ -2,23 +2,38 @@ import sage.all
 from collections.abc import Iterable
 import functools
 
-
 def tangent_vector(f):
-    # https://doc.sagemath.org/html/en/reference/manifolds/sage/manifolds/differentiable/tangent_vector.html?highlight=partial%20differential
-    # XXX:  There is TangentVector in Sage but a little bit more complicated. Does it pay to use that one ?
-    from sage.calculus.var import var
-    from sage.calculus.functional import diff
-    t = var("t")
-    newvars = [var("x%s" % i) for i in f.variables()]
+    """
+    >>> x,y,z = sage.all.var ("x y z")
+    >>> fun   = sage.all.function ("fun")(x,y,z)
+    >>> fun   = x**2 - 3*y**4 - z*x*y + z - x  
+    >>> tangent_vector (fun)
+    [-y*z + 2*x - 1, -12*y^3 - x*z, -x*y + 1]
+    >>> fun = x**2 + 2*y**3 - 3*z**4
+    >>> tangent_vector (fun)
+    [2*x, 6*y^2, -12*z^3]
+    >>> fun = x**2 
+    >>> tangent_vector (fun)    
+    [2*x]
+    """
+    t = sage.all.var("t")
+    newvars = [sage.all.var("x%s" % i) for i in f.variables()]
     for o, n in zip(f.variables(), newvars):
         f = f.subs({o: o+t*n})
-    d = diff(f, t).limit(t=0)
+    d = sage.all.diff(f, t).limit(t=0)
     return [d.coefficient(_) for _ in newvars]
 
 #
 
 
 def order_of_derivative(e):
+    '''Returns the vector of the orders of a derivative respect to its variables
+    >>> x,y,z = sage.all.var ("x,y,z")
+    >>> f = sage.all.function("f")(x,y,z)
+    >>> d = sage.all.diff(f, x,x,y,z,z,z)
+    >>> order_of_derivative (d)
+    [2, 1, 3]
+    '''
     opr = e.operator()
     opd = e.operands()
     if not isinstance(opr, sage.symbolic.operators.FDerivativeOperator):
@@ -46,18 +61,42 @@ def __lt__(a, b):
 
 
 def is_derivative(e):
-    '''checks whether an expression 'e' is a pure derivative'''
+    '''checks whether an expression 'e' is a pure derivative
+    >>> x = sage.all.var('x')
+    >>> f = sage.all.function ('f')(x)
+    >>> is_derivative (f)
+    False
+    >>> is_derivative (sage.all.diff(f,x))
+    True
+    >>> is_derivative (sage.all.diff(f,x)*x)
+    False
+    '''
     try:
         return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
     except AttributeError:
-        return False
+        pass
 
 
 def is_function(e):
-    '''checks whether an expression 'e' is a function'''
+    '''checks whether an expression 'e' is a pure function without any 
+    derivative as a factor
+    
+    >>> x = sage.all.var('x')
+    >>> f = sage.all.function ('f')(x)
+    >>> is_function (f)
+    True
+    >>> is_function (sage.all.diff(f,x))
+    False
+    >>> is_function (x*sage.all.diff(f,x))
+    False
+    '''
     try:
         # XXX this must done more sagemathic if possible
         return "NewSymbolicFunction" in e.operator().__class__.__name__ and \
             e.operands() != []
     except AttributeError:
-        return False
+        pass
+    
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()    
