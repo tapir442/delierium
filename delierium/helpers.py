@@ -1,3 +1,10 @@
+# +
+# #!/usr/bin/env python
+# coding: utf-8
+# -
+
+
+# strange ! this import works in every other module
 import sage.all
 from collections.abc import Iterable
 import functools
