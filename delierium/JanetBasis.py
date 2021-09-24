@@ -4,7 +4,8 @@
 # -
 
 from sage.all import *
-from delierium import *
+from delierium.MatrixOrder  import *
+from delierium.helpers import *
 from pprint import pprint
 import functools
 from operator import mul
@@ -13,8 +14,16 @@ from IPython.core.debugger import set_trace
 
 @functools.total_ordering
 class DTerm:
-    '''differential term'''
-
+#    '''differential term
+#        >>> x,y,z = sage.all.var("x y z")
+#        >>> f     = sage.all.function("f")(x,y,z)
+#        >>> g     = sage.all.function("g")(x,y,z)   
+#        >>> h     = sage.all.function("h")(x,y,z)    
+#        >>> ctx   = Context ((f,g),(x,y,z))
+##        >>> d     = (x**2) * sage.all.diff(f, x, y)
+ #       >>> DTerm(d,ctx)
+ #       hansi    
+ #   '''
     def __init__(self, e, context=None):
         self._coeff = Rational(1)
         self._d = Rational(0)
@@ -310,34 +319,24 @@ def Autoreduce(S, context):
             # start from scratch
             i = 0
 
-
-def degree(v, m) -> Integer:
-    # returnd degree of variable 'v' in monomial 'm'
-    for operand in m.operands():
-        if bool(v == operand):
-            return 1
-        e = operand.operands()
-        if e and bool(e[0] == v):
-            return e[1]
-    return 0
-
-
 def multipliers(m, M, Vars):
-    """Multipliers for Monomials"""
+    """Multipliers for Monomials
+    Vars are assumed to be sorted ascending
+    """
     assert (m in M)
     # ToDo: convert to differential vectors and use vec_multipliers!
-    d = max((degree(v, u) for u in M for v in Vars), default=0)
+    d = max((u.degree(v) for u in M for v in Vars), default=0)
     mult = []
-    if degree(Vars[0], m) == d:
+    if m.degree(Vars[0]) == d:
         mult.append(Vars[0])
     for j in range(1, len(Vars)):
         v = Vars[j]
-        dd = list(map(lambda x: degree(x, m), Vars[:j]))
+        dd = list(map(lambda _x: m.degree(_x), Vars[:j]))
         V = []
         for _u in M:
-            if [degree(_v, _u) for _v in Vars[:j]] == dd:
+            if [_u.degree(_v) for _v in Vars[:j]] == dd:
                 V.append(_u)
-        if degree(v, m) == max((degree(v, _u) for _u in V), default=0):
+        if m.degree(v) == max((_u.degree(v) for _u in V), default=0):
             mult.append(v)
     # XXX return nonmultipliers, too
     return mult, set(Vars) - set(mult)
@@ -458,4 +457,9 @@ def CompleteSystem(S, context):
         _ = complete(s[k], context)
         res.extend(_)
     return Reorder(res, context, ascending=True)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
+
 # -
