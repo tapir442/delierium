@@ -163,6 +163,9 @@ class Differential_Polynomial:
         # implement asap
         pass
 
+    def Lfunc (self):
+        return self.Lder().operator().function()
+    
     def coefficients(self):
         for p in self._p:
             yield p._coeff
@@ -322,6 +325,7 @@ def Autoreduce(S, context):
 def multipliers(m, M, Vars):
     """Multipliers for Monomials
     Vars are assumed to be sorted ascending
+    Janet-Like Monomial Division (Gerdt, Blinkov)
     """
     assert (m in M)
     # ToDo: convert to differential vectors and use vec_multipliers!
@@ -338,8 +342,7 @@ def multipliers(m, M, Vars):
                 V.append(_u)
         if m.degree(v) == max((_u.degree(v) for _u in V), default=0):
             mult.append(v)
-    # XXX return nonmultipliers, too
-    return mult, set(Vars) - set(mult)
+    return set(mult), set(Vars) - set(mult)
 
 
 def vec_degree(v, m) -> Integer:
@@ -362,7 +365,7 @@ def vec_multipliers(m, M, Vars):
                 V.append(_u)
         if vec_degree(v, m) == max((vec_degree(v, _u) for _u in V), default=0):
             mult.append(v)
-    return mult, set(Vars) - set(mult)
+    return set(mult), set(Vars) - set(mult)
 
 
 # +
@@ -416,7 +419,8 @@ class Differential_Vector:
 
 
 def in_class(r, mclass, M, vars):
-    '''checks whether "r" is in the same class like "mclass"'''
+    '''checks whether "r" is in the same class like "mclass"
+    '''
     mult, nonmult = vec_multipliers(mclass, M, vars)
     return all(vec_degree(x, r) >= vec_degree(x, mclass) for x in mult) and \
         all(vec_degree(x, r) == vec_degree(x, mclass) for x in nonmult)
@@ -427,11 +431,11 @@ def derivative_to_vec(d, context):
 
 
 def complete(l, ctx):
-    ld = [derivative_to_vec(_.Lder(), ctx) for _ in l]
-    sort_order = tuple(reversed([i for i in range(len(ctx._independent))]))
-    m0 = []
-    for m, monomial in zip(ld, l):
-        _, nonmult = vec_multipliers(m, ld, sort_order)
+    leading_derivatives = [derivative_to_vec(_.Lder(), ctx) for _ in l]
+    sort_order          = tuple(reversed([i for i in range(len(ctx._independent))]))
+    m0                  = []
+    for m, monomial in zip(leading_derivatives, l):
+        _, nonmult = vec_multipliers(m, leading_derivatives, sort_order)
         for nm in nonmult:
             _m = list(m)
             _m[nm] += 1
