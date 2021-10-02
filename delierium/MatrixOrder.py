@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import doctest
 from functools import lru_cache
 
-from sage.all import *
+import sage.all
 
-import delierium.helpers as helpers
+try:
+    from delierium.helpers import *
+except (ImportError, ModuleNotFoundError):
+    print ("damned")
+    from helpers import *    
 
 #
 # standard weight matrices for lex, grlex and grevlex order
@@ -53,7 +56,7 @@ def idx(d, dependent, independent):
     '''helper function'''
     # this caching gains about 30 % of runtime,
     # but still pretty slow.
-    if helpers.is_derivative(d):
+    if is_derivative(d):
         return dependent.index(d.operator().function()(*list(independent)))
     return -1
 
@@ -67,7 +70,7 @@ class Context:
         self._independent = tuple(independent)
         self._dependent = tuple(dependent)
         self._weight = weight
-        self._basefield = PolynomialRing(QQ, independent)
+        self._basefield = None # PolynomialRing(QQ, independent)
 
 
 def higher(d1, d2, context):
@@ -84,12 +87,12 @@ def higher(d1, d2, context):
     # pure function corresponds with all zeros
     if d1idx >= 0:
         i1v[d1idx] = 1
-        i1 = vector(helpers.order_of_derivative(d1) + i1v)
+        i1 = vector(order_of_derivative(d1) + i1v)
     else:
         i1 = vector([0]*len(context._independent) + i1v)
     if d2idx >= 0:
         i2v[d2idx] = 1
-        i2 = vector(helpers.order_of_derivative(d2) + i2v)
+        i2 = vector(order_of_derivative(d2) + i2v)
     else:
         i2 = vector([0]*len(context._independent) + i2v)
     r = context._weight(context._dependent,
@@ -101,4 +104,5 @@ def higher(d1, d2, context):
 
 
 if __name__ == "__main__":
+    import doctest
     doctest.testmod()

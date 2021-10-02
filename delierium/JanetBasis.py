@@ -1,11 +1,13 @@
-# +
-# #!/usr/bin/env python
-# coding: utf-8
-# -
-
-from sage.all import *
-from delierium.MatrixOrder  import *
-from delierium.helpers import *
+from sage.calculus.functional import diff
+try:
+    from delierium.MatrixOrder  import *
+except ImportError:
+    from MatrixOrder import *
+try:
+    from delierium.helpers import *
+except (ImportError, ModuleNotFoundError):
+    from helpers import *
+    
 from pprint import pprint
 import functools
 from operator import mul
@@ -14,16 +16,27 @@ from IPython.core.debugger import set_trace
 
 @functools.total_ordering
 class DTerm:
-#    '''differential term
-#        >>> x,y,z = sage.all.var("x y z")
-#        >>> f     = sage.all.function("f")(x,y,z)
-#        >>> g     = sage.all.function("g")(x,y,z)   
-#        >>> h     = sage.all.function("h")(x,y,z)    
-#        >>> ctx   = Context ((f,g),(x,y,z))
-##        >>> d     = (x**2) * sage.all.diff(f, x, y)
- #       >>> DTerm(d,ctx)
- #       hansi    
- #   '''
+    '''differential term which is simply a product of an element of the base ring 
+    with a derivative of a function on the base ring.It is used as a term in
+    a Differential_Polynomial
+    
+    >>> from delierium import *
+    >>> x,y,z = var("x y z")
+    >>> f     = function("f")(x,y,z)
+    >>> g     = function("g")(x,y,z)   
+    >>> h     = function("h")(x,y,z)    
+    >>> ctx   = Context ((f,g),(x,y,z))
+    >>> d     = (x**2) * diff(f, x, y)
+    >>> print (DTerm(d,ctx))
+    x^2 * diff(f(x, y, z), x, y)
+    >>> d     = diff (f,x,x)
+    >>> print (DTerm(d,ctx))
+    1 * diff(f(x, y, z), x, x)
+    >>> DTerm(d,ctx).term()
+    diff(f(x, y, z), x, x)
+
+     
+    '''
     def __init__(self, e, context=None):
         self._coeff = Rational(1)
         self._d = Rational(0)
@@ -253,7 +266,8 @@ def reduceS(e: Differential_Polynomial, S: list, context) -> Differential_Polyno
     return enew
 
 
-def reduce(e1: Differential_Polynomial, e2: Differential_Polynomial, context: Context) -> Differential_Polynomial:
+def reduce(e1: Differential_Polynomial, e2: Differential_Polynomial, 
+           context: Context) -> Differential_Polynomial:
     assert e2.is_monic()
 
     def _order(der):
@@ -279,14 +293,19 @@ def reduce(e1: Differential_Polynomial, e2: Differential_Polynomial, context: Co
             e1_order = _order(d)
             dif = [a-b for a, b in zip(e1_order, e2_order)]
             if all(map(lambda h: h == 0, dif)):
-                return Differential_Polynomial(e1.expression() - e2.expression() * c, context)
+                return Differential_Polynomial(
+                        e1.expression() - e2.expression() * c, context)
             if all(map(lambda h: h >= 0, dif)):
                 variables_to_diff = []
                 for i in range(len(context._independent)):
                     if dif[i] != 0:
                         variables_to_diff.extend(
                             [context._independent[i]]*abs(dif[i]))
-                return Differential_Polynomial(e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
+                return Differential_Polynomial(
+                        e1.expression()-
+                        c*diff(e2.expression(), 
+                        *variables_to_diff), 
+                        context)
         return e
 
     _e1 = None
@@ -345,7 +364,7 @@ def multipliers(m, M, Vars):
     return set(mult), set(Vars) - set(mult)
 
 
-def vec_degree(v, m) -> Integer:
+def vec_degree(v, m):# -> Integer:
     return m[v]
 
 
@@ -383,19 +402,19 @@ class Differential_Vector:
         self._e = self.obj = e
         # is this the right place to do ?
         if ctx._weight == Mlex:
-            M = matrix.identity(len(self._e))
+            M = matrix.identity(self._e.number_of_operands())
         elif ctx._weight == Mgrlex:
-            M = matrix(len(self._e))
-            for i in range(len(self._e)):
+            M = matrix(self._e.number_of_operands())
+            for i in range(self._e.number_of_operands()):
                 M[0, i] = 1
-            for i in range(len(self._e) - 1):
+            for i in range(self._e.number_of_operands() - 1):
                 M[i+1, i] = 1
         elif ctx._weight == Mgrevlex:
-            M = matrix(len(self._e))
-            for i in range(len(self._e)):
+            M = matrix(self._e.number_of_operands())
+            for i in range(self._e.number_of_operands()):
                 M[0, i] = 1
-            for i in range(1, len(self._e)):
-                M[len(self._e)-i, i] = -1
+            for i in range(1, self._e.number_of_operands()):
+                M[self._e.number_of_operands()-i, i] = -1
         self.M = M
 
     # XXX use functools.cmp_to_key ?
@@ -431,7 +450,32 @@ def derivative_to_vec(d, context):
 
 
 def complete(l, ctx):
-    leading_derivatives = [derivative_to_vec(_.Lder(), ctx) for _ in l]
+    '''
+    >>> from delierium import *
+    >>> from sage.all import *
+    >>> x1,x2,x3=var("x1 x2 x3")
+    >>> f       = function("f")(x1,x2,x3)
+    >>> ctx = Context ((f,), (x1,x2,x3))
+    >>> M=[diff(f, x1, x1, x2, x2, x3, x3), diff(f, x1, 3, x3, 3), diff(f, x1, 3, x2, x3), diff (f, x2,x3)]
+    >>> complete (M, ctx)
+    [x1*x2^2*x3^3,
+     x1^3*x3^3,
+     x1^2*x2*x3^2,
+     x2^2*x3^3,
+     x1^2*x2*x3^3,
+     x1*x2*x3,
+     x1^2*x2*x3,
+     x1^3*x2*x3,
+     x2*x3^2,
+     x1*x2*x3^2,
+     x1^2*x2^2*x3^3,
+     x1^3*x2*x3^2,
+     x2*x3^3,
+     x1*x2*x3^3,
+     x1^3*x2*x3^3,
+     x2*x3]
+    '''
+    leading_derivatives = [derivative_to_vec(_, ctx) for _ in l]
     sort_order          = tuple(reversed([i for i in range(len(ctx._independent))]))
     m0                  = []
     for m, monomial in zip(leading_derivatives, l):
