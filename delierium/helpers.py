@@ -5,12 +5,13 @@
 
 
 # strange ! this import works in every other module
-import sage.all
+from sage.all import *
 from collections.abc import Iterable
 import functools
 
 def tangent_vector(f):
     """
+    >>> from delierium import *
     >>> x,y,z = sage.all.var ("x y z")
     >>> fun   = sage.all.function ("fun")(x,y,z)
     >>> fun   = x**2 - 3*y**4 - z*x*y + z - x  
@@ -23,11 +24,11 @@ def tangent_vector(f):
     >>> tangent_vector (fun)    
     [2*x]
     """
-    t = sage.all.var("t")
-    newvars = [sage.all.var("x%s" % i) for i in f.variables()]
+    t = var("t")
+    newvars = [var("x%s" % i) for i in f.variables()]
     for o, n in zip(f.variables(), newvars):
         f = f.subs({o: o+t*n})
-    d = sage.all.diff(f, t).limit(t=0)
+    d = diff(f, t).limit(t=0)
     return [d.coefficient(_) for _ in newvars]
 
 #
@@ -35,6 +36,7 @@ def tangent_vector(f):
 
 def order_of_derivative(e):
     '''Returns the vector of the orders of a derivative respect to its variables
+    >>> from delierium import *
     >>> x,y,z = sage.all.var ("x,y,z")
     >>> f = sage.all.function("f")(x,y,z)
     >>> d = sage.all.diff(f, x,x,y,z,z,z)
@@ -69,13 +71,14 @@ def __lt__(a, b):
 
 def is_derivative(e):
     '''checks whether an expression 'e' is a pure derivative
-    >>> x = sage.all.var('x')
-    >>> f = sage.all.function ('f')(x)
+    >>> from delierium import *
+    >>> x = var('x')
+    >>> f = function ('f')(x)
     >>> is_derivative (f)
     False
-    >>> is_derivative (sage.all.diff(f,x))
+    >>> is_derivative (diff(f,x))
     True
-    >>> is_derivative (sage.all.diff(f,x)*x)
+    >>> is_derivative (diff(f,x)*x)
     False
     '''
     try:
@@ -88,13 +91,14 @@ def is_function(e):
     '''checks whether an expression 'e' is a pure function without any 
     derivative as a factor
     
-    >>> x = sage.all.var('x')
-    >>> f = sage.all.function ('f')(x)
+    >>> from delierium import *
+    >>> x = var('x')
+    >>> f = function ('f')(x)
     >>> is_function (f)
     True
-    >>> is_function (sage.all.diff(f,x))
+    >>> is_function (diff(f,x))
     False
-    >>> is_function (x*sage.all.diff(f,x))
+    >>> is_function (x*diff(f,x))
     False
     '''
     try:
