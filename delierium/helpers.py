@@ -148,6 +148,9 @@ def monomial_to_vector(m, sort=None):
     >>> x1,x3,x3 = var("x1 x2 x3")
     >>> monomial_to_vector (x1**4 * x2**2 * x3**1)
     [4, 2, 1]
+    >>> x1,x3,x3 = var("x1 x2 x3")
+    >>> monomial_to_vector (x2**2 * x3**1)
+    [0, 2, 1]
     '''
     res = []
     for _m in m.operands():
