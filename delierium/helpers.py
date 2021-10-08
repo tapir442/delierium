@@ -142,6 +142,7 @@ def vector_to_monomial(v, sort=None):
     vars = var(" ".join('x%s' % _ for _ in range(1, len(v)+1)))
     return reduce(__mul__, [v**e for v, e in zip(vars, v)], 1)
 
+
 def monomial_to_vector(m, sort=None):
     '''
     >>> from delierium.helpers import monomial_to_vector
@@ -154,10 +155,10 @@ def monomial_to_vector(m, sort=None):
     '''
     res = []
     for _m in m.operands():
-        if _m.operands ():
-            res.append (_m.operands()[1])
+        if _m.operands():
+            res.append(_m.operands()[1])
         else:
-            res.append (1)
+            res.append(1)
     return res
 
 
