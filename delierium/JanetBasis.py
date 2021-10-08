@@ -14,16 +14,18 @@ from IPython.core.debugger import set_trace
 
 @functools.total_ordering
 class DTerm:
-#    '''differential term
-#        >>> x,y,z = sage.all.var("x y z")
-#        >>> f     = sage.all.function("f")(x,y,z)
-#        >>> g     = sage.all.function("g")(x,y,z)   
-#        >>> h     = sage.all.function("h")(x,y,z)    
-#        >>> ctx   = Context ((f,g),(x,y,z))
-##        >>> d     = (x**2) * sage.all.diff(f, x, y)
- #       >>> DTerm(d,ctx)
- #       hansi    
- #   '''
+    '''differential term
+
+        >>> from .JanetBasis import DTerm
+        >>> x,y,z = sage.all.var("x y z")
+        >>> f     = sage.all.function("f")(x,y,z)
+        >>> g     = sage.all.function("g")(x,y,z)
+        >>> h     = sage.all.function("h")(x,y,z)
+        >>> ctx   = Context ((f,g),(x,y,z))
+        >>> d     = (x**2) * sage.all.diff(f, x, y)
+        >>> DTerm(d,ctx)
+        hansi
+    '''
     def __init__(self, e, context=None):
         self._coeff = Rational(1)
         self._d = Rational(0)
@@ -64,7 +66,7 @@ class DTerm:
 
     def __nonzero__ (self):
         return bool(self.term())
-        
+
     def is_coefficient(self):
         # XXX nonsense
         return self._d == 1
@@ -165,7 +167,7 @@ class Differential_Polynomial:
 
     def Lfunc (self):
         return self.Lder().operator().function()
-    
+
     def coefficients(self):
         for p in self._p:
             yield p._coeff
@@ -326,6 +328,10 @@ def multipliers(m, M, Vars):
     """Multipliers for Monomials
     Vars are assumed to be sorted ascending
     Janet-Like Monomial Division (Gerdt, Blinkov)
+
+    >>> x1, x2, x3 = var ("x1 x2 x3")
+    >>> print ("c")
+    d
     """
     assert (m in M)
     # ToDo: convert to differential vectors and use vec_multipliers!
