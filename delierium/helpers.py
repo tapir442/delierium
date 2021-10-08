@@ -130,6 +130,34 @@ def is_function(e):
     except AttributeError:
         pass
 
+
+def vector_to_monomial(v, sort=None):
+    '''
+    >>> from delierium.helpers import vector_to_monomial
+    >>> vector_to_monomial ([1,2,3,4])
+    x1*x2^2*x3^3*x4^4
+    '''
+    from functools import reduce
+    from operator import __mul__
+    vars = var(" ".join('x%s' % _ for _ in range(1, len(v)+1)))
+    return reduce(__mul__, [v**e for v, e in zip(vars, v)], 1)
+
+def monomial_to_vector(m, sort=None):
+    '''
+    >>> from delierium.helpers import monomial_to_vector
+    >>> x1,x3,x3 = var("x1 x2 x3")
+    >>> monomial_to_vector (x1**4 * x2**2 * x3**1)
+    [4, 2, 1]
+    '''
+    res = []
+    for _m in m.operands():
+        if _m.operands ():
+            res.append (_m.operands()[1])
+        else:
+            res.append (1)
+    return res
+
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
