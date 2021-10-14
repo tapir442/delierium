@@ -6,9 +6,10 @@
 
 # strange ! this import works in every other module
 from sage.calculus.functional import diff
-from sage.calculus.var import function, var
+from sage.calculus.var import var
 from collections.abc import Iterable
 from sage.symbolic.operators import FDerivativeOperator
+
 
 def tangent_vector(f):
     r"""
@@ -66,18 +67,19 @@ def order_of_derivative(e):
     '''
     opr = e.operator()
     opd = e.operands()
-    if not is_derivative (e):
+    if not is_derivative(e):
         return [0] * len(e.variables())
     res = [opr.parameter_set().count(i) for i in range(len(opd))]
     return res
 
+
 def highest_order_of_derivative(e):
     # xxx _of_ in function name is annyoing
-    e      = e if isinstance(e, Iterable) else [e]
-    return max([sum (order_of_derivative(_)) for _ in e])
+    e = e if isinstance(e, Iterable) else [e]
+    return max([sum(order_of_derivative(_)) for _ in e])
 
 
-#def __lt__(a, b):
+# def __lt__(a, b):
 #    '''
 #    sorts functions lexicographically
 #    '''
@@ -143,22 +145,32 @@ def vector_to_monomial(v, sort=None):
     return reduce(__mul__, [v**e for v, e in zip(vars, v)], 1)
 
 
-def monomial_to_vector(m, sort=None):
+def monomial_to_vector(m, no_of_variables, sort=None):
     '''
     >>> from delierium.helpers import monomial_to_vector
     >>> x1,x3,x3 = var("x1 x2 x3")
-    >>> monomial_to_vector (x1**4 * x2**2 * x3**1)
+    >>> monomial_to_vector (x1**4 * x2**2 * x3**1, 3)
     [4, 2, 1]
     >>> x1,x3,x3 = var("x1 x2 x3")
-    >>> monomial_to_vector (x2**2 * x3**1)
+    >>> monomial_to_vector (x2**2 * x3**1, 3)
     [0, 2, 1]
     '''
     res = []
-    for _m in m.operands():
-        if _m.operands():
-            res.append(_m.operands()[1])
-        else:
-            res.append(1)
+    vars = var(" ".join('x%s' % _ for _ in range(1, no_of_variables+1)))
+    operands = m.operands()
+    def get_exponent(v, o):
+        for _o in o:
+            ops = _o.operands()
+            if ops:
+                if bool(v == ops[0]):
+                    return ops[1]
+            else:
+                if bool(v == _o):
+                    return 1
+
+        return 0
+    for _var in vars:
+        res.append (get_exponent (_var, operands))
     return res
 
 
