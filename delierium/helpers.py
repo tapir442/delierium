@@ -3,8 +3,6 @@
 # coding: utf-8
 # -
 
-
-# strange ! this import works in every other module
 from sage.calculus.functional import diff
 from sage.calculus.var import var
 from collections.abc import Iterable
@@ -58,6 +56,7 @@ def tangent_vector(f):
 
 def order_of_derivative(e):
     '''Returns the vector of the orders of a derivative respect to its variables
+
     >>> x,y,z = var ("x,y,z")
     >>> f = function("f")(x,y,z)
     >>> d = diff(f, x,x,y,z,z,z)
