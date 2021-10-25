@@ -6,6 +6,8 @@ from functools import lru_cache
 from sage.all import *
 from sage.modules.free_module_element import vector
 from sage.matrix.constructor import matrix
+from sage.symbolic.function_factory import function
+from sage.calculus.var import var
 try:
     from delierium.helpers import *
 except (ImportError, ModuleNotFoundError):
@@ -22,13 +24,31 @@ def insert_row(M,k,row):
     return matrix(M.rows()[:k]+[row]+M.rows()[k:])
 
 
-
-@lru_cache()
-def Mlex(f, v):
+def Mlex(funcs, vars):
     '''Generates the "cotes" according to Riquier for the lex ordering
+    INPUT : funcs: a list of functions
+            vars: a list of variables
+            these are not used directly , just their lenght is interasting, but so the
+            consumer doesn't has the burden of computing the length of list but
+            the lists directly from contex
+    OUTPUT: a matrix which when multiplying an augmented vector (func + var) gives
+            the vector in lex order
+            
+            same applies mutas mutandis for Mgrlex and Mgrevlex
+            
+    >>> x,y,z = var ("x y z")
+    >>> f = function("f")(x,y,z)
+    >>> g = function("g")(x,y,z)
+    >>> h = function("h")(x,y,z)
+    >>> from delierium.MatrixOrder import Mlex
+    >>> Mlex ((f,g), [x,y,z])
+    [0 0 0 2 1]
+    [1 0 0 0 0]
+    [0 1 0 0 0]
+    [0 0 1 0 0]    
     '''
-    m = len(f)
-    n = len(v)
+    m = len(funcs)
+    n = len(vars)
     i = matrix.identity(n)
     i = insert_row(i, 0, [0]*n)
     for j in range(m, 0, -1):
@@ -36,17 +56,42 @@ def Mlex(f, v):
     return i
 
 
-@lru_cache()
-def Mgrlex(f, v):
-    m = Mlex(f, v)
-    m = insert_row(m, 0, [1]*len(v)+[0]*len(f))
+def Mgrlex(funcs, vars):
+    '''Generates the "cotes" according to Riquier for the grlex ordering
+    >>> x,y,z = var ("x y z")
+    >>> f = function("f")(x,y,z)
+    >>> g = function("g")(x,y,z)
+    >>> h = function("h")(x,y,z)
+    >>> from delierium.MatrixOrder import Mgrlex
+    >>> Mgrlex ((f,g,h), [x,y,z])
+    [1 1 1 0 0 0]
+    [0 0 0 3 2 1]
+    [1 0 0 0 0 0]
+    [0 1 0 0 0 0]
+    [0 0 1 0 0 0]    
+    '''
+    m = Mlex(funcs, vars)
+    m = insert_row(m, 0, [1]*len(vars)+[0]*len(funcs))
     return m
 
 
-@lru_cache()
-def Mgrevlex(f, v):
-    m = len(f)
-    n = len(v)
+def Mgrevlex(funcs, vars):
+    '''Generates the "cotes" according to Riquier for the grevlex ordering
+    >>> x,y,z = var ("x y z")
+    >>> f = function("f")(x,y,z)
+    >>> g = function("g")(x,y,z)
+    >>> h = function("h")(x,y,z)
+    >>> from delierium.MatrixOrder import Mgrevlex
+    >>> Mgrevlex ((f,g,h), [x,y,z])
+    [ 1  1  1  0  0  0]
+    [ 0  0  0  3  2  1]
+    [ 0  0 -1  0  0  0]
+    [ 0 -1  0  0  0  0]
+    [-1  0  0  0  0  0]
+    '''
+    
+    m = len(funcs)
+    n = len(vars)
     l = Matrix([1]*n + [0]*m)
     l = insert_row(l, 1, vector([0]*n + [_ for _ in range(m, 0, -1)]))
     for idx in range(n):
@@ -56,7 +101,6 @@ def Mgrevlex(f, v):
     return l
 
 
-@lru_cache()
 def idx(d, dependent, independent):
     '''helper function'''
     # this caching gains about 30 % of runtime,
