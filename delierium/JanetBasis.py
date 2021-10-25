@@ -1,6 +1,6 @@
 from sage.calculus.functional import diff
 try:
-    from delierium.MatrixOrder  import *
+    from delierium.MatrixOrder import Context, higher
 except ImportError:
     from MatrixOrder import *
 try:
@@ -18,7 +18,8 @@ from IPython.core.debugger import set_trace
 class DTerm:
     r'''differential term
 
-        >>> from .JanetBasis import DTerm
+        >>> from delierium.JanetBasis import DTerm
+        >>> from delierium.MatrixOrder import Context
         >>> x,y,z = sage.all.var("x y z")
         >>> f     = sage.all.function("f")(x,y,z)
         >>> g     = sage.all.function("g")(x,y,z)
@@ -29,8 +30,8 @@ class DTerm:
         hansi
     '''
     def __init__(self, e, context=None):
-        self._coeff = Rational(1)
-        self._d = Rational(0)
+        self._coeff = 1
+        self._d     = 0
         self._context = context
         if is_derivative(e) or is_function(e):
             # XXX put into _d only if in context (homogenous polynomial!)
@@ -47,9 +48,9 @@ class DTerm:
                         r.append(o)
             # XXX : is simplify_full better ?
             self._coeff = functools.reduce(mul, r, 1).expand().simplify()
-            if bool(self._coeff == Integer(1)):
+            if bool(self._coeff == 1):
                 self._coeff = 1
-            if bool(self._coeff == Integer(0)):
+            if bool(self._coeff == 0):
                 self._coeff = 0
             if not r:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
@@ -181,7 +182,7 @@ class Differential_Polynomial:
 
     def normalize(self):
         if self._p:
-            if bool(self._p[0]._coeff == Integer(1)):
+            if bool(self._p[0]._coeff == 1):
                 self._p[0]._coeff = 1
             else:
                 self._p = [
@@ -293,9 +294,7 @@ def reduce(e1: Differential_Polynomial, e2: Differential_Polynomial,
                         variables_to_diff.extend(
                             [context._independent[i]]*abs(dif[i]))
                 return Differential_Polynomial(
-                        e1.expression()-
-                        c*diff(e2.expression(),
-                        *variables_to_diff),
+                        e1.expression() - c*diff(e2.expression(), *variables_to_diff),
                         context)
         return e
 
@@ -414,8 +413,9 @@ class Differential_Vector:
 
     # XXX use functools.cmp_to_key ?
     def mycmp(self, a, b):
-        a = self.M*vector(a)
-        b = self.M*vector(b)
+        from sage.combinat.integer_vector import IntegerVector as IV
+        a = self.M*IV(a)
+        b = self.M*IV(b)
         v = [_a - _b for _a, _b in zip(a, b)]
         # XXX check order
         for _ in v:
@@ -446,6 +446,7 @@ def derivative_to_vec(d, context):
 
 def complete(l, ctx):
     '''
+    >>> from delierium.MatrixOrder import Context
     >>> from delierium import *
     >>> from sage.all import *
     >>> x1,x2,x3=var("x1 x2 x3")
@@ -470,7 +471,10 @@ def complete(l, ctx):
      x1^3*x2*x3^3,
      x2*x3]
     '''
-    leading_derivatives = [derivative_to_vec(_, ctx) for _ in l]
+    if len(l) == 1:
+        return l
+    leading_derivatives = [_.Lder() for _ in l]
+    leading_derivatives = [derivative_to_vec(_, ctx) for _ in leading_derivatives]
     sort_order          = tuple(reversed([i for i in range(len(ctx._independent))]))
     m0                  = []
     for m, monomial in zip(leading_derivatives, l):
@@ -492,11 +496,15 @@ def complete(l, ctx):
 
 def CompleteSystem(S, context):
     s = {}
+    set_trace()
+    print ("S1: Separation")
     for _ in S:
         _fun = _.Lder().operator().function()
         s.setdefault(_fun, []).append(_)
+    pprint (s)
     res = []
     for k in s:
+        print ("S2: complete ", k)
         _ = complete(s[k], context)
         res.extend(_)
     return Reorder(res, context, ascending=True)
