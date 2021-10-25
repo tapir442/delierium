@@ -2,6 +2,7 @@
 # coding: utf-8
 
 from functools import lru_cache
+from IPython.core.debugger import set_trace
 
 from sage.all import *
 from sage.modules.free_module_element import vector
@@ -77,10 +78,10 @@ def Mgrlex(funcs, vars):
 
 def Mgrevlex(funcs, vars):
     '''Generates the "cotes" according to Riquier for the grevlex ordering
-    >>> x,y,z = var ("x y z")
-    >>> f = function("f")(x,y,z)
-    >>> g = function("g")(x,y,z)
-    >>> h = function("h")(x,y,z)
+    >>> _ = var ("x y z")
+    >>> f = function("f")(*_)
+    >>> g = function("g")(*_)
+    >>> h = function("h")(*_)
     >>> from delierium.MatrixOrder import Mgrevlex
     >>> Mgrevlex ((f,g,h), [x,y,z])
     [ 1  1  1  0  0  0]
@@ -88,13 +89,6 @@ def Mgrevlex(funcs, vars):
     [ 0  0 -1  0  0  0]
     [ 0 -1  0  0  0  0]
     [-1  0  0  0  0  0]
-    >>> x, y = var("x y")
-    >>> w = function ("w")(x,y)
-    >>> z = function ("z")(x,y)
-    >>> l1 = [z, diff(z, y), diff(z, x), diff (w, x, y), diff(z, x, x), diff(z, y,y), 
-    ...   w, diff(w, y), diff(w, x), diff (z, x, y), diff(w, x, x), diff(w, y,2)]    
-    >>> from functools import cmp_to_key
-    >>> s=sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, Mgrlex, (w,z), (x,y))))
     '''
     
     m = len(funcs)
@@ -120,7 +114,7 @@ def idx(d, dependent, independent):
 class Context:
     # XXX replace by named tuple? or attr.ib
     def __init__(self, dependent, independent, weight=Mlex):
-        """ sorting : (in)dependent [i] > dependent [i+i]        
+        """ sorting : both dependent and independent in DECREASING order 
         """
         # XXX maybe we can create the matrices here?
         self._independent = tuple(independent)
@@ -134,14 +128,26 @@ def higher(d1, d2, context):
     
     Given two derivatives d1 and d2 and a weight matrix it returns
     True if d2 does not preceed d1 
+    
+    >>> x, y = var("x y")
+    >>> w = function ("w")(x,y)
+    >>> z = function ("z")(x,y)
+    >>> l1 = [z, diff(z, y), diff(z, x), diff (w, x, y), diff(z, x, x), diff(z, y,y), 
+    ...   w, diff(w, y), diff(w, x), diff (z, x, y), diff(w, x, x), diff(w, y,2)]    
+    >>> from functools import cmp_to_key
+    >>> from delierium.MatrixOrder import higher, Context, Mgrevlex, Mlex, Mgrlex
+    >>> from delierium.JanetBasis import DTerm
+    >>> ctx = Context((w,z),(y,x), Mgrevlex)
+    >>> l1 = [DTerm(_) for  _ in l1]    
+    >>> higher (l1[1], l1[0], ctx)
     '''
     if d1 == d2:
         return True
-    d1 = d1._d
-    d2 = d2._d
     d1idx = idx(d1, context._dependent, context._independent)
     d2idx = idx(d2, context._dependent, context._independent)
 
+    mausi = open("mausi.txt", "w")
+    mausi.write ("%s:%s:%s:%s\n" % (d1, d2, d1idx, d2idx))
     i1v = [0]*len(context._dependent)
     i2v = [0]*len(context._dependent)
     # pure function corresponds with all zeros
@@ -162,6 +168,30 @@ def higher(d1, d2, context):
             return entry > 0
     return False
 
+
+def sorter (d1, d2, context = Mlex):
+    '''sorts two derivatives d1 and d2 using the weight matrix M
+    according to the sort order given in the tuple of  dependent and independent variables
+    
+    >>> x, y = var("x y")
+    >>> w = function ("w")(x,y)
+    >>> z = function ("z")(x,y)
+    >>> l1 = [z, diff(z, y), diff(z, x), diff (w, x, y), diff(z, x, x), diff(z, y,y), 
+    ...   w, diff(w, y), diff(w, x), diff (z, x, y), diff(w, x, x), diff(w, y,2)]    
+    >>> from functools import cmp_to_key
+    >>> from delierium.MatrixOrder import higher, Context, Mgrevlex, Mlex, Mgrlex, sorter
+    >>> from delierium.JanetBasis import DTerm
+    >>> ctx = Context((w,z),(y,x), Mlex)
+    >>> l1 = [DTerm(_, ctx) for  _ in l1]    
+    >>> s = sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctx)))
+    >>> s = [_.__str__() for _ in s]    
+    >>> s
+    '''
+    if d1 == d2:
+        return 0
+    if higher (d1, d2, context):
+        return 1
+    return -1
 
 if __name__ == "__main__":
     import doctest

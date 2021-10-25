@@ -6,6 +6,8 @@ except ImportError:
     from delierium.helpers import *
 except (ImportError, ModuleNotFoundError):
     from helpers import *
+    
+from delierium.helpers import is_function, is_derivative
 
 from pprint import pprint
 import functools
@@ -55,7 +57,10 @@ class DTerm:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
 
     def __str__(self):
-        return "{} * {}".format(self._coeff, self._d)
+        if self._coeff != 1:
+            return "{} * {}".format(self._coeff, self._d)
+        else:
+            return "{}".format(self._d)
 
     def term(self):
         return self._coeff * self._d
