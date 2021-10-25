@@ -19,7 +19,7 @@ def tangent_vector(f):
 
     INPUT:
 
-    - ``f`` - symbolic expressinf of type 'function'
+    - ``f`` - symbolic expression of type 'function'
 
     OUTPUT:
 

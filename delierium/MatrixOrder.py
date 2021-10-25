@@ -3,8 +3,9 @@
 
 from functools import lru_cache
 
-import sage.all
-
+from sage.all import *
+from sage.modules.free_module_element import vector
+from sage.matrix.constructor import matrix
 try:
     from delierium.helpers import *
 except (ImportError, ModuleNotFoundError):
@@ -16,6 +17,11 @@ except (ImportError, ModuleNotFoundError):
 # according to 'Term orders and Rankings' Schwarz, pp 43.
 #
 
+# insert_row is only defined for integer matrices :(
+def insert_row(M,k,row):
+    return matrix(M.rows()[:k]+[row]+M.rows()[k:])
+
+
 
 @lru_cache()
 def Mlex(f, v):
@@ -24,7 +30,7 @@ def Mlex(f, v):
     m = len(f)
     n = len(v)
     i = matrix.identity(n)
-    i = i.insert_row(0, [Integer(0)]*n)
+    i = insert_row(i, 0, [0]*n)
     for j in range(m, 0, -1):
         i = i.augment(vector([j] + [0]*n))
     return i
@@ -33,7 +39,7 @@ def Mlex(f, v):
 @lru_cache()
 def Mgrlex(f, v):
     m = Mlex(f, v)
-    m = m.insert_row(0, [Integer(1)]*len(v)+[Integer(0)]*len(f))
+    m = insert_row(m, 0, [1]*len(v)+[0]*len(f))
     return m
 
 
@@ -41,13 +47,12 @@ def Mgrlex(f, v):
 def Mgrevlex(f, v):
     m = len(f)
     n = len(v)
-    # why is this integer conversion necessary?
-    l = Matrix([Integer(1)]*n + [Integer(0)]*m)
-    l = l.insert_row(1, vector([0]*n + [Integer(_) for _ in range(m, 0, -1)]))
+    l = Matrix([1]*n + [0]*m)
+    l = insert_row(l, 1, vector([0]*n + [_ for _ in range(m, 0, -1)]))
     for idx in range(n):
         _v = vector([0]*(n+m))
         _v[n-idx-1] = -1
-        l = l.insert_row(2+idx, _v)
+        l = insert_row(l, 2+idx, _v)
     return l
 
 
@@ -74,7 +79,11 @@ class Context:
 
 
 def higher(d1, d2, context):
-    '''Algorithm 2.3 from [Schwarz]'''
+    '''Algorithm 2.3 from [Schwarz]
+    
+    Given two derivatives d1 and d2 and a weight matrix it returns
+    True if d2 does not preceed d1 
+    '''
     if d1 == d2:
         return True
     d1 = d1._d
