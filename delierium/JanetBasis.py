@@ -3,7 +3,6 @@ try:
     from delierium.MatrixOrder import Context, higher
 except ImportError:
     from MatrixOrder import *
-try:
     from delierium.helpers import *
 except (ImportError, ModuleNotFoundError):
     from helpers import *
@@ -477,6 +476,7 @@ def complete(l, ctx):
     leading_derivatives = [derivative_to_vec(_, ctx) for _ in leading_derivatives]
     sort_order          = tuple(reversed([i for i in range(len(ctx._independent))]))
     m0                  = []
+    set_trace()
     for m, monomial in zip(leading_derivatives, l):
         _, nonmult = vec_multipliers(m, leading_derivatives, sort_order)
         for nm in nonmult:
@@ -496,12 +496,10 @@ def complete(l, ctx):
 
 def CompleteSystem(S, context):
     s = {}
-    set_trace()
     print ("S1: Separation")
     for _ in S:
         _fun = _.Lder().operator().function()
         s.setdefault(_fun, []).append(_)
-    pprint (s)
     res = []
     for k in s:
         print ("S2: complete ", k)
