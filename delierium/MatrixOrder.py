@@ -88,6 +88,13 @@ def Mgrevlex(funcs, vars):
     [ 0  0 -1  0  0  0]
     [ 0 -1  0  0  0  0]
     [-1  0  0  0  0  0]
+    >>> x, y = var("x y")
+    >>> w = function ("w")(x,y)
+    >>> z = function ("z")(x,y)
+    >>> l1 = [z, diff(z, y), diff(z, x), diff (w, x, y), diff(z, x, x), diff(z, y,y), 
+    ...   w, diff(w, y), diff(w, x), diff (z, x, y), diff(w, x, x), diff(w, y,2)]    
+    >>> from functools import cmp_to_key
+    >>> s=sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, Mgrlex, (w,z), (x,y))))
     '''
     
     m = len(funcs)
