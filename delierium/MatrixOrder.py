@@ -1,20 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from functools import lru_cache
-from IPython.core.debugger import set_trace
-
 from sage.all import *
-from sage.modules.free_module_element import vector
-from sage.matrix.constructor import matrix
-from sage.symbolic.function_factory import function
-from sage.calculus.var import var
-try:
-    from delierium.helpers import *
-except (ImportError, ModuleNotFoundError):
-    print ("damned")
-    from helpers import *    
-
+from functools import cache
+import delierium.helpers as helpers
+import doctest
 #
 # standard weight matrices for lex, grlex and grevlex order
 # according to 'Term orders and Rankings' Schwarz, pp 43.
@@ -25,13 +15,15 @@ def insert_row(M,k,row):
     return matrix(M.rows()[:k]+[row]+M.rows()[k:])
 
 
+
+
 def Mlex(funcs, vars):
     '''Generates the "cotes" according to Riquier for the lex ordering
-    INPUT : funcs: a list of functions
-            vars: a list of variables
+    INPUT : funcs: a tuple of functions (tuple for caching reasons)
+            vars: a tuple of variables
             these are not used directly , just their lenght is interasting, but so the
             consumer doesn't has the burden of computing the length of list but
-            the lists directly from contex
+            the lists directly from context
     OUTPUT: a matrix which when multiplying an augmented vector (func + var) gives
             the vector in lex order
             
@@ -90,7 +82,6 @@ def Mgrevlex(funcs, vars):
     [ 0 -1  0  0  0  0]
     [-1  0  0  0  0  0]
     '''
-    
     m = len(funcs)
     n = len(vars)
     l = Matrix([1]*n + [0]*m)
@@ -102,90 +93,81 @@ def Mgrevlex(funcs, vars):
     return l
 
 
-def idx(d, dependent, independent):
-    '''helper function'''
-    # this caching gains about 30 % of runtime,
-    # but still pretty slow.
-    if is_derivative(d):
-        return dependent.index(d.operator().function()(*list(independent)))
-    return -1
-
-
 class Context:
     # XXX replace by named tuple? or attr.ib
-    def __init__(self, dependent, independent, weight=Mlex):
-        """ sorting : both dependent and independent in DECREASING order 
+    def __init__ (self, dependent, independent, weight = Mlex):
+        """ sorting : (in)dependent [i] > dependent [i+i]
         """
         # XXX maybe we can create the matrices here?
         self._independent = tuple(independent)
-        self._dependent = tuple(dependent)
-        self._weight = weight
-        self._basefield = None # PolynomialRing(QQ, independent)
+        self._dependent   = tuple(dependent)
+        self._weight      = weight (self._dependent, self._independent)
+        self._basefield   = PolynomialRing(QQ, independent)
 
 
-def higher(d1, d2, context):
-    '''Algorithm 2.3 from [Schwarz]
-    
-    Given two derivatives d1 and d2 and a weight matrix it returns
-    True if d2 does not preceed d1 
-    
-    >>> x, y = var("x y")
-    >>> w = function ("w")(x,y)
-    >>> z = function ("z")(x,y)
-    >>> l1 = [z, diff(z, y), diff(z, x), diff (w, x, y), diff(z, x, x), diff(z, y,y), 
-    ...   w, diff(w, y), diff(w, x), diff (z, x, y), diff(w, x, x), diff(w, y,2)]    
-    >>> from functools import cmp_to_key
-    >>> from delierium.MatrixOrder import higher, Context, Mgrevlex, Mlex, Mgrlex
-    >>> from delierium.JanetBasis import DTerm
-    >>> ctx = Context((w,z),(y,x), Mgrevlex)
-    >>> l1 = [DTerm(_) for  _ in l1]    
-    >>> higher (l1[1], l1[0], ctx)
-    '''
-    if d1 == d2:
-        return True
-    d1idx = idx(d1, context._dependent, context._independent)
-    d2idx = idx(d2, context._dependent, context._independent)
+@cache
+def higher (d1 ,d2, context):
+    # XXX move to context?
+    '''Algorithm 2.3 from [Schwarz]'''
+    @cache
+    def idx (d):
+        if helpers.is_derivative (d):
+            return context._dependent.index(d.operator().function()(*list(context._independent)))
+        return -1
+    @cache
+    def get_derivative_vector(d):
+        i = idx(d)
+        iv = [0]*len(context._dependent)
+        if i >= 0:
+            iv[i] = 1
+            return vector(helpers.order_of_derivative(d) + iv)
+        else:
+            return vector([0]*len(context._independent) + iv)
 
-    mausi = open("mausi.txt", "w")
-    mausi.write ("%s:%s:%s:%s\n" % (d1, d2, d1idx, d2idx))
-    i1v = [0]*len(context._dependent)
-    i2v = [0]*len(context._dependent)
-    # pure function corresponds with all zeros
-    if d1idx >= 0:
-        i1v[d1idx] = 1
-        i1 = vector(order_of_derivative(d1) + i1v)
-    else:
-        i1 = vector([0]*len(context._independent) + i1v)
-    if d2idx >= 0:
-        i2v[d2idx] = 1
-        i2 = vector(order_of_derivative(d2) + i2v)
-    else:
-        i2 = vector([0]*len(context._independent) + i2v)
-    r = context._weight(context._dependent,
-                        context._independent) * vector(i1-i2)
+    i1 = get_derivative_vector(d1)
+    i2 = get_derivative_vector(d2)
+                
+    r = context._weight * vector(i1-i2)
     for entry in r:
         if entry:
             return entry > 0
     return False
 
-
+@cache
 def sorter (d1, d2, context = Mlex):
     '''sorts two derivatives d1 and d2 using the weight matrix M
     according to the sort order given in the tuple of  dependent and independent variables
-    
-    >>> x, y = var("x y")
-    >>> w = function ("w")(x,y)
-    >>> z = function ("z")(x,y)
-    >>> l1 = [z, diff(z, y), diff(z, x), diff (w, x, y), diff(z, x, x), diff(z, y,y), 
-    ...   w, diff(w, y), diff(w, x), diff (z, x, y), diff(w, x, x), diff(w, y,2)]    
+
+    >>> x, y, z = var("x y z")
+    >>> u = function ("u")(x,y,z)
     >>> from functools import cmp_to_key
     >>> from delierium.MatrixOrder import higher, Context, Mgrevlex, Mlex, Mgrlex, sorter
     >>> from delierium.JanetBasis import DTerm
-    >>> ctx = Context((w,z),(y,x), Mlex)
-    >>> l1 = [DTerm(_, ctx) for  _ in l1]    
-    >>> s = sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctx)))
-    >>> s = [_.__str__() for _ in s]    
-    >>> s
+    >>> ctxMlex = Context((u,),(x,y,z), Mlex)
+    >>> ctxMgrlex = Context((u,),(x,y,z), Mgrlex)
+    >>> ctxMgrevlex = Context((u,),(x,y,z), Mgrevlex)
+    >>> # this is the standard example stolen from wikipedia
+    >>> u0 = diff(u,x,3)
+    >>> u1 = diff(u,z,2)
+    >>> u2 = diff(u,x,y,y,z)
+    >>> u3 = diff(u, x,x,z,z)
+    >>> l1 = [u0, u1,u2,u3]
+    >>> shuffle(l1)
+    >>> sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctxMlex)))
+    [diff(u(x, y, z), z, z),
+     diff(u(x, y, z), x, y, y, z),
+     diff(u(x, y, z), x, x, z, z),
+     diff(u(x, y, z), x, x, x)]
+    >>> sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctxMgrlex)))
+    [diff(u(x, y, z), z, z),
+     diff(u(x, y, z), x, x, x),
+     diff(u(x, y, z), x, y, y, z),
+     diff(u(x, y, z), x, x, z, z)]
+    >>> sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctxMgrevlex)))
+    [diff(u(x, y, z), z, z),
+     diff(u(x, y, z), x, x, x),
+     diff(u(x, y, z), x, x, z, z),
+     diff(u(x, y, z), x, y, y, z)]
     '''
     if d1 == d2:
         return 0
