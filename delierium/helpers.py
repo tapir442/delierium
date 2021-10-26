@@ -1,15 +1,10 @@
-# +
-# #!/usr/bin/env python
-# coding: utf-8
-# -
-
-from sage.calculus.functional import diff
-from sage.calculus.var import var
+import sage.all
 from collections.abc import Iterable
-from sage.symbolic.operators import FDerivativeOperator
-
+import functools
 
 def tangent_vector(f):
+    # https://doc.sagemath.org/html/en/reference/manifolds/sage/manifolds/differentiable/tangent_vector.html?highlight=partial%20differential
+    # XXX:  There is TangentVector in Sage but a little bit more complicated. Does it pay to use that one ?
     r"""
     Do a tangent vector
 
@@ -44,6 +39,8 @@ def tangent_vector(f):
     [2*x]
 
     """
+    from sage.calculus.var import var
+    from sage.calculus.functional import diff
     t = var("t")
     newvars = [var("x%s" % i) for i in f.variables()]
     for o, n in zip(f.variables(), newvars):
@@ -52,9 +49,7 @@ def tangent_vector(f):
     return [d.coefficient(_) for _ in newvars]
 
 #
-
-
-def order_of_derivative(e):
+def order_of_derivative (e):
     '''Returns the vector of the orders of a derivative respect to its variables
 
     >>> x,y,z = var ("x,y,z")
@@ -64,32 +59,29 @@ def order_of_derivative(e):
     >>> order_of_derivative (d)
     [2, 1, 3]
     '''
-    opr = e.operator()
-    opd = e.operands()
-    if not is_derivative(e):
-        return [0] * len(e.variables())
-    res = [opr.parameter_set().count(i) for i in range(len(opd))]
+    opr = e.operator ()
+    opd = e.operands ()
+    if not isinstance(opr, sage.symbolic.operators.FDerivativeOperator):
+        return [0] * len (e.variables())
+    res = [opr.parameter_set().count(i) for i in range (len(opd))]
     return res
 
+#def highest_order_of_derivative(e):
+#    # xxx _of_ in function name is annyoing
+#    e      = e if isinstance(e, Iterable) else [e]
+#    return max([sum (order_of_derivative(_)) for _ in e])
 
-def highest_order_of_derivative(e):
-    # xxx _of_ in function name is annyoing
-    e = e if isinstance(e, Iterable) else [e]
-    return max([sum(order_of_derivative(_)) for _ in e])
-
-
-# def __lt__(a, b):
-#    '''
-#    sorts functions lexicographically
-#    '''
-#    astr = a.operator().__str__()
-#   bstr = b.operator().__str__()
-#    if astr < bstr:
-#        return -1
-#    if astr > bstr:
-#        return 1
-#    return 0
-
+def __lt__ (a,b):
+    '''
+    sorts functions lexicographically
+    '''
+    astr = a.operator().__str__()
+    bstr = b.operator().__str__()
+    if astr < bstr:
+        return -1
+    if astr > bstr:
+        return 1
+    return 0
 
 def is_derivative(e):
     '''checks whether an expression 'e' is a pure derivative
@@ -104,10 +96,10 @@ def is_derivative(e):
     >>> is_derivative (diff(f,x)*x)
     False
     '''
-    try:
-        return isinstance(e.operator(), FDerivativeOperator)
+    try :
+        return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
     except AttributeError:
-        pass
+        return False
 
 
 def is_function(e):
@@ -124,12 +116,12 @@ def is_function(e):
     >>> is_function (x*diff(f,x))
     False
     '''
-    try:
+    try :
         # XXX this must done more sagemathic if possible
-        return "NewSymbolicFunction" in e.operator().__class__.__name__ and \
+        return "NewSymbolicFunction" in e.operator ().__class__.__name__ and \
             e.operands() != []
     except AttributeError:
-        pass
+        return False
 
 
 def vector_to_monomial(v, sort=None):
@@ -171,8 +163,3 @@ def monomial_to_vector(m, no_of_variables, sort=None):
     for _var in vars:
         res.append (get_exponent (_var, operands))
     return res
-
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
