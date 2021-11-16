@@ -10,32 +10,31 @@ import doctest
 # according to 'Term orders and Rankings' Schwarz, pp 43.
 #
 
-def Mlex(f, v):
+def Mlex(funcs, vars):
     '''Generates the "cotes" according to Riquier for the lex ordering
     '''
-    m = len(f)
-    n = len(v)
+    m = len(funcs)
+    n = len(vars)
     i = matrix.identity(n)
     i = i.insert_row(0, [Integer(0)]*n)
-    for j in range(m,0,-1):
-        i = i.augment (vector([j] + [0]*n))
+    for j in range(m, 0, -1):
+        i = i.augment(vector([j] + [Integer(0)]*n))
     return i
 
 
-def Mgrlex(f, v):
-    m = Mlex(f,v)
-    m = m.insert_row(0, [Integer(1)]*len(v)+[Integer(0)]*len(f))
+def Mgrlex(funcs, vars):
+    m = Mlex(funcs,vars)
+    m = m.insert_row(0, [Integer(1)]*len(vars)+[Integer(0)]*len(funcs))
     return m
 
-def Mgrevlex(f,v):
-    m = len(f)
-    n = len(v)
-    # why is this integer conversion necessary?
+def Mgrevlex(funcs, vars):
+    m = len(funcs)
+    n = len(vars)
     l = Matrix([Integer(1)]*n + [Integer(0)]*m)
     l = l.insert_row(1, vector([0]*n + [Integer(_) for _ in range(m,0,-1)]))
-    for idx in range (n):
-        _v = vector([0]*(n+m))
-        _v [n-idx-1] = -1
+    for idx in range(n):
+        _v = vector([Integer(0)]*(n+m))
+        _v[n-idx-1] = -1
         l = l.insert_row(2+idx, _v)
     return l
 
@@ -51,12 +50,34 @@ class Context:
         self._weight      = weight
         self._basefield   = PolynomialRing(QQ, independent)
 
+
+@cache
 def higher (d1 ,d2, context):
     # XXX move to context?
     '''Algorithm 2.3 from [Schwarz]'''
     @cache        
     def idx (d):
-        '''helper function'''
+        '''helper function
+        returns the index of the function name of the given derivative 'd' within
+        the tuple of dependent variables
+    
+        >>> from delierium.MatrixOrder import idx
+        >>> vars = var("x y z")
+        >>> f=function("f")(*vars)
+        >>> g=function("g")(*vars)
+        >>> h=function("h")(*vars)    
+        >>> df = diff (f, x,y)
+        >>> dg = diff (g, z,x)
+        >>> dh = diff (h,x)
+        >>> idx (df, (f,g,h))
+        0
+        >>> idx (df, (g,h,f))
+        2
+        >>> idx (df, (h,f,g))
+        1
+        >>> idx (f, (f,g,h))
+        -1
+        '''
         if helpers.is_derivative (d):
             return context._dependent.index(d.operator().function()(*list(context._independent)))
         return -1

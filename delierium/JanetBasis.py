@@ -56,6 +56,9 @@ class DTerm:
     def is_monic(self):
         return self._d != 1 and bool(self._coeff == 1)
     def __lt__ (self, other):
+        # XXX one third of the time is spent here and __eq__
+        # rethink the functools.total_ordering approach or find a way of 
+        # efficient caching
         return higher (self, other,self._context) and not self == other
     def __eq__ (self, other):
         return self._d == other._d and bool(self._coeff == other._coeff)
