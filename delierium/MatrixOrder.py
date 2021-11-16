@@ -40,14 +40,6 @@ def Mgrevlex(f,v):
     return l
 
 
-def idx (d, dependent, independent):
-    '''helper function'''
-    # this caching gains about 30 % of runtime,
-    # but still pretty slow.
-    if helpers.is_derivative (d):
-        return dependent.index(d.operator().function()(*list(independent)))
-    return -1
-
 class Context:
     # XXX replace by named tuple? or attr.ib
     def __init__ (self, dependent, independent, weight = Mlex):
@@ -59,16 +51,22 @@ class Context:
         self._weight      = weight
         self._basefield   = PolynomialRing(QQ, independent)
 
-@cache        
 def higher (d1 ,d2, context):
     # XXX move to context?
     '''Algorithm 2.3 from [Schwarz]'''
+    @cache        
+    def idx (d):
+        '''helper function'''
+        if helpers.is_derivative (d):
+            return context._dependent.index(d.operator().function()(*list(context._independent)))
+        return -1
+    
     if d1 == d2:
         return True
     d1 = d1._d
     d2 = d2._d
-    d1idx = idx(d1, context._dependent, context._independent)
-    d2idx = idx(d2, context._dependent, context._independent)
+    d1idx = idx(d1)
+    d2idx = idx(d2)
     
     i1v = [0]*len(context._dependent)
     i2v = [0]*len(context._dependent)
