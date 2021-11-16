@@ -4,7 +4,7 @@
 # -
 
 from sage.all import *
-from pylie import *
+from delierium import *
 from pprint import pprint
 import functools
 from operator import mul
@@ -33,6 +33,7 @@ class DTerm:
                         self._d = o  # zeroth derivative
                     else:
                         r.append (o)
+            # XXX how to get rid of simpify_full? It's eating up all the cpu
             self._coeff = functools.reduce (mul, r, 1).expand().simplify_full()
             if bool(self._coeff == Integer(1)):
                 self._coeff = 1
@@ -62,7 +63,8 @@ class DTerm:
         self.term().show()
     def expression (self):
         return self.term().expression()
-
+    def __hash__ (self):
+        return hash(repr(self))
 
 @functools.total_ordering
 class Differential_Polynomial:
@@ -157,9 +159,11 @@ class Differential_Polynomial:
         return self._p
     def expression (self):
         return sum(_._coeff * _._d for _ in self._p)
+    @functools.cache    
     def __lt__ (self, other):
         # very slow ....
         return self._p[0] < other._p[0]
+    @functools.cache
     def __eq__ (self, other):
         return all(bool(_[0] == _[1]) for _ in zip (self._p, other._p))
     def show(self):
@@ -173,6 +177,8 @@ class Differential_Polynomial:
     def __copy__(self):
         newone = type(self)(self.expression(), self._context)
         return newone
+    def __hash__ (self):
+        return hash(repr(self))
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ....
 def Reorder (S, context, ascending = False):

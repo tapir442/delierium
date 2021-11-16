@@ -2,14 +2,14 @@
 # coding: utf-8
 
 from sage.all import *
-from functools import lru_cache
-import pylie.helpers as helpers
+from functools import cache
+import delierium.helpers as helpers
 import doctest
 #
 # standard weight matrices for lex, grlex and grevlex order
 # according to 'Term orders and Rankings' Schwarz, pp 43.
 #
-@lru_cache()
+
 def Mlex(f, v):
     '''Generates the "cotes" according to Riquier for the lex ordering
     '''
@@ -21,13 +21,12 @@ def Mlex(f, v):
         i = i.augment (vector([j] + [0]*n))
     return i
 
-@lru_cache()
+
 def Mgrlex(f, v):
     m = Mlex(f,v)
     m = m.insert_row(0, [Integer(1)]*len(v)+[Integer(0)]*len(f))
     return m
 
-@lru_cache()
 def Mgrevlex(f,v):
     m = len(f)
     n = len(v)
@@ -40,7 +39,7 @@ def Mgrevlex(f,v):
         l = l.insert_row(2+idx, _v)
     return l
 
-@lru_cache()
+
 def idx (d, dependent, independent):
     '''helper function'''
     # this caching gains about 30 % of runtime,
@@ -60,7 +59,9 @@ class Context:
         self._weight      = weight
         self._basefield   = PolynomialRing(QQ, independent)
 
+@cache        
 def higher (d1 ,d2, context):
+    # XXX move to context?
     '''Algorithm 2.3 from [Schwarz]'''
     if d1 == d2:
         return True
