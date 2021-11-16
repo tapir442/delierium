@@ -34,7 +34,7 @@ class DTerm:
                     else:
                         r.append (o)
             # XXX how to get rid of simpify_full? It's eating up all the cpu
-            self._coeff = functools.reduce (mul, r, 1).expand().simplify_full()
+            self._coeff = functools.reduce (mul, r, 1)
             if bool(self._coeff == Integer(1)):
                 self._coeff = 1
             if bool(self._coeff == Integer(0)):
@@ -152,20 +152,20 @@ class Differential_Polynomial:
             if bool (self._p[0]._coeff == Integer (1)):
                 self._p[0]._coeff = 1
             else:
-                self._p = [_ for _ in self._p if _._coeff and not bool(_._coeff == 0)]
+                self._p = [_ for _ in self._p if _._coeff]
                 c = self._p[0]._coeff
-                self._p = [ DTerm((_._coeff / c) * _._d, self._context) for _ in self._p]
+                # much better to have 'simplify' here
+                self._p = [DTerm((_._coeff / c).simplify() * _._d, self._context) for _ in self._p]
     def __nonzero__ (self):
         return self._p
     def expression (self):
         return sum(_._coeff * _._d for _ in self._p)
     @functools.cache    
     def __lt__ (self, other):
-        # very slow ....
         return self._p[0] < other._p[0]
     @functools.cache
     def __eq__ (self, other):
-        return all(bool(_[0] == _[1]) for _ in zip (self._p, other._p))
+        return all(bool(_[0]._d == _[1]._d) for _ in zip (self._p, other._p))
     def show(self):
         self.expression().show()
     def __sub__ (self, other):
@@ -391,6 +391,7 @@ def complete (l,ctx):
         l = [_._e for _ in l]
 
 def CompleteSystem(S, context):
+    #return S
     s = {}
     for _ in S:
         _fun = _.Lder().operator().function()
