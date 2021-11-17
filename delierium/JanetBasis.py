@@ -335,28 +335,30 @@ class Differential_Vector:
             ctx : context object representing the order of variables
         """
         self._e = self.obj = e
-        # is this the right place to do ? 
+        nops = self._e.number_of_operands()
+        # is this the right place to do ?
         if ctx._weight == Mlex:
-            M = matrix.identity(len(self._e))
+            M = matrix.identity(nops)
         elif ctx._weight == Mgrlex:
-            M = matrix (len(self._e))
-            for i in range(len(self._e)):
-                M [0, i] = 1
-            for i in range (len(self._e) - 1):
-                M [i+1, i] = 1
+            M = matrix(nops)
+            for i in range(nops):
+                M[0, i] = 1
+            for i in range(nops - 1):
+                M[i+1, i] = 1
         elif ctx._weight == Mgrevlex:
-            M = matrix (len(self._e))
-            for i in range(len(self._e)):
-                M [0, i] = 1
-            for i in range (1,len(self._e)):
-                M [len(self._e)-i, i] = -1
+            M = matrix(nops)
+            for i in range(nops):
+                M[0, i] = 1
+            for i in range(1, nops):
+                M[nops-i, i] = -1
         self.M = M
-        
-    #XXX use functools.cmp_to_key ?
-    def mycmp (self, a, b):
-        a = self.M*vector(a)
-        b = self.M*vector(b)
-        v = [_a - _b for _a,_b in zip (a, b)]
+
+    # XXX use functools.cmp_to_key ?
+    def mycmp(self, a, b):
+        from sage.combinat.integer_vector import IntegerVector as IV
+        a = self.M*IV(a)
+        b = self.M*IV(b)
+        v = [_a - _b for _a, _b in zip(a, b)]
         # XXX check order
         for _ in v:
             if _ < 0:

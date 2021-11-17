@@ -44,10 +44,9 @@ class Context:
     def __init__ (self, dependent, independent, weight = Mlex):
         """ sorting : (in)dependent [i] > dependent [i+i]        
         """
-        # XXX maybe we can create the matrices here?
         self._independent = tuple(independent)
         self._dependent   = tuple(dependent)
-        self._weight      = weight
+        self._weight      = weight (self._dependent, self._independent)
         self._basefield   = PolynomialRing(QQ, independent)
 
 
@@ -98,7 +97,7 @@ def higher (d1 ,d2, context):
         i2 = vector(helpers.order_of_derivative(d2) + i2v)
     else:
         i2 = vector([0]*len(context._independent) + i2v)
-    r = context._weight(context._dependent, context._independent) * vector(i1-i2)
+    r = context._weight * vector(i1-i2)
     for entry in r:
         if entry:
             return entry > 0
