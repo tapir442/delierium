@@ -53,12 +53,13 @@ class DTerm:
     def is_coefficient(self):
         # XXX nonsense
         return self._d == 1
+    
+    def derivative (self):
+        return self._d
+
     def is_monic(self):
         return self._d != 1 and bool(self._coeff == 1)
     def __lt__ (self, other):
-        # XXX one third of the time is spent here and __eq__
-        # rethink the functools.total_ordering approach or find a way of 
-        # efficient caching
         return higher (self, other,self._context) and not self == other
     def __eq__ (self, other):
         return self._d == other._d and bool(self._coeff == other._coeff)
@@ -67,7 +68,7 @@ class DTerm:
     def expression (self):
         return self.term().expression()
     def __hash__ (self):
-        return hash(repr(self))
+        return hash(self.__str__())
 
 @functools.total_ordering
 class Differential_Polynomial:
@@ -105,7 +106,13 @@ class Differential_Polynomial:
                         self._p.append (DTerm(coeff * d[0], self._context))
                     else:
                         self._p.append (DTerm(coeff, self._context))
-        self._p = sorted(self._p)
+#        self._p = sorted(self._p)
+        self._p = [_ for _ in reversed(
+                    sorted(
+                        self._p, 
+                        key=functools.cmp_to_key(lambda item1, item2: 
+                                             sorter (item1.derivative(), item2.derivative(), self._context)))
+                )]
         self.normalize()
     
     def ctxfunc(self, e):
@@ -155,9 +162,7 @@ class Differential_Polynomial:
             if bool (self._p[0]._coeff == Integer (1)):
                 self._p[0]._coeff = 1
             else:
-                self._p = [_ for _ in self._p if _._coeff]
                 c = self._p[0]._coeff
-                # much better to have 'simplify' here
                 self._p = [DTerm((_._coeff / c).simplify() * _._d, self._context) for _ in self._p]
     def __nonzero__ (self):
         return self._p
@@ -185,10 +190,11 @@ class Differential_Polynomial:
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ....
 def Reorder (S, context, ascending = False):
-    res=sorted(S)
-    if ascending :
-        res.reverse()
-    return res
+    return sorted(S, key=functools.cmp_to_key(lambda item1, item2: 
+                        sorter (item1.Lder(), item2.Lder(), context)), 
+                            reverse = not ascending
+                        )
+
 def reduceS (e:Differential_Polynomial, S:list, context)->Differential_Polynomial:
     S= Reorder (S, context, ascending = True)
     reducing = True
