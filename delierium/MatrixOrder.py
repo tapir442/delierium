@@ -96,6 +96,17 @@ def Mgrevlex(funcs, vars):
         l = insert_row(l, 2+idx, _v)
     return l
 
+@functools.cache
+def get_compound_vector (i, d, dep, indep):
+    r = []
+    iv = [0]*dep
+    if i >= 0:
+        iv[i] = 1
+        r = vector(order_of_derivative(d) + iv)
+    else:
+        r = vector([0]*indep + iv)
+    return r
+
 
 class Context:
     # XXX replace by named tuple? or attr.ib
@@ -123,20 +134,10 @@ class Context:
             return 0
         d1idx = idx(d1)
         d2idx = idx(d2)
-    
-        i1v = [0]*len(self._dependent)
-        i2v = [0]*len(self._dependent)
         # pure function corresponds with all zeros
-        if d1idx >= 0:
-            i1v[d1idx] = 1
-            i1 = vector(order_of_derivative(d1) + i1v)
-        else:
-            i1 = vector([0]*len(self._independent) + i1v)
-        if d2idx >= 0:
-            i2v[d2idx] = 1
-            i2 = vector(order_of_derivative(d2) + i2v)
-        else:
-            i2 = vector([0]*len(self._independent) + i2v)
+        i1 = get_compound_vector (d1idx, d1, len(self._dependent), len(self._independent))
+        i2 = get_compound_vector (d2idx, d2, len(self._dependent), len(self._independent))
+
         r = self._weight * vector(i1-i2)
         for entry in r:
             if entry:

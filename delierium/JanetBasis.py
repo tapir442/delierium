@@ -11,7 +11,7 @@ from operator import mul
 from IPython.core.debugger import set_trace
 
 
-@functools.total_ordering
+#@functools.total_ordering
 class DTerm:
     '''differential term'''
     def __init__ (self, e, context = None):
@@ -68,8 +68,13 @@ class DTerm:
     def __hash__ (self):
         return hash(self.__str__())
 
+        
+@functools.cache
+def eq(a,b):
+    return bool(a==b)
 
-@functools.total_ordering
+    
+#@functools.total_ordering
 class Differential_Polynomial:
     def __init__ (self, e, context):
         self._context = context
@@ -170,9 +175,8 @@ class Differential_Polynomial:
         return sum(_._coeff * _._d for _ in self._p)
     def __lt__ (self, other):
         return self._p[0] < other._p[0]
-    @functools.cache
     def __eq__ (self, other):
-        return all(bool(_[0]._d == _[1]._d) for _ in zip (self._p, other._p))
+        return all(eq(_[0]._d, _[1]._d) for _ in zip (self._p, other._p))
     def show(self):
         self.expression().show()
     def __sub__ (self, other):
@@ -208,11 +212,10 @@ def reduceS (e:Differential_Polynomial, S:list, context)->Differential_Polynomia
                 gen = (_ for _ in S)
                 reducing = True
     return enew
+
 def reduce(e1: Differential_Polynomial,e2: Differential_Polynomial, context:Context)->Differential_Polynomial:
-    assert e2.is_monic()
     def _order (der):
         if der != 1:
-            ## XXX: user pylie namespace
             return order_of_derivative(der)
         else :
             return [0]*len(context._independent)
@@ -298,7 +301,7 @@ def multipliers(m, M, Vars):
         if degree (v, m) == max((degree (v, _u) for _u in V), default = 0):
             mult.append (v)
     # XXX return nonmultipliers, too
-    return mult              
+    return mult, set(Vars) - set(mult)
 
 def vec_degree(v, m)->Integer:    
     return m[v]

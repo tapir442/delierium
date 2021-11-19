@@ -42,6 +42,7 @@ def is_derivative(e):
         return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
     except AttributeError:
         return False
+    
 def is_function(e):
     '''checks whether an expression 'e' is a function'''
     try :
