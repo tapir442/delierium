@@ -11,8 +11,6 @@ from operator import mul
 from IPython.core.debugger import set_trace
 
 
-
-
 @functools.total_ordering
 class DTerm:
     '''differential term'''
@@ -70,6 +68,7 @@ class DTerm:
     def __hash__ (self):
         return hash(self.__str__())
 
+
 @functools.total_ordering
 class Differential_Polynomial:
     def __init__ (self, e, context):
@@ -106,12 +105,12 @@ class Differential_Polynomial:
                         self._p.append (DTerm(coeff * d[0], self._context))
                     else:
                         self._p.append (DTerm(coeff, self._context))
-#        self._p = sorted(self._p)
+
         self._p = [_ for _ in reversed(
                     sorted(
                         self._p, 
                         key=functools.cmp_to_key(lambda item1, item2: 
-                                             sorter (item1.derivative(), item2.derivative(), self._context)))
+                                             self._context.higher(item1.derivative(), item2.derivative())))
                 )]
         self.normalize()
     
@@ -159,6 +158,7 @@ class Differential_Polynomial:
         return True
     def normalize (self):
         if self._p:
+            # what if coeff == 2?
             if bool (self._p[0]._coeff == Integer (1)):
                 self._p[0]._coeff = 1
             else:
@@ -168,7 +168,6 @@ class Differential_Polynomial:
         return self._p
     def expression (self):
         return sum(_._coeff * _._d for _ in self._p)
-    @functools.cache    
     def __lt__ (self, other):
         return self._p[0] < other._p[0]
     @functools.cache
@@ -191,7 +190,7 @@ class Differential_Polynomial:
 # ToDo: Janet_Basis as class as this object has properties like rank, order ....
 def Reorder (S, context, ascending = False):
     return sorted(S, key=functools.cmp_to_key(lambda item1, item2: 
-                        sorter (item1.Lder(), item2.Lder(), context)), 
+                        context.higher(item1.Lder(), item2.Lder())), 
                             reverse = not ascending
                         )
 

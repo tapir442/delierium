@@ -23,10 +23,6 @@ def order_of_derivative (e):
     res = [opr.parameter_set().count(i) for i in range (len(opd))]
     return res
 
-#def highest_order_of_derivative(e):
-#    # xxx _of_ in function name is annyoing
-#    e      = e if isinstance(e, Iterable) else [e]
-#    return max([sum (order_of_derivative(_)) for _ in e])
 
 def __lt__ (a,b):
     '''
@@ -46,11 +42,11 @@ def is_derivative(e):
         return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
     except AttributeError:
         return False
-    
 def is_function(e):
     '''checks whether an expression 'e' is a function'''
     try :
         # XXX this must done more sagemathic if possible
+        # hint: calculus._is_function does not work
         return "NewSymbolicFunction" in e.operator ().__class__.__name__ and \
             e.operands() != []
     except AttributeError:

@@ -2,40 +2,98 @@
 # coding: utf-8
 
 from sage.all import *
-from functools import cache
-import delierium.helpers as helpers
-import doctest
+from sage.modules.free_module_element import vector
+from sage.matrix.constructor import matrix
+from sage.symbolic.function_factory import function
+from sage.calculus.var import var
+from .helpers import is_derivative, order_of_derivative
+
+import functools 
+    
 #
 # standard weight matrices for lex, grlex and grevlex order
 # according to 'Term orders and Rankings' Schwarz, pp 43.
 #
 
+# insert_row is only defined for integer matrices :(
+def insert_row(M,k,row):
+    return matrix(M.rows()[:k]+[row]+M.rows()[k:])
+
+
 def Mlex(funcs, vars):
     '''Generates the "cotes" according to Riquier for the lex ordering
+    INPUT : funcs: a tuple of functions (tuple for caching reasons)
+            vars: a tuple of variables
+            these are not used directly , just their lenght is interasting, but so the
+            consumer doesn't has the burden of computing the length of list but
+            the lists directly from context
+    OUTPUT: a matrix which when multiplying an augmented vector (func + var) gives
+            the vector in lex order
+            
+            same applies mutas mutandis for Mgrlex and Mgrevlex
+            
+    >>> x,y,z = var ("x y z")
+    >>> f = function("f")(x,y,z)
+    >>> g = function("g")(x,y,z)
+    >>> h = function("h")(x,y,z)
+    >>> from delierium.MatrixOrder import Mlex
+    >>> Mlex ((f,g), [x,y,z])
+    [0 0 0 2 1]
+    [1 0 0 0 0]
+    [0 1 0 0 0]
+    [0 0 1 0 0]    
     '''
     m = len(funcs)
     n = len(vars)
     i = matrix.identity(n)
-    i = i.insert_row(0, [Integer(0)]*n)
+    i = insert_row(i, 0, [0]*n)
     for j in range(m, 0, -1):
-        i = i.augment(vector([j] + [Integer(0)]*n))
+        i = i.augment(vector([j] + [0]*n))
     return i
 
 
 def Mgrlex(funcs, vars):
-    m = Mlex(funcs,vars)
-    m = m.insert_row(0, [Integer(1)]*len(vars)+[Integer(0)]*len(funcs))
+    '''Generates the "cotes" according to Riquier for the grlex ordering
+    >>> x,y,z = var ("x y z")
+    >>> f = function("f")(x,y,z)
+    >>> g = function("g")(x,y,z)
+    >>> h = function("h")(x,y,z)
+    >>> from delierium.MatrixOrder import Mgrlex
+    >>> Mgrlex ((f,g,h), [x,y,z])
+    [1 1 1 0 0 0]
+    [0 0 0 3 2 1]
+    [1 0 0 0 0 0]
+    [0 1 0 0 0 0]
+    [0 0 1 0 0 0]    
+    '''
+    m = Mlex(funcs, vars)
+    m = insert_row(m, 0, [1]*len(vars)+[0]*len(funcs))
     return m
 
+
 def Mgrevlex(funcs, vars):
+    '''Generates the "cotes" according to Riquier for the grevlex ordering
+    >>> _ = var ("x y z")
+    >>> f = function("f")(*_)
+    >>> g = function("g")(*_)
+    >>> h = function("h")(*_)
+    >>> from delierium.MatrixOrder import Mgrevlex
+    >>> Mgrevlex ((f,g,h), [x,y,z])
+    [ 1  1  1  0  0  0]
+    [ 0  0  0  3  2  1]
+    [ 0  0 -1  0  0  0]
+    [ 0 -1  0  0  0  0]
+    [-1  0  0  0  0  0]
+    '''
+    
     m = len(funcs)
     n = len(vars)
-    l = Matrix([Integer(1)]*n + [Integer(0)]*m)
-    l = l.insert_row(1, vector([0]*n + [Integer(_) for _ in range(m,0,-1)]))
+    l = Matrix([1]*n + [0]*m)
+    l = insert_row(l, 1, vector([0]*n + [_ for _ in range(m, 0, -1)]))
     for idx in range(n):
-        _v = vector([Integer(0)]*(n+m))
+        _v = vector([0]*(n+m))
         _v[n-idx-1] = -1
-        l = l.insert_row(2+idx, _v)
+        l = insert_row(l, 2+idx, _v)
     return l
 
 
@@ -49,61 +107,46 @@ class Context:
         self._weight      = weight (self._dependent, self._independent)
         self._basefield   = PolynomialRing(QQ, independent)
 
-
-@cache
-def higher (d1 ,d2, context):
-    # XXX move to context?
-    '''Algorithm 2.3 from [Schwarz]'''
-    @cache        
-    def idx (d):
-        '''helper function
-        returns the index of the function name of the given derivative 'd' within
-        the tuple of dependent variables
-    
-        >>> from delierium.MatrixOrder import idx
-        >>> vars = var("x y z")
-        >>> f=function("f")(*vars)
-        >>> g=function("g")(*vars)
-        >>> h=function("h")(*vars)    
-        >>> df = diff (f, x,y)
-        >>> dg = diff (g, z,x)
-        >>> dh = diff (h,x)
-        >>> idx (df, (f,g,h))
-        0
-        >>> idx (df, (g,h,f))
-        2
-        >>> idx (df, (h,f,g))
-        1
-        >>> idx (f, (f,g,h))
-        -1
+    @functools.cache
+    def higher (self, d1 ,d2):
+        '''Algorithm 2.3 from [Schwarz]    
+        Given two derivatives d1 and d2 and a weight matrix it returns
+        True if d2 does not preceed d1 
         '''
-        if helpers.is_derivative (d):
-            return context._dependent.index(d.operator().function()(*list(context._independent)))
+            
+        @functools.cache
+        def idx (d):
+            if is_derivative (d):
+                return self._dependent.index(d.operator().function()(*list(self._independent)))
+            return -1
+        if d1 == d2:
+            return 0
+        d1idx = idx(d1)
+        d2idx = idx(d2)
+    
+        i1v = [0]*len(self._dependent)
+        i2v = [0]*len(self._dependent)
+        # pure function corresponds with all zeros
+        if d1idx >= 0:
+            i1v[d1idx] = 1
+            i1 = vector(order_of_derivative(d1) + i1v)
+        else:
+            i1 = vector([0]*len(self._independent) + i1v)
+        if d2idx >= 0:
+            i2v[d2idx] = 1
+            i2 = vector(order_of_derivative(d2) + i2v)
+        else:
+            i2 = vector([0]*len(self._independent) + i2v)
+        r = self._weight * vector(i1-i2)
+        for entry in r:
+            if entry:
+                if entry > 0:
+                    return 1
+                else:
+                    return -1
         return -1
 
-    d1idx = idx(d1)
-    d2idx = idx(d2)
-    
-    i1v = [0]*len(context._dependent)
-    i2v = [0]*len(context._dependent)
-    # pure function corresponds with all zeros
-    if d1idx >= 0:
-        i1v[d1idx] = 1
-        i1 = vector(helpers.order_of_derivative(d1) + i1v)
-    else:
-        i1 = vector([0]*len(context._independent) + i1v)
-    if d2idx >= 0:
-        i2v[d2idx] = 1
-        i2 = vector(helpers.order_of_derivative(d2) + i2v)
-    else:
-        i2 = vector([0]*len(context._independent) + i2v)
-    r = context._weight * vector(i1-i2)
-    for entry in r:
-        if entry:
-            return entry > 0
-    return False
 
-@cache
 def sorter (d1, d2, context = Mlex):
     '''sorts two derivatives d1 and d2 using the weight matrix M
     according to the sort order given in the tuple of  dependent and independent variables
@@ -139,8 +182,6 @@ def sorter (d1, d2, context = Mlex):
      diff(u(x, y, z), x, x, z, z),
      diff(u(x, y, z), x, y, y, z)]
     '''
-    if d1 == d2:
-        return 0
     if higher (d1, d2, context):
         return 1
     return -1
