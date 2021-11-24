@@ -2,6 +2,16 @@ import sage.all
 from collections.abc import Iterable
 import functools
 
+@functools.cache
+def eq(d1, d2):
+    '''This cheap trick gives as a lot of performance gain
+    because maxima comparisons are expensive,and we can expect
+    a lot of the same comparisons over and over again
+    '''
+    return bool (d1==d2)
+
+
+
 def tangent_vector(f):
     # https://doc.sagemath.org/html/en/reference/manifolds/sage/manifolds/differentiable/tangent_vector.html?highlight=partial%20differential
     # XXX:  There is TangentVector in Sage but a little bit more complicated. Does it pay to use that one ?
@@ -83,6 +93,7 @@ def __lt__ (a,b):
         return 1
     return 0
 
+
 def is_derivative(e):
     '''checks whether an expression 'e' is a pure derivative
 
@@ -101,7 +112,7 @@ def is_derivative(e):
     except AttributeError:
         return False
 
-
+#Don't cache ! slows down
 def is_function(e):
     '''checks whether an expression 'e' is a pure function without any
     derivative as a factor
@@ -116,12 +127,16 @@ def is_function(e):
     >>> is_function (x*diff(f,x))
     False
     '''
-    try :
-        # XXX this must done more sagemathic if possible
+    if hasattr (e, "operator"):
         return "NewSymbolicFunction" in e.operator ().__class__.__name__ and \
             e.operands() != []
-    except AttributeError:
-        return False
+    return False
+#    try :
+#        # XXX this must done more sagemathic if possible
+#        return "NewSymbolicFunction" in e.operator ().__class__.__name__ and \
+#            e.operands() != []
+#    except AttributeError:
+#        return False
 
 
 def vector_to_monomial(v, sort=None):
