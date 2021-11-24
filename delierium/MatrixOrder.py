@@ -2,8 +2,8 @@
 # coding: utf-8
 
 from sage.all import *
-from functools import cache
-import delierium.helpers as helpers
+import functools
+from delierium.helpers import eq, order_of_derivative, is_derivative 
 import doctest
 #
 # standard weight matrices for lex, grlex and grevlex order
@@ -13,6 +13,8 @@ import doctest
 # insert_row is only defined for integer matrices :(
 def insert_row(M,k,row):
     return matrix(M.rows()[:k]+[row]+M.rows()[k:])
+
+
 
 
 
@@ -104,23 +106,29 @@ class Context:
         self._weight      = weight (self._dependent, self._independent)
         self._basefield   = PolynomialRing(QQ, independent)
 
-
-@cache
+_cache={}
+        
+@functools.cache
 def higher (d1 ,d2, context):
     # XXX move to context?
     '''Algorithm 2.3 from [Schwarz]'''
-    @cache
     def idx (d):
-        if helpers.is_derivative (d):
-            return context._dependent.index(d.operator().function()(*list(context._independent)))
-        return -1
-    @cache
+        # faster than functools.cache
+        if d in _cache:
+            return _cache[d]
+        
+        if not is_derivative (d):
+            _cache[d] = -1
+        else:
+            _cache[d] = context._dependent.index(d.operator().function()(*list(context._independent)))
+        return _cache[d]
+    @functools.cache
     def get_derivative_vector(d):
         i = idx(d)
         iv = [0]*len(context._dependent)
         if i >= 0:
             iv[i] = 1
-            return vector(helpers.order_of_derivative(d) + iv)
+            return vector(order_of_derivative(d) + iv)
         else:
             return vector([0]*len(context._independent) + iv)
 
@@ -133,7 +141,7 @@ def higher (d1 ,d2, context):
             return entry > 0
     return False
 
-@cache
+@functools.cache
 def sorter (d1, d2, context = Mlex):
     '''sorts two derivatives d1 and d2 using the weight matrix M
     according to the sort order given in the tuple of  dependent and independent variables
@@ -169,7 +177,7 @@ def sorter (d1, d2, context = Mlex):
      diff(u(x, y, z), x, x, z, z),
      diff(u(x, y, z), x, y, y, z)]
     '''
-    if d1 == d2:
+    if eq (d1, d2):
         return 0
     if higher (d1, d2, context):
         return 1

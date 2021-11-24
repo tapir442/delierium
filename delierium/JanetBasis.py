@@ -11,10 +11,6 @@ from operator import mul
 from IPython.core.debugger import set_trace
 
 
-@functools.cache
-def eq(d1, d2):
-    return bool (d1==d2)
-
 @functools.total_ordering
 class DTerm:
     def __init__ (self, e, context = None):
@@ -32,8 +28,8 @@ class DTerm:
         >>> print (dterm)
         x^2 * diff(f(x, y, z), x, y)
         '''
-        self._coeff       = Rational(1)
-        self._d           = Rational(1)
+        self._coeff       = 1
+        self._d           = 1
         self._context     = context
         if is_derivative(e) or is_function(e):
             # XXX put into _d only if in in context
@@ -43,17 +39,11 @@ class DTerm:
             for o in e.operands ():
                 if is_derivative (o):
                     self._d = o
+                elif is_function(o):
+                    self._d = o  # zeroth derivative
                 else:
-                    if is_function(o) and o in context._dependent:
-                        self._d = o  # zeroth derivative
-                    else:
-                        r.append (o)
-            # XXX how to get rid of simpify_full? It's eating up all the cpu
+                    r.append (o)
             self._coeff = functools.reduce (mul, r, 1)
-            if bool(self._coeff == Integer(1)):
-                self._coeff = 1
-            if bool(self._coeff == Integer(0)):
-                self._coeff = 0
             if not r:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
     def __str__ (self):
@@ -77,13 +67,11 @@ class DTerm:
     def __lt__ (self, other):
         return higher (self, other,self._context) and not self == other
     def __eq__ (self, other):
-        return eq(self._d, other._d) and bool(self._coeff == other._coeff)
+        return eq(self._d, other._d) and eq(self._coeff, other._coeff)
     def show(self):
         self.term().show()
     def expression (self):
         return self.term().expression()
-    def __hash__ (self):
-        return hash(self.__str__())
 
 @functools.total_ordering
 class Differential_Polynomial:
@@ -106,30 +94,26 @@ class Differential_Polynomial:
                     for item in s.operands():
                         (d if (is_derivative(item) or self.ctxfunc (item)) else coeff).append(item)
                 coeff = functools.reduce (mul, coeff, 1)
-                if bool (coeff == 0):
-                    continue
                 found = False
-                for _p in self._p:
-                    if not d:
-                        continue
-                    if d and _p._d == d[0]:
-                        _p._coeff += coeff
-                        found = True
-                        break
+                if d:
+                    for _p in self._p:
+                        # this use of 'eq' is the real performace gain (50%)
+                        if eq(_p._d, d[0]):
+                            _p._coeff += coeff
+                            found = True
+                            break
                 if not found:
                     if d:
                         self._p.append (DTerm(coeff * d[0], self._context))
                     else:
                         self._p.append (DTerm(coeff, self._context))
-        self._p = [_ for _ in reversed(
-                    sorted(
-                        self._p,
-                        key=functools.cmp_to_key(lambda item1, item2:
-                                             sorter (item1.derivative(), item2.derivative(), self._context)))
-                )]
+        self._p.sort(key=functools.cmp_to_key(lambda item1, item2: sorter (item1.derivative(), item2.derivative(), self._context)),
+                     reverse = True
+                )
         self.normalize()
 
     def ctxfunc(self, e):
+        @functools.cache
         def func(e):
             try:
                 return e.operator().function()
@@ -150,7 +134,7 @@ class Differential_Polynomial:
         return self._p[0]._d
 
     def Lcoeff(self):
-        return self._p[0]
+        return self._p[0]._coeff
 
     def terms (self):
         for p in self._p:
@@ -172,22 +156,18 @@ class Differential_Polynomial:
             return self._p[0].is_monic()
         return True
     def normalize (self):
-        if self._p:
-            if bool (self._p[0]._coeff == Integer (1)):
-                self._p[0]._coeff = 1
-            else:
-                c = self._p[0]._coeff
-                self._p = [DTerm((_._coeff / c).simplify() * _._d, self._context) for _ in self._p]
+        if self._p and self._p[0]._coeff != 1:
+            c = self._p[0]._coeff
+            self._p = [DTerm((_._coeff / c).simplify() * _._d, self._context) for _ in self._p]
     def __nonzero__ (self):
         return self._p
     def expression (self):
-        return sum(_._coeff * _._d for _ in self._p)
+        return sum(_.term() for _ in self._p)
     @functools.cache
     def __lt__ (self, other):
         return self._p[0] < other._p[0]
-    @functools.cache
     def __eq__ (self, other):
-        return all(bool(_[0]._d == _[1]._d) for _ in zip (self._p, other._p))
+        return all(eq(_[0]._d, _[1]._d) for _ in zip (self._p, other._p))
     def show(self):
         self.expression().show()
     def __sub__ (self, other):
@@ -199,8 +179,6 @@ class Differential_Polynomial:
     def __copy__(self):
         newone = type(self)(self.expression(), self._context)
         return newone
-    def __hash__ (self):
-        return hash(repr(self))
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ....
 def Reorder (S, context, ascending = False):
@@ -284,6 +262,7 @@ def Autoreduce(S, context):
             # start from scratch
             i = 0
 
+            
 def degree(v, m)->Integer:
     # returnd degree of variable 'v' in monomial 'm'
     for operand in m.operands():
@@ -295,7 +274,19 @@ def degree(v, m)->Integer:
     return 0
 
 def multipliers(m, M, Vars):
-    """Multipliers for Monomials"""
+    """Multipliers for Monomials
+    >>> from delierium.JanetBasis import multipliers
+    >>> v = var("x1 x2 x3")
+    >>> M = [x1*x1*x1*x2*x2*x3*x3, x1*x1*x1*x3*x3*x3, x3*x3*x3*x2*x1, x2*x1]
+    >>> r = multipliers (M[0],M, v)
+    >>> print (M[0], r[0], r[1])    
+    >>> r = multipliers (M[1],M, v)
+    >>> print (M[1], r[0], r[1])    
+    >>> r = multipliers (M[2],M, v)
+    >>> print (M[2], r[0], r[1])
+    >>> r = multipliers (M[3],M, v)    
+    >>> print (M[3], r[0], r[1])
+    """
     assert (m in M)
     # ToDo: convert to differential vectors and use vec_multipliers!
     d = max((degree (v, u) for u in M for v in Vars), default=0)
@@ -312,13 +303,40 @@ def multipliers(m, M, Vars):
         if degree (v, m) == max((degree (v, _u) for _u in V), default = 0):
             mult.append (v)
     # XXX return nonmultipliers, too
-    return mult
+    return mult, sorted(set(Vars) - set(mult))
 
 def vec_degree(v, m)->Integer:
     return m[v]
 
 def vec_multipliers(m, M, Vars):
-    """multipliers and nonmultipliers for differential vectors
+    """multipliers and nonmultipliers for differential vectors aka tuples
+    
+    m   : a tuple representing a differential vector
+    M   : the complete set of differential vectors
+    Vars: a tuple representing the order of indizes in m
+          Examples: 
+              (0,1,2) means first index in m represents the highest variable
+              (2,1,0) means last index in m represents the highest variable
+    
+    ......................................................
+    The doctest example is from Schwarz, Example C.1, p. 384
+    This example is in on variables x1,x2,x3, with x3 the highest rated variable.
+    So we have to specify (2,1,0) to represent this
+    
+    >>> from delierium.JanetBasis import vec_multipliers
+    >>> M = [(2,2,3), (3,0,3), (3,1,1), (0,1,1)]
+    >>> r = vec_multipliers (M[0],M, (2,1,0))
+    >>> print (M[0], r[0], r[1])
+    (2, 2, 3) [2, 1, 0] []
+    >>> r = vec_multipliers (M[1],M, (2,1,0))
+    >>> print (M[1], r[0], r[1])    
+    (3, 0, 3) [2, 0] [1]    
+    >>> r = vec_multipliers (M[2],M, (2,1,0))
+    >>> print (M[2], r[0], r[1])
+    (3, 1, 1) [1, 0] [2]    
+    >>> r = vec_multipliers (M[3],M, (2,1,0))    
+    >>> print (M[3], r[0], r[1])
+    (0, 1, 1) [1] [0, 2]    
     """
     d = max((vec_degree (v, u) for u in M for v in Vars), default=0)
     mult = []
@@ -333,7 +351,7 @@ def vec_multipliers(m, M, Vars):
                 V.append (_u)
         if vec_degree (v, m) == max((vec_degree (v, _u) for _u in V), default = 0):
             mult.append (v)
-    return mult, set(Vars) - set(mult)
+    return mult, list(sorted(set(Vars) - set(mult)))
 
 
 # +
@@ -380,7 +398,7 @@ class Differential_Vector:
     def __lt__(self, other):
         return self.mycmp(self.obj, other.obj) < 0
     def __eq__(self, other):
-        return self.mycmp(self.obj, other.obj) == 0
+        return eq(self.obj, other.obj)
 
 
 def in_class (r, mclass, M, vars):
@@ -394,8 +412,18 @@ def derivative_to_vec (d, context):
 
 
 def complete (l,ctx):
+    """
+    ah, this one gets differential polynomials !!!!
+    
+    hmm , how to testP.... 
+    
+    >>> from delierium.JanetBasis import vec_multipliers, complete
+    >>> x1, x2, x3 = var("x1 x2 x3")
+    """
+
     ld         = [derivative_to_vec(_.Lder(), ctx) for _ in l]
     sort_order = tuple(reversed([i for i in range(len(ctx._independent))]))
+    print (sort_order)
     m0         = []
     for m, monomial in zip (ld, l):
         _, nonmult = vec_multipliers (m , ld , sort_order)
@@ -412,8 +440,12 @@ def complete (l,ctx):
         l = reversed(sorted(map (lambda _ : Differential_Vector(_, ctx), list(set(l)))))
         l = [_._e for _ in l]
 
+        
+        
 def CompleteSystem(S, context):
-    #return S
+    """
+    Algorithm C1, p. 385
+    """
     s = {}
     for _ in S:
         _fun = _.Lder().operator().function()
@@ -424,3 +456,56 @@ def CompleteSystem(S, context):
         res.extend (_)
     return Reorder(res, context, ascending = True)
 # -
+
+# https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt#overlay-context=contents
+##############Janet Division#############
+#Janet:=proc(u,U,Vars)
+#def mm (u, U, Vars)
+#local n,m,d,L,i,j,dd,V,v,Mult;
+#option trace;
+#    if degree(u)=0 then RETURN(Vars); fi;
+#n:=nops(Vars);
+#m:=ArrayNumElems(U);
+#d:=[seq(max(seq(degree(U[j],Vars[i]),j=1..m)),i=1..n)];
+#Mult:=NULL;
+ #   if degree(u,Vars[1])=d[1] then
+  #     Mult:=Mult,Vars[1];
+   # fi:
+#for j from 2 to n do
+#   	dd:=[seq(degree(u,Vars[l]),l=1..j-1)];
+#  	V:=NULL:
+# 	for v in U do
+#	    if [seq(degree(v,Vars[l]),l=1..j-1)]=dd then
+#      V:=V,v:
+#   fi:
+#od:
+#if degree(u,Vars[j])=max(seq(degree(v,Vars[j]), v in [V])) then
+#  Mult:=Mult,Vars[j];
+#fi:
+#od:
+#RETURN([Mult]);
+#end:
+
+########### Pommaret Division #############
+#LeftPommaret:=proc(u,U,Vars)
+#local N,Ind,i;
+#N:=NULL:
+#Ind:=indets(u):
+#for i from 1 to nops(Vars) while not (Vars[i] in Ind) do
+#    N:=N,Vars[i]:
+#od:
+#N:=N,Vars[i]:
+#RETURN([N]);
+#end:
+    	   
+
+#RightPommaret:=proc(u,U,Vars)
+#local N,Ind,i;
+#N:=NULL:
+#Ind:=indets(u):
+#for i from  nops(Vars) by -1 to 1 while not (Vars[i] in Ind) do
+ #   N:=N,Vars[i]:
+#od:
+#N:=N,Vars[i]:
+#RETURN([N]);
+#end:
