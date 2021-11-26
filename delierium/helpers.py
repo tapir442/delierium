@@ -1,7 +1,9 @@
 import sage.all
 from collections.abc import Iterable
 import functools
+from sage.calculus.var import var
 
+    
 @functools.cache
 def eq(d1, d2):
     '''This cheap trick gives as a lot of performance gain
@@ -148,7 +150,7 @@ def vector_to_monomial(v, sort=None):
     from functools import reduce
     from operator import __mul__
     vars = var(" ".join('x%s' % _ for _ in range(1, len(v)+1)))
-    return reduce(__mul__, [v**e for v, e in zip(vars, v)], 1)
+    return reduce(__mul__, [v**e for v, e in zip(reversed(vars), v)], 1)
 
 
 def monomial_to_vector(m, no_of_variables, sort=None):
@@ -168,10 +170,10 @@ def monomial_to_vector(m, no_of_variables, sort=None):
         for _o in o:
             ops = _o.operands()
             if ops:
-                if bool(v == ops[0]):
+                if eq(v, ops[0]):
                     return ops[1]
             else:
-                if bool(v == _o):
+                if eq(v, _o):
                     return 1
 
         return 0

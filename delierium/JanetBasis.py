@@ -3,12 +3,21 @@
 # coding: utf-8
 # -
 
-from sage.all import *
-from delierium import *
-from pprint import pprint
+from sage.calculus.var import var
+from sage.calculus.functional import diff
+from delierium.helpers import (is_derivative, is_function, eq, 
+                               order_of_derivative)
+from delierium.MatrixOrder import higher, sorter, Context
 import functools
 from operator import mul
 from IPython.core.debugger import set_trace
+
+@functools.cache
+def func(e):
+    try:
+        return e.operator().function()
+    except AttributeError:
+        return e.operator()
 
 
 @functools.total_ordering
@@ -18,12 +27,14 @@ class DTerm:
 
         >>> from delierium.JanetBasis import DTerm
         >>> from delierium.MatrixOrder import Context
-        >>> x,y,z = sage.all.var("x y z")
-        >>> f     = sage.all.function("f")(x,y,z)
-        >>> g     = sage.all.function("g")(x,y,z)
-        >>> h     = sage.all.function("h")(x,y,z)
+        >>> from sage.calculus.var import var
+        >>> from sage.calculus.functional import diff
+        >>> x,y,z = var("x y z")
+        >>> f     = function("f")(x,y,z)
+        >>> g     = function("g")(x,y,z)
+        >>> h     = function("h")(x,y,z)
         >>> ctx   = Context ((f,g),(x,y,z))
-        >>> d     = (x**2) * sage.all.diff(f, x, y)
+        >>> d     = (x**2) * diff(f, x, y)
         >>> dterm = DTerm(d,ctx)
         >>> print (dterm)
         x^2 * diff(f(x, y, z), x, y)
@@ -54,7 +65,7 @@ class DTerm:
         if is_derivative(self._d):
             return order_of_derivative (self._d)
         else:
-            return [0] * len (context._independent)
+            return [0] * len (self._context._independent)
     def is_coefficient(self):
         # XXX nonsense
         return self._d == 1
@@ -81,7 +92,6 @@ class Differential_Polynomial:
 
     def _init(self, e):
         self._p = []
-        res     = []
         if is_derivative(e) or is_function(e):
             self._p.append(DTerm(e, self._context))
         else:
@@ -113,12 +123,6 @@ class Differential_Polynomial:
         self.normalize()
 
     def ctxfunc(self, e):
-        @functools.cache
-        def func(e):
-            try:
-                return e.operator().function()
-            except AttributeError:
-                return e.operator()
         return func(e) and func(e) in self._context._dependent
 
     def _collect_terms (self, e):
@@ -179,7 +183,10 @@ class Differential_Polynomial:
     def __copy__(self):
         newone = type(self)(self.expression(), self._context)
         return newone
+    def diff(self, *args):
+        return type(self)(diff(self.expression(), *args), self._context)
 
+                                       
 # ToDo: Janet_Basis as class as this object has properties like rank, order ....
 def Reorder (S, context, ascending = False):
     return sorted(S, key=functools.cmp_to_key(lambda item1, item2:
@@ -208,11 +215,6 @@ def reduce(e1: Differential_Polynomial,e2: Differential_Polynomial, context:Cont
             return order_of_derivative(der)
         else :
             return [0]*len(context._independent)
-    def func(e):
-        try:
-            return e.operator().function()
-        except AttributeError:
-            return e.operator()
 
     def _reduce (e, ld):
         e2_order = _order (ld)
@@ -262,30 +264,31 @@ def Autoreduce(S, context):
             # start from scratch
             i = 0
 
-            
-def degree(v, m)->Integer:
+@functools.cache
+def degree(v, m):
     # returnd degree of variable 'v' in monomial 'm'
     for operand in m.operands():
-        if bool(v == operand):
+        if eq(v, operand):
             return 1
         e = operand.operands()
-        if e and bool (e[0] == v):
+        if e and eq (e[0], v):
             return e[1]
     return 0
 
+@functools.cache
 def multipliers(m, M, Vars):
     """Multipliers for Monomials
     >>> from delierium.JanetBasis import multipliers
     >>> v = var("x1 x2 x3")
     >>> M = [x1*x1*x1*x2*x2*x3*x3, x1*x1*x1*x3*x3*x3, x3*x3*x3*x2*x1, x2*x1]
     >>> r = multipliers (M[0],M, v)
-    >>> print (M[0], r[0], r[1])    
+    >>> # print (M[0], r[0], r[1]) x1^3*x2^2*x3^2 [x1, x2, x3] []    
     >>> r = multipliers (M[1],M, v)
-    >>> print (M[1], r[0], r[1])    
+    >>> # print (M[1], r[0], r[1])  x1*x2 [x2] [x3, x1]  
     >>> r = multipliers (M[2],M, v)
-    >>> print (M[2], r[0], r[1])
+    >>> # print (M[2], r[0], r[1]) x1^3*x3^3 [x1, x3] [x2]    
     >>> r = multipliers (M[3],M, v)    
-    >>> print (M[3], r[0], r[1])
+    >>> # print (M[3], r[0], r[1])  x1*x2 [x2] [x3, x1]       
     """
     assert (m in M)
     # ToDo: convert to differential vectors and use vec_multipliers!
@@ -302,10 +305,9 @@ def multipliers(m, M, Vars):
                 V.append (_u)
         if degree (v, m) == max((degree (v, _u) for _u in V), default = 0):
             mult.append (v)
-    # XXX return nonmultipliers, too
     return mult, sorted(set(Vars) - set(mult))
 
-def vec_degree(v, m)->Integer:
+def vec_degree(v, m):
     return m[v]
 
 def vec_multipliers(m, M, Vars):
@@ -337,6 +339,25 @@ def vec_multipliers(m, M, Vars):
     >>> r = vec_multipliers (M[3],M, (2,1,0))    
     >>> print (M[3], r[0], r[1])
     (0, 1, 1) [1] [0, 2]    
+    >>> N=[[0,2], [2,0], [1,1]]
+    >>> r =vec_multipliers(N[0], N,  (0,1))
+    >>> print(r)
+    ([1], [0])    
+    >>> r =vec_multipliers(N[1], N,  (0,1))
+    >>> print(r)
+    ([0, 1], [])    
+    >>> r =vec_multipliers(N[2], N,  (0,1))
+    >>> print(r)
+    ([1], [0])    
+    >>> r =vec_multipliers(N[0], N,  (1,0))
+    >>> print(r)
+    ([1, 0], [])    
+    >>> r =vec_multipliers(N[1], N,  (1,0))
+    >>> print(r)
+    ([0], [1])    
+    >>> r =vec_multipliers(N[2], N,  (1,0))
+    >>> print(r)
+    ([0], [1])
     """
     d = max((vec_degree (v, u) for u in M for v in Vars), default=0)
     mult = []
@@ -400,10 +421,13 @@ class Differential_Vector:
     def __eq__(self, other):
         return eq(self.obj, other.obj)
 
+    
 
-def in_class (r, mclass, M, vars):
-    '''checks whether "r" is in the same class like "mclass"'''
-    mult, nonmult = vec_multipliers (mclass, M , vars)
+def in_class (r, mclass, mult, nonmult):
+    '''checks whether "r" is in the same class like "mclass"
+    r is a tuple
+    m is a tuple
+    '''    
     return all (vec_degree (x, r) >= vec_degree (x, mclass) for x in mult)  and \
         all (vec_degree(x, r) == vec_degree (x, mclass) for x in nonmult)
 
@@ -411,34 +435,39 @@ def derivative_to_vec (d, context):
     return order_of_derivative (d)
 
 
-def complete (l,ctx):
+def complete (pl,ctx):
     """
     ah, this one gets differential polynomials !!!!
     
     hmm , how to testP.... 
     
-    >>> from delierium.JanetBasis import vec_multipliers, complete
+    >>> from delierium.JanetBasis import vec_multipliers, complete, Differential_Polynomial
+    >>> from delierium.MatrixOrder import Context, Mlex
     >>> x1, x2, x3 = var("x1 x2 x3")
+    >>> f = function("f")(x1,x2,x3)
+    >>> ctx = Context ((f,), (x3,x2,x1))
+    >>> M = [Differential_Polynomial(_, ctx) \
+    ...    for _ in [diff(f, x1,2, x2, 2 , x3,3), diff(f, x1,3, x3,3), diff(f, x1,3,x2,x3), diff(f, x2,x3)]]
+    >>> print (complete (M, ctx))
     """
-
-    ld         = [derivative_to_vec(_.Lder(), ctx) for _ in l]
-    sort_order = tuple(reversed([i for i in range(len(ctx._independent))]))
-    print (sort_order)
+    ld         = [derivative_to_vec(_.Lder(), ctx) for _ in pl]
+    # XXX check sort order
+    sort_order = tuple([i for i in range(len(ctx._independent))])
     m0         = []
-    for m, monomial in zip (ld, l):
-        _, nonmult = vec_multipliers (m , ld , sort_order)
+    for m, monomial in zip (ld, pl):
+        mult, nonmult = vec_multipliers (m , ld , sort_order)
         for nm in nonmult:
             _m = list(m)
             _m [nm] += 1
             # XXX Fixme
-            if not any (in_class (tuple(_m), v, l, sort_order) for v in l):
+            if not any (in_class (tuple(_m), v, mult, nonmult)):
                 m0.append (diff (monomial, ctx._independent[nm]))
 
         if set(m0) == set():
-            return l
-        l.extend (m0)
-        l = reversed(sorted(map (lambda _ : Differential_Vector(_, ctx), list(set(l)))))
-        l = [_._e for _ in l]
+            return pl
+        pl.extend (m0)
+        pl = reversed(sorted(map (lambda _ : Differential_Vector(_, ctx), list(set(pl)))))
+        pl = [_._e for _ in l]
 
         
         
@@ -452,9 +481,16 @@ def CompleteSystem(S, context):
         s.setdefault (_fun, []).append (_)
     res = []
     for k in s:
-        _ = complete (s[k], context)
-        res.extend (_)
+        if len(s[k]) > 1:
+            _ = complete (s[k], context)
+            res.extend (_)
+        else:
+            res += s[k]
     return Reorder(res, context, ascending = True)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
 # -
 
 # https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt#overlay-context=contents
@@ -472,12 +508,12 @@ def CompleteSystem(S, context):
   #     Mult:=Mult,Vars[1];
    # fi:
 #for j from 2 to n do
-#   	dd:=[seq(degree(u,Vars[l]),l=1..j-1)];
-#  	V:=NULL:
-# 	for v in U do
-#	    if [seq(degree(v,Vars[l]),l=1..j-1)]=dd then
-#      V:=V,v:
-#   fi:
+#dd:=[seq(degree(u,Vars[l]),l=1..j-1)];
+#V:=NULL:
+#for v in U do
+#if [seq(degree(v,Vars[l]),l=1..j-1)]=dd then
+#V:=V,v:
+#fi:
 #od:
 #if degree(u,Vars[j])=max(seq(degree(v,Vars[j]), v in [V])) then
 #  Mult:=Mult,Vars[j];
@@ -497,8 +533,6 @@ def CompleteSystem(S, context):
 #N:=N,Vars[i]:
 #RETURN([N]);
 #end:
-    	   
-
 #RightPommaret:=proc(u,U,Vars)
 #local N,Ind,i;
 #N:=NULL:
