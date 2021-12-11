@@ -1,9 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from sage.all import *
+import sage.all
+from sage.matrix.constructor import identity_matrix, matrix, Matrix
+from sage.calculus.var import var, function
+from sage.calculus.functional import diff
+from sage.modules.free_module_element import vector
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+from sage.rings.rational_field import QQ
+from sage.misc.prandom import shuffle
+from functools import cmp_to_key
+
+
 import functools
-from delierium.helpers import eq, order_of_derivative, is_derivative 
+from delierium.helpers import eq, order_of_derivative, is_derivative
 import doctest
 #
 # standard weight matrices for lex, grlex and grevlex order
@@ -14,11 +24,6 @@ import doctest
 def insert_row(M,k,row):
     return matrix(M.rows()[:k]+[row]+M.rows()[k:])
 
-
-
-
-
-
 def Mlex(funcs, vars):
     '''Generates the "cotes" according to Riquier for the lex ordering
     INPUT : funcs: a tuple of functions (tuple for caching reasons)
@@ -28,23 +33,22 @@ def Mlex(funcs, vars):
             the lists directly from context
     OUTPUT: a matrix which when multiplying an augmented vector (func + var) gives
             the vector in lex order
-            
+
             same applies mutas mutandis for Mgrlex and Mgrevlex
-            
+
     >>> x,y,z = var ("x y z")
     >>> f = function("f")(x,y,z)
     >>> g = function("g")(x,y,z)
     >>> h = function("h")(x,y,z)
-    >>> from delierium.MatrixOrder import Mlex
     >>> Mlex ((f,g), [x,y,z])
     [0 0 0 2 1]
     [1 0 0 0 0]
     [0 1 0 0 0]
-    [0 0 1 0 0]    
+    [0 0 1 0 0]
     '''
     m = len(funcs)
     n = len(vars)
-    i = matrix.identity(n)
+    i = identity_matrix(n)
     i = insert_row(i, 0, [0]*n)
     for j in range(m, 0, -1):
         i = i.augment(vector([j] + [0]*n))
@@ -57,13 +61,12 @@ def Mgrlex(funcs, vars):
     >>> f = function("f")(x,y,z)
     >>> g = function("g")(x,y,z)
     >>> h = function("h")(x,y,z)
-    >>> from delierium.MatrixOrder import Mgrlex
     >>> Mgrlex ((f,g,h), [x,y,z])
     [1 1 1 0 0 0]
     [0 0 0 3 2 1]
     [1 0 0 0 0 0]
     [0 1 0 0 0 0]
-    [0 0 1 0 0 0]    
+    [0 0 1 0 0 0]
     '''
     m = Mlex(funcs, vars)
     m = insert_row(m, 0, [1]*len(vars)+[0]*len(funcs))
@@ -76,7 +79,6 @@ def Mgrevlex(funcs, vars):
     >>> f = function("f")(*_)
     >>> g = function("g")(*_)
     >>> h = function("h")(*_)
-    >>> from delierium.MatrixOrder import Mgrevlex
     >>> Mgrevlex ((f,g,h), [x,y,z])
     [ 1  1  1  0  0  0]
     [ 0  0  0  3  2  1]
@@ -86,7 +88,7 @@ def Mgrevlex(funcs, vars):
     '''
     m = len(funcs)
     n = len(vars)
-    l = Matrix([1]*n + [0]*m)
+    l = matrix([1]*n + [0]*m)
     l = insert_row(l, 1, vector([0]*n + [_ for _ in range(m, 0, -1)]))
     for idx in range(n):
         _v = vector([0]*(n+m))
@@ -107,7 +109,7 @@ class Context:
         self._basefield   = PolynomialRing(QQ, independent)
 
 _cache={}
-        
+
 @functools.cache
 def higher (d1 ,d2, context):
     # XXX move to context?
@@ -116,7 +118,7 @@ def higher (d1 ,d2, context):
         # faster than functools.cache
         if d in _cache:
             return _cache[d]
-        
+
         if not is_derivative (d):
             _cache[d] = -1
         else:
@@ -134,7 +136,7 @@ def higher (d1 ,d2, context):
 
     i1 = get_derivative_vector(d1)
     i2 = get_derivative_vector(d2)
-                
+
     r = context._weight * vector(i1-i2)
     for entry in r:
         if entry:
@@ -148,9 +150,6 @@ def sorter (d1, d2, context = Mlex):
 
     >>> x, y, z = var("x y z")
     >>> u = function ("u")(x,y,z)
-    >>> from functools import cmp_to_key
-    >>> from delierium.MatrixOrder import higher, Context, Mgrevlex, Mlex, Mgrlex, sorter
-    >>> from delierium.JanetBasis import DTerm
     >>> ctxMlex = Context((u,),(x,y,z), Mlex)
     >>> ctxMgrlex = Context((u,),(x,y,z), Mgrlex)
     >>> ctxMgrevlex = Context((u,),(x,y,z), Mgrevlex)
@@ -161,21 +160,24 @@ def sorter (d1, d2, context = Mlex):
     >>> u3 = diff(u, x,x,z,z)
     >>> l1 = [u0, u1,u2,u3]
     >>> shuffle(l1)
-    >>> sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctxMlex)))
-    [diff(u(x, y, z), z, z),
-     diff(u(x, y, z), x, y, y, z),
-     diff(u(x, y, z), x, x, z, z),
-     diff(u(x, y, z), x, x, x)]
-    >>> sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctxMgrlex)))
-    [diff(u(x, y, z), z, z),
-     diff(u(x, y, z), x, x, x),
-     diff(u(x, y, z), x, y, y, z),
-     diff(u(x, y, z), x, x, z, z)]
-    >>> sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctxMgrevlex)))
-    [diff(u(x, y, z), z, z),
-     diff(u(x, y, z), x, x, x),
-     diff(u(x, y, z), x, x, z, z),
-     diff(u(x, y, z), x, y, y, z)]
+    >>> s = sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctxMlex)))
+    >>> for _ in s: print(_)
+    diff(u(x, y, z), z, z)
+    diff(u(x, y, z), x, y, y, z)
+    diff(u(x, y, z), x, x, z, z)
+    diff(u(x, y, z), x, x, x)
+    >>> s = sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctxMgrlex)))
+    >>> for _ in s: print(_)
+    diff(u(x, y, z), z, z)
+    diff(u(x, y, z), x, x, x)
+    diff(u(x, y, z), x, y, y, z)
+    diff(u(x, y, z), x, x, z, z)
+    >>> s = sorted(l1, key=cmp_to_key(lambda item1, item2: sorter (item1, item2, ctxMgrevlex)))
+    >>> for _ in s: print(_)
+    diff(u(x, y, z), z, z)
+    diff(u(x, y, z), x, x, x)
+    diff(u(x, y, z), x, x, z, z)
+    diff(u(x, y, z), x, y, y, z)
     '''
     if eq (d1, d2):
         return 0

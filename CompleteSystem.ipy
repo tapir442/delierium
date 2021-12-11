@@ -3,11 +3,13 @@
 
 #%display latex
 
+import sage.all
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
-from delierium.JanetBasis import multipliers, Differential_Polynomial, Reorder
+from delierium.JanetBasis import (
+    multipliers, Differential_Polynomial, Reorder, CompleteSystem)
 from delierium.MatrixOrder import Context, Mlex, Mgrlex, Mgrevlex
-from delierium.helpers import vector_to_monomial
+from delierium.helpers import vector_to_monomial, eq
 from IPython.core.debugger import set_trace
 import functools
 from delierium.JanetBasis import derivative_to_vec
@@ -17,7 +19,6 @@ t=x1,x2,x3=var("x1 x2 x3")
 f       = function("f")(*t)
 M=[x1*x1*x2*x2*x3**3, x1**3 * x3**3, x1**3 * x2*x3, x2*x3]
 
-%load_ext snakeviz
 
 def complete(m, context = None):
     '''
@@ -61,101 +62,34 @@ def complete(m, context = None):
         loc.extend(sorted(list(set(m0))))
 
 
-#%%snakeviz
-ctx=Context((f,), tuple(_ for _ in reversed(t)))
-M=[x1*x1*x2*x2*x3**3, x1**3 * x3**3, x1**3 * x2*x3, x2*x3]
-c=complete (M, ctx)
+#ctx=Context((f,), tuple(_ for _ in reversed(t)))
+#M=[x1*x1*x2*x2*x3**3, x1**3 * x3**3, x1**3 * x2*x3, x2*x3]
+#c=complete (M, ctx)
 
-from pprint import pprint
-pprint(c)
+#from pprint import pprint
+#pprint(c)
 
-#set_trace ()
-
-vars = var ("x y")
-z = function("z")(*vars)
-w = function("w")(*vars)
+#vars = var ("x y")
+#z = function("z")(*vars)
+#w = function("w")(*vars)
 # ctx: items are in descending order ?
-ctx = Context((w,z), vars, Mlex)
-%load_ext snakeviz
-g1=diff(z,y,y)
-g2=diff(w,x,x)
-g3=diff(w,x,y)
-g4=diff(w,y,y)
+#ctx = Context((w,z), vars, Mlex)
+#g1=diff(z,y,y)
+#g2=diff(w,x,x)
+#g3=diff(w,x,y)
+#g4=diff(w,y,y)
 
-def complete_to_monomial (S, context):
-    result = S[:]
-    # XXX remove hardcoded setting
-    vars = var("x3 x2 x1")
-    def map_old_to_new(l):
-        # XXX remove
-        res = []
-        for _l in l:
-            res.append (context._independent [vars.index(_l)])
-        return res
-    counter = 0
-    while 1:
-        counter+=1
-        monomials = [(_, vector_to_monomial(derivative_to_vec(_.Lder(), context))) for _ in result]
-        ms        = tuple ([_[1] for _ in monomials])
-        m0 = []
 
-        # multiplier-collection is our M
-        multiplier_collection = []
-        for dp, monom in monomials:
-            # S1
-            _multipliers, _nonmultipliers = multipliers(monom, ms, vars)
-            multiplier_collection.append ((monom, dp, _multipliers, _nonmultipliers))
 
-        for monom, dp, _multipliers, _nonmultipliers in multiplier_collection:
-            if not _nonmultipliers:
-                m0.append((monom, None, dp))
-            else:
-                for n in _nonmultipliers:
-                    m0.append((monom * n, n, dp))
-        to_remove = []
-        for _m0 in m0:
-            # S3: check whether in class of any of the monomials
-            for monomial, _, _multipliers, _nonmultipliers in multiplier_collection:
-                if all(_m0[0].degree(x) >= monomial.degree(x) for x in _multipliers) and \
-                   all(_m0[0].degree(x) == monomial.degree(x) for x in _nonmultipliers):
-                    # this is in _m0's class
-                    to_remove.append(_m0)
-        for _to in to_remove:
-            try:
-                m0.remove(_to)
-            except:
-                pass
-        if not m0:
-            return result
-        else:
-            for _m0 in m0:
-                dp = Differential_Polynomial(_m0[2].diff(map_old_to_new([_m0[1]])[0]).expression(), context)
-                if not dp in result:
-                    result.append (dp)
-        Reorder (result, context, ascending=False)
-
-def CompleteSystem(S, context):
-    """
-    Algorithm C1, p. 385
-    """
-    s = {}
-    for _ in S:
-        _fun = _.Lder().operator().function()
-        s.setdefault (_fun, []).append (_)
-    res = []
-    for k in s:
-        if len(s[k]) > 1:
-            _ = complete_to_monomial(s[k], context)
-            res.extend (_)
-        else:
-            res += s[k]
-    return Reorder(res, context, ascending = False)
 
 #cs=CompleteSystem([Differential_Polynomial(_, ctx) for _ in [g1,g2,g3,g4]], ctx)
 
 
-def complete_with_DPs(dps, ctx):
-    pass
+#def complete_with_DPs(dps, ctx):
+#    pass
+
+
+%load_ext snakeviz
 
 
 tvars=var("x y z")
@@ -167,9 +101,14 @@ h3=diff(w, x,     y,  z,z,z)
 h4=diff(w, x,     y)
 ctx=Context((w,),(x,y,z), Mgrlex)
 
+#%snakeviz
 dps=[Differential_Polynomial(_, ctx) for _ in [h1,h2,h3,h4]]
 
+
+#%snakeviz
 cs = CompleteSystem(dps, ctx)
+
+#print(eq.cache_info())
 
 for _ in cs:
     _.show()

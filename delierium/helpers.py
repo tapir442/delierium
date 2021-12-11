@@ -1,17 +1,19 @@
 import sage.all
 from collections.abc import Iterable
 import functools
-from sage.calculus.var import var
+from sage.calculus.var import var, function
+from sage.calculus.functional import diff
+from functools import reduce
+from operator import __mul__
 
-    
+
 @functools.cache
 def eq(d1, d2):
     '''This cheap trick gives as a lot of performance gain
     because maxima comparisons are expensive,and we can expect
     a lot of the same comparisons over and over again
     '''
-    return bool (d1==d2)
-
+    return bool(d1 == d2)
 
 
 def tangent_vector(f):
@@ -61,7 +63,9 @@ def tangent_vector(f):
     return [d.coefficient(_) for _ in newvars]
 
 #
-def order_of_derivative (e):
+
+
+def order_of_derivative(e):
     '''Returns the vector of the orders of a derivative respect to its variables
 
     >>> x,y,z = var ("x,y,z")
@@ -71,19 +75,20 @@ def order_of_derivative (e):
     >>> order_of_derivative (d)
     [2, 1, 3]
     '''
-    opr = e.operator ()
-    opd = e.operands ()
+    opr = e.operator()
+    opd = e.operands()
     if not isinstance(opr, sage.symbolic.operators.FDerivativeOperator):
-        return [0] * len (e.variables())
-    res = [opr.parameter_set().count(i) for i in range (len(opd))]
+        return [0] * len(e.variables())
+    res = [opr.parameter_set().count(i) for i in range(len(opd))]
     return res
 
-#def highest_order_of_derivative(e):
+# def highest_order_of_derivative(e):
 #    # xxx _of_ in function name is annyoing
 #    e      = e if isinstance(e, Iterable) else [e]
 #    return max([sum (order_of_derivative(_)) for _ in e])
 
-def __lt__ (a,b):
+
+def __lt__(a, b):
     '''
     sorts functions lexicographically
     '''
@@ -109,17 +114,16 @@ def is_derivative(e):
     >>> is_derivative (diff(f,x)*x)
     False
     '''
-    try :
+    try:
         return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
     except AttributeError:
         return False
 
-#Don't cache ! slows down
+
 def is_function(e):
     '''checks whether an expression 'e' is a pure function without any
     derivative as a factor
 
-    >>> from delierium.helpers import is_function
     >>> x = var('x')
     >>> f = function ('f')(x)
     >>> is_function (f)
@@ -129,33 +133,23 @@ def is_function(e):
     >>> is_function (x*diff(f,x))
     False
     '''
-    if hasattr (e, "operator"):
-        return "NewSymbolicFunction" in e.operator ().__class__.__name__ and \
+    if hasattr(e, "operator"):
+        return "NewSymbolicFunction" in e.operator().__class__.__name__ and \
             e.operands() != []
     return False
-#    try :
-#        # XXX this must done more sagemathic if possible
-#        return "NewSymbolicFunction" in e.operator ().__class__.__name__ and \
-#            e.operands() != []
-#    except AttributeError:
-#        return False
 
 
 def vector_to_monomial(v, sort=None):
     '''
-    >>> from delierium.helpers import vector_to_monomial
     >>> vector_to_monomial ([1,2,3,4])
-    x1*x2^2*x3^3*x4^4
+    x1^4*x2^3*x3^2*x4
     '''
-    from functools import reduce
-    from operator import __mul__
     vars = var(" ".join('x%s' % _ for _ in range(1, len(v)+1)))
     return reduce(__mul__, [v**e for v, e in zip(reversed(vars), v)], 1)
 
 
 def monomial_to_vector(m, no_of_variables, sort=None):
     '''
-    >>> from delierium.helpers import monomial_to_vector
     >>> x1,x3,x3 = var("x1 x2 x3")
     >>> monomial_to_vector (x1**4 * x2**2 * x3**1, 3)
     [4, 2, 1]
@@ -166,6 +160,7 @@ def monomial_to_vector(m, no_of_variables, sort=None):
     res = []
     vars = var(" ".join('x%s' % _ for _ in range(1, no_of_variables+1)))
     operands = m.operands()
+
     def get_exponent(v, o):
         for _o in o:
             ops = _o.operands()
@@ -178,5 +173,5 @@ def monomial_to_vector(m, no_of_variables, sort=None):
 
         return 0
     for _var in vars:
-        res.append (get_exponent (_var, operands))
+        res.append(get_exponent(_var, operands))
     return res

@@ -3,11 +3,15 @@
 # coding: utf-8
 # -
 
-from sage.calculus.var import var
+import sage.all
+from sage.calculus.var import var, function
 from sage.calculus.functional import diff
-from delierium.helpers import (is_derivative, is_function, eq, 
-                               order_of_derivative)
-from delierium.MatrixOrder import higher, sorter, Context
+from delierium.helpers import (is_derivative, is_function, eq,
+                               order_of_derivative, vector_to_monomial,
+                               monomial_to_vector
+
+                               )
+from delierium.MatrixOrder import higher, sorter, Context, Mgrlex
 import functools
 from operator import mul
 from IPython.core.debugger import set_trace
@@ -25,10 +29,6 @@ class DTerm:
     def __init__ (self, e, context = None):
         r'''differential term
 
-        >>> from delierium.JanetBasis import DTerm
-        >>> from delierium.MatrixOrder import Context
-        >>> from sage.calculus.var import var
-        >>> from sage.calculus.functional import diff
         >>> x,y,z = var("x y z")
         >>> f     = function("f")(x,y,z)
         >>> g     = function("g")(x,y,z)
@@ -186,7 +186,7 @@ class Differential_Polynomial:
     def diff(self, *args):
         return type(self)(diff(self.expression(), *args), self._context)
 
-                                       
+
 # ToDo: Janet_Basis as class as this object has properties like rank, order ....
 def Reorder (S, context, ascending = False):
     return sorted(S, key=functools.cmp_to_key(lambda item1, item2:
@@ -278,20 +278,18 @@ def degree(v, m):
 @functools.cache
 def multipliers(m, M, Vars):
     """Multipliers for Monomials
-    >>> from delierium.JanetBasis import multipliers
-    >>> v = var("x1 x2 x3")
-    >>> M = [x1*x1*x1*x2*x2*x3*x3, x1*x1*x1*x3*x3*x3, x3*x3*x3*x2*x1, x2*x1]
-    >>> r = multipliers (M[0],M, v)
-    >>> # print (M[0], r[0], r[1]) x1^3*x2^2*x3^2 [x1, x2, x3] []    
-    >>> r = multipliers (M[1],M, v)
-    >>> # print (M[1], r[0], r[1])  x1*x2 [x2] [x3, x1]  
-    >>> r = multipliers (M[2],M, v)
-    >>> # print (M[2], r[0], r[1]) x1^3*x3^3 [x1, x3] [x2]    
-    >>> r = multipliers (M[3],M, v)    
-    >>> # print (M[3], r[0], r[1])  x1*x2 [x2] [x3, x1]       
+    >>> v = var("x3 x2 x1")
+    >>> M = (x3*x3*x3*x2*x2*x1*x1, x1*x1*x1*x3*x3*x3, x1**3*x2*x3, x2*x3)
+    >>> multipliers (M[0],M, v)
+    ([x3, x2, x1], [])
+    >>> multipliers (M[1],M, v)
+    ([x3, x1], [x2])
+    >>> multipliers (M[2],M, v)
+    ([x2, x1], [x3])
+    >>> multipliers (M[3],M, v)
+    ([x2], [x3, x1])
     """
     assert (m in M)
-    # ToDo: convert to differential vectors and use vec_multipliers!
     d = max((degree (v, u) for u in M for v in Vars), default=0)
     mult = []
     if degree (Vars[0], m) == d:
@@ -305,56 +303,55 @@ def multipliers(m, M, Vars):
                 V.append (_u)
         if degree (v, m) == max((degree (v, _u) for _u in V), default = 0):
             mult.append (v)
-    return mult, sorted(set(Vars) - set(mult))
+    return sorted(mult), sorted(set(Vars) - set(mult))
 
 def vec_degree(v, m):
     return m[v]
 
 def vec_multipliers(m, M, Vars):
     """multipliers and nonmultipliers for differential vectors aka tuples
-    
+
     m   : a tuple representing a differential vector
     M   : the complete set of differential vectors
     Vars: a tuple representing the order of indizes in m
-          Examples: 
+          Examples:
               (0,1,2) means first index in m represents the highest variable
               (2,1,0) means last index in m represents the highest variable
-    
+
     ......................................................
     The doctest example is from Schwarz, Example C.1, p. 384
     This example is in on variables x1,x2,x3, with x3 the highest rated variable.
     So we have to specify (2,1,0) to represent this
-    
-    >>> from delierium.JanetBasis import vec_multipliers
+
     >>> M = [(2,2,3), (3,0,3), (3,1,1), (0,1,1)]
     >>> r = vec_multipliers (M[0],M, (2,1,0))
     >>> print (M[0], r[0], r[1])
     (2, 2, 3) [2, 1, 0] []
     >>> r = vec_multipliers (M[1],M, (2,1,0))
-    >>> print (M[1], r[0], r[1])    
-    (3, 0, 3) [2, 0] [1]    
+    >>> print (M[1], r[0], r[1])
+    (3, 0, 3) [2, 0] [1]
     >>> r = vec_multipliers (M[2],M, (2,1,0))
     >>> print (M[2], r[0], r[1])
-    (3, 1, 1) [1, 0] [2]    
-    >>> r = vec_multipliers (M[3],M, (2,1,0))    
+    (3, 1, 1) [1, 0] [2]
+    >>> r = vec_multipliers (M[3],M, (2,1,0))
     >>> print (M[3], r[0], r[1])
-    (0, 1, 1) [1] [0, 2]    
+    (0, 1, 1) [1] [0, 2]
     >>> N=[[0,2], [2,0], [1,1]]
     >>> r =vec_multipliers(N[0], N,  (0,1))
     >>> print(r)
-    ([1], [0])    
+    ([1], [0])
     >>> r =vec_multipliers(N[1], N,  (0,1))
     >>> print(r)
-    ([0, 1], [])    
+    ([0, 1], [])
     >>> r =vec_multipliers(N[2], N,  (0,1))
     >>> print(r)
-    ([1], [0])    
+    ([1], [0])
     >>> r =vec_multipliers(N[0], N,  (1,0))
     >>> print(r)
-    ([1, 0], [])    
+    ([1, 0], [])
     >>> r =vec_multipliers(N[1], N,  (1,0))
     >>> print(r)
-    ([0], [1])    
+    ([0], [1])
     >>> r =vec_multipliers(N[2], N,  (1,0))
     >>> print(r)
     ([0], [1])
@@ -421,13 +418,13 @@ class Differential_Vector:
     def __eq__(self, other):
         return eq(self.obj, other.obj)
 
-    
+
 
 def in_class (r, mclass, mult, nonmult):
     '''checks whether "r" is in the same class like "mclass"
     r is a tuple
     m is a tuple
-    '''    
+    '''
     return all (vec_degree (x, r) >= vec_degree (x, mclass) for x in mult)  and \
         all (vec_degree(x, r) == vec_degree (x, mclass) for x in nonmult)
 
@@ -438,19 +435,17 @@ def derivative_to_vec (d, context):
 def complete (pl,ctx):
     """
     ah, this one gets differential polynomials !!!!
-    
-    hmm , how to testP.... 
-    
-    >>> from delierium.JanetBasis import vec_multipliers, complete, Differential_Polynomial
-    >>> from delierium.MatrixOrder import Context, Mlex
-    >>> x1, x2, x3 = var("x1 x2 x3")
-    >>> f = function("f")(x1,x2,x3)
-    >>> ctx = Context ((f,), (x3,x2,x1))
-    >>> M = [Differential_Polynomial(_, ctx) \
-    ...    for _ in [diff(f, x1,2, x2, 2 , x3,3), diff(f, x1,3, x3,3), diff(f, x1,3,x2,x3), diff(f, x2,x3)]]
-    >>> print (complete (M, ctx))
+
+    hmm , how to testP....
+
+    >>> #x1, x2, x3 = var("x1 x2 x3")
+    >>> #f = function("f")(x1,x2,x3)
+    >>> #ctx = Context ((f,), (x3,x2,x1))
+    >>> #M = [Differential_Polynomial(_, ctx)\
+    #for _ in [diff(f, x1,2, x2, 2 , x3,3), diff(f, x1,3, x3,3), diff(f, x1,3,x2,x3), diff(f, x2,x3)]]
+    >>> #print (complete (M, ctx))
     """
-    ld         = [derivative_to_vec(_.Lder(), ctx) for _ in pl]
+    ld         = tuple([derivative_to_vec(_.Lder(), ctx) for _ in pl])
     # XXX check sort order
     sort_order = tuple([i for i in range(len(ctx._independent))])
     m0         = []
@@ -469,11 +464,88 @@ def complete (pl,ctx):
         pl = reversed(sorted(map (lambda _ : Differential_Vector(_, ctx), list(set(pl)))))
         pl = [_._e for _ in l]
 
-        
-        
+def complete_to_monomial (S, context):
+    result = S[:]
+    vars = var (" ".join(["x%s" % i for i in range (len(context._independent), 0, -1)]))
+    def map_old_to_new(l):
+        # XXX remove
+        res = []
+        for _l in l:
+            res.append (context._independent [vars.index(_l)])
+        return res
+    counter = 0
+    while 1:
+        counter+=1
+        monomials = [(_, vector_to_monomial(derivative_to_vec(_.Lder(), context))) for _ in result]
+        ms        = tuple ([_[1] for _ in monomials])
+        m0 = []
+
+        # multiplier-collection is our M
+        multiplier_collection = []
+        for dp, monom in monomials:
+            # S1
+            _multipliers, _nonmultipliers = multipliers(monom, ms, vars)
+            multiplier_collection.append ((monom, dp, _multipliers, _nonmultipliers))
+
+        for monom, dp, _multipliers, _nonmultipliers in multiplier_collection:
+            if not _nonmultipliers:
+                m0.append((monom, None, dp))
+            else:
+                for n in _nonmultipliers:
+                    m0.append((monom * n, n, dp))
+        to_remove = []
+        for _m0 in m0:
+            # S3: check whether in class of any of the monomials
+            for monomial, _, _multipliers, _nonmultipliers in multiplier_collection:
+                if all(_m0[0].degree(x) >= monomial.degree(x) for x in _multipliers) and \
+                   all(_m0[0].degree(x) == monomial.degree(x) for x in _nonmultipliers):
+                    # this is in _m0's class
+                    to_remove.append(_m0)
+        for _to in to_remove:
+            try:
+                m0.remove(_to)
+            except:
+                pass
+        if not m0:
+            return result
+        else:
+            for _m0 in m0:
+                dp = Differential_Polynomial(_m0[2].diff(map_old_to_new([_m0[1]])[0]).expression(), context)
+                if not dp in result:
+                    result.append (dp)
+        Reorder (result, context, ascending=False)
+
 def CompleteSystem(S, context):
     """
     Algorithm C1, p. 385
+
+    >>> tvars=var("x y z")
+    >>> w = function("w")(*tvars)
+    >>> # these DPs are constructed from C1, pp 384
+    >>> h1=diff(w, x,x,x, y,y,z,z)
+    >>> h2=diff(w, x,x,x,     z,z,z)
+    >>> h3=diff(w, x,     y,  z,z,z)
+    >>> h4=diff(w, x,     y)
+    >>> ctx=Context((w,),(x,y,z), Mgrlex)
+    >>> dps=[Differential_Polynomial(_, ctx) for _ in [h1,h2,h3,h4]]
+    >>> cs = CompleteSystem(dps, ctx)
+    >>> for _ in cs: _.show()
+    diff(w(x, y, z), x, x, x, y, y, z, z)
+    diff(w(x, y, z), x, x, x, y, z, z, z)
+    diff(w(x, y, z), x, x, x, y, y, z)
+    diff(w(x, y, z), x, x, x, y, z, z)
+    diff(w(x, y, z), x, x, x, z, z, z)
+    diff(w(x, y, z), x, x, y, z, z, z)
+    diff(w(x, y, z), x, x, x, y, y)
+    diff(w(x, y, z), x, x, x, y, z)
+    diff(w(x, y, z), x, x, y, z, z)
+    diff(w(x, y, z), x, y, z, z, z)
+    diff(w(x, y, z), x, x, x, y)
+    diff(w(x, y, z), x, x, y, z)
+    diff(w(x, y, z), x, y, z, z)
+    diff(w(x, y, z), x, x, y)
+    diff(w(x, y, z), x, y, z)
+    diff(w(x, y, z), x, y)
     """
     s = {}
     for _ in S:
@@ -482,11 +554,11 @@ def CompleteSystem(S, context):
     res = []
     for k in s:
         if len(s[k]) > 1:
-            _ = complete (s[k], context)
+            _ = complete_to_monomial(s[k], context)
             res.extend (_)
         else:
             res += s[k]
-    return Reorder(res, context, ascending = True)
+    return Reorder(res, context, ascending = False)
 
 if __name__ == "__main__":
     import doctest
