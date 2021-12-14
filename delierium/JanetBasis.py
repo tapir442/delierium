@@ -5,18 +5,28 @@
 
 import sage.all
 from sage.calculus.var import var, function
+from sage.misc.reset import reset
 from sage.calculus.functional import diff
-from delierium.helpers import (is_derivative, is_function, eq,
+try :
+    from delierium.helpers import (is_derivative, is_function, eq,
                                order_of_derivative, vector_to_monomial,
                                monomial_to_vector
-
                                )
-from delierium.MatrixOrder import higher, sorter, Context, Mgrlex
+    from delierium.MatrixOrder import higher, sorter, Context, Mgrlex
+except ModuleNotFoundError:
+    from helpers import (is_derivative, is_function, eq,
+                               order_of_derivative, vector_to_monomial,
+                               monomial_to_vector
+                               )
+    from MatrixOrder import higher, sorter, Context, Mgrlex
+
 import functools
 from operator import mul
 from IPython.core.debugger import set_trace
+from more_itertools import bucket
+import logging
 
-@functools.cache
+#@functools.cache
 def func(e):
     try:
         return e.operator().function()
@@ -45,6 +55,8 @@ class DTerm:
         if is_derivative(e) or is_function(e):
             # XXX put into _d only if in in context
             self._d = e
+        elif isinstance (e, int):
+            pass
         else:
             r = []
             for o in e.operands ():
@@ -58,7 +70,13 @@ class DTerm:
             if not r:
                 raise ValueError("invalid expression '{}' for DTerm".format(e))
     def __str__ (self):
-        return "{} * {}".format (self._coeff, self._d)
+        try:
+            return "{} * {}".format (self._coeff.expression(), self._d)
+        except AttributeError:
+            if eq (self._coeff, 1):
+                return "{}".format (self._d)
+            else:
+                return "{} * {}".format (self._coeff, self._d)
     def term(self):
         return self._coeff * self._d
     def order (self):
@@ -92,7 +110,9 @@ class Differential_Polynomial:
 
     def _init(self, e):
         self._p = []
+        logging.debug ("0: e:%s, class:%s" % (e, e.__class__))
         if is_derivative(e) or is_function(e):
+            logging.debug ("1: e:%s, class:%s" % (e, e.__class__))
             self._p.append(DTerm(e, self._context))
         else:
             for s in e.operands ():
@@ -114,8 +134,10 @@ class Differential_Polynomial:
                             break
                 if not found:
                     if d:
+                        logging.debug ("2: e:%s, class:%s" % (e, e.__class__))
                         self._p.append (DTerm(coeff * d[0], self._context))
                     else:
+                        logging.debug ("3: e:%s, class:%s" % (e, e.__class__))
                         self._p.append (DTerm(coeff, self._context))
         self._p.sort(key=functools.cmp_to_key(lambda item1, item2: sorter (item1.derivative(), item2.derivative(), self._context)),
                      reverse = True
@@ -167,7 +189,7 @@ class Differential_Polynomial:
         return self._p
     def expression (self):
         return sum(_.term() for _ in self._p)
-    @functools.cache
+#    @functools.cache
     def __lt__ (self, other):
         return self._p[0] < other._p[0]
     def __eq__ (self, other):
@@ -185,7 +207,8 @@ class Differential_Polynomial:
         return newone
     def diff(self, *args):
         return type(self)(diff(self.expression(), *args), self._context)
-
+    def __str__ (self):
+        return " + ".join ([str(_) for _ in self._p])
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ....
 def Reorder (S, context, ascending = False):
@@ -199,8 +222,8 @@ def reduceS (e:Differential_Polynomial, S:list, context)->Differential_Polynomia
     reducing = True
     gen = (_ for _ in S)
     while reducing:
-        for p in gen:
-            enew = reduce (e, p, context)
+        for dp in gen:
+            enew = reduce (e, dp, context)
             if enew == e:
                 reducing = False
             else:
@@ -218,6 +241,7 @@ def reduce(e1: Differential_Polynomial,e2: Differential_Polynomial, context:Cont
 
     def _reduce (e, ld):
         e2_order = _order (ld)
+
         for t in e._p:
             d = t._d
             c = t._coeff
@@ -264,18 +288,8 @@ def Autoreduce(S, context):
             # start from scratch
             i = 0
 
-@functools.cache
-def degree(v, m):
-    # returnd degree of variable 'v' in monomial 'm'
-    for operand in m.operands():
-        if eq(v, operand):
-            return 1
-        e = operand.operands()
-        if e and eq (e[0], v):
-            return e[1]
-    return 0
 
-@functools.cache
+#@functools.cache
 def multipliers(m, M, Vars):
     """Multipliers for Monomials
     >>> v = var("x3 x2 x1")
@@ -288,9 +302,18 @@ def multipliers(m, M, Vars):
     ([x2, x1], [x3])
     >>> multipliers (M[3],M, v)
     ([x2], [x3, x1])
+    >>> # Example Schwarz pp 54
+    >>> reset(v)
+    >>> v = var("x2 x1")
+    >>> M = (x1**2, x2**3, x2*x2*x1)
+    >>> M[0], multipliers (M[0],M, v)
+    ([x3, x2, x1], [])
+    >>> M[1],multipliers (M[1],M, v)
+    ([x3, x1], [x2])
+    >>> M[2],multipliers (M[2],M, v)
+    None
     """
-    assert (m in M)
-    d = max((degree (v, u) for u in M for v in Vars), default=0)
+    d = max((u.degree(v) for u in M for v in Vars), default=0)
     mult = []
     if degree (Vars[0], m) == d:
         mult.append (Vars[0])
@@ -465,7 +488,7 @@ def complete (pl,ctx):
         pl = [_._e for _ in l]
 
 def complete_to_monomial (S, context):
-    result = S[:]
+    result = [_ for _ in S]
     vars = var (" ".join(["x%s" % i for i in range (len(context._independent), 0, -1)]))
     def map_old_to_new(l):
         # XXX remove
@@ -486,13 +509,13 @@ def complete_to_monomial (S, context):
             # S1
             _multipliers, _nonmultipliers = multipliers(monom, ms, vars)
             multiplier_collection.append ((monom, dp, _multipliers, _nonmultipliers))
-
         for monom, dp, _multipliers, _nonmultipliers in multiplier_collection:
             if not _nonmultipliers:
                 m0.append((monom, None, dp))
             else:
-                for n in _nonmultipliers:
-                    m0.append((monom * n, n, dp))
+                # todo: do we need subsets or is a multiplication by only one
+                # nonmultiplier one after the other enough ?
+                m0.extend([(monom * n, n, dp) for n in _nonmultipliers])
         to_remove = []
         for _m0 in m0:
             # S3: check whether in class of any of the monomials
@@ -513,7 +536,7 @@ def complete_to_monomial (S, context):
                 dp = Differential_Polynomial(_m0[2].diff(map_old_to_new([_m0[1]])[0]).expression(), context)
                 if not dp in result:
                     result.append (dp)
-        Reorder (result, context, ascending=False)
+        result = Reorder (result, context, ascending=False)
 
 def CompleteSystem(S, context):
     """
@@ -530,35 +553,39 @@ def CompleteSystem(S, context):
     >>> dps=[Differential_Polynomial(_, ctx) for _ in [h1,h2,h3,h4]]
     >>> cs = CompleteSystem(dps, ctx)
     >>> for _ in cs: _.show()
-    diff(w(x, y, z), x, x, x, y, y, z, z)
-    diff(w(x, y, z), x, x, x, y, z, z, z)
-    diff(w(x, y, z), x, x, x, y, y, z)
-    diff(w(x, y, z), x, x, x, y, z, z)
-    diff(w(x, y, z), x, x, x, z, z, z)
-    diff(w(x, y, z), x, x, y, z, z, z)
-    diff(w(x, y, z), x, x, x, y, y)
-    diff(w(x, y, z), x, x, x, y, z)
-    diff(w(x, y, z), x, x, y, z, z)
-    diff(w(x, y, z), x, y, z, z, z)
-    diff(w(x, y, z), x, x, x, y)
-    diff(w(x, y, z), x, x, y, z)
-    diff(w(x, y, z), x, y, z, z)
-    diff(w(x, y, z), x, x, y)
-    diff(w(x, y, z), x, y, z)
     diff(w(x, y, z), x, y)
+    diff(w(x, y, z), x, y, z)
+    diff(w(x, y, z), x, x, y)
+    diff(w(x, y, z), x, y, z, z)
+    diff(w(x, y, z), x, x, y, z)
+    diff(w(x, y, z), x, x, x, y)
+    diff(w(x, y, z), x, y, z, z, z)
+    diff(w(x, y, z), x, x, y, z, z)
+    diff(w(x, y, z), x, x, x, y, z)
+    diff(w(x, y, z), x, x, x, y, y)
+    diff(w(x, y, z), x, x, y, z, z, z)
+    diff(w(x, y, z), x, x, x, z, z, z)
+    diff(w(x, y, z), x, x, x, y, z, z)
+    diff(w(x, y, z), x, x, x, y, y, z)
+    diff(w(x, y, z), x, x, x, y, z, z, z)
+    diff(w(x, y, z), x, x, x, y, y, z, z)
+    >>> # example from Schwarz, pp 54
+    >>> w = function("w")(x,y)
+    >>> z = function("z")(x,y)
+    >>> g1 = diff(z,y,y) + diff(z, y)/(2*y)
+    >>> g5 = diff(z,x,x,x) + diff(w,y,y)*8*y**2 + diff(w,x,x)/y - diff(z,x,y)*4*y**2 - diff(z,x)*32*y-16*w
+    >>> g6 = diff(z,x,x,y) - diff(z,y,y)*4*y**2 - diff(z,y)*8*y
+    >>> ctx = Context((w,z),(x,y), Mgrlex)
+    >>> #dps=[Differential_Polynomial(_, ctx) for _ in [g1,g5,g6]]
+    >>> #cs = CompleteSystem(dps, ctx)
+    >>> #for _ in cs: print(_)
     """
-    s = {}
-    for _ in S:
-        _fun = _.Lder().operator().function()
-        s.setdefault (_fun, []).append (_)
+    s = bucket(S, key=lambda d: d.Lder().operator().function())
     res = []
     for k in s:
-        if len(s[k]) > 1:
-            _ = complete_to_monomial(s[k], context)
-            res.extend (_)
-        else:
-            res += s[k]
-    return Reorder(res, context, ascending = False)
+        _ = complete_to_monomial(s[k], context)
+        res.extend (_)
+    return Reorder(res, context, ascending = True)
 
 if __name__ == "__main__":
     import doctest
