@@ -13,7 +13,11 @@ from functools import cmp_to_key
 
 
 import functools
-from delierium.helpers import eq, order_of_derivative, is_derivative
+try:
+    from delierium.helpers import eq, order_of_derivative, is_derivative
+except ModuleNotFoundError:
+    from helpers import eq, order_of_derivative, is_derivative
+
 import doctest
 #
 # standard weight matrices for lex, grlex and grevlex order
@@ -124,7 +128,7 @@ def higher (d1 ,d2, context):
         else:
             _cache[d] = context._dependent.index(d.operator().function()(*list(context._independent)))
         return _cache[d]
-    @functools.cache
+    #@functools.cache
     def get_derivative_vector(d):
         i = idx(d)
         iv = [0]*len(context._dependent)

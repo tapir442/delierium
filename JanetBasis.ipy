@@ -1,5 +1,7 @@
 #%display latex
-from delierium.JanetBasis import Autoreduce, Differential_Polynomial, Reorder, CompleteSystem, derivative_to_vec,multipliers
+from delierium.JanetBasis import (
+    Autoreduce, Differential_Polynomial, Reorder, CompleteSystem, derivative_to_vec,multipliers
+    , reduceS)
 from delierium.MatrixOrder import Context, Mgrlex, Mgrevlex, Mlex
 from delierium.helpers import eq
 from pprint import pprint
@@ -12,9 +14,15 @@ from delierium.helpers import (is_derivative, is_function, eq,
                                monomial_to_vector
 
                                )
+import sage.all
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
+from more_itertools import powerset, bucket
+from itertools import product, combinations, islice
+import logging
 
+logging.basicConfig(filename='delierium.log', level=logging.DEBUG)
+logging.info('Started')
 
 def Lfunc(e):
     return e
@@ -23,7 +31,17 @@ def Lcml(e):
     return 0
 def Lcm(e):
     return 0
+
+def split_by_function(S, context):
+    s = bucket(S, key=lambda d: d.Lder().operator().function())
+    res = []
+    for k in s:
+       _ = FindIntegrableConditions(s[k], context)
+       res.extend (_)
+    return res
+
 def FindIntegrableConditions(S, context):
+    vars = var (" ".join(["x%s" % i for i in range (len(context._independent), 0, -1)]))
     monomials = [(_, vector_to_monomial(derivative_to_vec(_.Lder(), context))) for _ in S]
     ms        = tuple ([_[1] for _ in monomials])
     m0 = []
@@ -38,20 +56,25 @@ def FindIntegrableConditions(S, context):
     multiplier_collection = []
     for dp, monom in monomials:
         # S1
+        # damned! Variables are messed up!
         _multipliers, _nonmultipliers = multipliers(monom, ms, vars)
-        multiplier_collection.append ((dp,
-                                       [map_old_to_new([_])[0] for _ in _multipliers],
-                                       [map_old_to_new([_])[0] for _ in _nonmultipliers]
-                                       ))
-    from itertools import product, combinations
+        multiplier_collection.append (
+            (dp,
+             [map_old_to_new([_])[0] for _ in _multipliers],
+             [map_old_to_new([_])[0] for _ in _nonmultipliers]
+            ))
     result = []
     for e1, e2 in product(multiplier_collection, repeat=2):
         if e1 == e2: continue
-        for m in e1[1]:
-            for n in [c for i in range(len(e2[2])+1)
-                      for c in combinations(e2[2], i) if c]:
-                result.append (e1[0].diff(m) - e2[0].diff(*n))
-
+        for n in e1[2]:
+            for m in islice(powerset(e2[1]), 1, None):
+                if eq(diff(e1[0].Lder(), n), diff(e2[0].Lder(), *m)):
+                    # integrability condition
+                    # don't need leading coefficients because in DPs
+                    # it is always 1
+                    c = diff(e1[0].expression(), n) - \
+                        diff(e2[0].expression(), *m)
+                    result.append (c)
     return result
 
 def ReduceIntegrabilityConditions(S, context):
@@ -61,44 +84,64 @@ z = function("z")(*vars)
 w = function("w")(*vars)
 # ctx: items are in descending order
 ctx = Context((w,z), vars, Mgrlex)
-f1 =diff(w, y) + x*diff(z,y)/(2*y*(x**2+y)) - w/y
-#f1.show()
-f2=diff(z,x,y) + y*diff(w,y)/x + 2*y*diff(z, x)/x
-#f2.show()
-f3 = diff(w, x,y) - 2*x*diff(z, x,2)/y - x*diff(w,x)/y**2
-#f3.show()
-f4 = diff(w, x,y) + diff(z, x,y) + diff(w, y)/(2*y) - diff(w,x)/y + x* diff(z, y)/y - w/(2*y**2)
-f5 =diff(w,y,y) + diff(z,x,y) - diff(w, y)/y + w/(y**2)
-#f5.show()
-f1dp=Differential_Polynomial(f1, context=ctx)
-f2dp=Differential_Polynomial(f2, context=ctx)
-f3dp=Differential_Polynomial(f3, context=ctx)
-f4dp=Differential_Polynomial(f4, context=ctx)
-f5dp=Differential_Polynomial(f5, context=ctx)
+
+from System_2_24 import system_2_24
+from System_2_25 import system_2_25
+
+
 class Janet_Basis:
     def __init__ (self, S, context):
         """List of homogenous PDE's + order context"""
-        self.S = S
-        if not isinstance(self.S, Iterable):
+        if not isinstance(S, Iterable):
             # bad criterion
-            self.S = [self.S]
-        self.S = Reorder([Differential_Polynomial(s, context) for s in self.S], context, ascending = True)
-        self.S = Autoreduce (self.S, context)
-        self.S = CompleteSystem(self.S, context)
-        _multipliers = FindIntegrableConditions(self.S, context)
-#        for _ in zip (self.S, _multipliers):
-#            _[0].show()
-#            print(_[1])
-        #self.S = ReduceIntegrabilityConditions(self.S, context)
-        #if all ([_ == 0 for _ in c]) or not c:
-        #    return S\n",
-        #S += c\n",
-        self.S = Reorder (self.S, context)
+            self.S = [S]
+        else:
+            self.S = S[:]
+        while 1:
+            logging.debug ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+            self.S = Reorder([Differential_Polynomial(s, context) for s in self.S], context, ascending = True)
+            logging.debug("before Autureduce")
+            for _ in self.S:
+                _.show()
+            self.S = Autoreduce (self.S, context)
+            logging.debug("before CompleteSystem")
+            for _ in self.S:
+                logging.debug(_)
+            self.S = CompleteSystem(self.S, context)
+            logging.debug("before conditions")
+            for _ in self.S:
+                logging.debug (_)
+            self.conditions = split_by_function(self.S, context)
+            c = []
+            for _m in self.conditions:
+                _m = Differential_Polynomial(_m, context)
+                c.append (reduceS(_m, self.S, context))
+            if not c:
+                self.S = Reorder (self.S, context)
+                return
+            self.S = [_.expression() for _ in self.S] + [_.expression() for _ in c]
+
     def rank(self):
         return 0
     def order(self):
         return 0
-checkS=Janet_Basis([f3,f1,f5, f2,f4], ctx)
+import time
+#start = time.time()
+#checkS=Janet_Basis(system_2_24, ctx)
+#print (time.time()-start)
+#for _ in checkS.S:
+#    _.show()
+#print(eq.cache_info())
+
+
+start = time.time()
+checkS=Janet_Basis(system_2_25, ctx)
+print (time.time()-start)
+
 for _ in checkS.S:
     _.show()
 print(eq.cache_info())
+
+
+
+

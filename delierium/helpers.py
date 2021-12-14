@@ -9,9 +9,10 @@ from operator import __mul__
 
 @functools.cache
 def eq(d1, d2):
-    '''This cheap trick gives as a lot of performance gain
+    '''This cheap trick gives as a lot of performance gain (> 80%!)
     because maxima comparisons are expensive,and we can expect
-    a lot of the same comparisons over and over again
+    a lot of the same comparisons over and over again.
+    All other caching is neglegible comparef to this here
     '''
     return bool(d1 == d2)
 
