@@ -109,9 +109,9 @@ class Differential_Polynomial:
 
     def _init(self, e):
         self._p = []
-        logging.debug ("0: e:%s, class:%s" % (e, e.__class__))
+#        logging.debug ("0: e:%s, class:%s" % (e, e.__class__))
         if is_derivative(e) or is_function(e):
-            logging.debug ("1: e:%s, class:%s" % (e, e.__class__))
+#            logging.debug ("1: e:%s, class:%s" % (e, e.__class__))
             self._p.append(DTerm(e, self._context))
         else:
             for s in e.operands ():
@@ -133,10 +133,10 @@ class Differential_Polynomial:
                             break
                 if not found:
                     if d:
-                        logging.debug ("2: e:%s, class:%s" % (e, e.__class__))
+#                        logging.debug ("2: e:%s, class:%s" % (e, e.__class__))
                         self._p.append (DTerm(coeff * d[0], self._context))
                     else:
-                        logging.debug ("3: e:%s, class:%s" % (e, e.__class__))
+#                        logging.debug ("3: e:%s, class:%s" % (e, e.__class__))
                         self._p.append (DTerm(coeff, self._context))
         self._p.sort(key=functools.cmp_to_key(lambda item1, item2: sorter (item1.derivative(), item2.derivative(), self._context)),
                      reverse = True
