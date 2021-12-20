@@ -89,8 +89,6 @@ w = function("w")(*vars)
 # ctx: items are in descending order
 ctx = Context((w,z), vars, Mgrevlex)
 
-from System_2_24 import system_2_24
-from System_2_25 import system_2_25
 
 
 class Janet_Basis:
@@ -102,16 +100,13 @@ class Janet_Basis:
         else:
             self.S = S[:]
         while 1:
-            logging.debug ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+            self.show("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
             self.S = Reorder([Differential_Polynomial(s, context) for s in self.S], context, ascending = True)
-            logging.debug("before Autureduce")
-            self.show()
+            self.show("before Autureduce")
             self.S = Autoreduce (self.S, context)
-            logging.debug("before CompleteSystem")
-            self.show()
+            self.show("before CompleteSystem")
             self.S = CompleteSystem(self.S, context)
-            logging.debug("before conditions")
-            self.show()
+            self.show("before conditions")
             self.conditions = split_by_function(self.S, context)
             c = []
             for _m in self.conditions:
@@ -121,26 +116,33 @@ class Janet_Basis:
                 self.S = Reorder (self.S, context)
                 return
             self.S = [_.expression() for _ in self.S] + [_.expression() for _ in c]
-    def show(self):
+    def show(self, position = ""):
+        if position:
+            s = "=====> %s" % position
+            print (s)
+            logging.debug(s)
         for _ in self.S:
+            logging.debug ("S:%s" % _)
             print (_)
     def rank(self):
         return 0
     def order(self):
         return 0
 import time
-start = time.time()
-checkS=Janet_Basis(system_2_24, ctx)
-print (time.time()-start)
-checkS.show()
-#print(eq.cache_info())
-
-
+#from System_2_24 import system_2_24, ctx
 #start = time.time()
-#checkS=Janet_Basis(system_2_25, ctx)
+#checkS=Janet_Basis(system_2_24, ctx)
 #print (time.time()-start)
 #checkS.show()
 #print(eq.cache_info())
+
+
+start = time.time()
+from System_2_25 import system_2_25, ctx
+checkS=Janet_Basis(system_2_25, ctx)
+print (time.time()-start)
+checkS.show()
+print(eq.cache_info())
 
 
 
