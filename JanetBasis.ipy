@@ -41,8 +41,12 @@ def split_by_function(S, context):
     return res
 
 def FindIntegrableConditions(S, context):
+    result = list(S)
+    if len(result) == 1:
+        return []
     vars = var (" ".join(["x%s" % i for i in range (len(context._independent), 0, -1)]))
     monomials = [(_, vector_to_monomial(derivative_to_vec(_.Lder(), context))) for _ in S]
+
     ms        = tuple ([_[1] for _ in monomials])
     m0 = []
     def map_old_to_new(l):
@@ -83,14 +87,14 @@ vars = var ("x y")
 z = function("z")(*vars)
 w = function("w")(*vars)
 # ctx: items are in descending order
-ctx = Context((w,z), vars, Mgrlex)
+ctx = Context((w,z), vars, Mgrevlex)
 
 from System_2_24 import system_2_24
 from System_2_25 import system_2_25
 
 
 class Janet_Basis:
-    def __init__ (self, S, context):
+    def __init__ (self, S, context = Mgrevlex):
         """List of homogenous PDE's + order context"""
         if not isinstance(S, Iterable):
             # bad criterion
@@ -101,16 +105,13 @@ class Janet_Basis:
             logging.debug ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
             self.S = Reorder([Differential_Polynomial(s, context) for s in self.S], context, ascending = True)
             logging.debug("before Autureduce")
-            for _ in self.S:
-                _.show()
+            self.show()
             self.S = Autoreduce (self.S, context)
             logging.debug("before CompleteSystem")
-            for _ in self.S:
-                logging.debug(_)
+            self.show()
             self.S = CompleteSystem(self.S, context)
             logging.debug("before conditions")
-            for _ in self.S:
-                logging.debug (_)
+            self.show()
             self.conditions = split_by_function(self.S, context)
             c = []
             for _m in self.conditions:
@@ -120,27 +121,26 @@ class Janet_Basis:
                 self.S = Reorder (self.S, context)
                 return
             self.S = [_.expression() for _ in self.S] + [_.expression() for _ in c]
-
+    def show(self):
+        for _ in self.S:
+            print (_)
     def rank(self):
         return 0
     def order(self):
         return 0
 import time
-#start = time.time()
-#checkS=Janet_Basis(system_2_24, ctx)
-#print (time.time()-start)
-#for _ in checkS.S:
-#    _.show()
+start = time.time()
+checkS=Janet_Basis(system_2_24, ctx)
+print (time.time()-start)
+checkS.show()
 #print(eq.cache_info())
 
 
-start = time.time()
-checkS=Janet_Basis(system_2_25, ctx)
-print (time.time()-start)
-
-for _ in checkS.S:
-    _.show()
-print(eq.cache_info())
+#start = time.time()
+#checkS=Janet_Basis(system_2_25, ctx)
+#print (time.time()-start)
+#checkS.show()
+#print(eq.cache_info())
 
 
 

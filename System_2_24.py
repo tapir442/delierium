@@ -19,7 +19,7 @@ vars = var ("x y")
 z = function("z")(*vars)
 w = function("w")(*vars)
 # ctx: items are in descending order
-ctx = Context((w,z), vars, Mgrlex)
+ctx = Context((w,z), vars, Mgrevlex)
 
 f1 = diff(w, y) + x*diff(z,y)/(2*y*(x**2+y)) - w/y
 f2 = diff(z,x,y) + y*diff(w,y)/x + 2*y*diff(z, x)/x

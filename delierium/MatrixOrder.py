@@ -103,7 +103,7 @@ def Mgrevlex(funcs, vars):
 
 class Context:
     # XXX replace by named tuple? or attr.ib
-    def __init__ (self, dependent, independent, weight = Mlex):
+    def __init__ (self, dependent, independent, weight = Mgrevlex):
         """ sorting : (in)dependent [i] > dependent [i+i]
         """
         # XXX maybe we can create the matrices here?
@@ -148,7 +148,7 @@ def higher (d1 ,d2, context):
     return False
 
 @functools.cache
-def sorter (d1, d2, context = Mlex):
+def sorter (d1, d2, context = Mgrevlex):
     '''sorts two derivatives d1 and d2 using the weight matrix M
     according to the sort order given in the tuple of  dependent and independent variables
 

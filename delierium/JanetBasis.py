@@ -33,7 +33,6 @@ def func(e):
     except AttributeError:
         return e.operator()
 
-
 @functools.total_ordering
 class DTerm:
     def __init__ (self, e, context = None):
@@ -241,7 +240,6 @@ def reduce(e1: Differential_Polynomial,e2: Differential_Polynomial, context:Cont
 
     def _reduce (e, ld):
         e2_order = _order (ld)
-
         for t in e._p:
             d = t._d
             c = t._coeff
@@ -269,11 +267,8 @@ def reduce(e1: Differential_Polynomial,e2: Differential_Polynomial, context:Cont
 def Autoreduce(S, context):
     dps = list(S)
     i = 0
-    while True:
-        p = dps[:i+1]
-        r = dps[i+1:]
-        if not r:
-            return dps
+    p, r = dps[:i+1], dps[i+1:]
+    while r:
         newdps = []
         have_reduced = False
         for _r in r:
@@ -287,7 +282,8 @@ def Autoreduce(S, context):
         else:
             # start from scratch
             i = 0
-
+        p, r = dps[:i+1], dps[i+1:]
+    return dps
 
 #@functools.cache
 def multipliers(m, M, Vars):
@@ -307,24 +303,24 @@ def multipliers(m, M, Vars):
     >>> v = var("x2 x1")
     >>> M = (x1**2, x2**3, x2*x2*x1)
     >>> M[0], multipliers (M[0],M, v)
-    ([x3, x2, x1], [])
+    (x1^2, ([x1], [x2]))
     >>> M[1],multipliers (M[1],M, v)
-    ([x3, x1], [x2])
+    (x2^3, ([x2, x1], []))
     >>> M[2],multipliers (M[2],M, v)
-    None
+    (x1*x2^2, ([x1], [x2]))
     """
     d = max((u.degree(v) for u in M for v in Vars), default=0)
     mult = []
-    if degree (Vars[0], m) == d:
+    if m.degree(Vars[0]) == d:
         mult.append (Vars[0])
     for j in range (1, len (Vars)):
         v = Vars[j]
-        dd = list (map (lambda x: degree (x,m), Vars[:j]))
+        dd = list (map (lambda x: m.degree(x), Vars[:j]))
         V = []
         for _u in M:
-            if [degree (_v, _u) for _v in Vars[:j]]==dd:
+            if [_u.degree(_v) for _v in Vars[:j]]==dd:
                 V.append (_u)
-        if degree (v, m) == max((degree (v, _u) for _u in V), default = 0):
+        if m.degree(v) == max((_u.degree(v) for _u in V), default = 0):
             mult.append (v)
     return sorted(mult), sorted(set(Vars) - set(mult))
 
@@ -488,7 +484,12 @@ def complete (pl,ctx):
         pl = [_._e for _ in l]
 
 def complete_to_monomial (S, context):
-    result = [_ for _ in S]
+    result = list(S)
+    if len(result) == 1:
+        # don't do anything if there is nothing to do. as the independent list
+        # may be larger as the vraibalies in the leading term all kind of
+        # starnge things will happen
+        return result
     vars = var (" ".join(["x%s" % i for i in range (len(context._independent), 0, -1)]))
     def map_old_to_new(l):
         # XXX remove
@@ -576,9 +577,13 @@ def CompleteSystem(S, context):
     >>> g5 = diff(z,x,x,x) + diff(w,y,y)*8*y**2 + diff(w,x,x)/y - diff(z,x,y)*4*y**2 - diff(z,x)*32*y-16*w
     >>> g6 = diff(z,x,x,y) - diff(z,y,y)*4*y**2 - diff(z,y)*8*y
     >>> ctx = Context((w,z),(x,y), Mgrlex)
-    >>> #dps=[Differential_Polynomial(_, ctx) for _ in [g1,g5,g6]]
-    >>> #cs = CompleteSystem(dps, ctx)
-    >>> #for _ in cs: print(_)
+    >>> dps=[Differential_Polynomial(_, ctx) for _ in [g1,g5,g6]]
+    >>> cs = CompleteSystem(dps, ctx)
+    >>> for _ in cs: print(_)
+    diff(z(x, y), y, y) + 1/2/y * diff(z(x, y), y)
+    diff(z(x, y), x, y, y) + 1/2/y * diff(z(x, y), x, y)
+    diff(z(x, y), x, x, y) + -4*y^2 * diff(z(x, y), y, y) + -8*y * diff(z(x, y), y)
+    diff(z(x, y), x, x, x) + 1/y * diff(w(x, y), x, x) + 8*y^2 * diff(w(x, y), y, y) + -4*y^2 * diff(z(x, y), x, y) + -32*y * diff(z(x, y), x) + -16 * w(x, y)
     """
     s = bucket(S, key=lambda d: d.Lder().operator().function())
     res = []
