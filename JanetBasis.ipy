@@ -45,7 +45,7 @@ def FindIntegrableConditions(S, context):
     if len(result) == 1:
         return []
     vars = var (" ".join(["x%s" % i for i in range (len(context._independent), 0, -1)]))
-    monomials = [(_, vector_to_monomial(derivative_to_vec(_.Lder(), context))) for _ in S]
+    monomials = [(_, vector_to_monomial(derivative_to_vec(_.Lder(), context))) for _ in result]
 
     ms        = tuple ([_[1] for _ in monomials])
     m0 = []
@@ -83,12 +83,6 @@ def FindIntegrableConditions(S, context):
 
 def ReduceIntegrabilityConditions(S, context):
     return S
-vars = var ("x y")
-z = function("z")(*vars)
-w = function("w")(*vars)
-# ctx: items are in descending order
-ctx = Context((w,z), vars, Mgrevlex)
-
 
 
 class Janet_Basis:
@@ -107,15 +101,16 @@ class Janet_Basis:
             self.show("before CompleteSystem")
             self.S = CompleteSystem(self.S, context)
             self.show("before conditions")
+            set_trace()
             self.conditions = split_by_function(self.S, context)
-            c = []
+            reduced = []
             for _m in self.conditions:
                 _m = Differential_Polynomial(_m, context)
-                c.append (reduceS(_m, self.S, context))
-            if not c:
+                reduced.append (reduceS(_m, self.S, context))
+            if not reduced:
                 self.S = Reorder (self.S, context)
                 return
-            self.S = [_.expression() for _ in self.S] + [_.expression() for _ in c]
+            self.S = [_.expression() for _ in self.S] + [_.expression() for _ in reduced]
     def show(self, position = ""):
         if position:
             s = "=====> %s" % position
