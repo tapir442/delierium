@@ -52,10 +52,7 @@ def tangent_vector(f):
     [2*x, 6*y^2, -12*z^3]
     sage: tangent_vector (x**2)
     [2*x]
-
     """
-    from sage.calculus.var import var
-    from sage.calculus.functional import diff
     t = var("t")
     newvars = [var("x%s" % i) for i in f.variables()]
     for o, n in zip(f.variables(), newvars):
@@ -64,7 +61,6 @@ def tangent_vector(f):
     return [d.coefficient(_) for _ in newvars]
 
 #
-
 
 def order_of_derivative(e):
     '''Returns the vector of the orders of a derivative respect to its variables
@@ -82,24 +78,6 @@ def order_of_derivative(e):
         return [0] * len(e.variables())
     res = [opr.parameter_set().count(i) for i in range(len(opd))]
     return res
-
-# def highest_order_of_derivative(e):
-#    # xxx _of_ in function name is annyoing
-#    e      = e if isinstance(e, Iterable) else [e]
-#    return max([sum (order_of_derivative(_)) for _ in e])
-
-
-def __lt__(a, b):
-    '''
-    sorts functions lexicographically
-    '''
-    astr = a.operator().__str__()
-    bstr = b.operator().__str__()
-    if astr < bstr:
-        return -1
-    if astr > bstr:
-        return 1
-    return 0
 
 
 def is_derivative(e):
@@ -119,7 +97,6 @@ def is_derivative(e):
         return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
     except AttributeError:
         return False
-
 
 def is_function(e):
     '''checks whether an expression 'e' is a pure function without any
