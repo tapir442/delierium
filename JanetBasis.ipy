@@ -1,6 +1,6 @@
 #%display latex
 from delierium.JanetBasis import (
-    Autoreduce, Differential_Polynomial, Reorder, CompleteSystem, derivative_to_vec,multipliers
+    Autoreduce, Differential_Polynomial, Reorder, CompleteSystem, derivative_to_vec,vec_multipliers, Janet_Basis
     , reduceS)
 from delierium.MatrixOrder import Context, Mgrlex, Mgrevlex, Mlex
 from delierium.helpers import eq
@@ -17,12 +17,6 @@ from delierium.helpers import (is_derivative, is_function, eq,
 import sage.all
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
-from more_itertools import powerset, bucket
-from itertools import product, combinations, islice
-import logging
-
-logging.basicConfig(filename='delierium.log', level=logging.DEBUG)
-logging.info('Started')
 
 def Lfunc(e):
     return e
@@ -32,105 +26,17 @@ def Lcml(e):
 def Lcm(e):
     return 0
 
-def split_by_function(S, context):
-    s = bucket(S, key=lambda d: d.Lder().operator().function())
-    res = []
-    for k in s:
-       _ = FindIntegrableConditions(s[k], context)
-       res.extend (_)
-    return res
 
-def FindIntegrableConditions(S, context):
-    result = list(S)
-    if len(result) == 1:
-        return []
-    vars = var (" ".join(["x%s" % i for i in range (len(context._independent), 0, -1)]))
-    monomials = [(_, vector_to_monomial(derivative_to_vec(_.Lder(), context))) for _ in result]
-
-    ms        = tuple ([_[1] for _ in monomials])
-    m0 = []
-    def map_old_to_new(l):
-        # XXX remove
-        res = []
-        for _l in l:
-            res.append (context._independent [vars.index(_l)])
-        return res
-
-    # multiplier-collection is our M
-    multiplier_collection = []
-    for dp, monom in monomials:
-        # S1
-        # damned! Variables are messed up!
-        _multipliers, _nonmultipliers = multipliers(monom, ms, vars)
-        multiplier_collection.append (
-            (dp,
-             [map_old_to_new([_])[0] for _ in _multipliers],
-             [map_old_to_new([_])[0] for _ in _nonmultipliers]
-            ))
-    result = []
-    for e1, e2 in product(multiplier_collection, repeat=2):
-        if e1 == e2: continue
-        for n in e1[2]:
-            for m in islice(powerset(e2[1]), 1, None):
-                if eq(diff(e1[0].Lder(), n), diff(e2[0].Lder(), *m)):
-                    # integrability condition
-                    # don't need leading coefficients because in DPs
-                    # it is always 1
-                    c = diff(e1[0].expression(), n) - \
-                        diff(e2[0].expression(), *m)
-                    result.append (c)
-    return result
-
-def ReduceIntegrabilityConditions(S, context):
-    return S
-
-
-class Janet_Basis:
-    def __init__ (self, S, context = Mgrevlex):
-        """List of homogenous PDE's + order context"""
-        if not isinstance(S, Iterable):
-            # bad criterion
-            self.S = [S]
-        else:
-            self.S = S[:]
-        while 1:
-            self.show("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-            self.S = Reorder([Differential_Polynomial(s, context) for s in self.S], context, ascending = True)
-            self.show("before Autureduce")
-            self.S = Autoreduce (self.S, context)
-            self.show("before CompleteSystem")
-            self.S = CompleteSystem(self.S, context)
-            self.show("before conditions")
-            set_trace()
-            self.conditions = split_by_function(self.S, context)
-            reduced = []
-            for _m in self.conditions:
-                _m = Differential_Polynomial(_m, context)
-                reduced.append (reduceS(_m, self.S, context))
-            if not reduced:
-                self.S = Reorder (self.S, context)
-                return
-            self.S = [_.expression() for _ in self.S] + [_.expression() for _ in reduced]
-    def show(self, position = ""):
-        if position:
-            s = "=====> %s" % position
-            print (s)
-            logging.debug(s)
-        for _ in self.S:
-            logging.debug ("S:%s" % _)
-            print (_)
-    def rank(self):
-        return 0
-    def order(self):
-        return 0
+import cProfile
 import time
-#from System_2_24 import system_2_24, ctx
-#start = time.time()
-#checkS=Janet_Basis(system_2_24, ctx)
-#print (time.time()-start)
-#checkS.show()
-#print(eq.cache_info())
+from System_2_24 import system_2_24, ctx
+start = time.time()
+checkS=Janet_Basis(system_2_24, ctx)
+print (time.time()-start)
+checkS.show()
+print(eq.cache_info())
 
+eq.cache_clear()
 
 start = time.time()
 from System_2_25 import system_2_25, ctx
