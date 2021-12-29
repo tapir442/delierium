@@ -656,52 +656,22 @@ if __name__ == "__main__":
 # -
 
 # https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt#overlay-context=contents
-##############Janet Division#############
-#Janet:=proc(u,U,Vars)
-#def mm (u, U, Vars)
-#local n,m,d,L,i,j,dd,V,v,Mult;
-#option trace;
-#    if degree(u)=0 then RETURN(Vars); fi;
-#n:=nops(Vars);
-#m:=ArrayNumElems(U);
-#d:=[seq(max(seq(degree(U[j],Vars[i]),j=1..m)),i=1..n)];
-#Mult:=NULL;
- #   if degree(u,Vars[1])=d[1] then
-  #     Mult:=Mult,Vars[1];
-   # fi:
-#for j from 2 to n do
-#dd:=[seq(degree(u,Vars[l]),l=1..j-1)];
-#V:=NULL:
-#for v in U do
-#if [seq(degree(v,Vars[l]),l=1..j-1)]=dd then
-#V:=V,v:
-#fi:
-#od:
-#if degree(u,Vars[j])=max(seq(degree(v,Vars[j]), v in [V])) then
-#  Mult:=Mult,Vars[j];
-#fi:
-#od:
-#RETURN([Mult]);
-#end:
 
 ########### Pommaret Division #############
-#LeftPommaret:=proc(u,U,Vars)
-#local N,Ind,i;
-#N:=NULL:
-#Ind:=indets(u):
-#for i from 1 to nops(Vars) while not (Vars[i] in Ind) do
-#    N:=N,Vars[i]:
-#od:
-#N:=N,Vars[i]:
-#RETURN([N]);
-#end:
-#RightPommaret:=proc(u,U,Vars)
-#local N,Ind,i;
-#N:=NULL:
-#Ind:=indets(u):
-#for i from  nops(Vars) by -1 to 1 while not (Vars[i] in Ind) do
- #   N:=N,Vars[i]:
-#od:
-#N:=N,Vars[i]:
-#RETURN([N]);
-#end:
+def LeftPommaret(u,U,Vars):
+    local N,Ind,i
+    N=NULL
+    Ind=indets(u):
+    for i from 1 to nops(Vars) while not (Vars[i] in Ind):
+        N = N,Vars[i]
+    N = N,Vars[i]
+    return N
+
+def RightPommaret(u,U,Vars):
+    local N,Ind,i
+    N:=NULL
+    Ind:=indets(u)
+    for i from  nops(Vars) by -1 to 1 while not (Vars[i] in Ind):
+        N:=N,Vars[i]
+    N:=N,Vars[i]
+    return N
