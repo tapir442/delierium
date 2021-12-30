@@ -658,20 +658,20 @@ if __name__ == "__main__":
 # https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt#overlay-context=contents
 
 ########### Pommaret Division #############
-def LeftPommaret(u,U,Vars):
-    local N,Ind,i
-    N=NULL
-    Ind=indets(u):
-    for i from 1 to nops(Vars) while not (Vars[i] in Ind):
-        N = N,Vars[i]
-    N = N,Vars[i]
-    return N
+#def LeftPommaret(u,U,Vars):
+#    local N,Ind,i
+#    N=NULL
+#    Ind=indets(u):
+#    for i from 1 to nops(Vars) while not (Vars[i] in Ind):
+#        N = N,Vars[i]
+#    N = N,Vars[i]
+#    return N
 
-def RightPommaret(u,U,Vars):
-    local N,Ind,i
-    N:=NULL
-    Ind:=indets(u)
-    for i from  nops(Vars) by -1 to 1 while not (Vars[i] in Ind):
-        N:=N,Vars[i]
-    N:=N,Vars[i]
-    return N
+#def RightPommaret(u,U,Vars):
+#    local N,Ind,i
+#    N:=NULL
+#    Ind:=indets(u)
+#    for i from  nops(Vars) by -1 to 1 while not (Vars[i] in Ind):
+#        N:=N,Vars[i]
+#    N:=N,Vars[i]
+#    return N
