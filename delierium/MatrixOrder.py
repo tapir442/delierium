@@ -14,9 +14,9 @@ from functools import cmp_to_key
 
 import functools
 try:
-    from delierium.helpers import eq, order_of_derivative, is_derivative
+    from delierium.helpers import eq, order_of_derivative, is_derivative, is_function
 except ModuleNotFoundError:
-    from helpers import eq, order_of_derivative, is_derivative
+    from helpers import eq, order_of_derivative, is_derivative, is_function
 
 import doctest
 #
@@ -38,7 +38,7 @@ def Mlex(funcs, vars):
     OUTPUT: a matrix which when multiplying an augmented vector (func + var) gives
             the vector in lex order
 
-            same applies mutas mutandis for Mgrlex and Mgrevlex
+            same applies mutatiss mutandis for Mgrlex and Mgrevlex
 
     >>> x,y,z = var ("x y z")
     >>> f = function("f")(x,y,z)
@@ -108,39 +108,37 @@ class Context:
         """
         # XXX maybe we can create the matrices here?
         self._independent = tuple(independent)
-        self._dependent   = tuple(dependent)
+        self._dependent   = tuple((_.operator() for _ in dependent))
         self._weight      = weight (self._dependent, self._independent)
         self._basefield   = PolynomialRing(QQ, independent)
 
 _cache={}
 
 @functools.cache
-def higher (d1 ,d2, context):
+def higher(d1, d2, context):
     # XXX move to context?
-    '''Algorithm 2.3 from [Schwarz]'''
-    def idx (d):
+    '''Algorithm 2.3 from [Schwarz].'''
+    @functools.cache
+    def analyze_dterm(dd):
+        if is_derivative(dd):
+            f = dd.operator().function()
+        elif is_function(dd):
+            f = dd.operator()
+        else:
+            f = [_ for _ in dd.operands() if is_function(_) or is_derivative(_)][0]
+            if is_derivative(f):
+                f = f.operator().function()
+        return f
+    def idx(d):
         # faster than functools.cache
-        if d in _cache:
-            return _cache[d]
-
-        if not is_derivative (d):
-            _cache[d] = -1
-        else:
-            _cache[d] = context._dependent.index(d.operator().function()(*list(context._independent)))
-        return _cache[d]
-    #@functools.cache
+        return context._dependent.index(analyze_dterm(d))
+    @functools.cache
     def get_derivative_vector(d):
-        i = idx(d)
         iv = [0]*len(context._dependent)
-        if i >= 0:
-            iv[i] = 1
-            return vector(order_of_derivative(d) + iv)
-        else:
-            return vector([0]*len(context._independent) + iv)
-
+        iv [idx(d)] += 1
+        return vector(order_of_derivative(d) + iv)
     i1 = get_derivative_vector(d1)
     i2 = get_derivative_vector(d2)
-
     r = context._weight * vector(i1-i2)
     for entry in r:
         if entry:
@@ -150,7 +148,8 @@ def higher (d1 ,d2, context):
 @functools.cache
 def sorter (d1, d2, context = Mgrevlex):
     '''sorts two derivatives d1 and d2 using the weight matrix M
-    according to the sort order given in the tuple of  dependent and independent variables
+    according to the sort order given in the tuple of  dependent and
+    independent variables
 
     >>> x, y, z = var("x y z")
     >>> u = function ("u")(x,y,z)
@@ -183,9 +182,9 @@ def sorter (d1, d2, context = Mgrevlex):
     diff(u(x, y, z), x, x, z, z)
     diff(u(x, y, z), x, y, y, z)
     '''
-    if eq (d1, d2):
-        return 0
-    if higher (d1, d2, context):
+    if eq(d1, d2):
+        return 1
+    if higher(d1, d2, context):
         return 1
     return -1
 
