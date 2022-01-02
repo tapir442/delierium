@@ -1,19 +1,5 @@
 #%display latex
-from delierium.JanetBasis import (
-    Autoreduce, Differential_Polynomial, Reorder, CompleteSystem, derivative_to_vec,vec_multipliers, Janet_Basis
-    , reduceS)
-from delierium.MatrixOrder import Context, Mgrlex, Mgrevlex, Mlex
-from delierium.helpers import eq
-from pprint import pprint
-from collections.abc import Iterable
-import functools
-from operator import mul, sub
-from IPython.core.debugger import set_trace
-from delierium.helpers import (is_derivative, is_function, eq,
-                               order_of_derivative, vector_to_monomial,
-                               monomial_to_vector
 
-                               )
 import sage.all
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
@@ -29,22 +15,28 @@ def Lcm(e):
 
 import cProfile
 import time
+
+#%display latex
+from delierium.JanetBasis import Janet_Basis
+from delierium.MatrixOrder import Context, Mgrlex, Mgrevlex, Mlex
+from IPython.core.debugger import set_trace
+from delierium.helpers import (is_derivative, is_function, eq,
+                               order_of_derivative, vector_to_monomial,
+                               monomial_to_vector
+
+                               )
+
+
+%load_ext snakeviz
+#import time
 from System_2_24 import system_2_24, ctx
-start = time.time()
-checkS=Janet_Basis(system_2_24, ctx)
-print (time.time()-start)
+#%snakeviz
+checkS=Janet_Basis(system_2_24, ctx._dependent, ctx._independent, Mlex)
 checkS.show()
-print(eq.cache_info())
 
 eq.cache_clear()
 
-start = time.time()
 from System_2_25 import system_2_25, ctx
-checkS=Janet_Basis(system_2_25, ctx)
-print (time.time()-start)
+#%snakeviz
+checkS=Janet_Basis(system_2_25, ctx._dependent, ctx._independent, Mlex)
 checkS.show()
-print(eq.cache_info())
-
-
-
-

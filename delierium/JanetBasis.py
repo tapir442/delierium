@@ -118,7 +118,7 @@ class _Differential_Polynomial:
         else:
             for s in e.operands():
                 coeff, d = [], []
-                if is_derivative(s):
+                if is_derivative(s) or is_function(s):
                     d.append(s)
                 else:
                     for item in s.operands():
@@ -156,6 +156,12 @@ class _Differential_Polynomial:
 
     def Lder (self):
         return self._p[0]._d
+
+    def Lfunc(self):
+        if is_function(self._p[0]._d):
+            return self._p[0]._d.operator()
+        else:
+            return self._p[0]._d.operator().function()
 
     def Lcoeff(self):
         return self._p[0]._coeff
@@ -246,19 +252,19 @@ def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Co
             if func(ld) != func(d):
                 continue
             e1_order = _order (d)
-            dif = [a-b for a, b in zip (e1_order, e2_order)]
-            if all (map (lambda h: h == 0, dif)) :
+            dif = [a-b for a, b in zip(e1_order, e2_order)]
+            if all(map(lambda h: h == 0, dif)):
                 return _Differential_Polynomial (e1.expression() - e2.expression() * c, context)
             if all (map (lambda h: h >= 0, dif)):
                 variables_to_diff = []
                 for i in range (len(context._independent)):
-                    if dif [i] != 0:
+                    if dif[i] != 0:
                         variables_to_diff.extend ([context._independent[i]]*abs(dif[i]))
                 return _Differential_Polynomial (e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
         return e
 
     _e1 = None
-    while True:
+    while 1:
         _e1 = _reduce_inner (e1, e2.Lder())
         if bool(_e1 == e1):
             return _e1
@@ -267,22 +273,22 @@ def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Co
 def Autoreduce(S, context):
     dps = list(S)
     i = 0
-    p, r = dps[:i+1], dps[i+1:]
+    _p, r = dps[:i+1], dps[i+1:]
     while r:
         newdps = []
         have_reduced = False
         for _r in r:
-            rnew = reduceS(_r, p, context)
+            rnew = reduceS(_r, _p, context)
             have_reduced = have_reduced or rnew != _r
             newdps.append(rnew)
-        dps = Reorder(p + [_ for _  in newdps if _ not in p], context, ascending = True)
+        dps = Reorder(_p + [_ for _  in newdps if _ not in _p], context, ascending = True)
         if not have_reduced:
             # no reduction done
             i += 1
         else:
             # start from scratch
             i = 0
-        p, r = dps[:i+1], dps[i+1:]
+        _p, r = dps[:i+1], dps[i+1:]
     return dps
 
 def vec_degree(v, m):
@@ -369,72 +375,16 @@ def vec_multipliers(m, M, Vars):
     return mult, list(sorted(set(Vars) - set(mult)))
 
 
-# +
-@functools.total_ordering
-class Differential_Vector:
-    """Differential Vector:
-       maps a partial derivative to a tuple representing this derivative
-    """
-    def __init__ (self,e, ctx):
-        """
-            e   : expression for the derivative
-            ctx : context object representing the order of variables
-        """
-        self._e = self.obj = e
-        # is this the right place to do ?
-        if ctx._weight == Mlex:
-            M = matrix.identity(len(self._e))
-        elif ctx._weight == Mgrlex:
-            M = matrix (len(self._e))
-            for i in range(len(self._e)):
-                M [0, i] = 1
-            for i in range (len(self._e) - 1):
-                M [i+1, i] = 1
-        elif ctx._weight == Mgrevlex:
-            M = matrix (len(self._e))
-            for i in range(len(self._e)):
-                M [0, i] = 1
-            for i in range (1,len(self._e)):
-                M [len(self._e)-i, i] = -1
-        self.M = M
-
-    #XXX use functools.cmp_to_key ?
-    def mycmp (self, a, b):
-        a = self.M*vector(a)
-        b = self.M*vector(b)
-        v = [_a - _b for _a,_b in zip (a, b)]
-        # XXX check order
-        for _ in v:
-            if _ < 0:
-                return 1
-            if _ > 0:
-                return -1
-        return 0
-    def __lt__(self, other):
-        return self.mycmp(self.obj, other.obj) < 0
-    def __eq__(self, other):
-        return eq(self.obj, other.obj)
-
-
-
-def in_class (r, mclass, mult, nonmult):
-    '''checks whether "r" is in the same class like "mclass"
-    r is a tuple
-    m is a tuple
-    '''
-    return all (vec_degree (x, r) >= vec_degree (x, mclass) for x in mult)  and \
-        all (vec_degree(x, r) == vec_degree (x, mclass) for x in nonmult)
-
 @functools.cache
-def derivative_to_vec (d, context):
-    return order_of_derivative (d)
+def derivative_to_vec(d, context):
+    return order_of_derivative(d)
 
 def complete (S, context):
     result = list(S)
     if len(result) == 1:
         # don't do anything if there is nothing to do. as the independent list
         # may be larger as the variables in the leading term all kind of
-        # starnge things will happen
+        # strange things will happen
         return result
     vars = list(range (len(context._independent)))
     def map_old_to_new(l):
@@ -453,7 +403,7 @@ def complete (S, context):
         for dp, monom in monomials:
             # S1
             _multipliers, _nonmultipliers = vec_multipliers(monom, ms, vars)
-            multiplier_collection.append ((monom, dp, _multipliers, _nonmultipliers))
+            multiplier_collection.append((monom, dp, _multipliers, _nonmultipliers))
         for monom, dp, _multipliers, _nonmultipliers in multiplier_collection:
             if not _nonmultipliers:
                 m0.append((monom, None, dp))
@@ -533,12 +483,12 @@ def CompleteSystem(S, context):
     diff(z(x, y), x, x, y) + -4*y^2 * diff(z(x, y), y, y) + -8*y * diff(z(x, y), y)
     diff(z(x, y), x, x, x) + 1/y * diff(w(x, y), x, x) + 8*y^2 * diff(w(x, y), y, y) + -4*y^2 * diff(z(x, y), x, y) + -32*y * diff(z(x, y), x) + -16 * w(x, y)
     """
-    s = bucket(S, key=lambda d: d.Lder().operator().function())
+    s = bucket(S, key=lambda d: d.Lfunc())
     res = flatten([complete(s[k], context) for k in s])
     return Reorder(res, context, ascending = True)
 
 def split_by_function(S, context):
-    s = bucket(S, key=lambda d: d.Lder().operator().function())
+    s = bucket(S, key=lambda d: d.Lfunc())
     return flatten([FindIntegrableConditions(s[k], context) for k in s])
 
 def FindIntegrableConditions(S, context):
@@ -616,7 +566,37 @@ class Janet_Basis:
         diff(z(x, y), x) + 1/2/y * w(x, y)
         diff(w(x, y), y) + -1/y * w(x, y)
         diff(w(x, y), x)
+        >>> vars = var ("x y")
+        >>> z = function("z")(*vars)
+        >>> w = function("w")(*vars)
+        >>> f1 = diff(w, y) + x*diff(z,y)/(2*y*(x**2+y)) - w/y
+        >>> f2 = diff(z,x,y) + y*diff(w,y)/x + 2*y*diff(z, x)/x
+        >>> f3 = diff(w, x,y) - 2*x*diff(z, x,2)/y - x*diff(w,x)/y**2
+        >>> f4 = diff(w, x,y) + diff(z, x,y) + diff(w, y)/(2*y) - diff(w,x)/y + x* diff(z, y)/y - w/(2*y**2)
+        >>> f5 = diff(w,y,y) + diff(z,x,y) - diff(w, y)/y + w/(y**2)
+        >>> system_2_24 = [f1,f2,f3,f4,f5]
+        >>> checkS=Janet_Basis(system_2_24, (w,z), vars, Mgrlex)
+        >>> checkS.show()
+        diff(z(x, y), y)
+        diff(z(x, y), x) + 1/2/y * w(x, y)
+        diff(w(x, y), y) + -1/y * w(x, y)
+        diff(w(x, y), x)
+        >>> vars = var ("x y")
+        >>> z = function("z")(*vars)
+        >>> w = function("w")(*vars)
+        >>> g1 = diff(z, y,y) + diff(z,y)/(2*y)
+        >>> g2 = diff(w,x,x) + 4*diff(w,y)*y**2 - 8*(y**2) * diff(z,x) - 8*w*y
+        >>> g3 = diff(w,x,y) - diff(z,x,x)/2 - diff(w,x)/(2*y) - 6* (y**2) * diff(z,y)
+        >>> g4 = diff(w,y,y) - 2*diff(z,x,y) - diff(w,y)/(2*y) + w/(2*y**2)
+        >>> system_2_25 = [g2,g3,g4,g1]
+        >>> checkS=Janet_Basis(system_2_25, (w,z), vars, Mgrlex)
+        >>> checkS.show()
+        diff(z(x, y), y)
+        diff(z(x, y), x) + 1/2/y * w(x, y)
+        diff(w(x, y), y) + -1/y * w(x, y)
+        diff(w(x, y), x)
         """
+        eq.cache_clear()
         context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # bad criterion
@@ -630,25 +610,32 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
-            self.S = Autoreduce (self.S, context)
+            self.S = Autoreduce(self.S, context)
             self.S = CompleteSystem(self.S, context)
             self.conditions = split_by_function(self.S, context)
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
-                      ]
+            ]
             if not reduced:
-                self.S = Reorder (self.S, context)
+                self.S = Reorder(self.S, context)
                 return
             self.S += [_ for _ in reduced if
-                       not (_  in self.S or eq(_.expression(), 0))]
+                       not (_ in self.S or eq(_.expression(), 0))]
             self.S = Reorder(self.S, context, ascending=True)
-    def show(self, position = ""):
+
+    def show(self):
+        """Print the Janet basis with leading derivative first."""
         for _ in self.S:
-            print (_)
+            print(_)
+
     def rank(self):
+        """Return the rank of the computed Janet basis."""
         return 0
+
     def order(self):
+        """Return the order of the computed Janet basis."""
         return 0
+
 
 if __name__ == "__main__":
     import doctest
