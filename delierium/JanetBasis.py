@@ -185,7 +185,6 @@ class _Differential_Polynomial:
         return len(self._p) > 0
     def expression (self):
         return self._expression
-#    @functools.cache
     def __lt__ (self, other):
         return self._p[0] < other._p[0]
     def __eq__ (self, other):
@@ -200,12 +199,12 @@ class _Differential_Polynomial:
         return hash(self.expression())
 # ToDo: Janet_Basis as class as this object has properties like rank, order ....
 def Reorder (S, context, ascending = False):
-    return sorted(S, key=functools.cmp_to_key(lambda item1, item2:
-                        sorter (item1.Lder(), item2.Lder(), context)),
-                            reverse = not ascending
-                        )
+    return sorted(S, key=functools.cmp_to_key(
+        lambda item1, item2:
+            sorter(item1.Lder(), item2.Lder(), context)),
+        reverse=not ascending)
 
-def reduceS (e:_Differential_Polynomial, S:list, context)->_Differential_Polynomial:
+def reduceS(e:_Differential_Polynomial, S:list, context)->_Differential_Polynomial:
     reducing = True
     gen = (_ for _ in S)
     while reducing:
@@ -219,30 +218,30 @@ def reduceS (e:_Differential_Polynomial, S:list, context)->_Differential_Polynom
                 reducing = True
     return enew
 def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Context)->_Differential_Polynomial:
-    def _order (der):
+    def _order(der):
         if der != 1:
             ## XXX: user pylie namespace
             return order_of_derivative(der)
-        else :
+        else:
             return [0]*len(context._independent)
 
-    def _reduce_inner (e, ld):
-        e2_order = _order (ld)
+    def _reduce_inner(e, ld):
+        e2_order = _order(ld)
         for t in e._p:
             d = t._d
             c = t._coeff
             if func(ld) != func(d):
                 continue
-            e1_order = _order (d)
+            e1_order = _order(d)
             dif = [a-b for a, b in zip(e1_order, e2_order)]
             if all(map(lambda h: h == 0, dif)):
-                return _Differential_Polynomial (e1.expression() - e2.expression() * c, context)
-            if all (map (lambda h: h >= 0, dif)):
+                return _Differential_Polynomial(e1.expression() - e2.expression() * c, context)
+            if all(map(lambda h: h >= 0, dif)):
                 variables_to_diff = []
-                for i in range (len(context._independent)):
+                for i in range(len(context._independent)):
                     if dif[i] != 0:
-                        variables_to_diff.extend ([context._independent[i]]*abs(dif[i]))
-                return _Differential_Polynomial (e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
+                        variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
+                return _Differential_Polynomial(e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
         return e
 
     _e1 = None
