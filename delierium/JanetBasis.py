@@ -9,15 +9,11 @@ from sage.misc.reset import reset
 from sage.calculus.functional import diff
 try :
     from delierium.helpers import (is_derivative, is_function, eq,
-                               order_of_derivative, vector_to_monomial,
-                               monomial_to_vector
-                               )
+                               order_of_derivative)
     from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 except ModuleNotFoundError:
     from helpers import (is_derivative, is_function, eq,
-                               order_of_derivative, vector_to_monomial,
-                               monomial_to_vector
-                               )
+                               order_of_derivative)
     from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 
 import functools
@@ -180,10 +176,6 @@ class _Differential_Polynomial:
     def coefficients (self):
         for p in self._p:
             yield p._coeff
-    def is_monic (self):
-        if self._p:
-            return self._p[0].is_monic()
-        return True
     def normalize (self):
         if self._p and self._p[0]._coeff != 1:
             c = self._p[0]._coeff
@@ -200,15 +192,6 @@ class _Differential_Polynomial:
         return all(eq(_[0]._d, _[1]._d) for _ in zip (self._p, other._p))
     def show(self):
         self.expression().show()
-    def __sub__ (self, other):
-        return self.__class__(self.expression() - other.expression(), self._context)
-    def __add__ (self, other):
-        return self.__class__(self.expression() + other.expression(), self._context)
-    def __mul__ (self, other):
-        return self.__class__(self.expression() * other, self._context)
-    def __copy__(self):
-        newone = type(self)(self.expression(), self._context)
-        return newone
     def diff(self, *args):
         return type(self)(diff(self.expression(), *args), self._context)
     def __str__ (self):
@@ -223,12 +206,11 @@ def Reorder (S, context, ascending = False):
                         )
 
 def reduceS (e:_Differential_Polynomial, S:list, context)->_Differential_Polynomial:
-    S= Reorder (S, context, ascending = True)
     reducing = True
     gen = (_ for _ in S)
     while reducing:
         for dp in gen:
-            enew = reduce (e, dp, context)
+            enew = reduce(e, dp, context)
             if enew == e:
                 reducing = False
             else:
@@ -386,7 +368,7 @@ def complete (S, context):
         # may be larger as the variables in the leading term all kind of
         # strange things will happen
         return result
-    vars = list(range (len(context._independent)))
+    vars = list(range(len(context._independent)))
     def map_old_to_new(l):
         # XXX remove
         res = []
@@ -432,9 +414,8 @@ def complete (S, context):
         else:
             for _m0 in m0:
                 dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new([_m0[1]])[0]).expression(), context)
-                if not dp in result:
-                    result.append (dp)
-        result = Reorder (result, context, ascending=False)
+                result.append(dp)
+        result = Reorder(result, context, ascending=False)
 
 def CompleteSystem(S, context):
     """
