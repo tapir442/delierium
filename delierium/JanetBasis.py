@@ -229,9 +229,9 @@ def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Co
         e2_order = _order(ld)
         for t in e._p:
             d = t._d
-            c = t._coeff
             if func(ld) != func(d):
                 continue
+            c = t._coeff
             e1_order = _order(d)
             dif = [a-b for a, b in zip(e1_order, e2_order)]
             if all(map(lambda h: h == 0, dif)):
@@ -413,7 +413,8 @@ def complete (S, context):
         else:
             for _m0 in m0:
                 dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new([_m0[1]])[0]).expression(), context)
-                result.append(dp)
+                if dp not in result:
+                    result.append(dp)
         result = Reorder(result, context, ascending=False)
 
 def CompleteSystem(S, context):

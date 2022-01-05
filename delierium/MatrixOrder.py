@@ -108,7 +108,8 @@ class Context:
         """
         # XXX maybe we can create the matrices here?
         self._independent = tuple(independent)
-        self._dependent   = tuple((_.operator() for _ in dependent))
+        self._dependent   = tuple((_.operator() if is_function(_) else _
+                                   for _ in dependent))
         self._weight      = weight (self._dependent, self._independent)
         self._basefield   = PolynomialRing(QQ, independent)
 
