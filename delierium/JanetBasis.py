@@ -19,9 +19,6 @@ except ModuleNotFoundError:
 import functools
 from operator import mul
 from IPython.core.debugger import set_trace
-from more_itertools import bucket, flatten
-import logging
-import sys
 from collections.abc import Iterable
 from more_itertools import powerset, bucket, flatten
 from itertools import product, combinations, islice
@@ -47,7 +44,7 @@ class _Dterm:
         >>> d     = (x**2) * diff(f, x, y)
         >>> dterm = _Dterm(d,ctx)
         >>> print (dterm)
-        x^2 * diff(f(x, y, z), x, y)
+        (x^2) * diff(f(x, y, z), x, y)
         '''
         self._coeff, self._d = 1, 1
         self._context = context
@@ -64,12 +61,12 @@ class _Dterm:
         self._expression = self._coeff * self._d
     def __str__(self):
         try:
-            return "{} * {}".format (self._coeff.expression(), self._d)
+            return "({}) * {}".format (self._coeff.expression(), self._d)
         except AttributeError:
             if eq (self._coeff, 1):
                 return "{}".format (self._d)
             else:
-                return "{} * {}".format (self._coeff, self._d)
+                return "({}) * {}".format (self._coeff, self._d)
     def term(self):
         return self._coeff * self._d
     def order (self):
@@ -459,10 +456,10 @@ def CompleteSystem(S, context):
     >>> dps=[_Differential_Polynomial(_, ctx) for _ in [g1,g5,g6]]
     >>> cs = CompleteSystem(dps, ctx)
     >>> for _ in cs: print(_)
-    diff(z(x, y), y, y) + 1/2/y * diff(z(x, y), y)
-    diff(z(x, y), x, y, y) + 1/2/y * diff(z(x, y), x, y)
-    diff(z(x, y), x, x, y) + -4*y^2 * diff(z(x, y), y, y) + -8*y * diff(z(x, y), y)
-    diff(z(x, y), x, x, x) + 1/y * diff(w(x, y), x, x) + 8*y^2 * diff(w(x, y), y, y) + -4*y^2 * diff(z(x, y), x, y) + -32*y * diff(z(x, y), x) + -16 * w(x, y)
+    diff(z(x, y), y, y) + (1/2/y) * diff(z(x, y), y)
+    diff(z(x, y), x, y, y) + (1/2/y) * diff(z(x, y), x, y)
+    diff(z(x, y), x, x, y) + (-4*y^2) * diff(z(x, y), y, y) + (-8*y) * diff(z(x, y), y)
+    diff(z(x, y), x, x, x) + (1/y) * diff(w(x, y), x, x) + (8*y^2) * diff(w(x, y), y, y) + (-4*y^2) * diff(z(x, y), x, y) + (-32*y) * diff(z(x, y), x) + (-16) * w(x, y)
     """
     s = bucket(S, key=lambda d: d.Lfunc())
     res = flatten([complete(s[k], context) for k in s])
@@ -530,8 +527,8 @@ class Janet_Basis:
         >>> checkS=Janet_Basis(system_2_24, (w,z), vars)
         >>> checkS.show()
         diff(z(x, y), y)
-        diff(z(x, y), x) + 1/2/y * w(x, y)
-        diff(w(x, y), y) + -1/y * w(x, y)
+        diff(z(x, y), x) + (1/2/y) * w(x, y)
+        diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
         >>> vars = var ("x y")
         >>> z = function("z")(*vars)
@@ -544,8 +541,8 @@ class Janet_Basis:
         >>> checkS=Janet_Basis(system_2_25, (w,z), vars)
         >>> checkS.show()
         diff(z(x, y), y)
-        diff(z(x, y), x) + 1/2/y * w(x, y)
-        diff(w(x, y), y) + -1/y * w(x, y)
+        diff(z(x, y), x) + (1/2/y) * w(x, y)
+        diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
         >>> vars = var ("x y")
         >>> z = function("z")(*vars)
@@ -559,8 +556,8 @@ class Janet_Basis:
         >>> checkS=Janet_Basis(system_2_24, (w,z), vars, Mgrlex)
         >>> checkS.show()
         diff(z(x, y), y)
-        diff(z(x, y), x) + 1/2/y * w(x, y)
-        diff(w(x, y), y) + -1/y * w(x, y)
+        diff(z(x, y), x) + (1/2/y) * w(x, y)
+        diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
         >>> vars = var ("x y")
         >>> z = function("z")(*vars)
@@ -573,8 +570,8 @@ class Janet_Basis:
         >>> checkS=Janet_Basis(system_2_25, (w,z), vars, Mgrlex)
         >>> checkS.show()
         diff(z(x, y), y)
-        diff(z(x, y), x) + 1/2/y * w(x, y)
-        diff(w(x, y), y) + -1/y * w(x, y)
+        diff(z(x, y), x) + (1/2/y) * w(x, y)
+        diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
         """
         eq.cache_clear()

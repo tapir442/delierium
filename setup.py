@@ -1,8 +1,14 @@
 from setuptools import setup, find_packages
 setup(
-    name = "delirium",
-    version = "0.0.0",
-    packages=["delierium"],
-    setup_requires=["more-itertools"]
-
+    name="delierium",
+    version="0.0.1a0",
+    packages=find_packages(include=['delierium.*']),
+    setup_requires=["more-itertools"],
+    install_requires=["more-itertools"],
+    author='Martin Mayerhofer-Schöpf',
+    author_email='tapir@aon.at',
+    license='MIT',
+    classifiers=[],
+    keywords='ODE PDE Lie',
+    project_urls={'Source':'https://github.com/tapir442/delierium'}
 )
