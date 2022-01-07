@@ -1,11 +1,17 @@
 # delierium
 <b>D</b>ifferential <b>E</b>quations' <b>LIE</b> symmetries <b>R</b>esearch <b>I</b>nstr<b>UM</b>ent
 
-Searching for symmetries in ODEs and PDEs using Python.
+Searching for symmetries in ODEs and PDEs using Python/SageMath.
 
 # Status
 
 still playing around with Janet bases
+
+## Release 0.0.1dev0
+
+- Just constructing a Janet basis from a list of homogenuous linear PDEs (for grevlex and degrevlex order,
+lex is dubious)
+
 
 # Literature (and inspiration):
 * Werner M. Seiler: Involution. The Formal Theory of Differential Equations and its Applications in Computer Algebra, Spinger Berlin 2010, ISBN 978-3-642-26135-0.
