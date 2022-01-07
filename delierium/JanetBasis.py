@@ -502,7 +502,12 @@ def FindIntegrableConditions(S, context):
 
 class Janet_Basis:
     def __init__(self, S, dependent, independent, sort_order=Mgrevlex):
-        """List of homogenous PDE's + order context
+        """
+        Parameters:
+            * List of homogenous PDE's
+            * List of dependent variables, i.e. the functions to searched for
+            * List of variables
+            * sort order, default is grevlex
 
         >>> vars = var ("x y")
         >>> z = function("z")(*vars)
