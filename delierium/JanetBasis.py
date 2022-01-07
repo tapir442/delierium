@@ -360,17 +360,10 @@ def derivative_to_vec(d, context):
 def complete (S, context):
     result = list(S)
     if len(result) == 1:
-        # don't do anything if there is nothing to do. as the independent list
-        # may be larger as the variables in the leading term all kind of
-        # strange things will happen
         return result
     vars = list(range(len(context._independent)))
     def map_old_to_new(l):
-        # XXX remove
-        res = []
-        for _l in l:
-            res.append (context._independent [vars.index(_l)])
-        return res
+        return context._independent[vars.index(l)]
     while 1:
         monomials = [(_, derivative_to_vec(_.Lder(), context)) for _ in result]
         ms        = tuple ([_[1] for _ in monomials])
@@ -409,7 +402,7 @@ def complete (S, context):
             return result
         else:
             for _m0 in m0:
-                dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new([_m0[1]])[0]).expression(), context)
+                dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new(_m0[1])).expression(), context)
                 if dp not in result:
                     result.append(dp)
         result = Reorder(result, context, ascending=False)
@@ -479,11 +472,7 @@ def FindIntegrableConditions(S, context):
     ms = tuple([_[1] for _ in monomials])
     m0 = []
     def map_old_to_new(l):
-        # XXX remove
-        res = []
-        for _l in l:
-            res.append (context._independent [vars.index(_l)])
-        return res
+        return context._independent [vars.index(l)]
 
     # multiplier-collection is our M
     multiplier_collection = []
@@ -493,8 +482,8 @@ def FindIntegrableConditions(S, context):
         _multipliers, _nonmultipliers = vec_multipliers(monom, ms, vars)
         multiplier_collection.append (
             (dp,
-             [map_old_to_new([_])[0] for _ in _multipliers],
-             [map_old_to_new([_])[0] for _ in _nonmultipliers]
+             [map_old_to_new(_) for _ in _multipliers],
+             [map_old_to_new(_) for _ in _nonmultipliers]
             ))
     result = []
     for e1, e2 in product(multiplier_collection, repeat=2):
