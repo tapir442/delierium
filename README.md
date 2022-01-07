@@ -7,7 +7,7 @@ Searching for symmetries in ODEs and PDEs using Python/SageMath.
 
 still playing around with Janet bases
 
-## Release 0.0.1dev0
+## Release 0.0.1.dev0
 
 - Just constructing a Janet basis from a list of homogenuous linear PDEs (for grevlex and degrevlex order,
 lex is dubious)
@@ -30,3 +30,25 @@ lex is dubious)
     * Make it a valuable package
 * Long term:
     * Maybe integration into SciPy|SymPy|SageMath
+
+
+
+# Documentation
+
+How to use:
+
+>>> vars = var ("x y")
+>>> z = function("z")(*vars)
+>>> w = function("w")(*vars)
+>>> f1 = diff(w, y) + x*diff(z,y)/(2*y*(x**2+y)) - w/y
+>>> f2 = diff(z,x,y) + y*diff(w,y)/x + 2*y*diff(z, x)/x
+>>> f3 = diff(w, x,y) - 2*x*diff(z, x,2)/y - x*diff(w,x)/y**2
+>>> f4 = diff(w, x,y) + diff(z, x,y) + diff(w, y)/(2*y) - diff(w,x)/y + x* diff(z, y)/y - w/(2*y**2)
+>>> f5 = diff(w,y,y) + diff(z,x,y) - diff(w, y)/y + w/(y**2)
+>>> system_2_24 = [f1,f2,f3,f4,f5]
+>>> checkS=Janet_Basis(system_2_24, (w,z), vars)
+>>> checkS.show()
+diff(z(x, y), y)
+diff(z(x, y), x) + (1/2/y) * w(x, y)
+diff(w(x, y), y) + (-1/y) * w(x, y)
+diff(w(x, y), x)

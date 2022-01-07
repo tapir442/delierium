@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 setup(
     name="delierium",
-    version="0.0.1dev0",
+    version="0.0.1.dev0",
     packages=find_packages(include=['delierium.*']),
     setup_requires=["more-itertools", "sage"],
     install_requires=["more-itertools", "sage"],
