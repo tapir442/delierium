@@ -17,7 +17,7 @@ import cProfile
 import time
 
 #%display latex
-from delierium.JanetBacsis import Janet_Basis
+from delierium.JanetBasis import Janet_Basis
 from delierium.MatrixOrder import Context, Mgrlex, Mgrevlex, Mlex
 from IPython.core.debugger import set_trace
 
