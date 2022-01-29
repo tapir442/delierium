@@ -37,9 +37,8 @@ from IPython.core.debugger import set_trace
 from collections.abc import Iterable
 from more_itertools import powerset, bucket, flatten
 from itertools import product, combinations, islice
+from sage.matrix.constructor import Matrix
 
-
-x
 def is_op_du(expr_op, u):
     is_derivative = isinstance(
         expr_op.operator(),
@@ -174,20 +173,24 @@ def EulerD(density, depend, independ):
     return result
 
 
-
-
-#u= function('u')
-#v= function('v')
-
-#L=u(t)*v(t) + diff(u(t), t)**2 + diff(v(t), t)**2 - u(t)**2 - v(t)**2
-## this one works
-#print (EulerD (L, (u,v), t))
-
-
-#L=u(t)*v(t) + diff(u(t), t)**2 + diff(v(t), t)**2 + 2*diff(u(t), t) * diff(v(t), t)
-#print (EulerD (L, (u,v), t))
-
 def FrechetD (support, dependVar, independVar, testfunction):
+    """
+    >>> t, x = var ("t x")
+    >>> v  = function ("v")
+    >>> u  = function ("u")
+    >>> w1 = function ("w1")
+    >>> w2 = function ("w2")
+    >>> eqsys = [diff(v(x,t), x) - u(x,t), diff(v(x,t), t) - diff(u(x,t), x)/(u(x,t)**2)]
+    >>> m = Matrix(FrechetD (eqsys, [u,v], [x,t], [w1,w2]))
+    >>> m[0][0]
+    -w1(x, t)
+    >>> m[0][1]
+    diff(w2(x, t), x)
+    >>> m[1][0]
+    2*w1(x, t)*diff(u(x, t), x)/u(x, t)^3 - diff(w1(x, t), x)/u(x, t)^2
+    >>> m[1][1]
+    diff(w2(x, t), t)
+    """
     frechet = []
     var ("eps")
     for j in range (len(support)):
@@ -200,38 +203,12 @@ def FrechetD (support, dependVar, independVar, testfunction):
             #    # when time and motivation. Online version on asksage works perfectly
             #    return dependVar[i](*independVar)+ testfunction[i](*independVar) * eps
             #r0 = function('r0', eval_func=_r0)
-            s  =  support[j].substitute_function (dependVar[i], r0)
+            s  =  support[j].substitute_function(dependVar[i], r0)
             deriv.append (diff(s, eps).subs ({eps: 0}))
         frechet.append (deriv)
     return frechet
 
 
-
-var ("t x")
-v  = function ("v")
-u  = function ("u")
-w1 = function ("w1")
-w2 = function ("w2")
-eqsys = [diff(v(x,t), x) - u(x,t), diff(v(x,t), t) - diff(u(x,t), x)/(u(x,t)**2)]
-
-
-eqsys
-
-
-FrechetD (eqsys, [u,v], [x,t], [w1,w2])
-
-
-var ("t x y")
-v  = function ("v")
-u  = function ("u")
-z  = function ("z")
-w1 = function ("w1")
-w2 = function ("w2")
-w3 = function ("w3")
-eqsys1 = [diff(v(x,y,t), x, y) - u(x,y,t), diff(v(x,y,t), t, y) - diff(u(x,y,t), x)/(u(x,y,t)**2), diff(z(x,y,t), t, t)- (z(x,y,t)**2)-u(x,y,t)]; eqsys
-
-
-print (FrechetD (eqsys1, [u,v,z], [x,y,t], [w1,w2,w3]))
 
 
 def AdjointFrechetD(support, dependVar, independVar, testfunction):
