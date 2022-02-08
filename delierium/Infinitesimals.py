@@ -98,12 +98,7 @@ def prolongation(eq, dependent, independent):
     for p in prolong:
         _p = []
         for l in p:
-            i = 0
-            def r0(*args):
-                return eta[i]
-            # this kinda counting is not very nice
-            _p.append(l.substitute_function(test[i], r0))
-            i += 1
+            _p.extend([l.substitute_function(test[i], _e) for _e in  eta])
         prol.append(sum(_ for _ in _p))
     prolong = prol[:]
     prol = []
