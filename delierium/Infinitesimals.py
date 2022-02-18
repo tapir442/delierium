@@ -110,6 +110,34 @@ def prolongation(eq, dependent, independent):
             )
     return prol
 
+def prolongationODE(equations, dependent, independent):
+    """
+    Baumann, ex 1, pp.136
+    >>> x    = var("x")
+    >>> u    = function('u')
+    >>> F    = function("F")
+    >>> ode3 = diff(u(x), x) - F(u(x),x)
+    >>> prolongationODE(ode3,u,x)
+    [xi(u(x), x)*D[0](F)(u(x), x)*diff(u(x), x) - diff(u(x), x)^2*D[0](xi)(u(x), x) - (D[0](F)(u(x), x)*diff(u(x), x) + D[1](F)(u(x), x) - diff(u(x), x, x))*xi(u(x), x) - phi(u(x), x)*D[0](F)(u(x), x) + D[0](phi)(u(x), x)*diff(u(x), x) - xi(u(x), x)*diff(u(x), x, x) - diff(u(x), x)*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)]
+    """
+    vars     = [dependent(independent), independent]
+    xi       = function("xi")
+    phi      = function("phi")
+    eta      = phi(*vars) - xi(*vars) * diff(dependent(independent), independent)
+    test     = function("t")
+    prolong  = FrechetD([equations], [dependent], [independent], testfunction=[test])
+    prol     = []
+    for p in prolong:
+        _p = []
+        for l in p:
+            _p.append(l.substitute_function(test, eta).expand())
+        prol.append(sum(_ for _ in _p))
+    prolong = prol[:]
+    prol = []
+    for j in range(len(prolong)):
+        prol.append(prolong[j] + xi(*vars) * equations.diff(independent))
+    return prol
+
 
 if __name__ == "__main__":
     import doctest
