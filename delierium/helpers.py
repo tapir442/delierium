@@ -116,3 +116,32 @@ def is_function(e):
             e.operands() != []
     return False
 
+import more_itertools
+def compactify(*vars):
+    pairs = list(more_itertools.pairwise(vars))
+    if not pairs:
+        return [vars[0]]
+    result = []
+    for pair in pairs:
+        if isinstance(pair[0], Integer):
+            continue
+        elif isinstance(pair[1], Integer):
+            result.extend([pair[0]] * pair[1])
+        else:
+            result.append(pair[0])
+    return result
+
+
+def adiff(f, *vars):
+    variables_from_function = f.variables()
+    unique_vars = [var("unique_%s" % i) for i in range(len(variables_from_function))]
+    subst_dict  = {}
+    for i in zip(variables_from_function, unique_vars):
+        subst_dict[i[0]] = i[1]
+    local_expr = f.subs(subst_dict)
+    _vars       = compactify(vars)
+    _vars       = tuple([subst_dict[_] for _ in vars])
+    d = diff(local_expr, *_vars)
+    for k in subst_dict:
+        d = d.subs({subst_dict[k]: k})
+    return d
