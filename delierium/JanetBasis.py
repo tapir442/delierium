@@ -9,11 +9,11 @@ from sage.misc.reset import reset
 from sage.calculus.functional import diff
 try :
     from delierium.helpers import (is_derivative, is_function, eq,
-                               order_of_derivative)
+                                   order_of_derivative, adiff)
     from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 except ModuleNotFoundError:
     from helpers import (is_derivative, is_function, eq,
-                               order_of_derivative)
+                               order_of_derivative, adiff)
     from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 
 import functools
@@ -493,28 +493,15 @@ def FindIntegrableConditions(S, context):
     result = []
     for e1, e2 in product(multiplier_collection, repeat=2):
         if e1 == e2: continue
-        try:
-            for n in e1[2]:
-                for m in islice(powerset(e2[1]), 1, None):
-                    print("A"*40, e1[0], e1[0].Lder())
-                    ccc = diff(e1[0].Lder(), n)
-                    print("ccc:", ccc, e2[0])
-                    print("CLder: ", e2[0].Lder())
-                    print("*m", m)
-                    ddd = diff(e2[0].Lder(), *m)
-                    print("ddd:", ddd)
-                    if eq(diff(e1[0].Lder(), n), diff(e2[0].Lder(), *m)):
-                        # integrability condition
-                        # don't need leading coefficients because in DPs
-                        # it is always 1
-                        c = diff(e1[0].expression(), n) - \
-                            diff(e2[0].expression(), *m)
-                        result.append(c)
-        except Exception as why:
-            from pprint import pprint
-            pprint(locals())
-            set_trace()
-
+        for n in e1[2]:
+            for m in islice(powerset(e2[1]), 1, None):
+                if eq(adiff(e1[0].Lder(), n), adiff(e2[0].Lder(), *m)):
+                    # integrability condition
+                    # don't need leading coefficients because in DPs
+                    # it is always 1
+                    c = diff(e1[0].expression(), n) - \
+                        diff(e2[0].expression(), *m)
+                    result.append(c)
     return result
 
 
