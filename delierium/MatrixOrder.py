@@ -121,9 +121,6 @@ def higher(d1, d2, context):
     '''Algorithm 2.3 from [Schwarz].'''
     @functools.cache
     def analyze_dterm(dd):
-        print ("analyze_dterm", dd)
-        print ("is_derivative", is_derivative(dd))
-        print ("is_function", is_function(dd))
         if is_derivative(dd):
             f = dd.operator().function()
         elif is_function(dd):
@@ -135,21 +132,14 @@ def higher(d1, d2, context):
         return f
     def idx(d):
         # faster than functools.cache
-        print ("idx", context._dependent.index(analyze_dterm(d)))
         return context._dependent.index(analyze_dterm(d))
     @functools.cache
     def get_derivative_vector(d):
-        print ("==================================")
-        print ("get_derivative_vector")
         iv = [0]*len(context._dependent)
-        print ("iv :", iv)
         iv [idx(d)] += 1
-        print ("order_of_derivative", order_of_derivative(d))
         return vector(order_of_derivative(d, len(context._independent)) + iv)
     i1 = get_derivative_vector(d1)
     i2 = get_derivative_vector(d2)
-    print (d1,d2)
-    print(i1, i2)
     r = context._weight * vector(i1-i2)
     for entry in r:
         if entry:

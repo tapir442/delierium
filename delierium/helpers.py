@@ -5,7 +5,7 @@ from sage.calculus.var import var, function
 from sage.calculus.functional import diff
 from functools import reduce
 from operator import __mul__
-
+import more_itertools
 
 @functools.cache
 def eq(d1, d2):
@@ -75,7 +75,6 @@ def order_of_derivative(e, required_len = 0):
     opr = e.operator()
     opd = e.operands()
     if not isinstance(opr, sage.symbolic.operators.FDerivativeOperator):
-        print("=======================================>", locals())
         return [0] * max((len(e.variables()), required_len))
     res = [opr.parameter_set().count(i) for i in range(len(opd))]
     return res
@@ -116,3 +115,33 @@ def is_function(e):
         return "NewSymbolicFunction" in e.operator().__class__.__name__ and \
             e.operands() != []
     return False
+
+
+def compactify(*vars):
+    pairs = list(more_itertools.pairwise(vars))
+    if not pairs:
+        return [vars[0]]
+    result = []
+    for pair in pairs:
+        if isinstance(pair[0], Integer):
+            continue
+        elif isinstance(pair[1], Integer):
+            result.extend([pair[0]] * pair[1])
+        else:
+            result.append(pair[0])
+    return result
+
+
+def adiff(f, *vars):
+    variables_from_function = f.variables()
+    unique_vars = [var("unique_%s" % i) for i in range(len(variables_from_function))]
+    subst_dict  = {}
+    for i in zip(variables_from_function, unique_vars):
+        subst_dict[i[0]] = i[1]
+    local_expr = f.subs(subst_dict)
+    _vars       = compactify(vars)
+    _vars       = tuple([subst_dict[_] for _ in vars])
+    d = diff(local_expr, *_vars)
+    for k in subst_dict:
+        d = d.subs({subst_dict[k]: k})
+    return d
