@@ -62,7 +62,7 @@ def tangent_vector(f):
 
 #
 
-def order_of_derivative(e):
+def order_of_derivative(e, required_len = 0):
     '''Returns the vector of the orders of a derivative respect to its variables
 
     >>> x,y,z = var ("x,y,z")
@@ -75,7 +75,8 @@ def order_of_derivative(e):
     opr = e.operator()
     opd = e.operands()
     if not isinstance(opr, sage.symbolic.operators.FDerivativeOperator):
-        return [0] * len(e.variables())
+        print("=======================================>", locals())
+        return [0] * max((len(e.variables()), required_len))
     res = [opr.parameter_set().count(i) for i in range(len(opd))]
     return res
 
@@ -115,4 +116,3 @@ def is_function(e):
         return "NewSymbolicFunction" in e.operator().__class__.__name__ and \
             e.operands() != []
     return False
-

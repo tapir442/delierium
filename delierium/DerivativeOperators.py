@@ -23,12 +23,10 @@ from sage.calculus.var import var, function
 from sage.misc.reset import reset
 from sage.calculus.functional import diff
 try :
-    from delierium.helpers import (is_derivative, is_function, eq,
-                               order_of_derivative)
+    from delierium.helpers import (is_derivative, is_function, eq)
     from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 except ModuleNotFoundError:
-    from helpers import (is_derivative, is_function, eq,
-                               order_of_derivative)
+    from helpers import (is_derivative, is_function, eq)
     from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 
 import functools

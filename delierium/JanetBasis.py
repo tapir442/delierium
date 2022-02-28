@@ -69,11 +69,12 @@ class _Dterm:
                 return "({}) * {}".format (self._coeff, self._d)
     def term(self):
         return self._coeff * self._d
-    def order (self):
+
+    def order(self):
         if is_derivative(self._d):
-            return order_of_derivative (self._d)
+            return order_of_derivative(self._d, len(self._context._independent))
         else:
-            return [0] * len (self._context._independent)
+            return [0] * len(self._context._independent)
     def is_coefficient(self):
         # XXX nonsense
         return self._d == 1
@@ -188,14 +189,19 @@ class _Differential_Polynomial:
         return all(eq(_[0]._d, _[1]._d) for _ in zip (self._p, other._p))
     def show(self):
         self.expression().show()
+
     def diff(self, *args):
         return type(self)(diff(self.expression(), *args), self._context)
-    def __str__ (self):
-        return " + ".join ([str(_) for _ in self._p])
+
+    def __str__(self):
+        return " + ".join([str(_) for _ in self._p])
+
     def __hash__(self):
         return hash(self.expression())
-# ToDo: Janet_Basis as class as this object has properties like rank, order ....
-def Reorder (S, context, ascending = False):
+
+
+# ToDo: Janet_Basis as class as this object has properties like rank, order ...
+def Reorder(S, context, ascending = False):
     return sorted(S, key=functools.cmp_to_key(
         lambda item1, item2:
             sorter(item1.Lder(), item2.Lder(), context)),
@@ -217,8 +223,7 @@ def reduceS(e:_Differential_Polynomial, S:list, context)->_Differential_Polynomi
 def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Context)->_Differential_Polynomial:
     def _order(der):
         if der != 1:
-            ## XXX: user pylie namespace
-            return order_of_derivative(der)
+            return order_of_derivative(der, len(context._independent))
         else:
             return [0]*len(context._independent)
 
@@ -355,9 +360,9 @@ def vec_multipliers(m, M, Vars):
 
 @functools.cache
 def derivative_to_vec(d, context):
-    return order_of_derivative(d)
+    return order_of_derivative(d, len(context._independent))
 
-def complete (S, context):
+def complete(S, context):
     result = list(S)
     if len(result) == 1:
         return result
@@ -488,15 +493,28 @@ def FindIntegrableConditions(S, context):
     result = []
     for e1, e2 in product(multiplier_collection, repeat=2):
         if e1 == e2: continue
-        for n in e1[2]:
-            for m in islice(powerset(e2[1]), 1, None):
-                if eq(diff(e1[0].Lder(), n), diff(e2[0].Lder(), *m)):
-                    # integrability condition
-                    # don't need leading coefficients because in DPs
-                    # it is always 1
-                    c = diff(e1[0].expression(), n) - \
-                        diff(e2[0].expression(), *m)
-                    result.append (c)
+        try:
+            for n in e1[2]:
+                for m in islice(powerset(e2[1]), 1, None):
+                    print("A"*40, e1[0], e1[0].Lder())
+                    ccc = diff(e1[0].Lder(), n)
+                    print("ccc:", ccc, e2[0])
+                    print("CLder: ", e2[0].Lder())
+                    print("*m", m)
+                    ddd = diff(e2[0].Lder(), *m)
+                    print("ddd:", ddd)
+                    if eq(diff(e1[0].Lder(), n), diff(e2[0].Lder(), *m)):
+                        # integrability condition
+                        # don't need leading coefficients because in DPs
+                        # it is always 1
+                        c = diff(e1[0].expression(), n) - \
+                            diff(e2[0].expression(), *m)
+                        result.append(c)
+        except Exception as why:
+            from pprint import pprint
+            pprint(locals())
+            set_trace()
+
     return result
 
 
