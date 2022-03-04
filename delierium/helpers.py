@@ -133,14 +133,24 @@ def compactify(*vars):
 
 
 def adiff(f, *vars):
-    variables_from_function = f.variables()
+    variables_from_function = f.operands()
     unique_vars = [var("unique_%s" % i) for i in range(len(variables_from_function))]
     subst_dict  = {}
+    from pprint import pprint
+    import pdb; pdb.set_trace()
     for i in zip(variables_from_function, unique_vars):
         subst_dict[i[0]] = i[1]
     local_expr = f.subs(subst_dict)
-    _vars       = compactify(vars)
-    _vars       = tuple([subst_dict[_] for _ in vars])
+    _vars = []
+    for _ in vars:
+        _vars = _(*variables_from_function) if is_function(_) else  _
+    try :
+        _vars = tuple([subst_dict[_] for _ in _vars])
+    except Exception as why:
+        pprint(locals())
+        print(why)
+
+    print("A"*99)
     d = diff(local_expr, *_vars)
     for k in subst_dict:
         d = d.subs({subst_dict[k]: k})
