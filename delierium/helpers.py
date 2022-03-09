@@ -133,12 +133,15 @@ def compactify(*vars):
 
 
 def adiff(f, *vars):
+    return func_diff(f, *vars)
+    print(locals())
+    from pprint import pprint
+    import pdb; pdb.set_trace()
+    return(f)
     variables_from_function = f.operands()
     unique_vars = [var("unique_%s" % i) for i in range(len(variables_from_function))]
     subst_dict  = {}
-    from pprint import pprint
-    import pdb; pdb.set_trace()
-    for i in zip(variables_from_function, unique_vars):
+    for i in zip(variables_from_function, unique_vars):        
         subst_dict[i[0]] = i[1]
     local_expr = f.subs(subst_dict)
     _vars = []
@@ -155,3 +158,72 @@ def adiff(f, *vars):
     for k in subst_dict:
         d = d.subs({subst_dict[k]: k})
     return d
+
+
+from sage.all import *
+import sage.symbolic.operators
+
+def is_op_du(expr_op, u):
+    is_derivative = isinstance(
+        expr_op,
+        sage.symbolic.operators.FDerivativeOperator
+    )
+
+    if is_derivative:
+        # Returns True if the differentiated function is `u`.
+        return expr_op.function() == u.operator()
+
+    else:
+        return False
+
+def iter_du_orders(expr, u):
+    for sub_expr in expr.operands():
+        if sub_expr == []:
+            # hit end of tree
+            continue
+
+        elif is_op_du(sub_expr.operator(), u):
+            # yield order of differentiation
+            yield len(sub_expr.operator().parameter_set())
+
+        else:
+            # iterate into sub expression
+            for order in iter_du_orders(sub_expr, u):
+                yield order
+
+def func_diff(L, *u_in):
+    """ `u` must be a callable symbolic expression
+    """
+#    https://ask.sagemath.org/question/7929/computing-variational-derivatives/
+    print ("A"*22)
+    print (L, u_in)
+    if len(u_in.variables()) == 1:
+        x = u_in.variables()[0]
+        u = u_in.function(x)
+    else:
+        return func_diff(L, *u_in[1:])
+
+    # This variable name must not collide
+    # with an existing one.
+    # I use an empty string in hopes that
+    # nobody else does this...
+    t = SR.var('mausi')
+
+    result = SR(0)
+
+    # `orders` is the set of all
+    # orders of differentiation of `u`
+    orders = set(iter_du_orders(L, u)).union((0,))
+
+    for c in orders:
+        du = u(x).diff(x, c)
+        sign = Integer(-1)**c
+
+        # Temporarily replace all `c`th derivatives of `u` with `t`;
+        # differentiate; then substitute back.
+        dL_du = L.subs({du:t}).diff(t).subs({t:du})
+
+        # Append intermediate term to `result`
+        result += sign * dL_du.diff(x, c)
+
+    return result
