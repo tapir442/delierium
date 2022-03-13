@@ -111,6 +111,7 @@ def is_function(e):
     >>> is_function (x*diff(f,x))
     False
     '''
+    #import pdb; pdb.set_trace ()
     if hasattr(e, "operator"):
         return "NewSymbolicFunction" in e.operator().__class__.__name__ and \
             e.operands() != []
@@ -132,34 +133,18 @@ def compactify(*vars):
     return result
 
 
-def adiff(f, *vars):
-    return func_diff(f, *vars)
-    print(locals())
-    from pprint import pprint
-    import pdb; pdb.set_trace()
-    return(f)
-    variables_from_function = f.operands()
-    unique_vars = [var("unique_%s" % i) for i in range(len(variables_from_function))]
-    subst_dict  = {}
-    for i in zip(variables_from_function, unique_vars):        
-        subst_dict[i[0]] = i[1]
-    local_expr = f.subs(subst_dict)
-    _vars = []
-    for _ in vars:
-        _vars = _(*variables_from_function) if is_function(_) else  _
-    try :
-        _vars = tuple([subst_dict[_] for _ in _vars])
-    except Exception as why:
-        pprint(locals())
-        print(why)
-
-    print("A"*99)
-    d = diff(local_expr, *_vars)
-    for k in subst_dict:
-        d = d.subs({subst_dict[k]: k})
-    return d
-
-
+def adiff(f, context, *vars):
+    for v in vars:
+        if "NewSymbolicFunction" in v.__class__.__name__:
+            idx = context._independent.index(v)
+            if idx == 0:
+                f = func_diff(f,  v(context._independent[1]))
+            else:
+                f = func_diff(f,  v(context._independent[0]))                
+        else :
+            f = f.diff(v)
+    return f
+    
 from sage.all import *
 import sage.symbolic.operators
 
@@ -191,17 +176,12 @@ def iter_du_orders(expr, u):
             for order in iter_du_orders(sub_expr, u):
                 yield order
 
-def func_diff(L, *u_in):
+def func_diff(L, u_in):
     """ `u` must be a callable symbolic expression
     """
 #    https://ask.sagemath.org/question/7929/computing-variational-derivatives/
-    print ("A"*22)
-    print (L, u_in)
-    if len(u_in.variables()) == 1:
-        x = u_in.variables()[0]
-        u = u_in.function(x)
-    else:
-        return func_diff(L, *u_in[1:])
+    x = u_in.variables()[0]
+    u = u_in.function(x)
 
     # This variable name must not collide
     # with an existing one.

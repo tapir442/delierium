@@ -495,12 +495,12 @@ def FindIntegrableConditions(S, context):
         if e1 == e2: continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
-                if eq(adiff(e1[0].Lder(), n), adiff(e2[0].Lder(), *m)):
+                if eq(adiff(e1[0].Lder(),context, n), adiff(e2[0].Lder(), context, *m)):
                     # integrability condition
                     # don't need leading coefficients because in DPs
                     # it is always 1
-                    c = diff(e1[0].expression(), n) - \
-                        diff(e2[0].expression(), *m)
+                    c = adiff(e1[0].expression(), context, n) - \
+                        adiff(e2[0].expression(), context, *m)
                     result.append(c)
     return result
 
