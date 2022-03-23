@@ -572,6 +572,14 @@ class Janet_Basis:
         diff(z(x, y), x) + (1/2/y) * w(x, y)
         diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
+        >>> x   = var('x')
+        >>> y   = function ('y')
+        >>> xi  = function('xi')(y(x), x)
+        >>> eta = function ('eta')(y(x), x)
+        >>> f1  = adiff (xi, y(x), 2) + 3*adiff(xi, y(x))/4
+        >>> f2  = adiff (eta, x, 2) +
+
+        
         """
         eq.cache_clear()
         context = Context(dependent, independent, sort_order)
