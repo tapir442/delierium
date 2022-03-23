@@ -111,7 +111,6 @@ def is_function(e):
     >>> is_function (x*diff(f,x))
     False
     '''
-    #import pdb; pdb.set_trace ()
     if hasattr(e, "operator"):
         return "NewSymbolicFunction" in e.operator().__class__.__name__ and \
             e.operands() != []
@@ -187,7 +186,7 @@ def func_diff(L, u_in):
     # with an existing one.
     # I use an empty string in hopes that
     # nobody else does this...
-    t = SR.var('mausi')
+    t = SR.var('tapir')
 
     result = SR(0)
 
