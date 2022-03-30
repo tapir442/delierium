@@ -33,7 +33,7 @@ def func(e):
         return e.operator()
 
 class _Dterm:
-    def __init__ (self, e, context = None):
+    def __init__ (self, d = 1, c = 1, context = None):
         r'''differential term
 
         >>> x,y,z = var("x y z")
@@ -42,22 +42,22 @@ class _Dterm:
         >>> h     = function("h")(x,y,z)
         >>> ctx   = Context ((f,g),(x,y,z))
         >>> d     = (x**2) * diff(f, x, y)
-        >>> dterm = _Dterm(d,ctx)
-        >>> print (dterm)
+        >>> dterm = _Dterm(d = diff(f, x, y), c = x**2, ctx)
         (x^2) * diff(f(x, y, z), x, y)
         '''
-        self._coeff, self._d = 1, 1
-        self._context = context
-        if is_derivative(e) or is_function(e):
-            self._d = e
-        else:
-            r = []
-            for o in e.operands():
-                if is_derivative(o) or is_function(o):
-                    self._d = o
-                else:
-                    r.append(o)
-            self._coeff = functools.reduce(mul, r, 1)
+        self._coeff, self._d = c, d
+#        
+#        self._context = context
+#        if is_derivative(e) or is_function(e):
+#            self._d = e
+#        else:
+#            r = []
+#            for o in e.operands():
+#                if is_derivative(o) or is_function(o):
+#                    self._d = o
+#                else:
+#                    r.append(o)
+#            self._coeff = functools.reduce(mul, r, 1)
         self._expression = self._coeff * self._d
     def __str__(self):
         try:
@@ -106,9 +106,9 @@ class _Differential_Polynomial:
             self._init(e.expand())
     def _init(self, e):
         if is_derivative(e) or is_function(e):
-            self._p.append(_Dterm(e, self._context))
+            self._p.append(_Dterm(d = e, c = 1, context = self._context))
         elif e.operator().__name__ == 'mul_vararg':
-            self._p.append(_Dterm(e, self._context))
+            self._p.append(_Dterm(d = e, c = 1, context = self._context))
         else:
             for s in e.operands():
                 coeff, d = [], []
@@ -124,12 +124,12 @@ class _Differential_Polynomial:
                         if eq(_p._d, d[0]):
                             _p._coeff += coeff
                             found = True
-                            break
+                            break                        
                 if not found:
                     if d:
-                        self._p.append (_Dterm(coeff * d[0], self._context))
+                        self._p.append (_Dterm(d = d[0], c = coeff, context = self._context))
                     else:
-                        self._p.append (_Dterm(coeff, self._context))
+                        self._p.append (_Dterm(d = 1, c = coeff, context = self._context))
         self._p.sort(key=functools.cmp_to_key(
             lambda item1, item2: sorter(item1._d, item2._d, self._context)
             ),reverse = True
@@ -177,7 +177,7 @@ class _Differential_Polynomial:
     def normalize (self):
         if self._p and self._p[0]._coeff != 1:
             c = self._p[0]._coeff
-            self._p = [_Dterm((_._coeff / c).simplify() * _._d, self._context) for _ in self._p]
+            self._p = [_Dterm( c = (_._coeff / c).simplify(), d= _._d, context = self._context) for _ in self._p]
         self._expression = sum (_.expression() for _ in self._p)
     def __nonzero__ (self):
         return len(self._p) > 0
@@ -579,7 +579,7 @@ class Janet_Basis:
         >>> f1  = adiff (xi, y(x), 2) + 3*adiff(xi, y(x))/4
         >>> f2  = adiff (eta, x, 2) +
 
-        
+
         """
         eq.cache_clear()
         context = Context(dependent, independent, sort_order)
