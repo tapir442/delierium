@@ -6,6 +6,7 @@ from sage.calculus.functional import diff
 from functools import reduce
 from operator import __mul__
 import more_itertools
+from IPython.core.debugger import set_trace
 
 @functools.cache
 def eq(d1, d2):
@@ -133,15 +134,18 @@ def compactify(*vars):
 
 
 def adiff(f, context, *vars):
-    for v in vars:
-        if "NewSymbolicFunction" in v.__class__.__name__:
-            idx = context._independent.index(v)
-            if idx == 0:
+    use_func_diff = any("NewSymbolicFunction" in v.__class__.__name__ for v in vars)
+    if use_func_diff:
+        for v in vars:
+            if "NewSymbolicFunction" in v.__class__.__name__:
                 f = func_diff(f,  v(context._independent[1]))
             else:
-                f = func_diff(f,  v(context._independent[0]))                
-        else :
-            f = f.diff(v)
+                xx = SR.var("xx")
+                gg = f.subs({context._independent[0](context._independent[1]):xx})
+                gg = diff(gg, v)
+                f=gg.subs({xx:context._independent[0](context._independent[1])})
+    else:
+        f = f.diff(*vars)
     return f
     
 from sage.all import *
