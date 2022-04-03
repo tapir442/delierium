@@ -42,22 +42,11 @@ class _Dterm:
         >>> h     = function("h")(x,y,z)
         >>> ctx   = Context ((f,g),(x,y,z))
         >>> d     = (x**2) * diff(f, x, y)
-        >>> dterm = _Dterm(d = diff(f, x, y), c = x**2, ctx)
+        >>> dterm = _Dterm(d = diff(f, x, y), c = x**2, context = ctx)
+	>>> print(dterm)	
         (x^2) * diff(f(x, y, z), x, y)
         '''
         self._coeff, self._d = c, d
-#        
-#        self._context = context
-#        if is_derivative(e) or is_function(e):
-#            self._d = e
-#        else:
-#            r = []
-#            for o in e.operands():
-#                if is_derivative(o) or is_function(o):
-#                    self._d = o
-#                else:
-#                    r.append(o)
-#            self._coeff = functools.reduce(mul, r, 1)
         self._expression = self._coeff * self._d
     def __str__(self):
         try:
@@ -478,7 +467,6 @@ def FindIntegrableConditions(S, context):
     m0 = []
     def map_old_to_new(l):
         return context._independent [vars.index(l)]
-
     # multiplier-collection is our M
     multiplier_collection = []
     for dp, monom in monomials:
@@ -495,6 +483,9 @@ def FindIntegrableConditions(S, context):
         if e1 == e2: continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
+                #print("A"*88)
+                #print (e1[0].Lder(), n, "::::", e2[0].Lder(), *m)
+                #print (adiff(e1[0].Lder(),context, n), adiff(e2[0].Lder(), context, *m)) 
                 if eq(adiff(e1[0].Lder(),context, n), adiff(e2[0].Lder(), context, *m)):
                     # integrability condition
                     # don't need leading coefficients because in DPs
@@ -572,14 +563,14 @@ class Janet_Basis:
         diff(z(x, y), x) + (1/2/y) * w(x, y)
         diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
-        >>> x   = var('x')
-        >>> y   = function ('y')
-        >>> xi  = function('xi')(y(x), x)
-        >>> eta = function ('eta')(y(x), x)
-        >>> f1  = adiff (xi, y(x), 2) + 3*adiff(xi, y(x))/4
-        >>> f2  = adiff (eta, x, 2) +
+        >>> #x   = var('x')
+        >>> #y   = function ('y')
+        >>> #xi  = function('xi')(y(x), x)
+        >>> #eta = function ('eta')(y(x), x)
+        >>> #f1  = adiff (xi, y(x), 2) + 3*adiff(xi, y(x))/4
+        >>> #f2  = adiff (eta, x, 2) +
 
-
+        
         """
         eq.cache_clear()
         context = Context(dependent, independent, sort_order)
