@@ -43,7 +43,7 @@ class _Dterm:
         >>> ctx   = Context ((f,g),(x,y,z))
         >>> d     = (x**2) * diff(f, x, y)
         >>> dterm = _Dterm(d = diff(f, x, y), c = x**2, context = ctx)
-	>>> print(dterm)	
+        >>> print(dterm)	
         (x^2) * diff(f(x, y, z), x, y)
         '''
         self._coeff, self._d = c, d
@@ -94,10 +94,23 @@ class _Differential_Polynomial:
         if not eq(0, e):
             self._init(e.expand())
     def _init(self, e):
+        def is_a_real_derivative(op):
+            # XXX make this part of context ?
+            return is_derivative(op) and op.operator().function() in self._context._dependent      
+        operands = e.operands()
+        operator = e.operator()
         if is_derivative(e) or is_function(e):
             self._p.append(_Dterm(d = e, c = 1, context = self._context))
-        elif e.operator().__name__ == 'mul_vararg':
-            self._p.append(_Dterm(d = e, c = 1, context = self._context))
+        elif operator.__name__ == 'mul_vararg':
+            coef = []
+            dif  = None
+            for o in operands:
+                if is_a_real_derivative(o):
+                    dif = o
+                else:
+                    coef.append(o)
+            self._p.append(_Dterm(d = dif, c = functools.reduce(mul, coef, 1)
+                                  , context = self._context))
         else:
             for s in e.operands():
                 coeff, d = [], []
@@ -113,12 +126,12 @@ class _Differential_Polynomial:
                         if eq(_p._d, d[0]):
                             _p._coeff += coeff
                             found = True
-                            break                        
+                            break
                 if not found:
                     if d:
-                        self._p.append (_Dterm(d = d[0], c = coeff, context = self._context))
+                        self._p.append(_Dterm(d = d[0], c = coeff, context = self._context))
                     else:
-                        self._p.append (_Dterm(d = 1, c = coeff, context = self._context))
+                        self._p.append(_Dterm(d = 1, c = coeff, context = self._context))
         self._p.sort(key=functools.cmp_to_key(
             lambda item1, item2: sorter(item1._d, item2._d, self._context)
             ),reverse = True
@@ -141,11 +154,14 @@ class _Differential_Polynomial:
         return self._p[0]._d
 
     def Lfunc(self):
-        if is_function(self._p[0]._d):
-            return self._p[0]._d.operator()
-        else:
-            return self._p[0]._d.operator().function()
-
+        try:
+            if is_function(self._p[0]._d):
+                return self._p[0]._d.operator()
+            else:
+                return self._p[0]._d.operator().function()
+        except Exception as e:
+            print(e)
+            set_trace()
     def Lcoeff(self):
         return self._p[0]._coeff
 
