@@ -109,7 +109,7 @@ class _Differential_Polynomial:
                     dif = o
                 else:
                     coef.append(o)
-            self._p.append(_Dterm(d = dif, c = functools.reduce(mul, coef, 1)
+                self._p.append(_Dterm(d = dif, c = functools.reduce(mul, coef, 1)
                                   , context = self._context))
         else:
             for s in e.operands():
