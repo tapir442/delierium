@@ -109,7 +109,7 @@ class _Differential_Polynomial:
                     dif = o
                 else:
                     coef.append(o)
-                self._p.append(_Dterm(d = dif, c = functools.reduce(mul, coef, 1)
+            self._p.append(_Dterm(d = dif, c = functools.reduce(mul, coef, 1)
                                   , context = self._context))
         else:
             for s in e.operands():
@@ -118,7 +118,9 @@ class _Differential_Polynomial:
                     d.append(s)
                 else:
                     for item in s.operands():
-                        (d if (is_derivative(item) or self.ctxfunc(item)) else coeff).append(item)
+                        (d 
+                         if ((is_derivative(item) and self.ctxfunc(item.function())) 
+                              or self.ctxfunc(item)) else coeff).append(item)
                 coeff = functools.reduce(mul, coeff, 1)
                 found = False
                 if d:
@@ -248,7 +250,11 @@ def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Co
                 for i in range(len(context._independent)):
                     if dif[i] != 0:
                         variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
-                return _Differential_Polynomial(e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
+                #try:
+                #    # XXX there must be a better waay to to that
+                #    return _Differential_Polynomial(e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
+                #except TypeError:
+                return _Differential_Polynomial(e1.expression()-c*adiff(e2.expression(), context, *variables_to_diff), context)
         return e
 
     _e1 = None
@@ -412,7 +418,7 @@ def complete(S, context):
             return result
         else:
             for _m0 in m0:
-                dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new(_m0[1])).expression(), context)
+                dp = _Differential_Polynomial(adiff(_m0[2].expression(), context, map_old_to_new(_m0[1])), context)
                 if dp not in result:
                     result.append(dp)
         result = Reorder(result, context, ascending=False)
@@ -609,7 +615,7 @@ class Janet_Basis:
                        for _m in self.conditions
             ]
             if not reduced:
-                self.S = Reorder(self.S, context)
+                self.S = Reorder(list(set(self.S)), context)
                 return
             self.S += [_ for _ in reduced if
                        not (_ in self.S or eq(_.expression(), 0))]
@@ -618,7 +624,7 @@ class Janet_Basis:
     def show(self):
         """Print the Janet basis with leading derivative first."""
         for _ in self.S:
-            print(_)
+            _.show()
 
     def rank(self):
         """Return the rank of the computed Janet basis."""
