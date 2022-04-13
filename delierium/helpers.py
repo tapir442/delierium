@@ -134,8 +134,10 @@ def compactify(*vars):
 
 
 def adiff(f, context, *vars):
-    #set_trace()
     use_func_diff = any("NewSymbolicFunction" in v.__class__.__name__ for v in vars)
+    for op in f.operands():
+        if "NewSymbolicFunction" in op.operator().__class__.__name__ :
+            use_func_diff = True
     if use_func_diff:
         for v in vars:
             if "NewSymbolicFunction" in v.__class__.__name__:
