@@ -250,10 +250,6 @@ def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Co
                 for i in range(len(context._independent)):
                     if dif[i] != 0:
                         variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
-                #try:
-                #    # XXX there must be a better waay to to that
-                #    return _Differential_Polynomial(e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
-                #except TypeError:
                 return _Differential_Polynomial(e1.expression()-c*adiff(e2.expression(), context, *variables_to_diff), context)
         return e
 
@@ -481,7 +477,7 @@ def split_by_function(S, context):
 def FindIntegrableConditions(S, context):
     result = list(S)
     if len(result) == 1:
-        return []
+        return [] 
     vars = list(range(len(context._independent)))
     monomials = [(_, derivative_to_vec(_.Lder(), context)) for _ in result]
 
@@ -505,13 +501,8 @@ def FindIntegrableConditions(S, context):
         if e1 == e2: continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
-                #print("A"*88)
-                #print (e1[0].Lder(), n, "::::", e2[0].Lder(), *m)
-                #print (adiff(e1[0].Lder(),context, n), adiff(e2[0].Lder(), context, *m)) 
                 if eq(adiff(e1[0].Lder(),context, n), adiff(e2[0].Lder(), context, *m)):
-                    # integrability condition
-                    # don't need leading coefficients because in DPs
-                    # it is always 1
+                    set_trace()                    
                     c = adiff(e1[0].expression(), context, n) - \
                         adiff(e2[0].expression(), context, *m)
                     result.append(c)
@@ -616,6 +607,7 @@ class Janet_Basis:
             ]
             if not reduced:
                 self.S = Reorder(list(set(self.S)), context)
+                self.type()
                 return
             self.S += [_ for _ in reduced if
                        not (_ in self.S or eq(_.expression(), 0))]
@@ -627,12 +619,21 @@ class Janet_Basis:
             _.show()
 
     def rank(self):
-        """Return the rank of the computed Janet basis."""
+        """Return the rank of the computed Janet basis, i.e. the number
+        of parametric derivatives
+        """
         return 0
 
     def order(self):
-        """Return the order of the computed Janet basis."""
-        return 0
+        """Return the order of the computed Janet basis which is the same as
+        the rank
+        """
+        return self.rank()
+    
+    def type(self):
+        '''Computes the type of the Janet Basis, i.e. the leading derivatives
+        '''
+        self._type = [_.Lder() for _ in self.S]
 
 
 if __name__ == "__main__":
