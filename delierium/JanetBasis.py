@@ -501,8 +501,7 @@ def FindIntegrableConditions(S, context):
         if e1 == e2: continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
-                if eq(adiff(e1[0].Lder(),context, n), adiff(e2[0].Lder(), context, *m)):
-                    set_trace()                    
+                if eq(adiff(e1[0].Lder(),context, n), adiff(e2[0].Lder(), context, *m)):                 
                     c = adiff(e1[0].expression(), context, n) - \
                         adiff(e2[0].expression(), context, *m)
                     result.append(c)
