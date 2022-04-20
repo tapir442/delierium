@@ -135,7 +135,8 @@ class _Differential_Polynomial:
                             found = True
                             break
                 if not found:
-                    self._p.append(_Dterm(d = d[0] if d else 1, 
+                    if not eq(coeff, 0):
+                        self._p.append(_Dterm(d = d[0] if d else 1, 
                                           c = coeff, 
                                           context = self._context))
         self._p = [_ for _ in self._p if not eq(_._coeff, 0)]
@@ -601,10 +602,10 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
-            print("This is where we start")
-            self.show()
-            for _ in self.S:
-                _.Lder().show()            
+            #print("This is where we start")
+            #self.show()
+            #for _ in self.S:
+            #    _.Lder().show()            
             # set_trace()
             self.S = Autoreduce(self.S, context)
             #print("after autoreduce")
