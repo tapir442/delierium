@@ -96,7 +96,8 @@ class _Differential_Polynomial:
     def _init(self, e):
         def is_a_real_derivative(op):
             # XXX make this part of context ?
-            return is_derivative(op) and op.operator().function() in self._context._dependent
+            return (is_derivative(op) and op.operator().function() in self._context._dependent) or \
+                is_function(o)
         operands = e.operands()
         operator = e.operator()
         if is_derivative(e) or is_function(e):
@@ -105,18 +106,16 @@ class _Differential_Polynomial:
             coef = []
             dif  = 1
             for o in operands:
-                if is_a_real_derivative(o) : # or is_derivative(o) or is_function(o):
+                if is_a_real_derivative(o):
                     dif = o
                 else:
                     coef.append(o)
             c = functools.reduce(mul, coef, 1)
             if not eq(c, 0):
                 if dif == 1:
-                    self._p.append(_Dterm(d = c, c = 1
-                                          , context = self._context))
+                    self._p.append(_Dterm(d = c,   c = 1, context = self._context))
                 else:
-                    self._p.append(_Dterm(d = dif, c = c
-                                          , context = self._context))
+                    self._p.append(_Dterm(d = dif, c = c, context = self._context))
         else:
             for o in operands:
                 coeff, d = [], []
@@ -136,11 +135,10 @@ class _Differential_Polynomial:
                             found = True
                             break
                 if not found:
-                    if d:
-                        self._p.append(_Dterm(d = d[0], c = coeff, context = self._context))
-                    else:
-                        self._p.append(_Dterm(d = 1, c = coeff, context = self._context))
-        self._p = [_ for _ in self._p if not eq(_._coeff, 0)]        
+                    self._p.append(_Dterm(d = d[0] if d else 1, 
+                                          c = coeff, 
+                                          context = self._context))
+        self._p = [_ for _ in self._p if not eq(_._coeff, 0)]
         self._p.sort(key=functools.cmp_to_key(
             lambda item1, item2: sorter(item1._d, item2._d, self._context)
             ),reverse = True
@@ -248,39 +246,23 @@ def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Co
         # instead of looping over terms we just look for reduction with *equal *
         # derivatives/functions, just for two hopes: no need to diff and faster 
         # elimination of terms
-        #potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if func(ld) == func(t._d)
-        #       and all(map(lambda h: h == 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
-        #if potential_funcs:
-       #     return _Differential_Polynomial(e1.expression() - e2.expression() * potential_funcs[0][1], context)
-      #  
-       # potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if func(ld) == func(t._d)
-       #        and all(map(lambda h: h >= 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
-       #                                     
-       #                                     
-       # if potential_funcs:
-       #     dif = [a-b for a,b in zip(potential_funcs[0][0], e2_order)]
-       #     variables_to_diff = []
-       #     for i in range(len(context._independent)):
-       #         if dif[i] != 0:
-       #             variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
-       #     return _Differential_Polynomial(e1.expression() - diff(e2.expression(), *variables_to_diff) * potential_funcs[0][1]
-        #                                    , context)
-       # return e
-        for t in e._p:
-            d = t._d
-            if func(ld) != func(d):
-                continue
-            c = t._coeff
-            e1_order = _order(d)
-            dif = [a-b for a, b in zip(e1_order, e2_order)]
-            if all(map(lambda h: h == 0, dif)):
-                return _Differential_Polynomial(e1.expression() - e2.expression() * c, context)
-            if all(map(lambda h: h >= 0, dif)):
-                variables_to_diff = []
-                for i in range(len(context._independent)):
-                    if dif[i] != 0:
-                        variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
-                return _Differential_Polynomial(e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
+        potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if func(ld) == func(t._d)
+               and all(map(lambda h: h == 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
+        if potential_funcs:
+            return _Differential_Polynomial(e1.expression() - e2.expression() * potential_funcs[0][1], context)
+        
+        potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if func(ld) == func(t._d)
+               and all(map(lambda h: h >= 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
+                                            
+                                            
+        if potential_funcs:
+            dif = [a-b for a,b in zip(potential_funcs[0][0], e2_order)]
+            variables_to_diff = []
+            for i in range(len(context._independent)):
+                if dif[i] != 0:
+                    variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
+            return _Differential_Polynomial(e1.expression() - diff(e2.expression(), *variables_to_diff) * potential_funcs[0][1]
+                                           , context)
         return e
     _e1 = None
     while 1:
@@ -530,7 +512,7 @@ def FindIntegrableConditions(S, context):
         if e1 == e2: continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
-                if eq(diff(e1[0].Lder(), n), diff(e2[0].Lder(), *m)):                 
+                if eq(diff(e1[0].Lder(), n), diff(e2[0].Lder(), *m)):
                     c = diff(e1[0].expression(), n) - \
                         diff(e2[0].expression(), *m)
                     result.append(c)
@@ -625,21 +607,21 @@ class Janet_Basis:
                 _.Lder().show()            
             # set_trace()
             self.S = Autoreduce(self.S, context)
-            print("after autoreduce")
-            self.show()
-            for _ in self.S:
-                _.Lder().show()
+            #print("after autoreduce")
+            #self.show()
+            #for _ in self.S:
+            #    _.Lder().show()
             
             self.S = CompleteSystem(self.S, context)
-            print("after complete system")
-            self.show()
+            #print("after complete system")
+            #self.show()
             
             self.conditions = split_by_function(self.S, context)
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
             ]
-            print("After conditions")
-            self.show()
+            #print("After conditions")
+            #self.show()
 
             if not reduced:
                 self.S = Reorder(list(set(self.S)), context)
