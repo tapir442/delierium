@@ -25,7 +25,7 @@ from itertools import product, combinations, islice
 
 
 
-@functools.cache
+#@functools.cache
 def func(e):
     try:
         return e.operator().function()
@@ -75,7 +75,7 @@ class _Dterm:
         return self._d != 1 and bool(self._coeff == 1)
     def __lt__ (self, other):
         return not eq(self, other) and higher(self, other, self._context)
-    @functools.cache
+    #@functools.cache
     def __eq__ (self, other):
         return eq(self._d, other._d) and eq(self._coeff, other._coeff)
     def show(self):
@@ -228,7 +228,7 @@ def reduceS(e:_Differential_Polynomial, S:list, context)->_Differential_Polynomi
     while reducing:
         for dp in gen:
             enew = reduce(e, dp, context)
-            if enew == e:
+            if enew is e:
                 reducing = False
             else:
                 e = enew
@@ -244,15 +244,16 @@ def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Co
 
     def _reduce_inner(e, ld):
         e2_order = _order(ld)
+        ldf      = func(ld)
         # instead of looping over terms we just look for reduction with *equal *
         # derivatives/functions, just for two hopes: no need to diff and faster 
         # elimination of terms
-        potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if func(ld) == func(t._d)
+        potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if eq(ldf, func(t._d))
                and all(map(lambda h: h == 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
         if potential_funcs:
             return _Differential_Polynomial(e1.expression() - e2.expression() * potential_funcs[0][1], context)
         
-        potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if func(ld) == func(t._d)
+        potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if eq(ldf, func(t._d))
                and all(map(lambda h: h >= 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
                                             
                                             
@@ -268,7 +269,7 @@ def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Co
     _e1 = None
     while 1:
         _e1 = _reduce_inner(e1, e2.Lder())
-        if bool(_e1 == e1):
+        if _e1 is e1:
             return _e1
         e1 = _e1
 
@@ -377,7 +378,7 @@ def vec_multipliers(m, M, Vars):
     return mult, list(sorted(set(Vars) - set(mult)))
 
 
-@functools.cache
+#@functools.cache
 def derivative_to_vec(d, context):
     return order_of_derivative(d, len(context._independent))
 
@@ -596,7 +597,8 @@ class Janet_Basis:
         else:
             self.S = S[:]
         old = []
-        self.S = Reorder([_Differential_Polynomial(s, context) for s in self.S], context, ascending = True)
+        # explore why s could be zero
+        self.S = Reorder([_Differential_Polynomial(s, context) for s in self.S if not eq(s, 0)], context, ascending = True)
         while 1:
             if old == self.S:
                 # no change since last run

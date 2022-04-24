@@ -115,7 +115,7 @@ class Context:
 
 _cache={}
 
-@functools.cache
+#@functools.cache
 def higher(d1, d2, context):
     # XXX move to context?
     '''Algorithm 2.3 from [Schwarz].'''
@@ -133,7 +133,7 @@ def higher(d1, d2, context):
     def idx(d):
         # faster than functools.cache
         return context._dependent.index(analyze_dterm(d))
-    @functools.cache
+    #@functools.cache
     def get_derivative_vector(d):
         iv = [0]*len(context._dependent)
         iv [idx(d)] += 1
@@ -146,7 +146,7 @@ def higher(d1, d2, context):
             return entry > 0
     return False
 
-@functools.cache
+#@functools.cache
 def sorter (d1, d2, context = Mgrevlex):
     '''sorts two derivatives d1 and d2 using the weight matrix M
     according to the sort order given in the tuple of  dependent and

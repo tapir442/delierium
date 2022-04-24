@@ -14,6 +14,7 @@ def eq(d1, d2):
     because maxima comparisons are expensive,and we can expect
     a lot of the same comparisons over and over again.
     All other caching is neglegible compared to this here
+    70 % of the time is spent here!
     '''
     return bool(d1 == d2)
 
