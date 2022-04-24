@@ -36,11 +36,11 @@ def prolongationFunction(f:list, x:list, order):
     '''
     >>> x, y, z = var("x y z")
     >>> f = function("f")(x, y, z)
-    >>> set(prolongationFunction([f], (x, y, z), 2)) == set(
-    ... [diff(f(x, y, z), z, z), diff(f(x, y, z), y), diff(f(x, y, z), x),
-    ... diff(f(x, y, z), z), f(x, y, z), diff(f(x, y, z), x, z),
-    ... diff(f(x, y, z), x, y), diff(f(x, y, z), x, x),
-    ... diff(f(x, y, z), y, y), diff(f(x, y, z), y, z)])
+    >>> set(prolongationFunction([f], [x, y, z], 2)) == set(
+    ... [diff(f, z, z), diff(f, y), diff(f, x),
+    ... diff(f, z), f, diff(f, x, z),
+    ... diff(f, x, y), diff(f, x, x),
+    ... diff(f, y, y), diff(f, y, z)])
     True
     '''
     result = f
@@ -48,8 +48,7 @@ def prolongationFunction(f:list, x:list, order):
     def outer(fun, l1, l2):
         return list(map(lambda v: fun(v[0], v[1]), product(l1, l2)))
     for i in range(order):
-        aux = outer(diff, aux, x)[:]
-        result += aux
+        result += (aux:= outer(diff, aux, x)[:])
     return(sorted(list(set(result))))
 
 
@@ -73,9 +72,6 @@ def prolongation(eq, dependent, independent):
     -D[2](f)(x, u(x), diff(u(x), x))*diff(u(x), x)^2*D[1](xi_1)(x, u(x)) + D[2](f)(x, u(x), diff(u(x), x))*D[1](phi_1)(x, u(x))*diff(u(x), x) - D[2](f)(x, u(x), diff(u(x), x))*diff(u(x), x)*D[0](xi_1)(x, u(x)) + xi_1(x, u(x))*D[0](f)(x, u(x), diff(u(x), x)) + phi_1(x, u(x))*D[1](f)(x, u(x), diff(u(x), x)) + D[2](f)(x, u(x), diff(u(x), x))*D[0](phi_1)(x, u(x))
     >>> # this one here is from Baumann, p.93
     >>> f_x = f(x, u(x), diff(u(x),x),  diff(u(x), x ,x))
-    >>> secondProlongation =  prolongation([f_x], [u], [x])[0].expand()
-    >>> print(secondProlongation)
-    -D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)^3*D[1, 1](xi_1)(x, u(x)) + D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[1, 1](phi_1)(x, u(x))*diff(u(x), x)^2 - 2*D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)^2*D[0, 1](xi_1)(x, u(x)) - D[2](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)^2*D[1](xi_1)(x, u(x)) - 3*D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)*diff(u(x), x, x)*D[1](xi_1)(x, u(x)) + 2*D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[0, 1](phi_1)(x, u(x))*diff(u(x), x) + D[2](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[1](phi_1)(x, u(x))*diff(u(x), x) + D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[1](phi_1)(x, u(x))*diff(u(x), x, x) - D[2](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)*D[0](xi_1)(x, u(x)) - 2*D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x, x)*D[0](xi_1)(x, u(x)) - D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)*D[0, 0](xi_1)(x, u(x)) + xi_1(x, u(x))*D[0](f)(x, u(x), diff(u(x), x), diff(u(x), x, x)) + phi_1(x, u(x))*D[1](f)(x, u(x), diff(u(x), x), diff(u(x), x, x)) + D[2](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[0](phi_1)(x, u(x)) + D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[0, 0](phi_1)(x, u(x))
     >>> # Baumann's example p. 94
     >>> x = var('x')
     >>> y = function('y')
@@ -84,10 +80,10 @@ def prolongation(eq, dependent, independent):
     """
     Depend = [d(*independent) for d in dependent]
     vars   = independent + Depend
-    xi     = [function("xi_%s" % (j+1)) for j in range(len(independent))]
+    xi     = [function("xi_%s" % (j+1), latex_name = r"\xi_{i+1}") for j in range(len(independent))]
     eta    = []
-    for i in range (len(dependent)):
-        phi = function("phi_%s" % (i+1))
+    for i in range(len(dependent)):
+        phi = function("phi_%s" % (i+1), latex_name = r"\phi_{i+1}")
         eta.append(phi(*vars) -
                    sum(xi[j](*vars) *
                        Depend[i].diff(independent[j])
@@ -98,7 +94,7 @@ def prolongation(eq, dependent, independent):
     for p in prolong:
         _p = []
         for l in p:
-            _p.extend([l.substitute_function(test[i], _e) for _e in  eta])
+            _p.extend([l.substitute_function(test[i], _e.function()) for _e in  eta])
         prol.append(sum(_ for _ in _p))
     prolong = prol[:]
     prol = []
@@ -121,8 +117,8 @@ def prolongationODE(equations, dependent, independent):
     [xi(u(x), x)*D[0](F)(u(x), x)*diff(u(x), x) - diff(u(x), x)^2*D[0](xi)(u(x), x) - (D[0](F)(u(x), x)*diff(u(x), x) + D[1](F)(u(x), x) - diff(u(x), x, x))*xi(u(x), x) - phi(u(x), x)*D[0](F)(u(x), x) + D[0](phi)(u(x), x)*diff(u(x), x) - xi(u(x), x)*diff(u(x), x, x) - diff(u(x), x)*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)]
     """
     vars     = [dependent(independent), independent]
-    xi       = function("xi")
-    phi      = function("phi")
+    xi       = function("xi", latex_name=r"\xi")
+    phi      = function("phi", latex_name=r"\phi")
     eta      = phi(*vars) - xi(*vars) * diff(dependent(independent), independent)
     test     = function('test')
     prolong  = FrechetD([equations], [dependent], [independent], testfunction=[test])
@@ -132,8 +128,9 @@ def prolongationODE(equations, dependent, independent):
         prol.append(sum(_ for _ in _p))
     prolong = prol[:]
     prol = []
-    for j in range(len(prolong)):
-        prol.append(prolong[j] + xi(*vars) * equations.diff(independent))
+    prol    = [prolong[j] + xi(*vars) * equations.diff(independent)
+               for j in range(len(prolong))
+               ]
     return prol
 
 

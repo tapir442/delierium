@@ -3,10 +3,14 @@ from collections.abc import Iterable
 import functools
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
+from sage.symbolic.operators import FDerivativeOperator
 from functools import reduce
 from operator import __mul__
 import more_itertools
+import re
+from sage.misc.html import html
 from IPython.core.debugger import set_trace
+import sage.symbolic.operators
 
 @functools.cache
 def eq(d1, d2):
@@ -14,6 +18,7 @@ def eq(d1, d2):
     because maxima comparisons are expensive,and we can expect
     a lot of the same comparisons over and over again.
     All other caching is neglegible compared to this here
+    70 % of the time is spent here!
     '''
     return bool(d1 == d2)
 
@@ -61,9 +66,7 @@ def tangent_vector(f):
     d = diff(f, t).limit(t=0)
     return [d.coefficient(_) for _ in newvars]
 
-#
-
-def order_of_derivative(e, required_len = 0):
+def order_of_derivative(e, required_len=0):
     '''Returns the vector of the orders of a derivative respect to its variables
 
     >>> x,y,z = var ("x,y,z")
@@ -95,7 +98,7 @@ def is_derivative(e):
     False
     '''
     try:
-        return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
+        return isinstance(e.operator(), FDerivativeOperator)
     except AttributeError:
         return False
 
@@ -110,6 +113,8 @@ def is_function(e):
     >>> is_function (diff(f,x))
     False
     >>> is_function (x*diff(f,x))
+    False
+    >>> is_function (x*f)
     False
     '''
     if hasattr(e, "operator"):
@@ -133,6 +138,7 @@ def compactify(*vars):
     return result
 
 
+@functools.cache
 def adiff(f, context, *vars):
     use_func_diff = any("NewSymbolicFunction" in v.__class__.__name__ for v in vars)
     for op in f.operands():
@@ -151,32 +157,27 @@ def adiff(f, context, *vars):
         f = f.diff(*vars)
     return f
     
-from sage.all import *
-import sage.symbolic.operators
 
 def is_op_du(expr_op, u):
     is_derivative = isinstance(
         expr_op,
         sage.symbolic.operators.FDerivativeOperator
     )
-
     if is_derivative:
         # Returns True if the differentiated function is `u`.
         return expr_op.function() == u.operator()
-
     else:
         return False
+
 
 def iter_du_orders(expr, u):
     for sub_expr in expr.operands():
         if sub_expr == []:
             # hit end of tree
             continue
-
         elif is_op_du(sub_expr.operator(), u):
             # yield order of differentiation
             yield len(sub_expr.operator().parameter_set())
-
         else:
             # iterate into sub expression
             for order in iter_du_orders(sub_expr, u):
@@ -213,3 +214,96 @@ def func_diff(L, u_in):
         result += sign * dL_du.diff(x, c)
 
     return result
+
+re_num   = re.compile(r"^(?P<sign>[+-])?(?P<p1>\d*)?(?P<p2>[.|/]\d*)?$")
+re_diff1 = re.compile(r"^D\[(?P<vars>.+)\]\((?P<f1>[^\)]+)\)\((?P<args>.*)\)(\^(?P<exp>.+)$)?")
+re_diff2 = re.compile(r"^diff\((?P<diff>.+)\)(\^(?P<exp>.+)$)?")                      
+nakedf   = re.compile(r"^(?P<fname>\w+)\(.*$")
+latexf   = re.compile(r"^(?P<f>(\\)?\w+)")
+
+def latexer(e):
+    ops,opr = e.expand().operands(), e.expand().operator()        
+    def _latexer(t):
+        res = ""
+        if match := re_diff2.match(str(t)):
+            params = match.groupdict()["diff"].split(",")
+            params = [_.strip() for _ in params]
+            fu = params[0]
+            if not match.groupdict().get("exp", ""):
+                res += " %s_{%s}" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:]))
+            else:
+                res += " %s_{%s}^%s" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:])
+                                   , match.groupdict()["exp"])        
+            return res
+        elif match := re_diff1.match(str(t)):
+            params  = match.groupdict()["args"].split(",")
+            params  = [_.strip() for _ in params]
+            fu      = params[0]
+            vv      = [int(_) for _ in match.groupdict()["vars"].split(",")]
+            params  = [nakedf.match(fu).groupdict()["fname"]] + params[1:]    
+            latexf1 = re.compile(r"^.+\\left\((?P<f>(\\)?%s)" % match.groupdict()["f1"])
+            fn      = latexf1.match(t._latex_()).groupdict()["f"]
+            if not match.groupdict().get("exp", ""):                    
+                res += r" %s_{%s}" % (fn, "".join((params[i] for i in vv)))
+            else:
+                res += r" %s_{%s}^%s" % (fn, 
+                            "".join((params[i] for i in vv))), match.groupdict()["exp"]
+            return res
+        else:
+            pass
+        opr, o = t.operator(), t.operands()
+        for _o in o:             
+            if match := re_num.match(str(_o)):
+                gd   = match.groupdict()
+                sign = gd["sign"]
+                if not sign:
+                    sign = ""
+                p1   = gd["p1"] if gd["p1"] else 0
+                p2   = gd["p2"] if gd["p2"] else ""
+                res  = sign + str(p1) + str(p2) + res
+            if match := re_diff2.match(str(_o)):
+                params = match.groupdict()["diff"].split(",")
+                params = [_.strip() for _ in params]
+                fu = params[0]
+                if not match.groupdict().get("exp", ""):
+                    res += " %s_{%s}" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:]))
+                else:
+                    res += " %s_{%s}^%s" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:])
+                                   , match.groupdict()["exp"])
+            elif match := re_diff1.match(str(_o)):
+                params  = match.groupdict()["args"].split(",")
+                params  = [_.strip() for _ in params]
+                fu      = params[0]
+                vv      = [int(_) for _ in match.groupdict()["vars"].split(",")]
+                params  = [nakedf.match(fu).groupdict()["fname"]] + params[1:]    
+                latexf1 = re.compile(r"^.+\\left\((?P<f>(\\)?%s)" % match.groupdict()["f1"])
+                fn      = latexf1.match(_o._latex_()).groupdict()["f"]
+                if not match.groupdict().get("exp", ""):                    
+                    res += r" %s_{%s}" % (fn, "".join((params[i] for i in vv)))
+                else:
+                    res += r" %s_{%s}^%s" % (fn, 
+                                   "".join((params[i] for i in vv))), match.groupdict()["exp"]
+                
+            elif match := nakedf.match(str(_o)):
+                n = match.groupdict()["fname"]
+                lf = _o._latex_()    
+                res += r" %s" % latexf.match(lf).groupdict()["f"]
+        return res
+
+    all = ""
+    if is_derivative(e) or e.operator().__name__ == 'mul_vararg':
+        all = _latexer(e)
+    elif e.operator().__name__ == 'add_vararg':
+        for _ in ops:
+            r = _latexer(_)        
+            if r.startswith("-"):
+                all += r
+            else:
+                if all:
+                    all += "+"+r
+                else:
+                    all = r
+    else:    
+        raise NotImplemetedError
+    all = all.replace("-1 ", "-")
+    return html("<p>$"+all+"$</p>")
