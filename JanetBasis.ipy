@@ -1,4 +1,4 @@
-#%display latex
+%display latex
 
 import sage.all
 from sage.calculus.var import var, function

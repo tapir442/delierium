@@ -14,7 +14,7 @@ setup(
     long_description_content_type='text/markdown',
     packages=find_packages(include=['delierium.*']),
     setup_requires=["more-itertools"],
-    install_requires=["more-itertools"],
+    install_requires=["more-itertools", "pylatexenc"],
     author='Martin Mayerhofer-Schöpf',
     author_email='tapir@aon.at',
     license='MIT',
