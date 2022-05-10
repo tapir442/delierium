@@ -112,6 +112,9 @@ class Context:
                                    for _ in dependent))
         self._weight      = weight (self._dependent, self._independent)
         self._basefield   = PolynomialRing(QQ, independent)
+        self._tree        = self._create_tree()
+    def _create_tree(self):
+        pass
 
 _cache={}
 

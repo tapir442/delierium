@@ -151,7 +151,7 @@ def adiff(f, context, *vars):
     else:
         f = f.diff(*vars)
     return f
-    
+
 from sage.all import *
 import sage.symbolic.operators
 
