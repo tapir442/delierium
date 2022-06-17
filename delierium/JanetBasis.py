@@ -4,24 +4,22 @@
 # -
 
 import sage.all
-from sage.calculus.var import var, function
-from sage.misc.reset import reset
 from sage.calculus.functional import diff
 try :
     from delierium.helpers import (is_derivative, is_function, eq,
                                    order_of_derivative)
-    from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
+    from delierium.MatrixOrder import higher, sorter, Context, Mgrevlex
 except ModuleNotFoundError:
     from helpers import (is_derivative, is_function, eq,
                                order_of_derivative)
-    from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
+    from MatrixOrder import higher, sorter, Context, Mgrevlex
 
 import functools
 from operator import mul
 from IPython.core.debugger import set_trace
 from collections.abc import Iterable
 from more_itertools import powerset, bucket, flatten
-from itertools import product, combinations, islice
+from itertools import product, islice
 
 
 
@@ -43,7 +41,7 @@ class _Dterm:
         >>> ctx   = Context ((f,g),(x,y,z))
         >>> d     = (x**2) * diff(f, x, y)
         >>> dterm = _Dterm(d = diff(f, x, y), c = x**2, context = ctx)
-        >>> print(dterm)	
+        >>> print(dterm)
         (x^2) * diff(f(x, y, z), x, y)
         '''
         self._coeff, self._d = c, d
@@ -123,8 +121,8 @@ class _Differential_Polynomial:
                     d.append(o)
                 else:
                     for item in o.operands():
-                        (d 
-                         if ((is_derivative(item) and self.ctxfunc(item.function())) 
+                        (d
+                         if ((is_derivative(item) and self.ctxfunc(item.function()))
                               or self.ctxfunc(item)) else coeff).append(item)
                 coeff = functools.reduce(mul, coeff, 1)
                 found = False
@@ -136,8 +134,8 @@ class _Differential_Polynomial:
                             break
                 if not found:
                     if not eq(coeff, 0):
-                        self._p.append(_Dterm(d = d[0] if d else 1, 
-                                          c = coeff, 
+                        self._p.append(_Dterm(d = d[0] if d else 1,
+                                          c = coeff,
                                           context = self._context))
         self._p = [_ for _ in self._p if not eq(_._coeff, 0)]
         self._p.sort(key=functools.cmp_to_key(
@@ -190,9 +188,9 @@ class _Differential_Polynomial:
     def normalize (self):
         if self._p and self._p[0]._coeff != 1:
             c = self._p[0]._coeff
-            self._p = [_Dterm( c = (_._coeff / c).simplify(), d= _._d, context = self._context) 
+            self._p = [_Dterm( c = (_._coeff / c).simplify(), d= _._d, context = self._context)
                        for _ in self._p]
-            
+
         self._expression = sum (_.expression() for _ in self._p)
     def __nonzero__ (self):
         return len(self._p) > 0
@@ -246,17 +244,17 @@ def reduce(e1: _Differential_Polynomial,e2: _Differential_Polynomial, context:Co
         e2_order = _order(ld)
         ldf      = func(ld)
         # instead of looping over terms we just look for reduction with *equal *
-        # derivatives/functions, just for two hopes: no need to diff and faster 
+        # derivatives/functions, just for two hopes: no need to diff and faster
         # elimination of terms
         potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if eq(ldf, func(t._d))
                and all(map(lambda h: h == 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
         if potential_funcs:
             return _Differential_Polynomial(e1.expression() - e2.expression() * potential_funcs[0][1], context)
-        
+
         potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if eq(ldf, func(t._d))
                and all(map(lambda h: h >= 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
-                                            
-                                            
+
+
         if potential_funcs:
             dif = [a-b for a,b in zip(potential_funcs[0][0], e2_order)]
             variables_to_diff = []
@@ -490,7 +488,7 @@ def split_by_function(S, context):
 def FindIntegrableConditions(S, context):
     result = list(S)
     if len(result) == 1:
-        return [] 
+        return []
     vars = list(range(len(context._independent)))
     monomials = [(_, derivative_to_vec(_.Lder(), context)) for _ in result]
 
@@ -514,6 +512,7 @@ def FindIntegrableConditions(S, context):
         if e1 == e2: continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
+                # ToDo: replace by tuples for speed
                 if eq(diff(e1[0].Lder(), n), diff(e2[0].Lder(), *m)):
                     c = diff(e1[0].expression(), n) - \
                         diff(e2[0].expression(), *m)
@@ -607,18 +606,18 @@ class Janet_Basis:
             #print("This is where we start")
             #self.show()
             #for _ in self.S:
-            #    _.Lder().show()            
+            #    _.Lder().show()
             # set_trace()
             self.S = Autoreduce(self.S, context)
             #print("after autoreduce")
             #self.show()
             #for _ in self.S:
             #    _.Lder().show()
-            
+
             self.S = CompleteSystem(self.S, context)
             #print("after complete system")
             #self.show()
-            
+
             self.conditions = split_by_function(self.S, context)
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
@@ -650,7 +649,7 @@ class Janet_Basis:
         the rank
         """
         return self.rank()
-    
+
     def type(self):
         '''Computes the type of the Janet Basis, i.e. the leading derivatives
         '''

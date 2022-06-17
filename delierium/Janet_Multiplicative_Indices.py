@@ -370,3 +370,7 @@ pprint(mausi)
 # 16: return U
 #
 # =============================================================================
+
+class Janet_Tree:
+    def __init__(self, monomials):
+        pass
