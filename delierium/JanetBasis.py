@@ -58,6 +58,7 @@ class _Dterm:
                 else:
                     r.append(o)
             self._coeff = functools.reduce(mul, r, 1)
+        self._order      = self._compute_order() 
         self._expression = self._coeff * self._d
     def __str__(self):
         try:
@@ -70,11 +71,14 @@ class _Dterm:
     def term(self):
         return self._coeff * self._d
 
-    def order(self):
+    def _compute_order(self):
+        """computes the monomial tuple from the derivative part"""
         if is_derivative(self._d):
             return order_of_derivative(self._d, len(self._context._independent))
         else:
             return [0] * len(self._context._independent)
+    def order(self):
+        return self._order
     def is_coefficient(self):
         # XXX nonsense
         return self._d == 1
@@ -577,7 +581,7 @@ class Janet_Basis:
         >>> xi  = function('xi')(y(x), x)
         >>> eta = function ('eta')(y(x), x)
         >>> f1  = adiff (xi, y(x), 2) + 3*adiff(xi, y(x))/4
-        >>> f2  = adiff (eta, x, 2) +
+        >>> f2  = adiff (eta, x, 2)
 
         
         """
