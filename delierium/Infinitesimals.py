@@ -124,11 +124,11 @@ def prolongationODE(equations, dependent, independent):
     xi       = function("xi")
     phi      = function("phi")
     eta      = phi(*vars) - xi(*vars) * diff(dependent(independent), independent)
-    test     = function("t")
+    test     = function('test')
     prolong  = FrechetD([equations], [dependent], [independent], testfunction=[test])
     prol     = []
     for p in prolong:
-        _p = [l.substitute_function(test, eta).expand() for l in p]
+        _p = [l.substitute_function(test, eta.function()).expand() for l in p]
         prol.append(sum(_ for _ in _p))
     prolong = prol[:]
     prol = []
