@@ -47,7 +47,8 @@ class _Dterm:
         (x^2) * diff(f(x, y, z), x, y)
         '''
         self._coeff, self._d = 1, 1
-        self._context = context
+        self._context        = context
+        self._has_minus      = False
         if is_derivative(e) or is_function(e):
             self._d = e
         else:
@@ -57,17 +58,18 @@ class _Dterm:
                     self._d = o
                 else:
                     r.append(o)
-            self._coeff = functools.reduce(mul, r, 1)
+            self._coeff     = functools.reduce(mul, r, 1)
+            self._has_minus = -1 in r
         self._order      = self._compute_order() 
         self._expression = self._coeff * self._d
     def __str__(self):
         try:
-            return "({}) * {}".format (self._coeff.expression(), self._d)
+            return f"({self._coeff.expression()}) * {self._d}"
         except AttributeError:
             if eq (self._coeff, 1):
-                return "{}".format (self._d)
+                return f"{self._d}"
             else:
-                return "({}) * {}".format (self._coeff, self._d)
+                return f"({self._coeff}) * { self._d}"
     def term(self):
         return self._coeff * self._d
 
@@ -94,7 +96,7 @@ class _Dterm:
     def __eq__ (self, other):
         return eq(self._d, other._d) and eq(self._coeff, other._coeff)
     def show(self):
-        self.term().show()
+        print(self._has_minus)
     def expression (self):
         return self._expression
     def __hash__(self):
