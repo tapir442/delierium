@@ -102,7 +102,7 @@ class _Dterm:
         clatex = latex(self._coeff)
         dlatex = latex(self._d)
         #print (clatex, dlatex)
-        pattern = re.compile(r"\\frac\{\\partial.+\}\{(?P<denominator>.+)\}(?P<funcname>.+)\\left\((?P<vars>.+)\\right\)")
+        pattern = re.compile(r"\\frac\{\\partial.*\}\{(?P<denominator>.+)\}(?P<funcname>.+)\\left\((?P<vars>.+)\\right\)")
         matcher = pattern.match(dlatex)
         res     = []
         funcname= ""
@@ -651,7 +651,8 @@ class Janet_Basis:
         """Print the Janet basis with leading derivative first."""
         for _ in self.S:
             print(_)
-        return html(latex("\\\\".join((_.show() for _ in self.S))))
+        #import pdb; pdb.set_trace()
+        return html("".join((_.show() for _ in self.S)))
 
     def rank(self):
         """Return the rank of the computed Janet basis."""
