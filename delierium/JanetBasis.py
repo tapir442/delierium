@@ -114,6 +114,8 @@ class _Dterm:
                 exp = int(exp) if exp else 1
                 res.append((den.groupdict()["varname"], exp))
                 denominator = denominator.replace(den.groups()[0], "")
+        else:
+            funcname = str(self._d.function().operator())
         vstring = "".join((_[0]*_[1] for _ in res))
         if self._coeff != 1:
             h = "<p>$%s %s_{%s}$</p>" % (self._coeff, funcname, vstring)
@@ -222,12 +224,12 @@ class _Differential_Polynomial:
             k = _.show()
             if not _._has_minus:
                 if r:
-                    r += latex("+") + k
+                    r += html("<p>+</p>") + k
                 else:
                     r += k
             else:
                 r += k
-        return html(r)
+        return html(r.replace("</p><p>", "").replace("*", ""))
 
     def diff(self, *args):
         return type(self)(diff(self.expression(), *args), self._context)
@@ -649,9 +651,6 @@ class Janet_Basis:
 
     def show(self):
         """Print the Janet basis with leading derivative first."""
-        for _ in self.S:
-            print(_)
-        import pdb; pdb.set_trace()
         return html("".join((_.show() for _ in self.S)))
         other_re = r"(?P<prefix>.+)?(?P<deriveoperator>D\[.*\]\(\w+\)\(.+\))"
         
