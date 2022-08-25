@@ -23,7 +23,9 @@ from collections.abc import Iterable
 from more_itertools import powerset, bucket, flatten
 from itertools import product, combinations, islice
 
-
+from sage.misc.latex import latex
+from sage.misc.html import html
+import re
 
 @functools.cache
 def func(e):
@@ -96,7 +98,28 @@ class _Dterm:
     def __eq__ (self, other):
         return eq(self._d, other._d) and eq(self._coeff, other._coeff)
     def show(self):
-        print(self._has_minus)
+        #print(self._has_minus)
+        clatex = latex(self._coeff)
+        dlatex = latex(self._d)
+        #print (clatex, dlatex)
+        pattern = re.compile(r"\\frac\{\\partial.+\}\{(?P<denominator>.+)\}(?P<funcname>.+)\\left\((?P<vars>.+)\\right\)")
+        matcher = pattern.match(dlatex)
+        res     = []
+        funcname= ""
+        if matcher:
+            vars = matcher.groupdict()["vars"]
+            funcname = matcher.groupdict()["funcname"]
+            denominator   = matcher.groupdict()["denominator"]
+            denom_matcher = re.compile(r"((\()?\\partial (?P<varname>\w+)(\)?)((\^\{(?P<exponent>\d+)\})?))")
+            while denominator:       
+                den = denom_matcher.match(denominator)
+                exp = den.groupdict()["exponent"]
+                exp = int(exp) if exp else 1
+                res.append((den.groupdict()["varname"], exp))
+                denominator = denominator.replace(den.groups()[0], "")
+        vstring = "".join((_[0]*_[1] for _ in res))
+        h       = "<p>$%s %s_{%s}$</p>" % (self._coeff, funcname, vstring)
+        return html(h)
     def expression (self):
         return self._expression
     def __hash__(self):
@@ -194,7 +217,17 @@ class _Differential_Polynomial:
     def __eq__ (self, other):
         return all(eq(_[0]._d, _[1]._d) for _ in zip (self._p, other._p))
     def show(self):
-        self.expression().show()
+        r = ""
+        for _ in self._p:
+            k = _.show()
+            if not _._has_minus:
+                if r:
+                    r += latex("+") + k
+                else:
+                    r += k
+            else:
+                r += k
+        return html(r)
 
     def diff(self, *args):
         return type(self)(diff(self.expression(), *args), self._context)
@@ -618,6 +651,7 @@ class Janet_Basis:
         """Print the Janet basis with leading derivative first."""
         for _ in self.S:
             print(_)
+        return html(latex("\\\\".join((_.show() for _ in self.S))))
 
     def rank(self):
         """Return the rank of the computed Janet basis."""
