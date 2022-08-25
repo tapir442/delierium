@@ -98,10 +98,7 @@ class _Dterm:
     def __eq__ (self, other):
         return eq(self._d, other._d) and eq(self._coeff, other._coeff)
     def show(self):
-        #print(self._has_minus)
-        clatex = latex(self._coeff)
         dlatex = latex(self._d)
-        #print (clatex, dlatex)
         pattern = re.compile(r"\\frac\{\\partial.*\}\{(?P<denominator>.+)\}(?P<funcname>.+)\\left\((?P<vars>.+)\\right\)")
         matcher = pattern.match(dlatex)
         res     = []
@@ -118,7 +115,10 @@ class _Dterm:
                 res.append((den.groupdict()["varname"], exp))
                 denominator = denominator.replace(den.groups()[0], "")
         vstring = "".join((_[0]*_[1] for _ in res))
-        h       = "<p>$%s %s_{%s}$</p>" % (self._coeff, funcname, vstring)
+        if self._coeff != 1:
+            h = "<p>$%s %s_{%s}$</p>" % (self._coeff, funcname, vstring)
+        else:
+            h = "<p>$%s_{%s}$</p>" % (funcname, vstring)
         return html(h)
     def expression (self):
         return self._expression
@@ -651,9 +651,10 @@ class Janet_Basis:
         """Print the Janet basis with leading derivative first."""
         for _ in self.S:
             print(_)
-        #import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         return html("".join((_.show() for _ in self.S)))
-
+        other_re = r"(?P<prefix>.+)?(?P<deriveoperator>D\[.*\]\(\w+\)\(.+\))"
+        
     def rank(self):
         """Return the rank of the computed Janet basis."""
         return 0
