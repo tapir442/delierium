@@ -97,7 +97,9 @@ class _Dterm:
     @functools.cache
     def __eq__ (self, other):
         return eq(self._d, other._d) and eq(self._coeff, other._coeff)
-    def show(self):
+    def show(self, rich = True):
+        if not rich:
+            return str(self)
         dlatex = latex(self._d)
         pattern = re.compile(r"\\frac\{\\partial.*\}\{(?P<denominator>.+)\}(?P<funcname>.+)\\left\((?P<vars>.+)\\right\)")
         matcher = pattern.match(dlatex)
@@ -218,7 +220,9 @@ class _Differential_Polynomial:
         return self._p[0] < other._p[0]
     def __eq__ (self, other):
         return all(eq(_[0]._d, _[1]._d) for _ in zip (self._p, other._p))
-    def show(self):
+    def show(self, rich = True):
+        if not rich:
+            return str(self)
         r = ""
         for _ in self._p:
             k = _.show()
