@@ -1,10 +1,8 @@
 import sage.all
-from collections.abc import Iterable
 import functools
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
-from functools import reduce
-from operator import __mul__
+from sage.symbolic.operators import FDerivativeOperator
 import more_itertools
 
 @functools.cache
@@ -19,7 +17,8 @@ def eq(d1, d2):
 
 def tangent_vector(f):
     # https://doc.sagemath.org/html/en/reference/manifolds/sage/manifolds/differentiable/tangent_vector.html?highlight=partial%20differential
-    # XXX:  There is TangentVector in Sage but a little bit more complicated. Does it pay to use that one ?
+    # XXX:  There is TangentVector in Sage but a little bit more complicated.
+    # Does it pay to use that one ?
     r"""
     Do a tangent vector
 
@@ -60,9 +59,7 @@ def tangent_vector(f):
     d = diff(f, t).limit(t=0)
     return [d.coefficient(_) for _ in newvars]
 
-#
-
-def order_of_derivative(e, required_len = 0):
+def order_of_derivative(e, required_len=0):
     '''Returns the vector of the orders of a derivative respect to its variables
 
     >>> x,y,z = var ("x,y,z")
@@ -94,7 +91,7 @@ def is_derivative(e):
     False
     '''
     try:
-        return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
+        return isinstance(e.operator(), FDerivativeOperator)
     except AttributeError:
         return False
 
@@ -109,6 +106,8 @@ def is_function(e):
     >>> is_function (diff(f,x))
     False
     >>> is_function (x*diff(f,x))
+    False
+    >>> is_function (x*f)
     False
     '''
     if hasattr(e, "operator"):
@@ -132,6 +131,7 @@ def compactify(*vars):
     return result
 
 
+@functools.cache
 def adiff(f, context, *vars):
     for v in vars:
         if "NewSymbolicFunction" in v.__class__.__name__:
@@ -139,41 +139,37 @@ def adiff(f, context, *vars):
             if idx == 0:
                 f = func_diff(f,  v(context._independent[1]))
             else:
-                f = func_diff(f,  v(context._independent[0]))                
-        else :
+                f = func_diff(f,  v(context._independent[0]))
+        else:
             f = f.diff(v)
     return f
-    
-from sage.all import *
-import sage.symbolic.operators
+
 
 def is_op_du(expr_op, u):
     is_derivative = isinstance(
         expr_op,
         sage.symbolic.operators.FDerivativeOperator
     )
-
     if is_derivative:
         # Returns True if the differentiated function is `u`.
         return expr_op.function() == u.operator()
-
     else:
         return False
+
 
 def iter_du_orders(expr, u):
     for sub_expr in expr.operands():
         if sub_expr == []:
             # hit end of tree
             continue
-
         elif is_op_du(sub_expr.operator(), u):
             # yield order of differentiation
             yield len(sub_expr.operator().parameter_set())
-
         else:
             # iterate into sub expression
             for order in iter_du_orders(sub_expr, u):
                 yield order
+
 
 def func_diff(L, u_in):
     """ `u` must be a callable symbolic expression
@@ -184,10 +180,9 @@ def func_diff(L, u_in):
 
     # This variable name must not collide
     # with an existing one.
-    # I use an empty string in hopes that
+    # who will call a variable "tapir"
     # nobody else does this...
     t = SR.var('tapir')
-
     result = SR(0)
 
     # `orders` is the set of all
@@ -200,7 +195,7 @@ def func_diff(L, u_in):
 
         # Temporarily replace all `c`th derivatives of `u` with `t`;
         # differentiate; then substitute back.
-        dL_du = L.subs({du:t}).diff(t).subs({t:du})
+        dL_du = L.subs({du: t}).diff(t).subs({t: du})
 
         # Append intermediate term to `result`
         result += sign * dL_du.diff(x, c)

@@ -14,7 +14,8 @@ from functools import cmp_to_key
 
 import functools
 try:
-    from delierium.helpers import eq, order_of_derivative, is_derivative, is_function
+    from delierium.helpers import eq, order_of_derivative, is_derivative, \
+        is_function
 except ModuleNotFoundError:
     from helpers import eq, order_of_derivative, is_derivative, is_function
 
@@ -24,19 +25,21 @@ import doctest
 # according to 'Term orders and Rankings' Schwarz, pp 43.
 #
 
-# insert_row is only defined for integer matrices :(
-def insert_row(M,k,row):
+
+def insert_row(M, k, row):
+    # insert_row is only defined for integer matrices :(
     return matrix(M.rows()[:k]+[row]+M.rows()[k:])
+
 
 def Mlex(funcs, vars):
     '''Generates the "cotes" according to Riquier for the lex ordering
     INPUT : funcs: a tuple of functions (tuple for caching reasons)
             vars: a tuple of variables
-            these are not used directly , just their lenght is interasting, but so the
-            consumer doesn't has the burden of computing the length of list but
-            the lists directly from context
-    OUTPUT: a matrix which when multiplying an augmented vector (func + var) gives
-            the vector in lex order
+            these are not used directly , just their lenght is interasting, but
+            so the consumer doesn't has the burden of computing the length of
+            list but the lists directly from context
+    OUTPUT: a matrix which when multiplying an augmented vector (func + var)
+            gives the vector in lex order
 
             same applies mutatiss mutandis for Mgrlex and Mgrevlex
 
@@ -130,13 +133,15 @@ def higher(d1, d2, context):
             if is_derivative(f):
                 f = f.operator().function()
         return f
+
     def idx(d):
         # faster than functools.cache
         return context._dependent.index(analyze_dterm(d))
+
     @functools.cache
     def get_derivative_vector(d):
         iv = [0]*len(context._dependent)
-        iv [idx(d)] += 1
+        iv[idx(d)] += 1
         return vector(order_of_derivative(d, len(context._independent)) + iv)
     i1 = get_derivative_vector(d1)
     i2 = get_derivative_vector(d2)
@@ -146,8 +151,9 @@ def higher(d1, d2, context):
             return entry > 0
     return False
 
+
 @functools.cache
-def sorter (d1, d2, context = Mgrevlex):
+def sorter(d1, d2, context=Mgrevlex):
     '''sorts two derivatives d1 and d2 using the weight matrix M
     according to the sort order given in the tuple of  dependent and
     independent variables
