@@ -9,32 +9,14 @@ Created on Tue Jan 18 13:45:11 2022
 import sage.all
 import sage.symbolic.operators
 from sage.calculus.var import var, function
-from sage.misc.reset import reset
 from sage.calculus.functional import diff
 from IPython.core.debugger import set_trace
 try:
-    from delierium.helpers import is_derivative, is_function
+    from delierium.helpers import is_function
 except ImportError:
-    from helpers import is_derivative, is_function
+    from helpers import is_function
 import functools
 from operator import mul
-import sage.all
-from sage.calculus.var import var, function
-from sage.misc.reset import reset
-from sage.calculus.functional import diff
-try :
-    from delierium.helpers import (is_derivative, is_function, eq)
-    from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
-except ModuleNotFoundError:
-    from helpers import (is_derivative, is_function, eq)
-    from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
-
-import functools
-from operator import mul
-from IPython.core.debugger import set_trace
-from collections.abc import Iterable
-from more_itertools import powerset, bucket, flatten
-from itertools import product, combinations, islice
 from sage.matrix.constructor import Matrix
 
 def is_op_du(expr_op, u):
@@ -49,6 +31,7 @@ def is_op_du(expr_op, u):
 
     else:
         return False
+
 
 def iter_du_orders(expr, u):
     for sub_expr in expr.operands():
@@ -65,6 +48,7 @@ def iter_du_orders(expr, u):
             for order in iter_du_orders(sub_expr, u):
                 yield order
 
+
 def func_diff(L, u_in):
     # `u` must be a callable symbolic expression
     # in one variable.
@@ -77,12 +61,10 @@ def func_diff(L, u_in):
 
     # This variable name must not collide
     # with an existing one.
-    # I use an empty string in hopes that
+    # I use "tapir" in hopes that
     # nobody else does this...
     t = SR.var('t')
-
     result = SR(0)
-
     # `orders` is the set of all
     # orders of differentiation of `u`
     orders = set(iter_du_orders(L, u)).union((0,))
@@ -93,8 +75,7 @@ def func_diff(L, u_in):
 
         # Temporarily replace all `c`th derivatives of `u` with `t`;
         # differentiate; then substitute back.
-        dL_du = L.subs({du:t}).diff(t).subs({t:du})
-
+        dL_du = L.subs({du: t}).diff(t).subs({t: du})
         # Append intermediate term to `result`
         result += sign * dL_du.diff(x, c)
 
@@ -173,11 +154,11 @@ def EulerD(density, depend, independ):
 
 def FrechetD (support, dependVar, independVar, testfunction):
     """
-    >>> t, x = var ("t x")
-    >>> v  = function ("v")
-    >>> u  = function ("u")
-    >>> w1 = function ("w1")
-    >>> w2 = function ("w2")
+    >>> x,t = var ("x t")
+    >>> v   = function ("v")
+    >>> u   = function ("u")
+    >>> w1  = function ("w1")
+    >>> w2  = function ("w2")
     >>> eqsys = [diff(v(x,t), x) - u(x,t), diff(v(x,t), t) - diff(u(x,t), x)/(u(x,t)**2)]
     >>> m = Matrix(FrechetD (eqsys, [u,v], [x,t], [w1,w2]))
     >>> m[0][0]

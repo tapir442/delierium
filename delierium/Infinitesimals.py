@@ -6,73 +6,57 @@ Created on Fri Jan  7 18:49:33 2022
 @author: tapir
 """
 
-import sage.all
-from sage.calculus.var import var, function
-from sage.misc.reset import reset
-from sage.matrix.constructor import identity_matrix, matrix, Matrix
-from sage.calculus.functional import diff
-#try :
-#    from delierium.helpers import (is_derivative, is_function, eq,
-#                               order_of_derivative)
-#    from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
-#except ModuleNotFoundError:
-#    from helpers import (is_derivative, is_function, eq,
-#                               order_of_derivative)
-#    from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 
-import functools
-from operator import mul
-from IPython.core.debugger import set_trace
-from collections.abc import Iterable
-from more_itertools import powerset, bucket, flatten
-from itertools import product, combinations, islice
+import sage.all
+from sage.calculus.functional import diff
+from sage.calculus.var import function, var
+
+from itertools import product
 try:
     from delierium.DerivativeOperators import FrechetD
 except ImportError:
     from DerivativeOperators import FrechetD
 
 
-def prolongationFunction(f:list, x:list, order):
+def prolongationFunction(f: list, x: list, order) -> list:
     '''
     >>> x, y, z = var("x y z")
     >>> f = function("f")(x, y, z)
     >>> set(prolongationFunction([f], (x, y, z), 2)) == set(
-    ... [diff(f(x, y, z), z, z), diff(f(x, y, z), y), diff(f(x, y, z), x),
-    ... diff(f(x, y, z), z), f(x, y, z), diff(f(x, y, z), x, z),
-    ... diff(f(x, y, z), x, y), diff(f(x, y, z), x, x),
-    ... diff(f(x, y, z), y, y), diff(f(x, y, z), y, z)])
+    ... [diff(f, z, z), diff(f, y), diff(f, x),
+    ... diff(f, z), f, diff(f, x, z),
+    ... diff(f, x, y), diff(f, x, x),
+    ... diff(f, y, y), diff(f, y, z)])
     True
     '''
     result = f
     aux    = result[:]
+
     def outer(fun, l1, l2):
         return list(map(lambda v: fun(v[0], v[1]), product(l1, l2)))
     for i in range(order):
-        aux = outer(diff, aux, x)[:]
-        result += aux
-    return(sorted(list(set(result))))
-
+        result.extend(aux := outer(diff, aux, x)[:])
+    return result
 
 
 def infini(eq):
     pass
 
 
-
 def prolongation(eq, dependent, independent):
     """
-
-    Doctest stolen from Baumann pp.92/93
-    >>> x = var('x')
+   Doctest stolen from Baumann pp.92/93
+    >>> x,a,b,c,d = var('x a b c d')
     >>> u = function('u')
     >>> u_x = u(x)
-    >>> f = function("f")
-    >>> f_x = f(x, u(x), diff(u(x),x))
+    >>> f = function('f')(a,b,c)
+    >>> f_x = f(a=x, b=u_x, c=diff(u_x,x))
     >>> ppp = prolongation([f_x], [u], [x])
     >>> print(ppp[0].expand())
     -D[2](f)(x, u(x), diff(u(x), x))*diff(u(x), x)^2*D[1](xi_1)(x, u(x)) + D[2](f)(x, u(x), diff(u(x), x))*D[1](phi_1)(x, u(x))*diff(u(x), x) - D[2](f)(x, u(x), diff(u(x), x))*diff(u(x), x)*D[0](xi_1)(x, u(x)) + xi_1(x, u(x))*D[0](f)(x, u(x), diff(u(x), x)) + phi_1(x, u(x))*D[1](f)(x, u(x), diff(u(x), x)) + D[2](f)(x, u(x), diff(u(x), x))*D[0](phi_1)(x, u(x))
     >>> # this one here is from Baumann, p.93
-    >>> f_x = f(x, u(x), diff(u(x),x),  diff(u(x), x ,x))
+    >>> f = function('f')(a,b,c,d)
+    >>> f_x = f(a=x, b=u(x), c=diff(u(x),x),  d=diff(u(x), x ,x))
     >>> secondProlongation =  prolongation([f_x], [u], [x])[0].expand()
     >>> print(secondProlongation)
     -D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)^3*D[1, 1](xi_1)(x, u(x)) + D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[1, 1](phi_1)(x, u(x))*diff(u(x), x)^2 - 2*D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)^2*D[0, 1](xi_1)(x, u(x)) - D[2](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)^2*D[1](xi_1)(x, u(x)) - 3*D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)*diff(u(x), x, x)*D[1](xi_1)(x, u(x)) + 2*D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[0, 1](phi_1)(x, u(x))*diff(u(x), x) + D[2](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[1](phi_1)(x, u(x))*diff(u(x), x) + D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[1](phi_1)(x, u(x))*diff(u(x), x, x) - D[2](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)*D[0](xi_1)(x, u(x)) - 2*D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x, x)*D[0](xi_1)(x, u(x)) - D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*diff(u(x), x)*D[0, 0](xi_1)(x, u(x)) + xi_1(x, u(x))*D[0](f)(x, u(x), diff(u(x), x), diff(u(x), x, x)) + phi_1(x, u(x))*D[1](f)(x, u(x), diff(u(x), x), diff(u(x), x, x)) + D[2](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[0](phi_1)(x, u(x)) + D[3](f)(x, u(x), diff(u(x), x), diff(u(x), x, x))*D[0, 0](phi_1)(x, u(x))
@@ -86,19 +70,19 @@ def prolongation(eq, dependent, independent):
     vars   = independent + Depend
     xi     = [function("xi_%s" % (j+1)) for j in range(len(independent))]
     eta    = []
-    for i in range (len(dependent)):
+    for i in range(len(dependent)):
         phi = function("phi_%s" % (i+1))
         eta.append(phi(*vars) -
                    sum(xi[j](*vars) *
                        Depend[i].diff(independent[j])
                        for j in range(len(independent))))
-    test = list(map(lambda _: function("t_%s" % _),  range(len(Depend))))
+    test = list(map(lambda _: function("t_%s" % _), range(len(Depend))))
     prolong = FrechetD(eq, dependent, independent, testfunction=test)
     prol = []
     for p in prolong:
         _p = []
         for l in p:
-            _p.extend([l.substitute_function(test[i], _e) for _e in  eta])
+            _p.extend([l.substitute_function(test[i], _e.function()) for _e in eta])
         prol.append(sum(_ for _ in _p))
     prolong = prol[:]
     prol = []
@@ -128,12 +112,12 @@ def prolongationODE(equations, dependent, independent):
     prolong  = FrechetD([equations], [dependent], [independent], testfunction=[test])
     prol     = []
     for p in prolong:
-        _p = [l.substitute_function(test, eta.function()).expand() for l in p]
+        _p = [_.substitute_function(test, eta.function()).expand() for _ in p]
         prol.append(sum(_ for _ in _p))
     prolong = prol[:]
-    prol = []
-    for j in range(len(prolong)):
-        prol.append(prolong[j] + xi(*vars) * equations.diff(independent))
+    prol    = [prolong[j] + xi(*vars) * equations.diff(independent)
+               for j in range(len(prolong))
+               ]
     return prol
 
 
