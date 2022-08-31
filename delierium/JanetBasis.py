@@ -468,7 +468,7 @@ def CompleteSystem(S, context):
     >>> dps=[_Differential_Polynomial(_, ctx) for _ in [h1,h2,h3,h4]]
     >>> cs = CompleteSystem(dps, ctx)
     >>> # things are sorted up
-    >>> for _ in cs: _.show()
+    >>> for _ in cs: print(_)
     diff(w(x, y, z), x, y)
     diff(w(x, y, z), x, y, z)
     diff(w(x, y, z), x, x, y)
@@ -649,9 +649,13 @@ class Janet_Basis:
                        not (_ in self.S or eq(_.expression(), 0))]
             self.S = Reorder(self.S, context, ascending=True)
 
-    def show(self):
+    def show(self, rich = False):
         """Print the Janet basis with leading derivative first."""
-        return html("".join((_.show() for _ in self.S)))
+        if rich:
+            return html("".join((_.show() for _ in self.S)))
+        else:
+            for _ in self.S:
+                print(_)
         other_re = r"(?P<prefix>.+)?(?P<deriveoperator>D\[.*\]\(\w+\)\(.+\))"
         
     def rank(self):
