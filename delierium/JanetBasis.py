@@ -97,7 +97,9 @@ class _Dterm:
     @functools.cache
     def __eq__ (self, other):
         return eq(self._d, other._d) and eq(self._coeff, other._coeff)
-    def show(self):
+    def show(self, rich = True):
+        if not rich:
+            return str(self)
         dlatex = latex(self._d)
         pattern = re.compile(r"\\frac\{\\partial.*\}\{(?P<denominator>.+)\}(?P<funcname>.+)\\left\((?P<vars>.+)\\right\)")
         matcher = pattern.match(dlatex)
@@ -218,7 +220,9 @@ class _Differential_Polynomial:
         return self._p[0] < other._p[0]
     def __eq__ (self, other):
         return all(eq(_[0]._d, _[1]._d) for _ in zip (self._p, other._p))
-    def show(self):
+    def show(self, rich = True):
+        if not rich:
+            return str(self)
         r = ""
         for _ in self._p:
             k = _.show()
@@ -468,7 +472,7 @@ def CompleteSystem(S, context):
     >>> dps=[_Differential_Polynomial(_, ctx) for _ in [h1,h2,h3,h4]]
     >>> cs = CompleteSystem(dps, ctx)
     >>> # things are sorted up
-    >>> for _ in cs: _.show()
+    >>> for _ in cs: print(_)
     diff(w(x, y, z), x, y)
     diff(w(x, y, z), x, y, z)
     diff(w(x, y, z), x, x, y)
@@ -649,9 +653,13 @@ class Janet_Basis:
                        not (_ in self.S or eq(_.expression(), 0))]
             self.S = Reorder(self.S, context, ascending=True)
 
-    def show(self):
+    def show(self, rich = False):
         """Print the Janet basis with leading derivative first."""
-        return html("".join((_.show() for _ in self.S)))
+        if rich:
+            return html("".join((_.show() for _ in self.S)))
+        else:
+            for _ in self.S:
+                print(_)
         other_re = r"(?P<prefix>.+)?(?P<deriveoperator>D\[.*\]\(\w+\)\(.+\))"
         
     def rank(self):
