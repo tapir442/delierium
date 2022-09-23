@@ -34,8 +34,17 @@ def func(e):
     except AttributeError:
         return e.operator()
 
-
-class _Dterm:
+class _Delierium_Expression:
+    def __init__(self, e):
+        self._expression = e
+    def expression(self):
+        return self._expression
+    def show(self, rich=True):
+        pass
+    
+    
+    
+class _Dterm(_Delierium_Expression):
     def __init__(self, e, context=None):
         r'''differential term
 
@@ -49,6 +58,7 @@ class _Dterm:
         >>> print (dterm)
         (x^2) * diff(f(x, y, z), x, y)
         '''
+        super().__init__(e)
         self._coeff, self._d = 1, 1
         self._context        = context
         self._has_minus      = False
@@ -65,7 +75,7 @@ class _Dterm:
                     self._coeff *= o
                     r.append(o)
         self._order      = self._compute_order()
-        self._expression = self._coeff * self._d
+#        self._expression = self._coeff * self._d
 
     def __str__(self):
         try:
@@ -136,16 +146,14 @@ class _Dterm:
         else:
             h = "<p>$%s_{%s}$</p>" % (funcname, vstring)
         return html(h)
-    def expression (self):
-        return self._expression
     def __hash__(self):
         return hash(self._expression)
 
 
-class _Differential_Polynomial:
+class _Differential_Polynomial(_Delierium_Expression):
     def __init__(self, e, context):
+        super().__init__(e)
         self._context = context
-        self._expression = e
         self._p = []
         if not eq(0, e):
             self._init(e.expand())
@@ -231,9 +239,6 @@ class _Differential_Polynomial:
 
     def __nonzero__(self):
         return len(self._p) > 0
-
-    def expression(self):
-        return self._expression
 
     def __lt__(self, other):
         return self._p[0] < other._p[0]
