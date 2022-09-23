@@ -14,8 +14,10 @@ from sage.calculus.var import function, var
 from itertools import product
 try:
     from delierium.DerivativeOperators import FrechetD
+    from delierium.JanetBasis import _Differential_Expression
 except ImportError:
     from DerivativeOperators import FrechetD
+    from JanetBasis import _Delierium_Expression
 
 
 def prolongationFunction(f: list, x: list, order) -> list:
@@ -118,6 +120,7 @@ def prolongationODE(equations, dependent, independent):
     prol    = [prolong[j] + xi(*vars) * equations.diff(independent)
                for j in range(len(prolong))
                ]
+    prol    = [_Delierium_Expression(_) for _ in prol]
     return prol
 
 
