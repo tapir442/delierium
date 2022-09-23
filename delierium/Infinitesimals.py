@@ -14,7 +14,7 @@ from sage.calculus.var import function, var
 from itertools import product
 try:
     from delierium.DerivativeOperators import FrechetD
-    from delierium.JanetBasis import _Differential_Expression
+    from delierium.JanetBasis import _Delierium_Expression
 except ImportError:
     from DerivativeOperators import FrechetD
     from JanetBasis import _Delierium_Expression
