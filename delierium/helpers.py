@@ -11,6 +11,7 @@ def eq(d1, d2):
     because maxima comparisons are expensive,and we can expect
     a lot of the same comparisons over and over again.
     All other caching is neglegible compared to this here
+    70 % of the time is spent here!
     '''
     return bool(d1 == d2)
 
@@ -133,15 +134,21 @@ def compactify(*vars):
 
 @functools.cache
 def adiff(f, context, *vars):
-    for v in vars:
-        if "NewSymbolicFunction" in v.__class__.__name__:
-            idx = context._independent.index(v)
-            if idx == 0:
+    use_func_diff = any("NewSymbolicFunction" in v.__class__.__name__ for v in vars)
+    for op in f.operands():
+        if "NewSymbolicFunction" in op.operator().__class__.__name__ :
+            use_func_diff = True
+    if use_func_diff:
+        for v in vars:
+            if "NewSymbolicFunction" in v.__class__.__name__:
                 f = func_diff(f,  v(context._independent[1]))
             else:
-                f = func_diff(f,  v(context._independent[0]))
-        else:
-            f = f.diff(v)
+                xx = SR.var("xx")
+                gg = f.subs({context._independent[0](context._independent[1]):xx})
+                gg = diff(gg, v)
+                f=gg.subs({xx:context._independent[0](context._independent[1])})
+    else:
+        f = f.diff(*vars)
     return f
 
 
