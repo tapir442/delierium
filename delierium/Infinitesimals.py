@@ -107,8 +107,8 @@ def prolongationODE(equations, dependent, independent):
     [xi(u(x), x)*D[0](F)(u(x), x)*diff(u(x), x) - diff(u(x), x)^2*D[0](xi)(u(x), x) - (D[0](F)(u(x), x)*diff(u(x), x) + D[1](F)(u(x), x) - diff(u(x), x, x))*xi(u(x), x) - phi(u(x), x)*D[0](F)(u(x), x) + D[0](phi)(u(x), x)*diff(u(x), x) - xi(u(x), x)*diff(u(x), x, x) - diff(u(x), x)*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)]
     """
     vars     = [dependent(independent), independent]
-    xi       = function("xi")
-    phi      = function("phi")
+    xi       = function("xi", latex_name=r"\xi")
+    phi      = function("phi", latex_name =  "r\phi")
     eta      = phi(*vars) - xi(*vars) * diff(dependent(independent), independent)
     test     = function("t")
     prolong  = FrechetD([equations], [dependent], [independent], testfunction=[test])
