@@ -70,10 +70,10 @@ def prolongation(eq, dependent, independent):
     """
     Depend = [d(*independent) for d in dependent]
     vars   = independent + Depend
-    xi     = [function("xi_%s" % (j+1)) for j in range(len(independent))]
+    xi     = [function("xi_%s" % (j+1), latex_name = r"\xi_{i+1}") for j in range(len(independent))]
     eta    = []
     for i in range(len(dependent)):
-        phi = function("phi_%s" % (i+1))
+        phi = function("phi_%s" % (i+1), latex_name = r"\phi_{i+1}")
         eta.append(phi(*vars) -
                    sum(xi[j](*vars) *
                        Depend[i].diff(independent[j])
@@ -108,7 +108,7 @@ def prolongationODE(equations, dependent, independent):
     """
     vars     = [dependent(independent), independent]
     xi       = function("xi", latex_name=r"\xi")
-    phi      = function("phi", latex_name =  "r\phi")
+    phi      = function("phi", latex_name=r"\phi")
     eta      = phi(*vars) - xi(*vars) * diff(dependent(independent), independent)
     test     = function("t")
     prolong  = FrechetD([equations], [dependent], [independent], testfunction=[test])
@@ -120,7 +120,6 @@ def prolongationODE(equations, dependent, independent):
     prol    = [prolong[j] + xi(*vars) * equations.diff(independent)
                for j in range(len(prolong))
                ]
-    prol    = [_Delierium_Expression(_) for _ in prol]
     return prol
 
 
