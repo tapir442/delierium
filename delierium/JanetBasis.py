@@ -9,11 +9,11 @@ from sage.misc.reset import reset
 from sage.calculus.functional import diff
 try :
     from delierium.helpers import (is_derivative, is_function, eq,
-                                   order_of_derivative, adiff)
+                                   order_of_derivative, adiff, latexer)
     from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 except ModuleNotFoundError:
     from helpers import (is_derivative, is_function, eq,
-                         order_of_derivative, adiff)
+                         order_of_derivative, adiff, latexer)
     from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 
 import functools
@@ -40,7 +40,7 @@ class _Delierium_Expression:
     def expression(self):
         return self._expression
     def show(self, rich=True):
-        pass
+        return 
     
     
     
@@ -122,30 +122,30 @@ class _Dterm(_Delierium_Expression):
     def show(self, rich=True):
         if not rich:
             return str(self)
-        dlatex = latex(self._d)
-        pattern = re.compile(r"\\frac\{\\partial.*\}\{(?P<denominator>.+)\}(?P<funcname>.+)\\left\((?P<vars>.+)\\right\)")
-        matcher = pattern.match(dlatex)
-        res     = []
-        funcname= ""
-        if matcher:
-            vars = matcher.groupdict()["vars"]
-            funcname = matcher.groupdict()["funcname"]
-            denominator   = matcher.groupdict()["denominator"]
-            denom_matcher = re.compile(r"((\()?\\partial (?P<varname>\w+)(\)?)((\^\{(?P<exponent>\d+)\})?))")
-            while denominator:
-                den = denom_matcher.match(denominator)
-                exp = den.groupdict()["exponent"]
-                exp = int(exp) if exp else 1
-                res.append((den.groupdict()["varname"], exp))
-                denominator = denominator.replace(den.groups()[0], "")
-        else:
-            funcname = str(self._d.function().operator())
-        vstring = "".join((_[0]*_[1] for _ in res))
-        if self._coeff != 1:
-            h = "<p>$%s %s_{%s}$</p>" % (self._coeff, funcname, vstring)
-        else:
-            h = "<p>$%s_{%s}$</p>" % (funcname, vstring)
-        return html(h)
+#        dlatex = latex(self._d)
+#        pattern = re.compile(r"\\frac\{\\partial.*\}\{(?P<denominator>.+)\}(?P<funcname>.+)\\left\((?P<vars>.+)\\right\)")#
+#        matcher = pattern.match(dlatex)
+#        res     = []
+#        funcname= ""
+#        if matcher:
+#            vars = matcher.groupdict()["vars"]
+#            funcname = matcher.groupdict()["funcname"]
+#            denominator   = matcher.groupdict()["denominator"]
+ #           denom_matcher = re.compile(r"((\()?\\partial (?P<varname>\w+)(\)?)((\^\{(?P<exponent>\d+)\})?))")
+ #           while denominator:
+ #               den = denom_matcher.match(denominator)
+  #              exp = den.groupdict()["exponent"]
+   #             exp = int(exp) if exp else 1
+    #            res.append((den.groupdict()["varname"], exp))
+     #           denominator = denominator.replace(den.groups()[0], "")
+#        else:
+#            funcname = str(self._d.function().operator())
+#        vstring = "".join((_[0]*_[1] for _ in res))
+#        if self._coeff != 1:
+#            h = "<p>$%s %s_{%s}$</p>" % (self._coeff, funcname, vstring)
+ #       else:
+  #          h = "<p>$%s_{%s}$</p>" % (funcname, vstring)
+        return latexer(self._d)
     def __hash__(self):
         return hash(self._expression)
 
@@ -247,6 +247,7 @@ class _Differential_Polynomial(_Delierium_Expression):
         return all(eq(_[0]._d, _[1]._d) for _ in zip(self._p, other._p))
 
     def show(self, rich=True):
+        breakpoint()
         if not rich:
             return str(self)
         r = ""

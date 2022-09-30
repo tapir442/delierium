@@ -4,6 +4,10 @@ from sage.calculus.var import var, function
 from sage.calculus.functional import diff
 from sage.symbolic.operators import FDerivativeOperator
 import more_itertools
+import re
+from sage.misc.html import html
+from IPython.core.debugger import set_trace
+
 
 @functools.cache
 def eq(d1, d2):
@@ -208,3 +212,62 @@ def func_diff(L, u_in):
         result += sign * dL_du.diff(x, c)
 
     return result
+
+re_num   = re.compile(r"^(?P<sign>[+-])?(?P<p1>\d*)?(?P<p2>[.|/]\d*)?$")
+re_diff1 = re.compile(r"^D\[(?P<vars>.+)\]\((?P<f1>[^\)]+)\)\((?P<args>.*)\)(\^(?P<exp>.+)$)?")
+re_diff2 = re.compile(r"^diff\((?P<diff>.+)\)(\^(?P<exp>.+)$)?")                      
+nakedf   = re.compile(r"^(?P<fname>\w+)\(.*$")
+latexf   = re.compile(r"^(?P<f>(\\)?\w+)")
+
+def latexer(e):
+    set_trace()
+    ops = e.expand().operands()
+    def _latexer(t):
+        o = t.operands()
+        res = ""
+        for _o in o: 
+            if match := re_num.match(str(_o)):
+                gd   = match.groupdict()
+                sign = gd["sign"]
+                if not sign:
+                    sign = ""
+                p1   = gd["p1"] if gd["p1"] else 0
+                p2   = gd["p2"] if gd["p2"] else ""
+                res  = sign + str(p1) + str(p2) + res
+            elif match := re_diff2.match(str(_o)):
+                params = match.groupdict()["diff"].split(",")
+                params = [_.strip() for _ in params]
+                fu = params[0]
+                if not match.groupdict().get("exp", ""):
+                    res += " %s_{%s}" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:]))
+                else:
+                    res += " %s_{%s}^%s" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:])
+                                       , match.groupdict()["exp"])
+            elif match := re_diff1.match(str(_o)):
+                params  = match.groupdict()["args"].split(",")
+                params  = [_.strip() for _ in params]
+                fu      = params[0]
+                vv      = [int(_) for _ in match.groupdict()["vars"].split(",")]
+                params  = [nakedf.match(fu).groupdict()["fname"]] + params[1:]    
+                latexf1 = re.compile(r"^.+\\left\((?P<f>(\\)?%s)" % match.groupdict()["f1"])
+                fn      = latexf1.match(_o._latex_()).groupdict()["f"]
+                if not match.groupdict().get("exp", ""):                    
+                    res += r" %s_{%s}" % (fn, "".join((params[i] for i in vv)))
+                else:
+                    res += r" %s_{%s}^%s" % (fn, 
+                                       "".join((params[i] for i in vv))), match.groupdict()["exp"]
+            elif match := nakedf.match(str(_o)):
+                n = match.groupdict()["fname"]
+                lf = _o._latex_()    
+                res += r" %s" % latexf.match(lf).groupdict()["f"]
+        return res
+    
+    all = ""
+    for _ in ops:
+        r = _latexer(_)
+        
+        if r.startswith("-"):
+            all += r
+        else:
+            all += "+"+r
+    return html("<p>$"+all+"$</p>")
