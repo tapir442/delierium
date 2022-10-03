@@ -220,12 +220,37 @@ nakedf   = re.compile(r"^(?P<fname>\w+)\(.*$")
 latexf   = re.compile(r"^(?P<f>(\\)?\w+)")
 
 def latexer(e):
-    set_trace()
-    ops = e.expand().operands()
+    ops,opr = e.expand().operands(), e.expand().operator()        
     def _latexer(t):
-        o = t.operands()
         res = ""
-        for _o in o: 
+        if match := re_diff2.match(str(t)):
+            params = match.groupdict()["diff"].split(",")
+            params = [_.strip() for _ in params]
+            fu = params[0]
+            if not match.groupdict().get("exp", ""):
+                res += " %s_{%s}" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:]))
+            else:
+                res += " %s_{%s}^%s" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:])
+                                   , match.groupdict()["exp"])        
+            return res
+        elif match := re_diff1.match(str(t)):
+            params  = match.groupdict()["args"].split(",")
+            params  = [_.strip() for _ in params]
+            fu      = params[0]
+            vv      = [int(_) for _ in match.groupdict()["vars"].split(",")]
+            params  = [nakedf.match(fu).groupdict()["fname"]] + params[1:]    
+            latexf1 = re.compile(r"^.+\\left\((?P<f>(\\)?%s)" % match.groupdict()["f1"])
+            fn      = latexf1.match(t._latex_()).groupdict()["f"]
+            if not match.groupdict().get("exp", ""):                    
+                res += r" %s_{%s}" % (fn, "".join((params[i] for i in vv)))
+            else:
+                res += r" %s_{%s}^%s" % (fn, 
+                            "".join((params[i] for i in vv))), match.groupdict()["exp"]
+            return res
+        else:
+            pass
+        opr, o = t.operator(), t.operands()
+        for _o in o:             
             if match := re_num.match(str(_o)):
                 gd   = match.groupdict()
                 sign = gd["sign"]
@@ -234,7 +259,7 @@ def latexer(e):
                 p1   = gd["p1"] if gd["p1"] else 0
                 p2   = gd["p2"] if gd["p2"] else ""
                 res  = sign + str(p1) + str(p2) + res
-            elif match := re_diff2.match(str(_o)):
+            if match := re_diff2.match(str(_o)):
                 params = match.groupdict()["diff"].split(",")
                 params = [_.strip() for _ in params]
                 fu = params[0]
@@ -242,7 +267,7 @@ def latexer(e):
                     res += " %s_{%s}" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:]))
                 else:
                     res += " %s_{%s}^%s" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:])
-                                       , match.groupdict()["exp"])
+                                   , match.groupdict()["exp"])
             elif match := re_diff1.match(str(_o)):
                 params  = match.groupdict()["args"].split(",")
                 params  = [_.strip() for _ in params]
@@ -255,19 +280,28 @@ def latexer(e):
                     res += r" %s_{%s}" % (fn, "".join((params[i] for i in vv)))
                 else:
                     res += r" %s_{%s}^%s" % (fn, 
-                                       "".join((params[i] for i in vv))), match.groupdict()["exp"]
+                                   "".join((params[i] for i in vv))), match.groupdict()["exp"]
+                
             elif match := nakedf.match(str(_o)):
                 n = match.groupdict()["fname"]
                 lf = _o._latex_()    
                 res += r" %s" % latexf.match(lf).groupdict()["f"]
         return res
-    
+
     all = ""
-    for _ in ops:
-        r = _latexer(_)
-        
-        if r.startswith("-"):
-            all += r
-        else:
-            all += "+"+r
+    if is_derivative(e) or e.operator().__name__ == 'mul_vararg':
+        all = _latexer(e)
+    elif e.operator().__name__ == 'add_vararg':
+        for _ in ops:
+            r = _latexer(_)        
+            if r.startswith("-"):
+                all += r
+            else:
+                if all:
+                    all += "+"+r
+                else:
+                    all = r
+    else:    
+        raise NotImplemetedError
+    all = all.replace("-1 ", "-")
     return html("<p>$"+all+"$</p>")
