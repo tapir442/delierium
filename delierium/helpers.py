@@ -11,6 +11,7 @@ import re
 from sage.misc.html import html
 from IPython.core.debugger import set_trace
 import sage.symbolic.operators
+from sage.graphs.graph import Graph
 
 @functools.cache
 def eq(d1, d2):
@@ -215,95 +216,114 @@ def func_diff(L, u_in):
 
     return result
 
-re_num   = re.compile(r"^(?P<sign>[+-])?(?P<p1>\d*)?(?P<p2>[.|/]\d*)?$")
-re_diff1 = re.compile(r"^D\[(?P<vars>.+)\]\((?P<f1>[^\)]+)\)\((?P<args>.*)\)(\^(?P<exp>.+)$)?")
-re_diff2 = re.compile(r"^diff\((?P<diff>.+)\)(\^(?P<exp>.+)$)?")                      
-nakedf   = re.compile(r"^(?P<fname>\w+)\(.*$")
-latexf   = re.compile(r"^(?P<f>(\\)?\w+)")
 
-def latexer(e):
-    ops,opr = e.expand().operands(), e.expand().operator()        
-    def _latexer(t):
-        res = ""
-        if match := re_diff2.match(str(t)):
-            params = match.groupdict()["diff"].split(",")
-            params = [_.strip() for _ in params]
-            fu = params[0]
-            if not match.groupdict().get("exp", ""):
-                res += " %s_{%s}" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:]))
-            else:
-                res += " %s_{%s}^%s" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:])
-                                   , match.groupdict()["exp"])        
-            return res
-        elif match := re_diff1.match(str(t)):
-            params  = match.groupdict()["args"].split(",")
-            params  = [_.strip() for _ in params]
-            fu      = params[0]
-            vv      = [int(_) for _ in match.groupdict()["vars"].split(",")]
-            params  = [nakedf.match(fu).groupdict()["fname"]] + params[1:]    
-            latexf1 = re.compile(r"^.+\\left\((?P<f>(\\)?%s)" % match.groupdict()["f1"])
-            fn      = latexf1.match(t._latex_()).groupdict()["f"]
-            if not match.groupdict().get("exp", ""):                    
-                res += r" %s_{%s}" % (fn, "".join((params[i] for i in vv)))
-            else:
-                res += r" %s_{%s}^%s" % (fn, 
-                            "".join((params[i] for i in vv))), match.groupdict()["exp"]
-            return res
+class ExpressionGraph:
+    '''simple internal helper class
+    analyzes the expression as a tree and stores the latex expression 
+    for each subexpression
+    stolen from https://ask.sagemath.org/question/58145/tree-representing-an-expression/
+    and adapted accordingly, quick 'n dirty
+    '''
+    def __init__(self, expr):
+        self.G = Graph()
+        self.i = 0
+        self.expr = expr
+        self.root = None
+        self.latex_names = {}
+        self.graph_expr(self.expr)
+    def plot(self, *args, **kwds):
+        #print ("root is {0}".format(self.root))
+        return self.G.plot(*args, layout='tree', tree_root=self.root, **kwds)
+    def graph_expr(self, expr):
+        try:
+            operator = expr.operator()
+        except AttributeError:  # e.g. if expr is an integer
+            operator = None
+        if operator is None:
+            name = "[{0}] {1}".format(self.i, expr)
+            #print(f"{self.i=}")
+            #print(f"(leaf) {expr=} {expr.__class__=}")
+            self.latex_names[str(expr)] = expr._latex_() 
+            self.i += 1
+            self.G.add_vertex(name)
+            return name
         else:
-            pass
-        opr, o = t.operator(), t.operands()
-        for _o in o:             
-            if match := re_num.match(str(_o)):
-                gd   = match.groupdict()
-                sign = gd["sign"]
-                if not sign:
-                    sign = ""
-                p1   = gd["p1"] if gd["p1"] else 0
-                p2   = gd["p2"] if gd["p2"] else ""
-                res  = sign + str(p1) + str(p2) + res
-            if match := re_diff2.match(str(_o)):
-                params = match.groupdict()["diff"].split(",")
-                params = [_.strip() for _ in params]
-                fu = params[0]
-                if not match.groupdict().get("exp", ""):
-                    res += " %s_{%s}" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:]))
+            try:
+                name = "[{0}] {1}".format(self.i, operator.__name__)
+                #print(f"named {self.i=} {name=}")
+            except AttributeError:
+                if "FDerivativeOperator" in operator.__class__.__name__:
+                    self.latex_names[str(operator.function())] = operator.function()._latex_()
+                    name = "FDerivativeOperator"
                 else:
-                    res += " %s_{%s}^%s" % (nakedf.match(fu).groupdict()["fname"], "".join(_ for _ in params[1:])
-                                   , match.groupdict()["exp"])
-            elif match := re_diff1.match(str(_o)):
-                params  = match.groupdict()["args"].split(",")
-                params  = [_.strip() for _ in params]
-                fu      = params[0]
-                vv      = [int(_) for _ in match.groupdict()["vars"].split(",")]
-                params  = [nakedf.match(fu).groupdict()["fname"]] + params[1:]    
-                latexf1 = re.compile(r"^.+\\left\((?P<f>(\\)?%s)" % match.groupdict()["f1"])
-                fn      = latexf1.match(_o._latex_()).groupdict()["f"]
-                if not match.groupdict().get("exp", ""):                    
-                    res += r" %s_{%s}" % (fn, "".join((params[i] for i in vv)))
-                else:
-                    res += r" %s_{%s}^%s" % (fn, 
-                                   "".join((params[i] for i in vv))), match.groupdict()["exp"]
-                
-            elif match := nakedf.match(str(_o)):
-                n = match.groupdict()["fname"]
-                lf = _o._latex_()    
-                res += r" %s" % latexf.match(lf).groupdict()["f"]
-        return res
+                    name = "[{0}] {1}".format(self.i, str(operator))
+                    #print(f"unnamed {self.i=} {name=}")                
+            try:
+                self.latex_names[str(operator)] = operator._latex_()
+            except AttributeError:
+                self.latex_names[str(expr)] = expr._latex_()
+            if self.i == 0:
+                self.root = name
+                #print("  ** root is '{0}' **".format(self.root))
+            self.i += 1
+            new_nodes = []
+            for opnd in expr.operands():
+                new_nodes += [self.graph_expr(opnd)]
+            self.G.add_vertex(name)
+            self.G.add_edges([(name, node) for node in new_nodes])
+            return name
 
-    all = ""
-    if is_derivative(e) or e.operator().__name__ == 'mul_vararg':
-        all = _latexer(e)
-    elif e.operator().__name__ == 'add_vararg':
-        for _ in ops:
-            r = _latexer(_)        
-            if r.startswith("-"):
-                all += r
+
+def latexer(e,  funcs = []):
+    re_num   = re.compile(r"^(?P<sign>[+-])?(?P<p1>\d*)?(?P<p2>[.|/]\d*)?$")
+    re_diff1 = re.compile(r".*(?P<D>D\[)(?P<vars>.+)\]\((?P<f1>[^\)]+)\)\((?P<args>\S*\), [^)]\)).*")
+    re_diff2 = re.compile(r"^diff\((?P<funcname>\w+)(?P<vars>\([a-zA-Z ,]+\)), (?P<diffs>[a-zA-Z ,]+)\)(\^(?P<exp>.+)$)?")                   
+    nakedf   = re.compile(r"^(?P<fname>\w+)\(.*$")
+    latexf   = re.compile(r"^(?P<f>(\\)?\w+)")
+    print(e)
+    pat = r".*(diff\((?P<funcname>\w+)(?P<vars>\([a-zA-Z ,]+\)), (?P<diffs>[a-zA-Z ,]+)\))"
+    r=re.compile(r"%s" % pat)
+    teststring=str(e.expand())
+
+    latexdict = ExpressionGraph(e).latex_names
+    
+    funcabbrevs = set()
+    while match := r.match(teststring):
+        res = "%s_{%s}" % (match.groupdict()["funcname"], "".join (match.groupdict()["diffs"].split(",")))
+        funcabbrevs.add((match.groupdict()["funcname"] + "".join(match.groupdict()["vars"]) , match.groupdict()["funcname"]))
+        teststring = teststring.replace(match.groups(0)[0], res)
+        
+    while match := re_diff1.match(teststring):
+        #set_trace()
+        params  = match.groupdict()["args"].split(",")
+        params  = [_.strip() for _ in params]
+        # XXX not sure this will work properly. What if params is ['y(x)']
+        # and not ['y(x)','x)'] ? in that case we will fail ...
+        params[-1] = params[-1].replace(")", "")        
+        fu      = params[0]
+        vv      = [int(_) for _ in match.groupdict()["vars"].split(",")]
+        
+        f1 = match.groupdict()["f1"]
+        to_replace = "".join(("D[", match.groupdict()["vars"],"]",
+                             "(",  f1, ")(",
+                             match.groupdict()["args"]))
+        vars = [_.replace(")","") for _ in params][1:]
+        downvar = ""
+        for _v in vv: 
+            if m := nakedf.match(params[_v]):
+                downvar += " ".join(m.groupdict()["fname"])
             else:
-                if all:
-                    all += "+"+r
-                else:
-                    all = r
-    else:    
-        raise NotImplemetedError
-    all = all.replace("-1 ", "-")
-    return html("<p>$"+all+"$</p>")
+                downvar += params[_v]
+        teststring = teststring.replace(to_replace, 
+                                        r" %s_{%s}" % (f1, downvar)
+                                       )
+        teststring = teststring.replace(f1, latexdict.get(f1, f1))
+        # XXX FixMe
+        args = match.groupdict()["args"][:-1] # remove trailing ")"
+        args = args.split(",")      
+        funcabbrevs.add((args[0], nakedf.match(args[0]).groupdict()["fname"]))
+        
+    for fu in funcabbrevs:
+        teststring = teststring.replace(fu[0], fu[1])
+    
+    return html("$%s$" % teststring.replace("*", " "))

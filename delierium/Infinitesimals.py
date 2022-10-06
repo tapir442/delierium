@@ -57,7 +57,6 @@ def infini(eq):
     pass
 
 
-
 def prolongation(eq, dependent, independent):
     """
 
