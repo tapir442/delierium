@@ -8,7 +8,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 setup(
     name="delierium",
-    version="0.0.1.dev0",
+    version="0.0.1.dev1",
     description="Symmetry Analysis for ODEs using SageMath",
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -24,6 +24,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Intended Audience :: Mathematicians',
         'Topic :: Calculus :: ODE',
+        'Topic :: Scientific/Engineering :: Mathematics'
         ],
     keywords='ODE PDE Lie',
     package_dir={'': 'delierium'},

@@ -118,7 +118,7 @@ class Context:
 
 _cache={}
 
-@functools.cache
+#@functools.cache
 def higher(d1, d2, context):
     # XXX move to context?
     '''Algorithm 2.3 from [Schwarz].'''

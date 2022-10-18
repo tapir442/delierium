@@ -34,17 +34,7 @@ def func(e):
     except AttributeError:
         return e.operator()
 
-class _Delierium_Expression:
-    def __init__(self, e):
-        self._expression = e
-    def expression(self):
-        return self._expression
-    def show(self, rich=True):
-        return 
-    
-    
-    
-class _Dterm(_Delierium_Expression):
+class _Dterm:
     def __init__(self, e, context=None):
         r'''differential term
 
@@ -58,12 +48,11 @@ class _Dterm(_Delierium_Expression):
         >>> print (dterm)
         (x^2) * diff(f(x, y, z), x, y)
         '''
-        super().__init__(e)
         self._coeff, self._d = 1, 1
         self._context        = context
         self._has_minus      = False
         if is_derivative(e) or is_function(e):
-            self._d = e
+            self._d     = e
         else:
             r = []
             for o in e.operands():
@@ -75,7 +64,7 @@ class _Dterm(_Delierium_Expression):
                     self._coeff *= o
                     r.append(o)
         self._order      = self._compute_order()
-#        self._expression = self._coeff * self._d
+        self._expression = self._coeff * self._d
 
     def __str__(self):
         try:
@@ -85,20 +74,18 @@ class _Dterm(_Delierium_Expression):
                 return f"{self._d}"
             else:
                 return f"({self._coeff}) * { self._d}"
-
     def term(self):
         return self._coeff * self._d
-
+    def expression(self):
+        return self._expression
     def _compute_order(self):
         """computes the monomial tuple from the derivative part"""
         if is_derivative(self._d):
             return order_of_derivative(self._d, len(self._context._independent))
         else:
             return [0] * len(self._context._independent)
-
     def order(self):
         return self._order
-
     def is_coefficient(self):
         # XXX nonsense
         return self._d == 1
@@ -150,15 +137,19 @@ class _Dterm(_Delierium_Expression):
         return hash(self._expression)
 
 
-class _Differential_Polynomial(_Delierium_Expression):
+class _Differential_Polynomial:
     def __init__(self, e, context):
-        super().__init__(e)
         self._context = context
         self._p = []
         if not eq(0, e):
             self._init(e.expand())
-
     def _init(self, e):
+   #     def is_a_real_derivative(op):
+   #         # XXX make this part of context ?
+   #         return (is_derivative(op) and op.operator().function() in self._context._dependent) or \
+   #             is_function(o)
+   #     operands = e.operands()
+   #     operator = e.operator()
         if is_derivative(e) or is_function(e):
             self._p.append(_Dterm(e, self._context))
         elif e.operator().__name__ == 'mul_vararg':
@@ -189,6 +180,9 @@ class _Differential_Polynomial(_Delierium_Expression):
             ), reverse=True
         )
         self.normalize()
+
+    def expression(self):
+        return self._expression
 
     def ctxfunc(self, e):
         return func(e) and func(e) in self._context._dependent
@@ -287,6 +281,7 @@ def reduceS(e: _Differential_Polynomial,
     while reducing:
         for dp in gen:
             enew = reduce(e, dp, context)
+            # XXX check wheter we can repalce "==" by 'is'
             if enew == e:
                 reducing = False
             else:
@@ -307,6 +302,28 @@ def reduce(e1: _Differential_Polynomial,
 
     def _reduce_inner(e, ld):
         e2_order = _order(ld)
+#        ldf      = func(ld)
+#        # instead of looping over terms we just look for reduction with *equal *
+#        # derivatives/functions, just for two hopes: no need to diff and faster
+#        # elimination of terms
+#        potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if eq(ldf, func(t._d))
+#               and all(map(lambda h: h == 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
+#        if potential_funcs:
+#            return _Differential_Polynomial(e1.expression() - e2.expression() * potential_funcs[0][1], context)
+#
+#        potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if eq(ldf, func(t._d))#
+#               and all(map(lambda h: h >= 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
+#
+#
+#        if potential_funcs:
+#            dif = [a-b for a,b in zip(potential_funcs[0][0], e2_order)]
+#            variables_to_diff = []
+#            for i in range(len(context._independent)):
+#                if dif[i] != 0:
+#                    variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
+#            return _Differential_Polynomial(e1.expression() - diff(e2.expression(), *variables_to_diff) * potential_funcs[0][1]
+#                                           , context)
+#        return e
         for t in e._p:
             d = t._d
             if func(ld) != func(d):
@@ -668,8 +685,21 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
+            #print("This is where we start")
+            #self.show()
+            #for _ in self.S:
+            #    _.Lder().show()
+            # set_trace()
             self.S = Autoreduce(self.S, context)
+            #print("after autoreduce")
+            #self.show()
+            #for _ in self.S:
+            #    _.Lder().show()
+
             self.S = CompleteSystem(self.S, context)
+            #print("after complete system")
+            #self.show()
+
             self.conditions = split_by_function(self.S, context)
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
@@ -695,8 +725,15 @@ class Janet_Basis:
         return 0
 
     def order(self):
-        """Return the order of the computed Janet basis."""
-        return 0
+        """Return the order of the computed Janet basis which is the same as
+        the rank
+        """
+        return self.rank()
+
+    def type(self):
+        '''Computes the type of the Janet Basis, i.e. the leading derivatives
+        '''
+        self._type = [_.Lder() for _ in self.S]
 
 
 if __name__ == "__main__":
