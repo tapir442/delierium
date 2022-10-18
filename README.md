@@ -5,10 +5,10 @@ Searching for symmetries in ODEs using Python/SageMath/sympy
 
 # Status
 
-still playing around with Janet bases
-Lie ouput form a alpha
+* still playing around with Janet bases
+* Lie ouput form a alpha
 
-## Release 0.0.1.dev0
+## Release 0.0.1.dev1
 
 * Just constructing a Janet basis from a list of homogenuous linear PDEs (for grevlex and degrevlex order,
 lex is dubious)
