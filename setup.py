@@ -24,6 +24,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Intended Audience :: Mathematicians',
         'Topic :: Calculus :: ODE',
+        'Topic :: Scientific/Engineering :: Mathematics'
         ],
     keywords='ODE PDE Lie',
     package_dir={'': 'delierium'},

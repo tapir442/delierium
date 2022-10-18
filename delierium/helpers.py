@@ -230,15 +230,21 @@ class ExpressionGraph:
         self.expr = expr
         self.root = None
         self.latex_names = {}
+        self.funcs_found = set()
         self.graph_expr(self.expr)
     def plot(self, *args, **kwds):
         #print ("root is {0}".format(self.root))
         return self.G.plot(*args, layout='tree', tree_root=self.root, **kwds)
     def graph_expr(self, expr):
+        #print("."*80)
+        #print (expr, expr.__class__)
+        #set_trace()                    
+        self.latex_names[str(expr)] = expr._latex_()
         try:
             operator = expr.operator()
         except AttributeError:  # e.g. if expr is an integer
             operator = None
+        #print(f"{operator=} {operator.__class__=}")    
         if operator is None:
             name = "[{0}] {1}".format(self.i, expr)
             #print(f"{self.i=}")
@@ -255,9 +261,15 @@ class ExpressionGraph:
                 if "FDerivativeOperator" in operator.__class__.__name__:
                     self.latex_names[str(operator.function())] = operator.function()._latex_()
                     name = "FDerivativeOperator"
-                else:
+                    #print(f"unnamed {self.i=} {name=}")                
+                elif "NewSymbolicFunction" in operator.__class__.__name__:
                     name = "[{0}] {1}".format(self.i, str(operator))
                     #print(f"unnamed {self.i=} {name=}")                
+                    self.funcs_found.add(expr)
+                    #print("AAA")
+                else:
+                    name = "[{0}] {1}".format(self.i, str(operator))
+                   # print(f"unnamed {self.i=} {name=}")                
             try:
                 self.latex_names[str(operator)] = operator._latex_()
             except AttributeError:
@@ -267,6 +279,7 @@ class ExpressionGraph:
                 #print("  ** root is '{0}' **".format(self.root))
             self.i += 1
             new_nodes = []
+            #print(f"{expr.operands()=}")
             for opnd in expr.operands():
                 new_nodes += [self.graph_expr(opnd)]
             self.G.add_vertex(name)
@@ -274,25 +287,21 @@ class ExpressionGraph:
             return name
 
 
-def latexer(e,  funcs = []):
-    re_num   = re.compile(r"^(?P<sign>[+-])?(?P<p1>\d*)?(?P<p2>[.|/]\d*)?$")
+def latexer(e):
     re_diff1 = re.compile(r".*(?P<D>D\[)(?P<vars>.+)\]\((?P<f1>[^\)]+)\)\((?P<args>\S*\), [^)]\)).*")
-    re_diff2 = re.compile(r"^diff\((?P<funcname>\w+)(?P<vars>\([a-zA-Z ,]+\)), (?P<diffs>[a-zA-Z ,]+)\)(\^(?P<exp>.+)$)?")                   
     nakedf   = re.compile(r"^(?P<fname>\w+)\(.*$")
-    latexf   = re.compile(r"^(?P<f>(\\)?\w+)")
-    print(e)
     pat = r".*(diff\((?P<funcname>\w+)(?P<vars>\([a-zA-Z ,]+\)), (?P<diffs>[a-zA-Z ,]+)\))"
     r=re.compile(r"%s" % pat)
     teststring=str(e.expand())
 
-    latexdict = ExpressionGraph(e).latex_names
-    
+    graph       = ExpressionGraph(e)
+    latexdict   = graph.latex_names
+    funcs_found = graph.funcs_found
     funcabbrevs = set()
     while match := r.match(teststring):
         res = "%s_{%s}" % (match.groupdict()["funcname"], "".join (match.groupdict()["diffs"].split(",")))
         funcabbrevs.add((match.groupdict()["funcname"] + "".join(match.groupdict()["vars"]) , match.groupdict()["funcname"]))
         teststring = teststring.replace(match.groups(0)[0], res)
-        
     while match := re_diff1.match(teststring):
         #set_trace()
         params  = match.groupdict()["args"].split(",")
@@ -318,12 +327,39 @@ def latexer(e,  funcs = []):
                                         r" %s_{%s}" % (f1, downvar)
                                        )
         teststring = teststring.replace(f1, latexdict.get(f1, f1))
-        # XXX FixMe
         args = match.groupdict()["args"][:-1] # remove trailing ")"
         args = args.split(",")      
         funcabbrevs.add((args[0], nakedf.match(args[0]).groupdict()["fname"]))
+    
+    for f in funcs_found:
+        # matches phi(y(x), x) with:
+        # outer = phi
+        # inner = y
+        # innervars = x
+        # outervars = x
+        #set_trace()
+        nested_function = re.compile(r"^(?P<outer>\w+)\((?P<inner>\w+)\((?P<innervars>[\w+ ,]+)\), (?P<outervars>[\w ,]+)\)$")
+        if match := nested_function.match(str(f)):
+            res = "%s(%s(%s), %s)" % (
+                match.groupdict()["outer"],
+                match.groupdict()["inner"],
+                match.groupdict()["innervars"],
+                match.groupdict()["outervars"])
+            teststring = teststring.replace(res, match.groupdict()["outer"])
         
+        simple_function = re.compile(r"^(?P<outer>\w+)\((?P<args>[\w ,]+)\)$")
+        # matches y(x, z) with:
+        # outer = y
+        # args = x, z
+        # matches  y(x) with:
+        # outer = y
+        # args = x
+        if match := simple_function.match(str(f)):
+            res = "%s(%s)" % (match.groupdict()["outer"], match.groupdict()["args"])
+            teststring = teststring.replace(res, match.groupdict()["outer"])
+            
+        
+
     for fu in funcabbrevs:
         teststring = teststring.replace(fu[0], fu[1])
-    
     return html("$%s$" % teststring.replace("*", " "))
