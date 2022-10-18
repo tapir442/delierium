@@ -12,7 +12,7 @@ setup(
     description="Symmetry Analysis for ODEs using SageMath",
     long_description=long_description,
     long_description_content_type='text/markdown',
-    packages=find_packages(include=['delierium.*']),
+    #packages=['delierium.*'],
     setup_requires=["more-itertools"],
     install_requires=["more-itertools", "pylatexenc"],
     author='Martin Mayerhofer-Schöpf',
