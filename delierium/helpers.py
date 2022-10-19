@@ -1,12 +1,16 @@
 import sage.all
-from collections.abc import Iterable
 import functools
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
+from sage.symbolic.operators import FDerivativeOperator
 from functools import reduce
 from operator import __mul__
 import more_itertools
+import re
+from sage.misc.html import html
 from IPython.core.debugger import set_trace
+import sage.symbolic.operators
+from sage.graphs.graph import Graph
 
 @functools.cache
 def eq(d1, d2):
@@ -21,7 +25,8 @@ def eq(d1, d2):
 
 def tangent_vector(f):
     # https://doc.sagemath.org/html/en/reference/manifolds/sage/manifolds/differentiable/tangent_vector.html?highlight=partial%20differential
-    # XXX:  There is TangentVector in Sage but a little bit more complicated. Does it pay to use that one ?
+    # XXX:  There is TangentVector in Sage but a little bit more complicated.
+    # Does it pay to use that one ?
     r"""
     Do a tangent vector
 
@@ -62,9 +67,7 @@ def tangent_vector(f):
     d = diff(f, t).limit(t=0)
     return [d.coefficient(_) for _ in newvars]
 
-#
-
-def order_of_derivative(e, required_len = 0):
+def order_of_derivative(e, required_len=0):
     '''Returns the vector of the orders of a derivative respect to its variables
 
     >>> x,y,z = var ("x,y,z")
@@ -96,7 +99,7 @@ def is_derivative(e):
     False
     '''
     try:
-        return isinstance(e.operator(), sage.symbolic.operators.FDerivativeOperator)
+        return isinstance(e.operator(), FDerivativeOperator)
     except AttributeError:
         return False
 
@@ -111,6 +114,8 @@ def is_function(e):
     >>> is_function (diff(f,x))
     False
     >>> is_function (x*diff(f,x))
+    False
+    >>> is_function (x*f)
     False
     '''
     if hasattr(e, "operator"):
@@ -134,6 +139,7 @@ def compactify(*vars):
     return result
 
 
+@functools.cache
 def adiff(f, context, *vars):
     use_func_diff = any("NewSymbolicFunction" in v.__class__.__name__ for v in vars)
     for op in f.operands():
@@ -152,36 +158,32 @@ def adiff(f, context, *vars):
         f = f.diff(*vars)
     return f
 
-from sage.all import *
-import sage.symbolic.operators
 
 def is_op_du(expr_op, u):
     is_derivative = isinstance(
         expr_op,
         sage.symbolic.operators.FDerivativeOperator
     )
-
     if is_derivative:
         # Returns True if the differentiated function is `u`.
         return expr_op.function() == u.operator()
-
     else:
         return False
+
 
 def iter_du_orders(expr, u):
     for sub_expr in expr.operands():
         if sub_expr == []:
             # hit end of tree
             continue
-
         elif is_op_du(sub_expr.operator(), u):
             # yield order of differentiation
             yield len(sub_expr.operator().parameter_set())
-
         else:
             # iterate into sub expression
             for order in iter_du_orders(sub_expr, u):
                 yield order
+
 
 def func_diff(L, u_in):
     """ `u` must be a callable symbolic expression
@@ -192,10 +194,9 @@ def func_diff(L, u_in):
 
     # This variable name must not collide
     # with an existing one.
-    # I use an empty string in hopes that
+    # who will call a variable "tapir"
     # nobody else does this...
     t = SR.var('tapir')
-
     result = SR(0)
 
     # `orders` is the set of all
@@ -208,9 +209,157 @@ def func_diff(L, u_in):
 
         # Temporarily replace all `c`th derivatives of `u` with `t`;
         # differentiate; then substitute back.
-        dL_du = L.subs({du:t}).diff(t).subs({t:du})
+        dL_du = L.subs({du: t}).diff(t).subs({t: du})
 
         # Append intermediate term to `result`
         result += sign * dL_du.diff(x, c)
 
     return result
+
+
+class ExpressionGraph:
+    '''simple internal helper class
+    analyzes the expression as a tree and stores the latex expression
+    for each subexpression
+    stolen from https://ask.sagemath.org/question/58145/tree-representing-an-expression/
+    and adapted accordingly, quick 'n dirty
+    '''
+    def __init__(self, expr):
+        self.G = Graph()
+        self.i = 0
+        self.expr = expr
+        self.root = None
+        self.latex_names = {}
+        self.funcs_found = set()
+        self.graph_expr(self.expr)
+    def plot(self, *args, **kwds):
+        #print ("root is {0}".format(self.root))
+        return self.G.plot(*args, layout='tree', tree_root=self.root, **kwds)
+    def graph_expr(self, expr):
+        #print("."*80)
+        #print (expr, expr.__class__)
+        #set_trace()
+        self.latex_names[str(expr)] = expr._latex_()
+        try:
+            operator = expr.operator()
+        except AttributeError:  # e.g. if expr is an integer
+            operator = None
+        #print(f"{operator=} {operator.__class__=}")
+        if operator is None:
+            name = "[{0}] {1}".format(self.i, expr)
+            #print(f"{self.i=}")
+            #print(f"(leaf) {expr=} {expr.__class__=}")
+            self.latex_names[str(expr)] = expr._latex_()
+            self.i += 1
+            self.G.add_vertex(name)
+            return name
+        else:
+            try:
+                name = "[{0}] {1}".format(self.i, operator.__name__)
+                #print(f"named {self.i=} {name=}")
+            except AttributeError:
+                if "FDerivativeOperator" in operator.__class__.__name__:
+                    self.latex_names[str(operator.function())] = operator.function()._latex_()
+                    name = "FDerivativeOperator"
+                    #print(f"unnamed {self.i=} {name=}")
+                elif "NewSymbolicFunction" in operator.__class__.__name__:
+                    name = "[{0}] {1}".format(self.i, str(operator))
+                    #print(f"unnamed {self.i=} {name=}")
+                    self.funcs_found.add(expr)
+                    #print("AAA")
+                else:
+                    name = "[{0}] {1}".format(self.i, str(operator))
+                   # print(f"unnamed {self.i=} {name=}")
+            try:
+                self.latex_names[str(operator)] = operator._latex_()
+            except AttributeError:
+                self.latex_names[str(expr)] = expr._latex_()
+            if self.i == 0:
+                self.root = name
+                #print("  ** root is '{0}' **".format(self.root))
+            self.i += 1
+            new_nodes = []
+            #print(f"{expr.operands()=}")
+            for opnd in expr.operands():
+                new_nodes += [self.graph_expr(opnd)]
+            self.G.add_vertex(name)
+            self.G.add_edges([(name, node) for node in new_nodes])
+            return name
+
+
+def latexer(e):
+    re_diff1 = re.compile(r".*(?P<D>D\[)(?P<vars>.+)\]\((?P<f1>[^\)]+)\)\((?P<args>\S*\), [^)]\)).*")
+    nakedf   = re.compile(r"^(?P<fname>\w+)\(.*$")
+    pat = r".*(diff\((?P<funcname>\w+)(?P<vars>\([a-zA-Z ,]+\)), (?P<diffs>[a-zA-Z ,]+)\))"
+    r=re.compile(r"%s" % pat)
+    teststring=str(e.expand())
+
+    graph       = ExpressionGraph(e)
+    latexdict   = graph.latex_names
+    funcs_found = graph.funcs_found
+    funcabbrevs = set()
+    while match := r.match(teststring):
+        # check 'diff'
+        res = "%s_{%s}" % (match.groupdict()["funcname"], "".join (match.groupdict()["diffs"].split(",")))
+        funcabbrevs.add((match.groupdict()["funcname"] + "".join(match.groupdict()["vars"]) , match.groupdict()["funcname"]))
+        teststring = teststring.replace(match.groups(0)[0], res)
+    while match := re_diff1.match(teststring):
+        # check 'D[...]'
+        #set_trace()
+        params  = match.groupdict()["args"].split(",")
+        params  = [_.strip() for _ in params]
+        # XXX not sure this will work properly. What if params is ['y(x)']
+        # and not ['y(x)','x)'] ? in that case we will fail ...
+        params[-1] = params[-1].replace(")", "")
+        fu      = params[0]
+        vv      = [int(_) for _ in match.groupdict()["vars"].split(",")]
+
+        f1 = match.groupdict()["f1"]
+        to_replace = "".join(("D[", match.groupdict()["vars"],"]",
+                             "(",  f1, ")(",
+                             match.groupdict()["args"]))
+        vars = [_.replace(")", "") for _ in params][1:]
+        downvar = ""
+        for _v in vv:
+            if m := nakedf.match(params[_v]):
+                downvar += " ".join(m.groupdict()["fname"])
+            else:
+                downvar += params[_v]
+        teststring = teststring.replace(to_replace,
+                                        r" %s_{%s}" % (f1, downvar)
+                                       )
+        teststring = teststring.replace(f1, latexdict.get(f1, f1))
+        args = match.groupdict()["args"][:-1] # remove trailing ")"
+        args = args.split(",")
+        funcabbrevs.add((args[0], nakedf.match(args[0]).groupdict()["fname"]))
+
+    for f in funcs_found:
+        # matches phi(y(x), x) with:
+        # outer = phi
+        # inner = y
+        # innervars = x
+        # outervars = x
+        #set_trace()
+        nested_function = re.compile(r"^(?P<outer>\w+)\((?P<inner>\w+)\((?P<innervars>[\w+ ,]+)\), (?P<outervars>[\w ,]+)\)$")
+        if match := nested_function.match(str(f)):
+            res = "%s(%s(%s), %s)" % (
+                match.groupdict()["outer"],
+                match.groupdict()["inner"],
+                match.groupdict()["innervars"],
+                match.groupdict()["outervars"])
+            teststring = teststring.replace(res, match.groupdict()["outer"])
+
+    for f in funcs_found:
+        simple_function = re.compile(r"^(?P<outer>\w+)\((?P<args>[\w ,]+)\)$")
+        # matches y(x, z) with:
+        # outer = y
+        # args = x, z
+        # matches  y(x) with:
+        # outer = y
+        # args = x
+        if match := simple_function.match(str(f)):
+            res = "%s(%s)" % (match.groupdict()["outer"], match.groupdict()["args"])
+            teststring = teststring.replace(res, match.groupdict()["outer"])
+    for fu in funcabbrevs:
+        teststring = teststring.replace(fu[0], fu[1])
+    return teststring.replace("*", " ")

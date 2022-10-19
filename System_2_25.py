@@ -17,7 +17,9 @@ vars = var ("x y")
 z = function("z")(*vars)
 w = function("w")(*vars)
 # ctx: items are in descending order
-ctx = Context((w,z), vars, Mgrevlex)
+ctx_grevlex_g = Context((w,z), vars, Mgrevlex)
+ctx_grlex_g   = Context((w,z), vars, Mgrlex)
+ctx_lex_g     = Context((w,z), vars, Mlex)
 
 g1 = diff(z, y,y) + diff(z,y)/(2*y)
 g2 = diff(w,x,x) + 4*diff(w,y)*y**2 - 8*(y**2) * diff(z,x) - 8*w*y
