@@ -25,6 +25,9 @@ from itertools import product, islice
 from sage.misc.latex import latex
 from sage.misc.html import html
 import re
+from sage.repl.rich_output.pretty_print import pretty_print
+
+from IPython.core.debugger import set_trace
 
 
 @functools.cache
@@ -108,7 +111,7 @@ class _Dterm:
 
     def show(self, rich=True):
         if not rich:
-            return str(self)
+            return str(self)        
 #        dlatex = latex(self._d)
 #        pattern = re.compile(r"\\frac\{\\partial.*\}\{(?P<denominator>.+)\}(?P<funcname>.+)\\left\((?P<vars>.+)\\right\)")#
 #        matcher = pattern.match(dlatex)
@@ -132,7 +135,13 @@ class _Dterm:
 #            h = "<p>$%s %s_{%s}$</p>" % (self._coeff, funcname, vstring)
  #       else:
   #          h = "<p>$%s_{%s}$</p>" % (funcname, vstring)
-        return latexer(self._d)
+        #f self._coeff != 1:
+        #   set_trace()
+        #eturn " ".join((latexer(self._coeff) if self._coeff != 1 else "", latexer(self._d)))
+        if self._coeff != 1:
+            return " ".join ((latexer(_) for _ in (self._coeff, self._d)))
+        else:
+            return latexer(self._d)
     def __hash__(self):
         return hash(self._expression)
 
@@ -241,20 +250,9 @@ class _Differential_Polynomial:
         return all(eq(_[0]._d, _[1]._d) for _ in zip(self._p, other._p))
 
     def show(self, rich=True):
-        breakpoint()
         if not rich:
             return str(self)
-        r = ""
-        for _ in self._p:
-            k = _.show()
-            if not _._has_minus:
-                if r:
-                    r += html("<p>+</p>") + k
-                else:
-                    r += k
-            else:
-                r += k
-        return html(r.replace("</p><p>", "").replace("*", ""))
+        return " ".join(_.show() for _ in self._p)
 
     def diff(self, *args):
         return type(self)(diff(self.expression(), *args), self._context)
@@ -685,20 +683,20 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
-            #print("This is where we start")
-            #self.show()
-            #for _ in self.S:
-            #    _.Lder().show()
-            # set_trace()
+ #           print("This is where we start")
+ #           self.show()
+#            for _ in self.S:
+#                _.Lder().show()
+            #set_trace()
             self.S = Autoreduce(self.S, context)
-            #print("after autoreduce")
-            #self.show()
-            #for _ in self.S:
-            #    _.Lder().show()
+ #           print("after autoreduce")
+ #           self.show()
+ #           for _ in self.S:
+ #               _.Lder().show()
 
             self.S = CompleteSystem(self.S, context)
-            #print("after complete system")
-            #self.show()
+#            print("after complete system")
+#            self.show()
 
             self.conditions = split_by_function(self.S, context)
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
@@ -713,12 +711,13 @@ class Janet_Basis:
 
     def show(self, rich=False):
         """Print the Janet basis with leading derivative first."""
-        if rich:
-            return html("".join((_.show() for _ in self.S)))
-        else:
-            for _ in self.S:
+        from IPython.display import Math
+        for _ in self.S:
+            if rich:
+                display(Math(_.show()))
+            else:
                 print(_)
-        other_re = r"(?P<prefix>.+)?(?P<deriveoperator>D\[.*\]\(\w+\)\(.+\))"
+        
 
     def rank(self):
         """Return the rank of the computed Janet basis."""

@@ -299,10 +299,12 @@ def latexer(e):
     funcs_found = graph.funcs_found
     funcabbrevs = set()
     while match := r.match(teststring):
+        # check 'diff'
         res = "%s_{%s}" % (match.groupdict()["funcname"], "".join (match.groupdict()["diffs"].split(",")))
         funcabbrevs.add((match.groupdict()["funcname"] + "".join(match.groupdict()["vars"]) , match.groupdict()["funcname"]))
         teststring = teststring.replace(match.groups(0)[0], res)
     while match := re_diff1.match(teststring):
+        # check 'D[...]'
         #set_trace()
         params  = match.groupdict()["args"].split(",")
         params  = [_.strip() for _ in params]
@@ -347,6 +349,7 @@ def latexer(e):
                 match.groupdict()["outervars"])
             teststring = teststring.replace(res, match.groupdict()["outer"])
 
+    for f in funcs_found:
         simple_function = re.compile(r"^(?P<outer>\w+)\((?P<args>[\w ,]+)\)$")
         # matches y(x, z) with:
         # outer = y
@@ -357,9 +360,6 @@ def latexer(e):
         if match := simple_function.match(str(f)):
             res = "%s(%s)" % (match.groupdict()["outer"], match.groupdict()["args"])
             teststring = teststring.replace(res, match.groupdict()["outer"])
-
-
-
     for fu in funcabbrevs:
         teststring = teststring.replace(fu[0], fu[1])
-    return html("$%s$" % teststring.replace("*", " "))
+    return teststring.replace("*", " ")
