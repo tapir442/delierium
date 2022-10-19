@@ -59,6 +59,7 @@ class _Dterm:
         else:
             r = []
             for o in e.operands():
+                #print (f"{e=}, {o=}")
                 if is_derivative(o) or is_function(o):
                     self._d = o
                 else:
@@ -112,36 +113,19 @@ class _Dterm:
     def show(self, rich=True):
         if not rich:
             return str(self)        
-#        dlatex = latex(self._d)
-#        pattern = re.compile(r"\\frac\{\\partial.*\}\{(?P<denominator>.+)\}(?P<funcname>.+)\\left\((?P<vars>.+)\\right\)")#
-#        matcher = pattern.match(dlatex)
-#        res     = []
-#        funcname= ""
-#        if matcher:
-#            vars = matcher.groupdict()["vars"]
-#            funcname = matcher.groupdict()["funcname"]
-#            denominator   = matcher.groupdict()["denominator"]
- #           denom_matcher = re.compile(r"((\()?\\partial (?P<varname>\w+)(\)?)((\^\{(?P<exponent>\d+)\})?))")
- #           while denominator:
- #               den = denom_matcher.match(denominator)
-  #              exp = den.groupdict()["exponent"]
-   #             exp = int(exp) if exp else 1
-    #            res.append((den.groupdict()["varname"], exp))
-     #           denominator = denominator.replace(den.groups()[0], "")
-#        else:
-#            funcname = str(self._d.function().operator())
-#        vstring = "".join((_[0]*_[1] for _ in res))
-#        if self._coeff != 1:
-#            h = "<p>$%s %s_{%s}$</p>" % (self._coeff, funcname, vstring)
- #       else:
-  #          h = "<p>$%s_{%s}$</p>" % (funcname, vstring)
-        #f self._coeff != 1:
-        #   set_trace()
-        #eturn " ".join((latexer(self._coeff) if self._coeff != 1 else "", latexer(self._d)))
+        
+        dlatex = latex(self._coeff)
+        denominator_pattern = re.compile(r"(-)?\\frac\{.*}{(.* )?(?P<nomfunc>\w+)?\\left\((?P<vars>[\w ,]*)\\right\).*")
+        res     = []
+        funcname= ""
+        while match := denominator_pattern.match(dlatex):        
+            to_replace = r"%s\left(%s\right)" % (match.groupdict()['nomfunc'], match.groupdict()['vars'])
+            dlatex = dlatex.replace (to_replace, match.groupdict()['nomfunc'])
         if self._coeff != 1:
-            return " ".join ((latexer(_) for _ in (self._coeff, self._d)))
+            return " ".join ((dlatex, latexer(self._d)))
         else:
             return latexer(self._d)
+    
     def __hash__(self):
         return hash(self._expression)
 
@@ -250,9 +234,22 @@ class _Differential_Polynomial:
         return all(eq(_[0]._d, _[1]._d) for _ in zip(self._p, other._p))
 
     def show(self, rich=True):
+        from IPython.core.debugger import set_trace
         if not rich:
             return str(self)
-        return " ".join(_.show() for _ in self._p)
+        res = ""
+        for _ in self._p:
+            s = _.show()
+            if not res:
+                res = s
+                continue
+            if s.startswith("-1 "):
+                s = s.replace("-1 ", "-")
+            if s.startswith("-"):
+                res += s
+            else:
+                res += " + " + s
+        return res
 
     def diff(self, *args):
         return type(self)(diff(self.expression(), *args), self._context)
