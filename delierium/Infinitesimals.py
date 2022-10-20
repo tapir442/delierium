@@ -10,12 +10,15 @@ Created on Fri Jan  7 18:49:33 2022
 import sage.all
 from sage.calculus.functional import diff
 from sage.calculus.var import function, var
+from sage.all import *
 
 from itertools import product
-try:
-    from delierium.DerivativeOperators import FrechetD
-except ImportError:
-    from DerivativeOperators import FrechetD
+from delierium.DerivativeOperators import FrechetD
+
+from delierium.helpers import latexer
+from sage.misc.html import html
+from IPython.core.debugger import set_trace
+from IPython.display import Math
 
 
 def prolongationFunction(f: list, x: list, order) -> list:
@@ -117,6 +120,20 @@ def prolongationODE(equations, dependent, independent):
                ]
     return prol
 
+def infinitesimalsODE (ode, dependent, independent, *args, **kw):
+    prolongation = prolongationODE(ode, dependent, independent)[0].expand()
+    print("prolongation", prolongation.__class__)
+    display(Math(latexer(prolongation)))
+    #print("Now solving for highest variable")
+    # ToDo: find the highest order of derivative
+    s1  = solve(ode==0, diff(dependent(independent),independent, 3))
+    ode1= prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
+    display(Math(latexer(ode1)))
+    # so far it is checked manually and with mathematica
+    
+    l = [_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent))]
+    # todo: remove hardcoded xi, phi
+    return l
 
 if __name__ == "__main__":
     import doctest
