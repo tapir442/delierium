@@ -171,7 +171,7 @@ def FrechetD (support, dependVar, independVar, testfunction):
     diff(w2(x, t), t)
     """
     frechet = []
-    var ("eps")
+    eps = var ("eps")
     for j in range (len(support)):
         deriv = []
         for i in range (len(support)):
