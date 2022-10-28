@@ -11,6 +11,8 @@ from sage.misc.html import html
 from IPython.core.debugger import set_trace
 import sage.symbolic.operators
 from sage.graphs.graph import Graph
+from anytree import Node, RenderTree, AnyNode, NodeMixin, PreOrderIter
+
 
 @functools.cache
 def eq(d1, d2):
@@ -364,3 +366,54 @@ def latexer(e):
     for fu in funcabbrevs:
         teststring = teststring.replace(fu[0], fu[1])
     return teststring.replace("*", " ")
+
+from anytree import Node, RenderTree, AnyNode, NodeMixin, PreOrderIter
+
+class ExpressionTree:
+    '''simple internal helper class
+    analyzes the expression as a tree and stores the latex expression
+    for each subexpression
+    stolen from https://ask.sagemath.org/question/58145/tree-representing-an-expression/
+    and adapted accordingly, quick 'n dirty
+    '''
+    def __init__(self, expr):
+        self.root = None
+        self.latex_names = {}        
+        self._expand(expr, self.root)
+        self.diffs  = set([node.value for node in PreOrderIter(self.root) if node.value.operator().__class__ == FDerivativeOperator])
+        self.funcs  = set([node.value for node in PreOrderIter(self.root) if node.value.operator().__class__.__name__ == 'NewSymbolicFunction'])
+        self.powers = set([node.value for node in PreOrderIter(self.root) if str(node.value.operator()) == '<built-in function pow>'])
+        self.latex  = set([(node.value, node.latex) for node in PreOrderIter(self.root)])
+    
+    def _expand(self, e, parent):            
+        try:
+            opr = e.operator()
+        except AttributeError:  # e.g. if expr is an integer
+            opr = None       
+        l = ""
+        if opr:
+            if "FDerivativeOperator" in opr.__class__.__name__:
+                l = "%s_{%s}" % (opr.function()._latex_(), ",".join([str(_) for _ in e.operands()]))
+            elif "NewSymbolicFunction" in opr.__class__.__name__:
+                l = opr._latex_()
+            else:
+                try:
+                    l = e._latex_()
+                except AttributeError:
+                    l = ""
+        try:
+            self.latex_names[str(opr)] = opr._latex_()
+        except AttributeError:
+            self.latex_names[str(e)] = e._latex_()
+            
+        n = Node(str(e), value = e, operator = opr, parent = parent, latex = l)
+        self.root = n if self.root is None else self.root
+        
+        if opr is not None:
+            try:
+                ops = e.operands()
+            except AttributeError:  # can that really happen?
+                ops = []
+            for o in ops:
+                self._expand(o, n)
+                
