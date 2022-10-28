@@ -295,36 +295,12 @@ def reduce(e1: _Differential_Polynomial,
         else:
             return [0]*len(context._independent)
 
-    def _reduce_inner(e, ld):
-        e2_order = _order(ld)
-#        ldf      = func(ld)
-#        # instead of looping over terms we just look for reduction with *equal *
-#        # derivatives/functions, just for two hopes: no need to diff and faster
-#        # elimination of terms
-#        potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if eq(ldf, func(t._d))
-#               and all(map(lambda h: h == 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
-#        if potential_funcs:
-#            return _Differential_Polynomial(e1.expression() - e2.expression() * potential_funcs[0][1], context)
-#
-#        potential_funcs  = [(_order(t._d), t._coeff) for t in e._p if eq(ldf, func(t._d))#
-#               and all(map(lambda h: h >= 0, [a-b for a, b in zip(_order(t._d), e2_order)]))]
-#
-#
-#        if potential_funcs:
-#            dif = [a-b for a,b in zip(potential_funcs[0][0], e2_order)]
-#            variables_to_diff = []
-#            for i in range(len(context._independent)):
-#                if dif[i] != 0:
-#                    variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
-#            return _Differential_Polynomial(e1.expression() - diff(e2.expression(), *variables_to_diff) * potential_funcs[0][1]
-#                                           , context)
-#        return e
-        for t in e._p:
-            d = t._d
-            if func(ld) != func(d):
-                continue
+    def _reduce_inner(e1, e2):
+        e2_order = _order(e2.Lder())
+        lf = func(e2.Lder())
+        for t in (_ for _ in e1._p if eq(func(_._d), lf)):
             c = t._coeff
-            e1_order = _order(d)
+            e1_order = _order(t._d)
             dif = [a-b for a, b in zip(e1_order, e2_order)]
             if all(map(lambda h: h == 0, dif)):
                 return _Differential_Polynomial(
@@ -334,10 +310,11 @@ def reduce(e1: _Differential_Polynomial,
                 for i in range(len(context._independent)):
                     if dif[i] != 0:
                         variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
-                return _Differential_Polynomial(e1.expression()-c*diff(e2.expression(), *variables_to_diff), context)
-        return e
-    _e1 = None
-    while not bool((_e1 := _reduce_inner(e1, e2.Lder())) == e1):
+                return _Differential_Polynomial(
+                    e1.expression() - c*diff(e2.expression(), *variables_to_diff), 
+                    context)
+        return e1
+    while not bool((_e1 := _reduce_inner(e1, e2)) == e1):
         e1 = _e1
     return _e1
 
