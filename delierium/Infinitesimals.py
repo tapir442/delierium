@@ -121,15 +121,14 @@ def prolongationODE(equations, dependent, independent):
                ]
     return prol
 
+
 def infinitesimalsODE (ode, dependent, independent, *args, **kw):
     prolongation = prolongationODE(ode, dependent, independent)[0].expand()
-    display(Math(latexer(prolongation)))
-    print("Now solving for highest variable")
     tree = ExpressionTree(prolongation)
     mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
     order= max([len(_.operator().parameter_set()) for _ in mine])
     s1  = solve(ode==0, diff(dependent(independent),independent, order))
-    ode1= prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
+    ode1 = prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
     display(Math(latexer(ode1)))
     l = [_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent, order))]
     # now we have eleminated the highest order. 
@@ -138,7 +137,8 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
     # set_trace()
     equations = []
     e = l[0]
-    for _ in reversed(sorted(tree.powers)):
+    diffpowers = set([_ for _ in tree.powers if _.operands()[0] in tree.diffs])
+    for _ in reversed(sorted(diffpowers)):
         new = e.coefficient(_)
         equations.append(new)
         e = (e - new * _).expand()
