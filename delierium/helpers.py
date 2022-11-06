@@ -382,7 +382,8 @@ class ExpressionTree:
         self._expand(expr, self.root)
         self.diffs  = set([node.value for node in PreOrderIter(self.root) if node.value.operator().__class__ == FDerivativeOperator])
         self.funcs  = set([node.value for node in PreOrderIter(self.root) if node.value.operator().__class__.__name__ == 'NewSymbolicFunction'])
-        self.powers = set([node.value for node in PreOrderIter(self.root) if str(node.value.operator()) == '<built-in function pow>'])
+        self.powers = set([node.value for node in PreOrderIter(self.root) if str(node.value.operator()) == '<built-in function pow>'])            
+#        self.diffpowers = set([node.value for node in PreOrderIter(self.root) if str(node.value.operator()) == '<built-in function pow>' and node.value.operands])
         self.latex  = set([(node.value, node.latex) for node in PreOrderIter(self.root)])
     
     def _expand(self, e, parent):            
