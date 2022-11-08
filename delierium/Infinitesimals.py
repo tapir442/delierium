@@ -6,22 +6,21 @@ Created on Fri Jan  7 18:49:33 2022
 @author: tapir
 """
 
+from itertools import product
+from anytree import Node, RenderTree, AnyNode, NodeMixin, PreOrderIter
 
 import sage.all
 from sage.calculus.functional import diff
 from sage.calculus.var import function, var
-from sage.all import *
-
-from itertools import product
-from delierium.DerivativeOperators import FrechetD
-
-from delierium.helpers import latexer, ExpressionTree
 from sage.misc.html import html
 from sage.symbolic.operators import FDerivativeOperator
+from sage.symbolic.relation import solve
+
+from delierium.DerivativeOperators import FrechetD
+from delierium.helpers import latexer, ExpressionTree
+
 from IPython.core.debugger import set_trace
 from IPython.display import Math
-from anytree import Node, RenderTree, AnyNode, NodeMixin, PreOrderIter
-
 
 def prolongationFunction(f: list, x: list, order) -> list:
     '''
@@ -129,6 +128,32 @@ term = namedtuple("term", ["power", "coeff"])
 import types
 
 def infinitesimalsODE (ode, dependent, independent, *args, **kw):
+    """
+    Computes the overdetermined system which is computed from the prolongation
+    of an ODE of order > 1
+    
+    Only the left hand sides of the equations is returned, for further manipulation
+    one has to add ' == 0' herself
+    
+    Real infinitesimals will follow soon
+    
+    >>> # Arrigo Example 2.20
+    >>> x   = var('x')
+    >>> y   = function('y')
+    >>> ode = diff(y(x), x, 3) + y(x) * diff(y(x), x, 2)
+    >>> inf = infinitesimalsODE(ode, y, x)
+    >>> for _ in inf: 
+    ...     print(_)
+    -3*D[0](xi)(y(x), x)
+    -6*D[0, 0](xi)(y(x), x)
+    y(x)*D[0](xi)(y(x), x) + 3*D[0, 0](phi)(y(x), x) - 9*D[0, 1](xi)(y(x), x)
+    y(x)*D[1](xi)(y(x), x) + phi(y(x), x) + 3*D[0, 1](phi)(y(x), x) - 3*D[1, 1](xi)(y(x), x)
+    -D[0, 0, 0](xi)(y(x), x)
+    -y(x)*D[0, 0](xi)(y(x), x) + D[0, 0, 0](phi)(y(x), x) - 3*D[0, 0, 1](xi)(y(x), x)
+    y(x)*D[0, 0](phi)(y(x), x) - 2*y(x)*D[0, 1](xi)(y(x), x) + 3*D[0, 0, 1](phi)(y(x), x) - 3*D[0, 1, 1](xi)(y(x), x)
+    2*y(x)*D[0, 1](phi)(y(x), x) - y(x)*D[1, 1](xi)(y(x), x) + 3*D[0, 1, 1](phi)(y(x), x) - D[1, 1, 1](xi)(y(x), x)
+    y(x)*D[1, 1](phi)(y(x), x) + D[1, 1, 1](phi)(y(x), x)
+    """
     prolongation = prolongationODE(ode, dependent, independent)[0].expand()
     tree = ExpressionTree(prolongation)         
     mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
@@ -139,10 +164,6 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
     #display(Math(latexer(ode1)))
     tree = ExpressionTree(ode1)    
     l = [_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent, order))]
-    # now we have eliminated the highest order. 
-    # now look at the powers of one order less...
-    # todo: remove hardcoded xi, phi
-    # set_trace()
     equations = []
     e         = l[0]
     all_this_stuff = set()
