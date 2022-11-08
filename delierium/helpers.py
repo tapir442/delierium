@@ -303,8 +303,8 @@ def latexer(e):
     #set_trace()
     while match := r.match(teststring):
         # check 'diff'
-        res = "%s_{%s}" % (match.groupdict()["funcname"], "".join (match.groupdict()["diffs"].split(",")))
-        funcabbrevs.add((match.groupdict()["funcname"] + "".join(match.groupdict()["vars"]) , match.groupdict()["funcname"]))
+        res = "%s_{%s}" % (match.groupdict()["funcname"], ",".join (match.groupdict()["diffs"].split(",")))
+        funcabbrevs.add((match.groupdict()["funcname"] + ",".join(match.groupdict()["vars"]) , match.groupdict()["funcname"]))
         teststring = teststring.replace(match.groups(0)[0], res)
     while match := re_diff1.match(teststring):
         # check 'D[...]'
@@ -325,7 +325,7 @@ def latexer(e):
         downvar = ""
         for _v in vv:
             if m := nakedf.match(params[_v]):
-                downvar += " ".join(m.groupdict()["fname"])
+                downvar += ",".join(m.groupdict()["fname"])
             else:
                 downvar += params[_v]
         teststring = teststring.replace(to_replace,
@@ -367,7 +367,6 @@ def latexer(e):
         teststring = teststring.replace(fu[0], fu[1])
     return teststring.replace("*", " ")
 
-from anytree import Node, RenderTree, AnyNode, NodeMixin, PreOrderIter
 
 class ExpressionTree:
     '''simple internal helper class
@@ -379,11 +378,11 @@ class ExpressionTree:
     def __init__(self, expr):
         self.root = None
         self.latex_names = {}        
+        self.gschisti = set()
         self._expand(expr, self.root)
         self.diffs  = set([node.value for node in PreOrderIter(self.root) if node.value.operator().__class__ == FDerivativeOperator])
         self.funcs  = set([node.value for node in PreOrderIter(self.root) if node.value.operator().__class__.__name__ == 'NewSymbolicFunction'])
         self.powers = set([node.value for node in PreOrderIter(self.root) if str(node.value.operator()) == '<built-in function pow>'])            
-#        self.diffpowers = set([node.value for node in PreOrderIter(self.root) if str(node.value.operator()) == '<built-in function pow>' and node.value.operands])
         self.latex  = set([(node.value, node.latex) for node in PreOrderIter(self.root)])
     
     def _expand(self, e, parent):            
@@ -392,7 +391,7 @@ class ExpressionTree:
         except AttributeError:  # e.g. if expr is an integer
             opr = None       
         l = ""
-        if opr:
+        if opr:                
             if "FDerivativeOperator" in opr.__class__.__name__:
                 l = "%s_{%s}" % (opr.function()._latex_(), ",".join([str(_) for _ in e.operands()]))
             elif "NewSymbolicFunction" in opr.__class__.__name__:
@@ -409,12 +408,17 @@ class ExpressionTree:
             
         n = Node(str(e), value = e, operator = opr, parent = parent, latex = l)
         self.root = n if self.root is None else self.root
-        
         if opr is not None:
             try:
                 ops = e.operands()
             except AttributeError:  # can that really happen?
                 ops = []
             for o in ops:
+                if "FDerivativeOperator" in o.operator().__class__.__name__:
+                    self.gschisti.add(o)
+                if hasattr(o.operator(), "__name__") and o.operator().__name__ == "pow":
+                    for _o in o.operands():
+                        if "FDerivativeOperator" in _o.operator().__class__.__name__:
+                            self.gschisti.add(o)
+                            self.gschisti.add(e)
                 self._expand(o, n)
-                
