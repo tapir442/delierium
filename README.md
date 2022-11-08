@@ -27,7 +27,7 @@ lex is dubious)
 # Goals:
 
 * Short term:
-    * Play around and make some parts work (at least for the Q[x,y,z] domain), ready for a small 0.0.1 release
+    * All kinda stuff for symmetry analysis of ODE/PDE , doing is step by step, whatver comes to my mind
 * Mid term:
     * Make it a valuable package
 * Long term:
@@ -35,9 +35,62 @@ lex is dubious)
 
 
 
-# Documentation
+# Documentation(work in progress)
 
-How to use:
+## How to use
+
+### Get the determining equations for the symmetry of an third order ODE:
+
+    >>> from delierium.Infinitesimals import infinitesimalsODE
+    >>> from sage.calculus.var import var, function
+    >>> from sage.calculus.functional import diff
+    >>> x   = var('x')
+    >>> y   = function('y')
+    >>> ode = diff(y(x), x, 3) + y(x) * diff(y(x), x, 2)
+    >>> inf = infinitesimalsODE(ode, y, x)
+    >>> print("determining system:")
+    >>> for _ in inf:
+    >>>     print(_)
+    >>> -3*D[0](xi)(y(x), x)
+    >>> -6*D[0, 0](xi)(y(x), x)
+    >>> y(x)*D[0](xi)(y(x), x) + 3*D[0, 0](phi)(y(x), x) - 9*D[0, 1](xi)(y(x), x)
+    >>> y(x)*D[1](xi)(y(x), x) + phi(y(x), x) + 3*D[0, 1](phi)(y(x), x) - 3*D[1, 1](xi)(y(x), x)
+    >>> -D[0, 0, 0](xi)(y(x), x)
+    >>> -y(x)*D[0, 0](xi)(y(x), x) + D[0, 0, 0](phi)(y(x), x) - 3*D[0, 0, 1](xi)(y(x), x)
+    >>> y(x)*D[0, 0](phi)(y(x), x) - 2*y(x)*D[0, 1](xi)(y(x), x) + 3*D[0, 0, 1](phi)(y(x), x) - 3*D[0, 1, 1](xi)(y(x), x)
+    >>> 2*y(x)*D[0, 1](phi)(y(x), x) - y(x)*D[1, 1](xi)(y(x), x) + 3*D[0, 1, 1](phi)(y(x), x) - D[1, 1, 1](xi)(y(x), x)
+    >>> y(x)*D[1, 1](phi)(y(x), x) + D[1, 1, 1](phi)(y(x), x)    
+    
+If you are using JupyterLab, you can print the results in a more human readable way:
+
+
+`from IPython.display import Math`
+
+`from delierium.helpers import latexer`
+
+`from delierium.helpers import latexer`
+
+`from delierium.helpers import latexer`
+
+`x   = var('x')`
+
+`y   = function('y')`
+
+`ode = diff(y(x), x, 3) + y(x) * diff(y(x), x, 2)`
+
+`display(Math(latexer(ode)))`
+
+`inf = infinitesimalsODE(ode, y, x)`
+
+`print("determining system:")`
+
+`for _ in inf:`
+
+`    display(Math(latexer(_)))`
+    
+In this mode a derivative like `d^2y/dx^2` is shown as `y_x`(superscript x)
+    
+### Janet Basis
 
     >>> import sage.all
     >>> from delierium.JanetBasis import Janet_Basis
