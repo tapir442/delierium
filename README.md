@@ -1,5 +1,5 @@
 # delierium
-<b>D</b>ifferential <b>E</b>quations' <b>LIE</b> symmetries <b>R</b>esearch <b>I</b>nstr<b>UM</b>ent
+<span style="font-size:30px;"><b>D</b>ifferential <b>E</b>quations' <b>LIE</b> symmetries <b>R</b>esearch <b>I</b>nstr<b>UM</b>ent</span>
 
 Searching for symmetries in ODEs using Python/SageMath/sympy
 
@@ -32,6 +32,13 @@ lex is dubious)
     * Make it a valuable package
 * Long term:
     * Maybe integration into SciPy|SymPy|SageMath
+
+# Release History
+## Release 0.1.0
+
+offers two functions 'Janet_Basis' and 'infinitesimalsODE' as described below. 
+
+Note that 'infinitesimalsODE' does only return the overdetermined system stemming from the prolongation of the original ODE. The real infinitesimal are part of the next release.
 
 
 
