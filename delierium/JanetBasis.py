@@ -53,7 +53,6 @@ class _Dterm:
         '''
         self._coeff, self._d = 1, 1
         self._context        = context
-        self._has_minus      = False
         if is_derivative(e) or is_function(e):
             self._d     = e
         else:
@@ -63,8 +62,6 @@ class _Dterm:
                 if is_derivative(o) or is_function(o):
                     self._d = o
                 else:
-                    if o == -1:
-                        self._has_minus = True
                     self._coeff *= o
                     r.append(o)
         self._order      = self._compute_order()
@@ -137,12 +134,6 @@ class _Differential_Polynomial:
         if not eq(0, e):
             self._init(e.expand())
     def _init(self, e):
-   #     def is_a_real_derivative(op):
-   #         # XXX make this part of context ?
-   #         return (is_derivative(op) and op.operator().function() in self._context._dependent) or \
-   #             is_function(o)
-   #     operands = e.operands()
-   #     operator = e.operator()
         if is_derivative(e) or is_function(e):
             self._p.append(_Dterm(e, self._context))
         elif e.operator().__name__ == 'mul_vararg':

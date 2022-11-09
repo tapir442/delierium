@@ -18,6 +18,7 @@ from sage.symbolic.relation import solve
 
 from delierium.DerivativeOperators import FrechetD
 from delierium.helpers import latexer, ExpressionTree
+from delierium.JanetBasis import Janet_Basis
 
 from IPython.core.debugger import set_trace
 from IPython.display import Math
@@ -227,7 +228,25 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
         equations.append(new)
         e = (e - new * _.coeff).expand()
     equations.append(e)
-    return equations
+    
+    # ToDo: 2 way: 
+    #    * either as Janet_Basis 
+    #    * or try to solve the undetermined system
+    X, Y = var('X Y')
+    for i in range(len(equations)):
+        equations[i] = equations[i].subs({dependent(independent) : Y})
+        for j in range(order):
+            equations[i] = equations[i].subs({diff(dependent(independent), independent) : j})
+
+
+    # toDo: repair ASAP
+    janet = Janet_Basis(equations, [phi, xi], [Y, independent])
+    pols = []
+    for i in range(len(janet.S)):
+        pols.append(janet.S[i].expression().subs({Y : dependent(independent)}))
+    return pols    
+
+
 
 
 
