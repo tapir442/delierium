@@ -228,25 +228,31 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
         equations.append(new)
         e = (e - new * _.coeff).expand()
     equations.append(e)
-    
+    return equations
+
+def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrexlex", *args, **kw):
+    overdetermined_system = infinitesimalsODE(ode, dependent, independent)
     # ToDo: 2 way: 
     #    * either as Janet_Basis 
     #    * or try to solve the undetermined system
-    X, Y = var('X Y')
-    for i in range(len(equations)):
-        equations[i] = equations[i].subs({dependent(independent) : Y})
-        for j in range(order):
-            equations[i] = equations[i].subs({diff(dependent(independent), independent) : j})
-
-
-    # toDo: repair ASAP
-    janet = Janet_Basis(equations, [phi, xi], [Y, independent])
+    Y = var('Y')
+    intermediate_system = []
+    for e in overdetermined_system:
+        # ToDo: make the next three lines into a function for helpers(code duplication
+        #       with infinitesimalsODE. Idea: return a dict with {function: order}
+        tree = ExpressionTree(e)         
+        mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
+        order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0  
+        e = e.subs({dependent(independent) : Y})
+        for j in range(1, order+1):
+            d = diff(dependent(independent), independent, j)
+            e = e.subs({d : 0})
+        intermediate_system.append(e)
+    janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
     pols = []
     for i in range(len(janet.S)):
         pols.append(janet.S[i].expression().subs({Y : dependent(independent)}))
     return pols    
-
-
 
 
 
