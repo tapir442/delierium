@@ -230,7 +230,7 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
     equations.append(e)
     return equations
 
-def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrexlex", *args, **kw):
+def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
     overdetermined_system = infinitesimalsODE(ode, dependent, independent)
     # ToDo: 2 way: 
     #    * either as Janet_Basis 

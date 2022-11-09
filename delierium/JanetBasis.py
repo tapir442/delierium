@@ -11,10 +11,12 @@ try :
     from delierium.helpers import (is_derivative, is_function, eq,
                                    order_of_derivative, adiff, latexer)
     from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
+    from delierium.Involution import Multipliers
 except ModuleNotFoundError:
     from helpers import (is_derivative, is_function, eq,
                          order_of_derivative, adiff, latexer)
     from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
+    from Involution import Multipliers
 
 import functools
 from operator import mul
@@ -109,24 +111,24 @@ class _Dterm:
 
     def show(self, rich=True):
         if not rich:
-            return str(self)        
-        
+            return str(self)
+
         dlatex = latex(self._coeff)
         denominator_pattern = re.compile(r"(-)?\\frac\{.*}{(.* )?(?P<nomfunc>\w+)?\\left\((?P<vars>[\w ,]*)\\right\).*")
         res     = []
         funcname= ""
-        while match := denominator_pattern.match(dlatex):        
+        while match := denominator_pattern.match(dlatex):
             to_replace = r"%s\left(%s\right)" % (match.groupdict()['nomfunc'], match.groupdict()['vars'])
             dlatex = dlatex.replace (to_replace, match.groupdict()['nomfunc'])
         if self._coeff != 1:
             return " ".join ((dlatex, latexer(self._d)))
         else:
             return latexer(self._d)
-    
+
     def __hash__(self):
         return hash(self._expression)
 
-
+   
 class _Differential_Polynomial:
     def __init__(self, e, context):
         self._context = context
@@ -225,7 +227,6 @@ class _Differential_Polynomial:
         return all(eq(_[0]._d, _[1]._d) for _ in zip(self._p, other._p))
 
     def show(self, rich=True):
-        from IPython.core.debugger import set_trace
         if not rich:
             return str(self)
         res = ""
@@ -302,7 +303,7 @@ def reduce(e1: _Differential_Polynomial,
                     if dif[i] != 0:
                         variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
                 return _Differential_Polynomial(
-                    e1.expression() - c*diff(e2.expression(), *variables_to_diff), 
+                    e1.expression() - c*diff(e2.expression(), *variables_to_diff),
                     context)
         return e1
     while not bool((_e1 := _reduce_inner(e1, e2)) == e1):
@@ -329,102 +330,17 @@ def Autoreduce(S, context):
     return dps
 
 
-def vec_degree(v, m):
-    return m[v]
-
-
-def vec_multipliers(m, M, Vars):
-    """multipliers and nonmultipliers for differential vectors aka tuples
-
-    m   : a tuple representing a differential vector
-    M   : the complete set of differential vectors
-    Vars: a tuple representing the order of indizes in m
-          Examples:
-              (0,1,2) means first index in m represents the highest variable
-              (2,1,0) means last index in m represents the highest variable
-
-    ......................................................
-    The doctest example is from Schwarz, Example C.1, p. 384
-    This example is in on variables x1,x2,x3, with x3 the highest rated variable.
-    So we have to specify (2,1,0) to represent this
-
-    >>> M = [(2,2,3), (3,0,3), (3,1,1), (0,1,1)]
-    >>> r = vec_multipliers (M[0],M, (2,1,0))
-    >>> print (M[0], r[0], r[1])
-    (2, 2, 3) [2, 1, 0] []
-    >>> r = vec_multipliers (M[1],M, (2,1,0))
-    >>> print (M[1], r[0], r[1])
-    (3, 0, 3) [2, 0] [1]
-    >>> r = vec_multipliers (M[2],M, (2,1,0))
-    >>> print (M[2], r[0], r[1])
-    (3, 1, 1) [1, 0] [2]
-    >>> r = vec_multipliers (M[3],M, (2,1,0))
-    >>> print (M[3], r[0], r[1])
-    (0, 1, 1) [1] [0, 2]
-    >>> N=[[0,2], [2,0], [1,1]]
-    >>> r =vec_multipliers(N[0], N,  (0,1))
-    >>> print(r)
-    ([1], [0])
-    >>> r =vec_multipliers(N[1], N,  (0,1))
-    >>> print(r)
-    ([0, 1], [])
-    >>> r =vec_multipliers(N[2], N,  (0,1))
-    >>> print(r)
-    ([1], [0])
-    >>> r =vec_multipliers(N[0], N,  (1,0))
-    >>> print(r)
-    ([1, 0], [])
-    >>> r =vec_multipliers(N[1], N,  (1,0))
-    >>> print(r)
-    ([0], [1])
-    >>> r =vec_multipliers(N[2], N,  (1,0))
-    >>> print(r)
-    ([0], [1])
-    >>> # next example form Gertd/Blinkov: Janet-like monomial divisiom, Table1
-    >>> # x1 -> Index 2
-    >>> # x2 -> Index 1 (this is easy)
-    >>> # x3 -> Index 0
-    >>> U = [[0,0,5], [1,2,2],[2,0,2], [1,4,0],[2,1,0],[5,0,0]]
-    >>> vec_multipliers(U[0], U, (2,1,0))
-    ([2, 1, 0], [])
-    >>> vec_multipliers(U[1], U, (2,1,0))
-    ([1, 0], [2])
-    >>> vec_multipliers(U[2], U, (2,1,0))
-    ([0], [1, 2])
-    >>> vec_multipliers(U[3], U, (2,1,0))
-    ([1, 0], [2])
-    >>> vec_multipliers(U[4], U, (2,1,0))
-    ([0], [1, 2])
-    >>> vec_multipliers(U[5], U, (2,1,0))
-    ([0], [1, 2])
-    """
-    d = max((vec_degree(v, u) for u in M for v in Vars), default=0)
-    mult = []
-    if vec_degree(Vars[0], m) == d:
-        mult.append(Vars[0])
-    for j in range(1, len(Vars)):
-        v = Vars[j]
-        dd = list(map(lambda x: vec_degree(x, m), Vars[:j]))
-        V = []
-        for _u in M:
-            if [vec_degree(_v, _u) for _v in Vars[:j]] == dd:
-                V.append(_u)
-        if vec_degree(v, m) == max((vec_degree(v, _u) for _u in V), default=0):
-            mult.append(v)
-    return mult, list(sorted(set(Vars) - set(mult)))
-
-
 @functools.cache
 def derivative_to_vec(d, context):
     return order_of_derivative(d, len(context._independent))
 
 
 def complete(S, context):
+    #set_trace()
     result = list(S)
     if len(result) == 1:
         return result
     vars = list(range(len(context._independent)))
-
     def map_old_to_new(v):
         return context._independent[vars.index(v)]
     while 1:
@@ -436,7 +352,8 @@ def complete(S, context):
         multiplier_collection = []
         for dp, monom in monomials:
             # S1
-            _multipliers, _nonmultipliers = vec_multipliers(monom, ms, vars)
+            division = Multipliers(monom, ms, vars)
+            _multipliers, _nonmultipliers = division.multipliers, division.nonmultipliers
             multiplier_collection.append((monom, dp, _multipliers, _nonmultipliers))
         for monom, dp, _multipliers, _nonmultipliers in multiplier_collection:
             if not _nonmultipliers:
@@ -545,7 +462,8 @@ def FindIntegrableConditions(S, context):
     for dp, monom in monomials:
         # S1
         # damned! Variables are messed up!
-        _multipliers, _nonmultipliers = vec_multipliers(monom, ms, vars)
+        division = Multipliers(monom, ms, vars)
+        _multipliers, _nonmultipliers = division.multipliers, division.nonmultipliers
         multiplier_collection.append(
             (dp,
              [map_old_to_new(_) for _ in _multipliers],
@@ -682,7 +600,6 @@ class Janet_Basis:
                 display(Math(_.show()))
             else:
                 print(_)
-        
 
     def rank(self):
         """Return the rank of the computed Janet basis."""
@@ -705,23 +622,3 @@ if __name__ == "__main__":
     doctest.testmod()
 # -
 
-# https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt#overlay-context=contents
-
-########### Pommaret Division #############
-#def LeftPommaret(u,U,Vars):
-#    local N,Ind,i
-#    N=NULL
-#    Ind=indets(u):
-#    for i from 1 to nops(Vars) while not (Vars[i] in Ind):
-#        N = N,Vars[i]
-#    N = N,Vars[i]
-#    return N
-
-#def RightPommaret(u,U,Vars):
-#    local N,Ind,i
-#    N:=NULL
-#    Ind:=indets(u)
-#    for i from  nops(Vars) by -1 to 1 while not (Vars[i] in Ind):
-#        N:=N,Vars[i]
-#    N:=N,Vars[i]
-#    return N
