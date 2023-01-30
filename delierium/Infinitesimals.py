@@ -159,6 +159,9 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
     tree = ExpressionTree(prolongation)         
     mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
     order= max([len(_.operator().parameter_set()) for _ in mine])
+    if order == 1:
+        print("Order 1 odes have no meaningful onfinitesimals")
+        return ([])
     #display(Math(latexer(prolongation)))
     s1  = solve(ode==0, diff(dependent(independent),independent, order))
     ode1 = prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
@@ -225,9 +228,11 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
                 all_this_stuff.add(term(tuple(powercollector), local_term))
     for _ in reversed(sorted(all_this_stuff)):
         new = e.coefficient(_.coeff)
-        equations.append(new)
+        if new != 0:
+            equations.append(new)
         e = (e - new * _.coeff).expand()
-    equations.append(e)
+    if e:
+        equations.append(e)
     return equations
 
 def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
@@ -248,13 +253,12 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
             d = diff(dependent(independent), independent, j)
             e = e.subs({d : 0})
         intermediate_system.append(e)
+    # ToDo: get rid of hardcoded phi and xi
     janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
     pols = []
     for i in range(len(janet.S)):
         pols.append(janet.S[i].expression().subs({Y : dependent(independent)}))
     return pols    
-
-
 
 
 if __name__ == "__main__":
