@@ -300,7 +300,6 @@ def latexer(e):
     latexdict   = graph.latex_names
     funcs_found = graph.funcs_found
     funcabbrevs = set()
-    #set_trace()
     while match := r.match(teststring):
         # check 'diff'
         res = "%s_{%s}" % (match.groupdict()["funcname"], ",".join (match.groupdict()["diffs"].split(",")))
