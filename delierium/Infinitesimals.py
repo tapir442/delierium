@@ -104,6 +104,11 @@ def prolongationODE(equations, dependent, independent):
     >>> ode3 = diff(u(x), x) - F(u(x),x)
     >>> prolongationODE(ode3,u,x)
     [xi(u(x), x)*D[0](F)(u(x), x)*diff(u(x), x) - diff(u(x), x)^2*D[0](xi)(u(x), x) - (D[0](F)(u(x), x)*diff(u(x), x) + D[1](F)(u(x), x) - diff(u(x), x, x))*xi(u(x), x) - phi(u(x), x)*D[0](F)(u(x), x) + D[0](phi)(u(x), x)*diff(u(x), x) - xi(u(x), x)*diff(u(x), x, x) - diff(u(x), x)*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)]
+    Baumann, ex 2, p.137
+    >>> g = function("g")
+    >>> f = function("f")
+    >>> ode4 = diff(u(x),x)-g(u(x))*f(x)
+    >>> prolongationODE(ode4,u,x)[0].expand()    
     """
     vars     = [dependent(independent), independent]
     xi       = function("xi", latex_name=r"\xi")
@@ -160,8 +165,8 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
     mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
     order= max([len(_.operator().parameter_set()) for _ in mine])
     if order == 1:
-        print("Order 1 odes have no meaningful onfinitesimals")
-        return ([])
+        print("Order 1 ODEs have no meaningful infinitesimals")
+        return []
     #display(Math(latexer(prolongation)))
     s1  = solve(ode==0, diff(dependent(independent),independent, order))
     ode1 = prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
@@ -255,9 +260,8 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
         intermediate_system.append(e)
     # ToDo: get rid of hardcoded phi and xi
     janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
-    pols = []
-    for i in range(len(janet.S)):
-        pols.append(janet.S[i].expression().subs({Y : dependent(independent)}))
+    pols = [janet.S[i].expression().subs({Y : dependent(independent)})
+            for i in range(len(janet.S))]    
     return pols    
 
 

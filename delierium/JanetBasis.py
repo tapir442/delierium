@@ -281,6 +281,7 @@ def reduceS(e: _Differential_Polynomial,
 def reduce(e1: _Differential_Polynomial,
            e2: _Differential_Polynomial,
            context: Context) -> _Differential_Polynomial:
+    @functools.cache
     def _order(der):
         if der != 1:
             return order_of_derivative(der, len(context._independent))
