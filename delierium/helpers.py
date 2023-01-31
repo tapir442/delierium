@@ -69,6 +69,7 @@ def tangent_vector(f):
     d = diff(f, t).limit(t=0)
     return [d.coefficient(_) for _ in newvars]
 
+
 def order_of_derivative(e, required_len=0):
     '''Returns the vector of the orders of a derivative respect to its variables
 
