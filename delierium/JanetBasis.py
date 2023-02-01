@@ -30,7 +30,7 @@ import re
 from sage.repl.rich_output.pretty_print import pretty_print
 
 from IPython.core.debugger import set_trace
-
+from IPython.display import Math
 
 @functools.cache
 def func(e):
@@ -567,22 +567,26 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
- #           print("This is where we start")
- #           self.show()
-#            for _ in self.S:
-#                _.Lder().show()
+            print("*"*99)
+            print("This is where we start")
+            self.show(rich=True)
+            for _ in self.S:
+                _.Lder().show()
             #set_trace()
             self.S = Autoreduce(self.S, context)
- #           print("after autoreduce")
- #           self.show()
- #           for _ in self.S:
- #               _.Lder().show()
+            print("after autoreduce")
+            self.show(rich=True)
+            for _ in self.S:
+                _.Lder().show()
 
             self.S = CompleteSystem(self.S, context)
-#            print("after complete system")
-#            self.show()
+            print("after complete system")
+            self.show(rich=True)
 
-            self.conditions = split_by_function(self.S, context)
+            self.conditions = list(split_by_function(self.S, context))
+            print("Conditions")
+            for _ in self.conditions:
+                _.show()
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
                        ]
@@ -595,7 +599,6 @@ class Janet_Basis:
 
     def show(self, rich=False):
         """Print the Janet basis with leading derivative first."""
-        from IPython.display import Math
         for _ in self.S:
             if rich:
                 display(Math(_.show()))
