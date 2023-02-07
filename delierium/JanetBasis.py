@@ -323,10 +323,7 @@ def Autoreduce(S, context):
             have_reduced = have_reduced or rnew != _r
             newdps.append(rnew)
         dps = Reorder(_p + [_ for _ in newdps if _ not in _p], context, ascending=True)
-        if not have_reduced:
-            i += 1
-        else:
-            i = 0
+        i = 0 if have_reduced else i + 1
         _p, r = dps[:i+1], dps[i+1:]
     return dps
 
@@ -337,7 +334,9 @@ def derivative_to_vec(d, context):
 
 
 def complete(S, context):
-    #set_trace()
+    # XXX rework without Differential polynomial. just with leading monomials
+    # XXX create differential polynomials when returning the result
+    # XXX put 'complete' into Involution, easier to test, and much faster
     result = list(S)
     if len(result) == 1:
         return result
@@ -345,6 +344,7 @@ def complete(S, context):
     def map_old_to_new(v):
         return context._independent[vars.index(v)]
     while 1:
+        # XXX put that line on top, then call 'complete' from Involution
         monomials = [(_, derivative_to_vec(_.Lder(), context)) for _ in result]
         ms        = tuple([_[1] for _ in monomials])
         m0 = []
@@ -380,9 +380,11 @@ def complete(S, context):
             except:
                 pass
         if not m0:
+            # XXX create the _Differntial Polynomials here
             return result
         else:
             for _m0 in m0:
+                # XXX don't create the polynomials, just the monomial tuples
                 dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new(_m0[1])).expression(), context)
                 if dp not in result:
                     result.append(dp)
@@ -579,6 +581,7 @@ class Janet_Basis:
             for _ in self.S:
                 _.Lder().show()
 
+            #set_trace()
             self.S = CompleteSystem(self.S, context)
             print("after complete system")
             self.show(rich=True)
