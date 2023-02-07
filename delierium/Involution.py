@@ -90,6 +90,7 @@ class Multipliers:
         [1] [0]
         >>> print(r.multipliers, r.nonmultipliers)
         [1] [0]
+        
         """
         d = max((vec_degree(v, u) for u in M for v in Vars), default=0)
         mult = []
@@ -107,6 +108,8 @@ class Multipliers:
         self.multipliers    = mult
         self.nonmultipliers = list(sorted(set(Vars) - set(mult)))
 
+
+        
         # https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt#overlay-context=contents
 #Janet:=proc(u,U,Vars)
 #local n,m,d,L,i,j,dd,V,v,Mult;
