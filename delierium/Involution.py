@@ -108,7 +108,60 @@ class Multipliers:
         self.multipliers    = mult
         self.nonmultipliers = list(sorted(set(Vars) - set(mult)))
 
+def complete(S):
+    # S: list of monomial tuples. Highest variable ist the last index 
+    result = list(S)
+    if len(result) == 1:
+        return result
+    vars = list(range(len(context._independent)))
+    def map_old_to_new(v):
+        return context._independent[vars.index(v)]
+    while 1:
+        # XXX put that line on top, then call 'complete' from Involution
+        monomials = [(_, derivative_to_vec(_.Lder(), context)) for _ in result]
+        ms        = tuple([_[1] for _ in monomials])
+        m0 = []
 
+        # multiplier-collection is our M
+        multiplier_collection = []
+        for dp, monom in monomials:
+            # S1
+            division = Multipliers(monom, ms, vars)
+            _multipliers, _nonmultipliers = division.multipliers, division.nonmultipliers
+            multiplier_collection.append((monom, dp, _multipliers, _nonmultipliers))
+        for monom, dp, _multipliers, _nonmultipliers in multiplier_collection:
+            if not _nonmultipliers:
+                m0.append((monom, None, dp))
+            else:
+                # todo: do we need subsets or is a multiplication by only one
+                # nonmultiplier one after the other enough ?
+                for n in _nonmultipliers:
+                    _m0 = list(monom)
+                    _m0[n] += 1
+                    m0.append((_m0, n, dp))
+        to_remove = []
+        for _m0 in m0:
+            # S3: check whether in class of any of the monomials
+            for monomial, _, _multipliers, _nonmultipliers in multiplier_collection:
+                if all(_m0[0][x] >= monomial[x] for x in _multipliers) and \
+                   all(_m0[0][x] == monomial[x] for x in _nonmultipliers):
+                    # this is in _m0's class
+                    to_remove.append(_m0)
+        for _to in to_remove:
+            try:
+                m0.remove(_to)
+            except:
+                pass
+        if not m0:
+            # XXX create the _Differntial Polynomials here
+            return result
+        else:
+            for _m0 in m0:
+                # XXX don't create the polynomials, just the monomial tuples
+                dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new(_m0[1])).expression(), context)
+                if dp not in result:
+                    result.append(dp)
+        result = Reorder(result, context, ascending=False)        
         
         # https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt#overlay-context=contents
 #Janet:=proc(u,U,Vars)
