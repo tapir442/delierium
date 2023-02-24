@@ -9,6 +9,7 @@ Factored out from JanetBasis.py, for ease of debugging and extending
 
 Holds everything for monomial involution stuff,like multipliers, divisions, etc.
 """
+import itertools
 
 def vec_degree(v, m):
     return m[v]
@@ -163,6 +164,53 @@ def complete(S):
                     result.append(dp)
         result = Reorder(result, context, ascending=False)        
         
+        
+        
+def complete(S):
+    # S: list of monomial tuples. Highest variable ist the last index 
+    # highest index is most important, we, have xn >...> x1
+    from IPython.core.debugger import set_trace
+    set_trace()
+    monomials = S[:]
+    result = []
+    all_vars = set([_ for _ in range(len(monomials[0]))])
+    while 1:
+        m0 = []
+        # multiplier-collection is our M
+        multiplier_collection = []
+        division = My_Multiplier(monomials)
+        multiplier_collection = [(v, all_vars - v, k) for k, v in division.mults.items()]
+        for mult, nonmult, monom, in multiplier_collection:
+            for n in nonmult:
+                _m0 = list(monom)
+                _m0[n] += 1
+                m0.append((_m0, n, monom))
+        to_remove = []
+        #set_trace()
+        for _m0 in m0:
+            # S3: check whether in class of any of the monomials
+            for mult, nonmult, monom in multiplier_collection:
+                s1 = [_m0[0][x] >= monom[x] for x in mult]
+                s2 = [_m0[0][x] == monom[x] for x in nonmult]
+                if all(s1) and all(s2):
+                    # this is in _m0's class
+                    to_remove.append(_m0)
+                    break
+                    
+        for _to in to_remove:
+            try:
+                m0.remove(_to)
+            except:
+                pass
+        if not m0:
+            # XXX create the _Differntial Polynomials here
+            return result
+        else:
+            result.extend(m0)
+            monomials.extend([tuple(_[0]) for _ in m0])
+        
+        
+        
         # https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt#overlay-context=contents
 #Janet:=proc(u,U,Vars)
 #local n,m,d,L,i,j,dd,V,v,Mult;
@@ -189,3 +237,51 @@ def complete(S):
 #od:
 #RETURN([Mult]);
 #end:
+
+def degree_of_set(j, U):
+    return max(u[j] for u in U)
+    
+def degree(j):
+    return u[j]
+
+class My_Multiplier:
+    def __init__(self, M):
+        self.degrees = {}
+        # no of variables
+        n = len(M[0])
+        for i in range(n):
+            self.degrees[i] = 0
+            for m in M:
+                self.degrees[i] = max(self.degrees[i], m[i])
+        self.max_degree = max (self.degrees.values())
+        self.mults = {}
+        for m in M:
+            self.mults[tuple(m)] = set()
+        self.alphas = {}
+        for m in M:
+            if m[n-1] == self.degrees[n-1]:
+                self.mults[m].add(n-1)
+        tuples = [ele for ele in itertools.product(range(0, self.max_degree+1), repeat = 1)]
+        self.alphas = {}
+        for t in tuples:
+            self.alphas[t] = set([m for m in M if all(m[n-1] == _t for _t in t)])
+        to_delete = [_ for _ in self.alphas if not self.alphas[_]]
+        for t in to_delete:
+            del self.alphas[t]
+
+        for j in reversed(range(n-1)):
+            for m in M:
+                if m[j] == self.degrees[j]:
+                    self.mults[m].add(j)
+            for m in M:
+                for a in self.alphas:
+                    if m in self.alphas[a] and m[j] == degree_of_set(j, self.alphas[a]):
+                        self.mults[m].add(j)
+            if n != 0:
+                tuples = [ele for ele in itertools.product(range(0, self.max_degree+1), repeat = n - j)]       
+                self.alphas = {}
+                for t in tuples:
+                    self.alphas[t] = set(m for m in M if list(m[j:]) == list(t))
+                to_delete = [_ for _ in self.alphas if not self.alphas[_]]                    
+                for t in to_delete:
+                    del self.alphas[t]

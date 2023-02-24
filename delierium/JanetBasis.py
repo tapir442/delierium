@@ -252,6 +252,8 @@ class _Differential_Polynomial:
     def __hash__(self):
         return hash(self.expression())
 
+    def order(self):
+        return self._p[0]._order
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ...
 def Reorder(S, context, ascending=False):
@@ -332,6 +334,8 @@ def Autoreduce(S, context):
 def derivative_to_vec(d, context):
     return order_of_derivative(d, len(context._independent))
 
+from delierium.Involution import complete as invcomplete
+from pprint import pprint
 
 def complete(S, context):
     # XXX rework without Differential polynomial. just with leading monomials
@@ -340,60 +344,47 @@ def complete(S, context):
     result = list(S)
     if len(result) == 1:
         return result
-    vars = list(range(len(context._independent)))
+    print("A"*99)
+    vars = list(range(len(context._independent)))    
+#    set_trace()
     def map_old_to_new(v):
         return context._independent[vars.index(v)]
-    while 1:
-        # XXX put that line on top, then call 'complete' from Involution
-        monomials = [(_, derivative_to_vec(_.Lder(), context)) for _ in result]
-        ms        = tuple([_[1] for _ in monomials])
-        m0 = []
-
-        # multiplier-collection is our M
-        multiplier_collection = []
-        for dp, monom in monomials:
-            # S1
-            division = Multipliers(monom, ms, vars)
-            _multipliers, _nonmultipliers = division.multipliers, division.nonmultipliers
-            multiplier_collection.append((monom, dp, _multipliers, _nonmultipliers))
-        for monom, dp, _multipliers, _nonmultipliers in multiplier_collection:
-            if not _nonmultipliers:
-                m0.append((monom, None, dp))
-            else:
-                # todo: do we need subsets or is a multiplication by only one
-                # nonmultiplier one after the other enough ?
-                for n in _nonmultipliers:
-                    _m0 = list(monom)
-                    _m0[n] += 1
-                    m0.append((_m0, n, dp))
-        to_remove = []
-        for _m0 in m0:
-            # S3: check whether in class of any of the monomials
-            for monomial, _, _multipliers, _nonmultipliers in multiplier_collection:
-                if all(_m0[0][x] >= monomial[x] for x in _multipliers) and \
-                   all(_m0[0][x] == monomial[x] for x in _nonmultipliers):
-                    # this is in _m0's class
-                    to_remove.append(_m0)
-        for _to in to_remove:
-            try:
-                m0.remove(_to)
-            except:
-                pass
-        if not m0:
-            # XXX create the _Differntial Polynomials here
-            return result
-        else:
-            for _m0 in m0:
-                # XXX don't create the polynomials, just the monomial tuples
-                dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new(_m0[1])).expression(), context)
-                if dp not in result:
+    for _ in result:
+        _.show()
+        
+    monomials = [tuple(_._p[0]._order) for _ in result]
+    print("monomials")
+    for m in monomials:
+        print(m)
+    m0 = invcomplete(monomials)
+    pprint("S"*99)
+    pprint(m0)
+    print(len(m0))
+    h = []
+    def create(poly):
+        result=[]
+        found = True
+        anchor = poly[2]
+        p      = poly
+        while found:
+            for m in m0:
+                if anchor == m[2]:
+                    dp = _Differential_Polynomial(p.diff(map_old_to_new(m[1])).expression(), context)
                     result.append(dp)
-        result = Reorder(result, context, ascending=False)
+                    anchor = dp._p[0]._order
+                    p      = dp
+                else:
+                    found = False
+        return result
+    for r in m0:
+        new_dpolynomials = create(r)
+        result.extend(new_dpolynomials)
+    return result
 
 
 def CompleteSystem(S, context):
     """
-    Algorithm C1, p. 385
+    Algorithm C1, Schwarz p. 385
 
     >>> tvars=var("x y z")
     >>> w = function("w")(*tvars)
