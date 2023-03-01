@@ -127,8 +127,7 @@ class _Dterm:
 
     def __hash__(self):
         return hash(self._expression)
-
-   
+ 
 class _Differential_Polynomial:
     def __init__(self, e, context):
         self._context = context
@@ -283,6 +282,8 @@ def reduceS(e: _Differential_Polynomial,
 def reduce(e1: _Differential_Polynomial,
            e2: _Differential_Polynomial,
            context: Context) -> _Differential_Polynomial:
+    """Reduce e1 wrt e2 according to Schwarz, S1
+    """
     @functools.cache
     def _order(der):
         if der != 1:
@@ -344,9 +345,7 @@ def complete(S, context):
     result = list(S)
     if len(result) == 1:
         return result
-    print("A"*99)
     vars = list(range(len(context._independent)))    
-#    set_trace()
     def map_old_to_new(v):
         return context._independent[vars.index(v)]
     for _ in result:
@@ -357,9 +356,6 @@ def complete(S, context):
     for m in monomials:
         print(m)
     m0 = invcomplete(monomials)
-    pprint("S"*99)
-    pprint(m0)
-    print(len(m0))
     h = []
     def create(poly):
         result=[]

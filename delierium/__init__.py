@@ -6,3 +6,4 @@ from .JanetBasis import _Dterm, _Differential_Polynomial, Autoreduce, \
     derivative_to_vec, complete, CompleteSystem, Janet_Basis
 from .DerivativeOperators import FrechetD, EulerD
 from .Involution import Multipliers
+from .Infinitesimals import prolongationFunction, prolongation, prolongationODE, infinitesimalsODE, Janet_Basis_from_ODE
