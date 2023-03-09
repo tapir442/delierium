@@ -167,10 +167,8 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
     if order == 1:
         print("Order 1 ODEs have no meaningful infinitesimals")
         return []
-    #display(Math(latexer(prolongation)))
     s1  = solve(ode==0, diff(dependent(independent),independent, order))
     ode1 = prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
-    #display(Math(latexer(ode1)))
     tree = ExpressionTree(ode1)    
     l = [_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent, order))]
     equations = []
