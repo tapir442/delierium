@@ -166,48 +166,47 @@ def complete(S):
         
         
         
-def complete(S):
-    # S: list of monomial tuples. Highest variable ist the last index 
-    # highest index is most important, we, have xn >...> x1
-    from IPython.core.debugger import set_trace
-    set_trace()
-    monomials = S[:]
-    result = []
-    all_vars = set([_ for _ in range(len(monomials[0]))])
-    while 1:
-        m0 = []
-        # multiplier-collection is our M
-        multiplier_collection = []
-        division = My_Multiplier(monomials)
-        multiplier_collection = [(v, all_vars - v, k) for k, v in division.mults.items()]
-        for mult, nonmult, monom, in multiplier_collection:
-            for n in nonmult:
-                _m0 = list(monom)
-                _m0[n] += 1
-                m0.append((_m0, n, monom))
-        to_remove = []
-        #set_trace()
-        for _m0 in m0:
-            # S3: check whether in class of any of the monomials
-            for mult, nonmult, monom in multiplier_collection:
-                s1 = [_m0[0][x] >= monom[x] for x in mult]
-                s2 = [_m0[0][x] == monom[x] for x in nonmult]
-                if all(s1) and all(s2):
-                    # this is in _m0's class
-                    to_remove.append(_m0)
-                    break
-                    
-        for _to in to_remove:
-            try:
-                m0.remove(_to)
-            except:
-                pass
-        if not m0:
-            # XXX create the _Differntial Polynomials here
-            return result
-        else:
-            result.extend(m0)
-            monomials.extend([tuple(_[0]) for _ in m0])
+#def complete(S):
+#    # S: list of monomial tuples. Highest variable ist the last index 
+#    # highest index is most important, we, have xn >...> x1
+#    from IPython.core.debugger import set_trace
+#    monomials = S[:]
+#    result = []
+#    all_vars = set([_ for _ in range(len(monomials[0]))])
+#    while 1:
+#        m0 = []
+#        # multiplier-collection is our M
+#        multiplier_collection = []
+#        division = My_Multiplier(monomials)
+#        multiplier_collection = [(v, all_vars - v, k) for k, v in division.mults.items()]
+#        for mult, nonmult, monom, in multiplier_collection:
+#            for n in nonmult:
+#                _m0 = list(monom)
+#                _m0[n] += 1
+#                m0.append((_m0, n, monom))
+#        to_remove = []
+#        #set_trace()
+#        for _m0 in m0:
+#            # S3: check whether in class of any of the monomials
+#            for mult, nonmult, monom in multiplier_collection:
+#                s1 = [_m0[0][x] >= monom[x] for x in mult]
+#                s2 = [_m0[0][x] == monom[x] for x in nonmult]
+#                if all(s1) and all(s2):
+#                    # this is in _m0's class
+#                    to_remove.append(_m0)
+#                    break
+#                    
+#        for _to in to_remove:
+#            try:
+#                m0.remove(_to)
+#            except:
+#                pass
+#        if not m0:
+#            # XXX create the _Differntial Polynomials here
+#            return result
+#        else:
+#            result.extend(m0)
+#            monomials.extend([tuple(_[0]) for _ in m0])
         
         
         
