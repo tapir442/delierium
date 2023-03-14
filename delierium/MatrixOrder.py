@@ -53,12 +53,12 @@ def Mlex(funcs, vars):
     [0 1 0 0 0]
     [0 0 1 0 0]
     '''
-    m = len(funcs)
-    n = len(vars)
-    i = identity_matrix(n)
-    i = insert_row(i, 0, [0]*n)
-    for j in range(m, 0, -1):
-        i = i.augment(vector([j] + [0]*n))
+    no_funcs = len(funcs)
+    no_vars = len(vars)
+    i = identity_matrix(no_vars)
+    i = insert_row(i, 0, [0]*no_vars)
+    for j in range(no_funcs, 0, -1):
+        i = i.augment(vector([j] + [0]*no_vars))
     return i
 
 
@@ -93,13 +93,13 @@ def Mgrevlex(funcs, vars):
     [ 0 -1  0  0  0  0]
     [-1  0  0  0  0  0]
     '''
-    m = len(funcs)
-    n = len(vars)
-    l = matrix([1]*n + [0]*m)
-    l = insert_row(l, 1, vector([0]*n + [_ for _ in range(m, 0, -1)]))
-    for idx in range(n):
-        _v = vector([0]*(n+m))
-        _v[n-idx-1] = -1
+    no_funcs = len(funcs)
+    no_vars = len(vars)
+    l = matrix([1]*no_vars + [0]*no_funcs)
+    l = insert_row(l, 1, vector([0]*no_vars + list(range(no_funcs, 0, -1))))
+    for idx in range(no_vars):
+        _v = vector([0]*(no_vars+no_funcs))
+        _v[no_vars-idx-1] = -1
         l = insert_row(l, 2+idx, _v)
     return l
 
@@ -116,6 +116,16 @@ class Context:
         self._weight      = weight (self._dependent, self._independent)
         self._basefield   = PolynomialRing(QQ, independent)
 
+    def gt(self, v1: vector, v2: vector) -> int:
+        """Computes the weigthed difference vector of v1 and v2
+        and returns 'True' if the first nonzero entry is > 0
+        """
+        r = self._weight * vector(v1-v2)
+        for entry in r:
+            if entry:
+                return entry > 0
+        return False        
+        
 _cache={}
 
 #@functools.cache
@@ -124,6 +134,7 @@ def higher(d1, d2, context):
     '''Algorithm 2.3 from [Schwarz].'''
     @functools.cache
     def analyze_dterm(dd):
+        # XXX use "_order" from DTerm directly
         if is_derivative(dd):
             f = dd.operator().function()
         elif is_function(dd):
@@ -143,13 +154,10 @@ def higher(d1, d2, context):
         iv = [0]*len(context._dependent)
         iv[idx(d)] += 1
         return vector(order_of_derivative(d, len(context._independent)) + iv)
+        
     i1 = get_derivative_vector(d1)
-    i2 = get_derivative_vector(d2)
-    r = context._weight * vector(i1-i2)
-    for entry in r:
-        if entry:
-            return entry > 0
-    return False
+    i2 = get_derivative_vector(d2)    
+    return context.gt(get_derivative_vector(d1), get_derivative_vector(d2))
 
 
 @functools.cache

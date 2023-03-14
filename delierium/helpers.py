@@ -70,6 +70,7 @@ def tangent_vector(f):
     return [d.coefficient(_) for _ in newvars]
 
 
+@functools.cache
 def order_of_derivative(e, required_len=0):
     '''Returns the vector of the orders of a derivative respect to its variables
 

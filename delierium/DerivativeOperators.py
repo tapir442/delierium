@@ -52,7 +52,6 @@ def iter_du_orders(expr, u):
 def func_diff(L, u_in):
     # `u` must be a callable symbolic expression
     # in one variable.
-    set_trace()
     if len(u_in.variables()) == 1:
         x = u_in.variables()[0]
         u = u_in.function(x)
