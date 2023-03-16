@@ -565,6 +565,7 @@ def FindIntegrableConditions(S, context):
         if e1 == e2: continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
+                # XXx: for the comparison, use orders instead of adiff, too expensive
                 if eq(adiff(e1[0].Lder(), context, n), adiff(e2[0].Lder(), context, *m)):
                     # integrability condition
                     # don't need leading coefficients because in DPs
