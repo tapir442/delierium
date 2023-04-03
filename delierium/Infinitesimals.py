@@ -169,9 +169,9 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
     s1  = solve(ode==0, diff(dependent(independent),independent, order))
     ode1 = prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
     tree = ExpressionTree(ode1)    
-    l = [_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent, order))]
+    l = (_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent, order)))
     equations = []
-    e         = l[0]
+    e         = next(l)
     all_this_stuff = set()
     for node in PreOrderIter(tree.root):
         # powercollector: an array which stores powers of derivatives
