@@ -191,9 +191,7 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
         # to factor out the derivatives to get the determining equations
         powercollector = [0]*(order-1)
         v = node.value
-        if v.operator() == sage.symbolic.operators.add_vararg:
-            continue
-        if v.operator() is None:
+        if v.operator() in [sage.symbolic.operators.add_vararg, None]:
             continue
         if isinstance(v.operator(), FDerivativeOperator):
             # standalone diff operator
