@@ -212,8 +212,8 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
                     if w.operands()[0] != independent:
                         # differential coming from prolongation, ignore                        
                         continue
+                    local_term *= w                        
                     powercollector[order - len(w.operator().parameter_set())-1] = 1
-                    local_term *= w
                 if isinstance(w.operator(), types.BuiltinFunctionType):
                     if w.operator().__qualname__ != 'pow':
                         continue
@@ -255,8 +255,7 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
         intermediate_system.append(e)
     # ToDo: get rid of hardcoded phi and xi
     janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
-    pols = [janet.S[i].expression().subs({Y : dependent(independent)})
-            for i in range(len(janet.S))]    
+    pols = map(lambda _ : _.expression().subs({Y : dependent(independent)}), janet.S)
     return pols    
 
 
