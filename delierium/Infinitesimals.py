@@ -97,18 +97,22 @@ def prolongation(eq, dependent, independent):
 
 def prolongationODE(equations, dependent, independent):
     """
-    Baumann, ex 1, pp.136
+    >>> # Baumann, ex 1, pp.136
     >>> x    = var("x")
     >>> u    = function('u')
     >>> F    = function("F")
     >>> ode3 = diff(u(x), x) - F(u(x),x)
     >>> prolongationODE(ode3,u,x)
     [xi(u(x), x)*D[0](F)(u(x), x)*diff(u(x), x) - diff(u(x), x)^2*D[0](xi)(u(x), x) - (D[0](F)(u(x), x)*diff(u(x), x) + D[1](F)(u(x), x) - diff(u(x), x, x))*xi(u(x), x) - phi(u(x), x)*D[0](F)(u(x), x) + D[0](phi)(u(x), x)*diff(u(x), x) - xi(u(x), x)*diff(u(x), x, x) - diff(u(x), x)*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)]
-    Baumann, ex 2, p.137
+    >>> # Baumann, ex 2, p.137
     >>> g = function("g")
     >>> f = function("f")
     >>> ode4 = diff(u(x),x)-g(u(x))*f(x)
-    >>> prolongationODE(ode4,u,x)[0].expand()    
+    >>> p = prolongationODE(ode4,u,x)[0].expand()
+    >>> sol = solve(ode4, diff(u(x), x))
+    >>> p = p.subs({sol[0].lhs() : sol[0].rhs()})
+    >>> print(p.expand())
+    -f(x)^2*g(u(x))^2*D[0](xi)(u(x), x) - g(u(x))*xi(u(x), x)*diff(f(x), x) - f(x)*phi(u(x), x)*D[0](g)(u(x)) + f(x)*g(u(x))*D[0](phi)(u(x), x) - f(x)*g(u(x))*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)
     """
     vars     = [dependent(independent), independent]
     xi       = function("xi", latex_name=r"\xi")
@@ -118,14 +122,9 @@ def prolongationODE(equations, dependent, independent):
     prolong  = FrechetD([equations], [dependent], [independent], testfunction=[test])
     prol     = []
     for p in prolong:
-        _p = [l.substitute_function(test, eta.function()).expand() for l in p]
+        _p = (l.substitute_function(test, eta.function()).expand() for l in p)
         prol.append(sum(_ for _ in _p))
-    prolong = prol[:]
-    prol = []
-    prol    = [prolong[j] + xi(*vars) * equations.diff(independent)
-               for j in range(len(prolong))
-               ]
-    return prol
+    return list(map (lambda _ : _ + xi(*vars) * equations.diff(independent), prol))
 
 
 from collections import namedtuple
