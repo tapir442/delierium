@@ -67,6 +67,7 @@ def prolongation(eq, dependent, independent):
     >>> print(prolongation([diff(y(x),x,2)], [y], [x])[0].expand())
     -D[1, 1](xi_1)(x, y(x))*diff(y(x), x)^3 + D[1, 1](phi_1)(x, y(x))*diff(y(x), x)^2 - 2*D[0, 1](xi_1)(x, y(x))*diff(y(x), x)^2 - 3*D[1](xi_1)(x, y(x))*diff(y(x), x)*diff(y(x), x, x) + 2*D[0, 1](phi_1)(x, y(x))*diff(y(x), x) - D[0, 0](xi_1)(x, y(x))*diff(y(x), x) + D[1](phi_1)(x, y(x))*diff(y(x), x, x) - 2*D[0](xi_1)(x, y(x))*diff(y(x), x, x) + D[0, 0](phi_1)(x, y(x))
     """
+    
     Depend = [d(*independent) for d in dependent]
     vars   = independent + Depend
     xi     = [function("xi_%s" % (j+1), latex_name = r"\xi_{i+1}") for j in range(len(independent))]
@@ -95,15 +96,21 @@ def prolongation(eq, dependent, independent):
             )
     return prol
 
-def prolongationODE(equations, dependent, independent):
+
+def prolongationODE(equations, 
+                    dependent, 
+                    independent, 
+                    infinitesimals=None):
     """
     >>> # Baumann, ex 1, pp.136
     >>> x    = var("x")
     >>> u    = function('u')
     >>> F    = function("F")
     >>> ode3 = diff(u(x), x) - F(u(x),x)
-    >>> prolongationODE(ode3,u,x)
-    [xi(u(x), x)*D[0](F)(u(x), x)*diff(u(x), x) - diff(u(x), x)^2*D[0](xi)(u(x), x) - (D[0](F)(u(x), x)*diff(u(x), x) + D[1](F)(u(x), x) - diff(u(x), x, x))*xi(u(x), x) - phi(u(x), x)*D[0](F)(u(x), x) + D[0](phi)(u(x), x)*diff(u(x), x) - xi(u(x), x)*diff(u(x), x, x) - diff(u(x), x)*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)]
+    >>> X=function('X')
+    >>> Y=function('Y')
+    >>> prolongationODE(ode3,u,x, infinitesimals=(X,Y))
+    [X(u(x), x)*D[0](F)(u(x), x)*diff(u(x), x) - D[0](X)(u(x), x)*diff(u(x), x)^2 - (D[0](F)(u(x), x)*diff(u(x), x) + D[1](F)(u(x), x) - diff(u(x), x, x))*X(u(x), x) - Y(u(x), x)*D[0](F)(u(x), x) - D[1](X)(u(x), x)*diff(u(x), x) + D[0](Y)(u(x), x)*diff(u(x), x) - X(u(x), x)*diff(u(x), x, x) + D[1](Y)(u(x), x)]
     >>> # Baumann, ex 2, p.137
     >>> g = function("g")
     >>> f = function("f")
@@ -115,8 +122,9 @@ def prolongationODE(equations, dependent, independent):
     -f(x)^2*g(u(x))^2*D[0](xi)(u(x), x) - g(u(x))*xi(u(x), x)*diff(f(x), x) - f(x)*phi(u(x), x)*D[0](g)(u(x)) + f(x)*g(u(x))*D[0](phi)(u(x), x) - f(x)*g(u(x))*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)
     """
     vars     = [dependent(independent), independent]
-    xi       = function("xi", latex_name=r"\xi")
-    phi      = function("phi", latex_name=r"\phi")
+    if infinitesimals is None:
+        infinitesimals = (function("xi", latex_name=r"\xi"), function("phi", latex_name=r"\phi"))
+    xi, phi  = infinitesimals
     eta      = phi(*vars) - xi(*vars) * diff(dependent(independent), independent)
     test     = function('test')
     prolong  = FrechetD([equations], [dependent], [independent], testfunction=[test])
@@ -132,7 +140,11 @@ from collections import namedtuple
 term = namedtuple("term", ["power", "coeff"])
 import types
 
-def infinitesimalsODE (ode, dependent, independent, *args, **kw):
+def overdeterminedSystemODE (ode, 
+                       dependent, 
+                       independent,  
+                       infinitesimals=None
+                       , *args, **kw):
     """
     Computes the overdetermined system which is computed from the prolongation
     of an ODE of order > 1
@@ -146,20 +158,24 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
     >>> x   = var('x')
     >>> y   = function('y')
     >>> ode = diff(y(x), x, 3) + y(x) * diff(y(x), x, 2)
-    >>> inf = infinitesimalsODE(ode, y, x)
+    >>> X=function('X')
+    >>> Y=function('Y')
+    >>> inf = overdeterminedSystemODE(ode, y, x, infinitesimals=(X,Y))
     >>> for _ in inf: 
     ...     print(_)
-    -3*D[0](xi)(y(x), x)
-    -6*D[0, 0](xi)(y(x), x)
-    y(x)*D[0](xi)(y(x), x) + 3*D[0, 0](phi)(y(x), x) - 9*D[0, 1](xi)(y(x), x)
-    y(x)*D[1](xi)(y(x), x) + phi(y(x), x) + 3*D[0, 1](phi)(y(x), x) - 3*D[1, 1](xi)(y(x), x)
-    -D[0, 0, 0](xi)(y(x), x)
-    -y(x)*D[0, 0](xi)(y(x), x) + D[0, 0, 0](phi)(y(x), x) - 3*D[0, 0, 1](xi)(y(x), x)
-    y(x)*D[0, 0](phi)(y(x), x) - 2*y(x)*D[0, 1](xi)(y(x), x) + 3*D[0, 0, 1](phi)(y(x), x) - 3*D[0, 1, 1](xi)(y(x), x)
-    2*y(x)*D[0, 1](phi)(y(x), x) - y(x)*D[1, 1](xi)(y(x), x) + 3*D[0, 1, 1](phi)(y(x), x) - D[1, 1, 1](xi)(y(x), x)
-    y(x)*D[1, 1](phi)(y(x), x) + D[1, 1, 1](phi)(y(x), x)
+    -3*D[0](X)(y(x), x)
+    -6*D[0, 0](X)(y(x), x)
+    y(x)*D[0](X)(y(x), x) - 9*D[0, 1](X)(y(x), x) + 3*D[0, 0](Y)(y(x), x)
+    y(x)*D[1](X)(y(x), x) + Y(y(x), x) - 3*D[1, 1](X)(y(x), x) + 3*D[0, 1](Y)(y(x), x)
+    -D[0, 0, 0](X)(y(x), x)
+    -y(x)*D[0, 0](X)(y(x), x) - 3*D[0, 0, 1](X)(y(x), x) + D[0, 0, 0](Y)(y(x), x)
+    -2*y(x)*D[0, 1](X)(y(x), x) + y(x)*D[0, 0](Y)(y(x), x) - 3*D[0, 1, 1](X)(y(x), x) + 3*D[0, 0, 1](Y)(y(x), x)
+    -y(x)*D[1, 1](X)(y(x), x) + 2*y(x)*D[0, 1](Y)(y(x), x) - D[1, 1, 1](X)(y(x), x) + 3*D[0, 1, 1](Y)(y(x), x)
+    y(x)*D[1, 1](Y)(y(x), x) + D[1, 1, 1](Y)(y(x), x)
     """
-    prolongation = prolongationODE(ode, dependent, independent)[0].expand()
+    if infinitesimals is None:
+        infinitesimals = (function("xi", latex_name=r"\xi"), function("phi", latex_name=r"\phi"))
+    prolongation = prolongationODE(ode, dependent, independent, infinitesimals=infinitesimals)[0].expand()
     tree = ExpressionTree(prolongation)         
     mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
     order= max([len(_.operator().parameter_set()) for _ in mine])
@@ -231,12 +247,12 @@ def infinitesimalsODE (ode, dependent, independent, *args, **kw):
         if new != 0:
             equations.append(new)
         e = (e - new * _.coeff).expand()
-    if e:
+    if e != 0:
         equations.append(e)
     return equations
 
 def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
-    overdetermined_system = infinitesimalsODE(ode, dependent, independent)
+    overdetermined_system = overdeterminedSystemODE(ode, dependent, independent)
     # ToDo: 2 way: 
     #    * either as Janet_Basis 
     #    * or try to solve the undetermined system
@@ -244,7 +260,7 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
     intermediate_system = []
     for e in overdetermined_system:
         # ToDo: make the next three lines into a function for helpers(code duplication
-        #       with infinitesimalsODE. Idea: return a dict with {function: order}
+        #       with overdeterminedSystemODE. Idea: return a dict with {function: order}
         tree = ExpressionTree(e)         
         mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
         order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0  
