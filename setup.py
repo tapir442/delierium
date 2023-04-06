@@ -6,7 +6,7 @@ import fnmatch
 here = pathlib.Path(__file__).parent.resolve()
 
 # Stinky MANIFEST.in does not work ?!?, so some workaround
-excluded=['src/delierium/Involution.py', 
+excluded=['src/delierium/Involution.py',
           'src/delierium/JanetBasis.py',
           'src/delierium/MatrixOrder.py',
           'src/delierium/higher_infinitesimals.py',
@@ -26,7 +26,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 setup(
     name="delierium",
-    version="0.9.0.dev9",
+    version="0.9.0.dev10",
     description="Symmetry Analysis for ODEs/PDEs using SageMath",
     long_description=long_description,
     long_description_content_type='text/markdown',
