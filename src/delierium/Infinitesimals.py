@@ -18,9 +18,6 @@ from sage.symbolic.relation import solve
 
 from delierium.DerivativeOperators import FrechetD
 from delierium.helpers import latexer, ExpressionTree
-from delierium.JanetBasis import Janet_Basis
-
-from IPython.core.debugger import set_trace
 from IPython.display import Math
 
 def prolongationFunction(f: list, x: list, order) -> list:
@@ -145,14 +142,26 @@ def overdeterminedSystemODE (ode,
                        independent,  
                        infinitesimals=None
                        , *args, **kw):
-    """
-    Computes the overdetermined system which is computed from the prolongation
+    """Computes the overdetermined system which is computed from the prolongation
     of an ODE of order > 1
     
-    Only the left hand sides of the equations is returned, for further manipulation
-    one has to add ' == 0' herself
+    Parameters
+    ----------
+    ode: a sagemath expression as the left side of '<expr> == 0'. No need to
+        add " == 0'!!
+    dependent: the name of the dependent variable, i.e. the unknown function
+    independent: 
+        the name of the independent variable
+    infinitesimals: ordered pair of sagemath variables, to be used as the names 
+        for the infinitesimals, to avoid potential name clashes with  variables in your 
+        application. If not specified, 'xi' and 'phi' are used as the defaults
+
+    Returns
+    -------
+    list
+        a list of expressions, each expression to be interpreted as left side of an
+        'expr' == 0. For further manipulation ane has to add ' == 0'.
     
-    Real infinitesimals will follow soon
     
     >>> # Arrigo Example 2.20
     >>> x   = var('x')
@@ -251,28 +260,28 @@ def overdeterminedSystemODE (ode,
         equations.append(e)
     return equations
 
-def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
-    overdetermined_system = overdeterminedSystemODE(ode, dependent, independent)
-    # ToDo: 2 way: 
-    #    * either as Janet_Basis 
-    #    * or try to solve the undetermined system
-    Y = var('Y')
-    intermediate_system = []
-    for e in overdetermined_system:
-        # ToDo: make the next three lines into a function for helpers(code duplication
-        #       with overdeterminedSystemODE. Idea: return a dict with {function: order}
-        tree = ExpressionTree(e)         
-        mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
-        order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0  
-        e = e.subs({dependent(independent) : Y})
-        for j in range(1, order+1):
-            d = diff(dependent(independent), independent, j)
-            e = e.subs({d : 0})
-        intermediate_system.append(e)
-    # ToDo: get rid of hardcoded phi and xi
-    janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
-    pols = map(lambda _ : _.expression().subs({Y : dependent(independent)}), janet.S)
-    return pols    
+#def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
+#    overdetermined_system = overdeterminedSystemODE(ode, dependent, independent)
+# ToDo: 2 way: 
+#    #    * either as Janet_Basis 
+#    #    * or try to solve the undetermined system
+#    Y = var('Y')
+#    intermediate_system = []
+#    for e in overdetermined_system:
+#        # ToDo: make the next three lines into a function for helpers(code duplication
+#        #       with overdeterminedSystemODE. Idea: return a dict with {function: order}#
+#        tree = ExpressionTree(e)        
+#        mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
+#        order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0  
+#        e = e.subs({dependent(independent) : Y})
+#        for j in range(1, order+1):
+#            d = diff(dependent(independent), independent, j)
+#            e = e.subs({d : 0})
+#        intermediate_system.append(e)
+#    # ToDo: get rid of hardcoded phi and xi
+#    janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
+#    pols = map(lambda _ : _.expression().subs({Y : dependent(independent)}), janet.S)
+#    return pols    
 
 
 if __name__ == "__main__":

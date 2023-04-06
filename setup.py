@@ -1,19 +1,37 @@
 from setuptools import setup, find_packages
+from setuptools.command.build_py import build_py as build_py_orig
 import pathlib
+import fnmatch
 
 here = pathlib.Path(__file__).parent.resolve()
+
+# Stinky MANIFEST.in does not work ?!?, so some workaround
+excluded=['src/delierium/Involution.py', 
+          'src/delierium/JanetBasis.py',
+          'src/delierium/MatrixOrder.py',
+          'src/delierium/higher_infinitesimals.py',
+          'src/tests/*']
+
+class build_py(build_py_orig):
+    def find_package_modules(self, package, package_dir):
+        modules = super().find_package_modules(package, package_dir)
+        return [
+            (pkg, mod, file)
+            for (pkg, mod, file) in modules
+            if not any(fnmatch.fnmatchcase(file, pat=pattern) for pattern in excluded)
+        ]
 
 # Get the long description from the README file
 long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 setup(
     name="delierium",
-    version="0.9.0.dev0",
+    version="0.9.0.dev9",
     description="Symmetry Analysis for ODEs/PDEs using SageMath",
     long_description=long_description,
     long_description_content_type='text/markdown',
-    setup_requires=["more-itertools"],
-    install_requires=["more-itertools"],
+    setup_requires=["more-itertools", "anytree"],
+    install_requires=["more-itertools", "anytree"],
     python_requires = ">=3.10",
     author='Martin Mayerhofer-Schöpf',
     author_email='tapir@aon.at',
@@ -22,13 +40,13 @@ setup(
         'Development Status :: 3 - Alpha',
         'Programming Language :: Python :: 3 :: Only',
         'License :: OSI Approved :: MIT License',
-        'Intended Audience :: Mathematicians',
         'Intended Audience :: Science/Research',
-        'Topic :: Calculus :: ODE',
         'Topic :: Scientific/Engineering :: Mathematics'
         ],
     keywords='ODE PDE Lie Symmetry',
-    packages=find_packages(include=['delierium']),    
-    package_data={'delierium' : ['*/Arrigo_Chapter_2.5.ipynb']},
+    package_dir={"": "src"},
+    packages=find_packages() + find_packages("src"),
+    cmdclass={'build_py': build_py},
+    package_data={'delierium/notebooks' : ['notebooks/Arrigo_Chapter_2.5.ipynb']},
     project_urls={'Source': 'https://github.com/tapir442/delierium'}
 )
