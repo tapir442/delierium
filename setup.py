@@ -5,7 +5,6 @@ import fnmatch
 
 here = pathlib.Path(__file__).parent.resolve()
 
-# Stinky MANIFEST.in does not work ?!?, so some workaround
 excluded=['src/delierium/Involution.py',
           'src/delierium/JanetBasis.py',
           'src/delierium/MatrixOrder.py',
