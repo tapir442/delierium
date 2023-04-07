@@ -5,3 +5,4 @@ pip wheel .
 git tag $DELIERIUM_TAG
 git push
 git push origin $DELIERIUM_TAG
+twine upload delierium-$DELIERIUM_TAG-py*.whl
