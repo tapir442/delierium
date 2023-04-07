@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 jupyterlab nbconvert README-GEN.ipynb --to html
 git commit --all -m"Release $DELIERIUM_TAG"
 pip wheel .
