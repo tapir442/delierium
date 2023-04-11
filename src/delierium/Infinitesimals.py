@@ -16,8 +16,9 @@ from sage.misc.html import html
 from sage.symbolic.operators import FDerivativeOperator
 from sage.symbolic.relation import solve
 
-from delierium.DerivativeOperators import FrechetD
-from delierium.helpers import latexer, ExpressionTree
+from .DerivativeOperators import FrechetD
+from .helpers import latexer, ExpressionTree
+from .JanetBasis import Janet_Basis
 from IPython.display import Math
 
 def prolongationFunction(f: list, x: list, order) -> list:
@@ -260,28 +261,30 @@ def overdeterminedSystemODE (ode,
         equations.append(e)
     return equations
 
-#def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
-#    overdetermined_system = overdeterminedSystemODE(ode, dependent, independent)
-# ToDo: 2 way: 
-#    #    * either as Janet_Basis 
-#    #    * or try to solve the undetermined system
-#    Y = var('Y')
-#    intermediate_system = []
-#    for e in overdetermined_system:
-#        # ToDo: make the next three lines into a function for helpers(code duplication
-#        #       with overdeterminedSystemODE. Idea: return a dict with {function: order}#
-#        tree = ExpressionTree(e)        
-#        mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
-#        order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0  
-#        e = e.subs({dependent(independent) : Y})
-#        for j in range(1, order+1):
-#            d = diff(dependent(independent), independent, j)
-#            e = e.subs({d : 0})
-#        intermediate_system.append(e)
-#    # ToDo: get rid of hardcoded phi and xi
-#    janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
-#    pols = map(lambda _ : _.expression().subs({Y : dependent(independent)}), janet.S)
-#    return pols    
+def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
+    overdetermined_system = overdeterminedSystemODE(ode, dependent, independent)
+    #ToDo: 2 way: 
+    #    * either as Janet_Basis 
+    #    * or try to solve the undetermined system
+    Y = var('Y')
+    intermediate_system = []
+    for e in overdetermined_system:
+        # ToDo: make the next three lines into a function for helpers(code duplication
+        #       with overdeterminedSystemODE. Idea: return a dict with {function: order}#
+        tree = ExpressionTree(e)        
+        mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
+        order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0  
+        e = e.subs({dependent(independent) : Y})
+        for j in range(1, order+1):
+            print(f"=====>{e=}")
+            d = diff(dependent(independent), independent, j)
+            print(f"=====>{d=}")            
+            e = e.subs({d : 0})
+        intermediate_system.append(e)
+    # ToDo: get rid of hardcoded phi and xi
+    janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
+    pols = map(lambda _ : _.expression().subs({Y : dependent(independent)}), janet.S)
+    return pols    
 
 
 if __name__ == "__main__":

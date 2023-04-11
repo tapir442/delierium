@@ -7,14 +7,9 @@ import sage.all
 from sage.calculus.var import var, function
 from sage.misc.reset import reset
 from sage.calculus.functional import diff
-try :
-    from delierium.helpers import (is_derivative, is_function, eq,
-                                   order_of_derivative, adiff, latexer)
-    from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
-except ModuleNotFoundError:
-    from helpers import (is_derivative, is_function, eq,
-                         order_of_derivative, adiff, latexer)
-    from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
+from delierium.helpers import (is_derivative, is_function, eq,
+                                 order_of_derivative, adiff, latexer)
+from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 
 import functools
 from operator import mul
@@ -59,7 +54,6 @@ class _Dterm:
         else:
             r = []
             for o in e.operands():
-                #print (f"{e=}, {o=}")
                 if is_derivative(o) or is_function(o):
                     self._d = o
                 else:
@@ -137,12 +131,6 @@ class _Differential_Polynomial:
         if not eq(0, e):
             self._init(e.expand())
     def _init(self, e):
-   #     def is_a_real_derivative(op):
-   #         # XXX make this part of context ?
-   #         return (is_derivative(op) and op.operator().function() in self._context._dependent) or \
-   #             is_function(o)
-   #     operands = e.operands()
-   #     operator = e.operator()
         if is_derivative(e) or is_function(e):
             self._p.append(_Dterm(e, self._context))
         elif e.operator().__name__ == 'mul_vararg':
@@ -279,7 +267,7 @@ def reduceS(e: _Differential_Polynomial,
         for dp in gen:
             enew = reduce(e, dp, context)
             # XXX check wheter we can repalce "==" by 'is'
-            if enew == e:
+            if (enew is e) or (enew == e):
                 reducing = False
             else:
                 e = enew
@@ -658,23 +646,11 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
- #           print("This is where we start")
- #           self.show()
-#            for _ in self.S:
-#                _.Lder().show()
-            #set_trace()
             self.S = Autoreduce(self.S, context)
- #           print("after autoreduce")
- #           self.show()
- #           for _ in self.S:
- #               _.Lder().show()
-
-            #set_trace()
             self.S = CompleteSystem(self.S, context)
-#            print("after complete system")
-#            self.show()
-
             self.conditions = split_by_function(self.S, context)
+            # XXXX : this seems to be wrong
+            #set_trace()
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
                        ]

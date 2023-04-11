@@ -11,10 +11,7 @@ import sage.symbolic.operators
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
 from IPython.core.debugger import set_trace
-try:
-    from delierium.helpers import is_function
-except ImportError:
-    from helpers import is_function
+from .helpers import is_function
 import functools
 from operator import mul
 from sage.matrix.constructor import Matrix

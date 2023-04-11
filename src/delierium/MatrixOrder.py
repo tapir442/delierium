@@ -10,16 +10,15 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.rational_field import QQ
 from sage.misc.prandom import shuffle
 from functools import cmp_to_key
+import doctest
 
 
 import functools
-try:
-    from delierium.helpers import eq, order_of_derivative, is_derivative, \
+from delierium.helpers import eq, order_of_derivative, is_derivative, \
         is_function
-except ModuleNotFoundError:
-    from helpers import eq, order_of_derivative, is_derivative, is_function
 
-import doctest
+
+
 #
 # standard weight matrices for lex, grlex and grevlex order
 # according to 'Term orders and Rankings' Schwarz, pp 43.
@@ -157,7 +156,7 @@ def higher(d1, d2, context):
         
     i1 = get_derivative_vector(d1)
     i2 = get_derivative_vector(d2)    
-    return context.gt(get_derivative_vector(d1), get_derivative_vector(d2))
+    return context.gt(i1, i2)
 
 
 @functools.cache

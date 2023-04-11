@@ -22,7 +22,7 @@ def eq(d1, d2):
     All other caching is neglegible compared to this here
     70 % of the time is spent here!
     '''
-    return bool(d1 == d2)
+    return bool((d1 is d2) or (d1 == d2))
 
 
 def tangent_vector(f):
@@ -180,7 +180,7 @@ def iter_du_orders(expr, u):
         if sub_expr == []:
             # hit end of tree
             continue
-        elif is_op_du(sub_expr.operator(), u):
+        if is_op_du(sub_expr.operator(), u):
             # yield order of differentiation
             yield len(sub_expr.operator().parameter_set())
         else:

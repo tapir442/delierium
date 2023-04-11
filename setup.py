@@ -11,6 +11,9 @@ excluded=['src/delierium/Involution.py',
           'src/delierium/higher_infinitesimals.py',
           'src/tests/*']
 
+
+print("O"*88)
+excluded = []
 class build_py(build_py_orig):
     def find_package_modules(self, package, package_dir):
         modules = super().find_package_modules(package, package_dir)
@@ -25,7 +28,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 
 setup(
     name="delierium",
-    version="0.9.0.dev10",
+    version="0.9.0.dev12",
     description="Symmetry Analysis for ODEs/PDEs using SageMath",
     long_description=long_description,
     long_description_content_type='text/markdown',
