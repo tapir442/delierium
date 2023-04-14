@@ -1,4 +1,4 @@
-import sage.all
+from sage.all import *
 import functools
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
@@ -154,7 +154,7 @@ def adiff(f, context, *vars):
             if "NewSymbolicFunction" in v.__class__.__name__:
                 f = func_diff(f,  v(context._independent[1]))
             else:
-                xx = SR.var("xx")
+                xx = SR.var('xx')
                 gg = f.subs({context._independent[0](context._independent[1]):xx})
                 gg = diff(gg, v)
                 f=gg.subs({xx:context._independent[0](context._independent[1])})

@@ -276,9 +276,7 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
         order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0  
         e = e.subs({dependent(independent) : Y})
         for j in range(1, order+1):
-            print(f"=====>{e=}")
             d = diff(dependent(independent), independent, j)
-            print(f"=====>{d=}")            
             e = e.subs({d : 0})
         intermediate_system.append(e)
     # ToDo: get rid of hardcoded phi and xi
