@@ -48,7 +48,6 @@ class _Dterm:
         '''
         self._coeff, self._d = 1, 1
         self._context        = context
-        self._has_minus      = False
         if is_derivative(e) or is_function(e):
             self._d     = e
         else:
@@ -57,8 +56,6 @@ class _Dterm:
                 if is_derivative(o) or is_function(o):
                     self._d = o
                 else:
-                    if o == -1:
-                        self._has_minus = True
                     self._coeff *= o
                     r.append(o)
         self._order      = self._compute_order()
@@ -653,12 +650,13 @@ class Janet_Basis:
             #set_trace()
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
-                       ]
-            if not reduced:
+                       ]            
+            if not reduced:                
                 self.S = Reorder(self.S, context)
                 return
             self.S += [_ for _ in reduced if
                        not (_ in self.S or eq(_.expression(), 0))]
+            self.S = Autoreduce(self.S, context)
             self.S = Reorder(self.S, context, ascending=True)
 
     def show(self, rich=False):
