@@ -104,7 +104,7 @@ def Mgrevlex(funcs, vars):
 
 
 class Context:
-    # XXX replace by named tuple? or attr.ib
+    __slots__ = ["_dependent", "_independent", "_weight"]
     def __init__ (self, dependent, independent, weight = Mgrevlex):
         """ sorting : (in)dependent [i] > dependent [i+i]
         """
@@ -113,7 +113,6 @@ class Context:
         self._dependent   = tuple((_.operator() if is_function(_) else _
                                    for _ in dependent))
         self._weight      = weight (self._dependent, self._independent)
-        self._basefield   = PolynomialRing(QQ, independent)
 
     def gt(self, v1: vector, v2: vector) -> int:
         """Computes the weigthed difference vector of v1 and v2
