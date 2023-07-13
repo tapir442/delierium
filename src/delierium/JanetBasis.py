@@ -641,25 +641,53 @@ class Janet_Basis:
             self.S = S[:]
         old = []
         self.S = Reorder([_Differential_Polynomial(s, context) for s in self.S], context, ascending = True)
+        print("*"*22, "here we start", "*"*22)
+        for _ in self.S:
+            print(_)
+        import pdb; pdb.set_trace()
         while 1:
             if old == self.S:
                 # no change since last run
+                print ("***** finished *****")
                 return
             old = self.S[:]
             self.S = Autoreduce(self.S, context)
+            print("*"*22, "after autoreduce", "*"*22)
+            for _ in self.S:
+                print(_)
+            
             self.S = CompleteSystem(self.S, context)
+            print("*"*22, "after complete system", "*"*22)
+            for _ in self.S:
+                print(_)
+            
             self.conditions = split_by_function(self.S, context)
             # XXXX : this seems to be wrong
+            print("*"*22, "after conditions", "*"*22)
+            for _ in self.S:
+                print(_)
+            for _ in self.conditions:
+                print("cond:", _)
+            
             #set_trace()
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
                        ]
+            print("*"*22, "after reduced 2", "*"*22)
+            for _ in reduced:
+                print(_)
+            
             if not reduced:
+                print("======  NO REDUCTION =====")
                 self.S = Reorder(self.S, context)
                 return
             self.S += [_ for _ in reduced if
                        not (_ in self.S or eq(_.expression(), 0))]
             self.S = Reorder(self.S, context, ascending=True)
+            print("*"*22, "END OF LOOP", "*"*22)
+            for _ in self.S:
+                print(_)
+            
 
     def show(self, rich=False):
         """Print the Janet basis with leading derivative first."""
