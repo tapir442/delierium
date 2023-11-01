@@ -7,9 +7,14 @@ import sage.all
 from sage.calculus.var import var, function
 from sage.misc.reset import reset
 from sage.calculus.functional import diff
-from delierium.helpers import (is_derivative, is_function, eq,
-                                 order_of_derivative, adiff, latexer)
-from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
+try :
+    from delierium.helpers import (is_derivative, is_function, eq,
+                                   order_of_derivative, adiff, latexer)
+    from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
+except ModuleNotFoundError:
+    from helpers import (is_derivative, is_function, eq,
+                         order_of_derivative, adiff, latexer)
+    from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
 
 import functools
 from operator import mul
@@ -23,7 +28,7 @@ import re
 from sage.repl.rich_output.pretty_print import pretty_print
 
 from IPython.core.debugger import set_trace
-from IPython.display import Math
+
 
 @functools.cache
 def func(e):
@@ -48,14 +53,18 @@ class _Dterm:
         '''
         self._coeff, self._d = 1, 1
         self._context        = context
+        self._has_minus      = False
         if is_derivative(e) or is_function(e):
             self._d     = e
         else:
             r = []
             for o in e.operands():
+                #print (f"{e=}, {o=}")
                 if is_derivative(o) or is_function(o):
                     self._d = o
                 else:
+                    if o == -1:
+                        self._has_minus = True
                     self._coeff *= o
                     r.append(o)
         self._order      = self._compute_order()
@@ -128,6 +137,12 @@ class _Differential_Polynomial:
         if not eq(0, e):
             self._init(e.expand())
     def _init(self, e):
+   #     def is_a_real_derivative(op):
+   #         # XXX make this part of context ?
+   #         return (is_derivative(op) and op.operator().function() in self._context._dependent) or \
+   #             is_function(o)
+   #     operands = e.operands()
+   #     operator = e.operator()
         if is_derivative(e) or is_function(e):
             self._p.append(_Dterm(e, self._context))
         elif e.operator().__name__ == 'mul_vararg':
@@ -245,8 +260,6 @@ class _Differential_Polynomial:
     def __hash__(self):
         return hash(self.expression())
 
-    def order(self):
-        return self._p[0]._order
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ...
 def Reorder(S, context, ascending=False):
@@ -264,7 +277,7 @@ def reduceS(e: _Differential_Polynomial,
         for dp in gen:
             enew = reduce(e, dp, context)
             # XXX check wheter we can repalce "==" by 'is'
-            if (enew is e) or (enew == e):
+            if enew == e:
                 reducing = False
             else:
                 e = enew
@@ -276,14 +289,18 @@ def reduceS(e: _Differential_Polynomial,
 def reduce(e1: _Differential_Polynomial,
            e2: _Differential_Polynomial,
            context: Context) -> _Differential_Polynomial:
-    """Reduce e1 wrt e2 according to Schwarz, S1
-    """
+    def _order(der):
+        if der != 1:
+            return order_of_derivative(der, len(context._independent))
+        else:
+            return [0]*len(context._independent)
+
     def _reduce_inner(e1, e2):
-        e2_order = e2._p[0]._order
+        e2_order = _order(e2.Lder())
         lf = func(e2.Lder())
         for t in (_ for _ in e1._p if eq(func(_._d), lf)):
             c = t._coeff
-            e1_order = t._order
+            e1_order = _order(t._d)
             dif = [a-b for a, b in zip(e1_order, e2_order)]
             if all(map(lambda h: h == 0, dif)):
                 return _Differential_Polynomial(
@@ -313,7 +330,10 @@ def Autoreduce(S, context):
             have_reduced = have_reduced or rnew != _r
             newdps.append(rnew)
         dps = Reorder(_p + [_ for _ in newdps if _ not in _p], context, ascending=True)
-        i = 0 if have_reduced else i + 1
+        if not have_reduced:
+            i += 1
+        else:
+            i = 0
         _p, r = dps[:i+1], dps[i+1:]
     return dps
 
@@ -407,13 +427,8 @@ def vec_multipliers(m, M, Vars):
 def derivative_to_vec(d, context):
     return order_of_derivative(d, len(context._independent))
 
-#from delierium.Involution import complete as invcomplete
-from pprint import pprint
 
 def complete(S, context):
-    # XXX rework without Differential polynomial. just with leading monomials
-    # XXX create differential polynomials when returning the result
-    # XXX put 'complete' into Involution, easier to test, and much faster
     result = list(S)
     if len(result) == 1:
         return result
@@ -467,7 +482,7 @@ def complete(S, context):
 
 def CompleteSystem(S, context):
     """
-    Algorithm C1, Schwarz p. 385
+    Algorithm C1, p. 385
 
     >>> tvars=var("x y z")
     >>> w = function("w")(*tvars)
@@ -550,7 +565,6 @@ def FindIntegrableConditions(S, context):
         if e1 == e2: continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
-                # XXx: for the comparison, use orders instead of adiff, too expensive
                 if eq(adiff(e1[0].Lder(), context, n), adiff(e2[0].Lder(), context, *m)):
                     # integrability condition
                     # don't need leading coefficients because in DPs
@@ -643,20 +657,30 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
-            self.S = Autoreduce(self.S, context)
-            self.S = CompleteSystem(self.S, context)
-            self.conditions = split_by_function(self.S, context)
-            # XXXX : this seems to be wrong
+ #           print("This is where we start")
+ #           self.show()
+#            for _ in self.S:
+#                _.Lder().show()
             #set_trace()
+            self.S = Autoreduce(self.S, context)
+ #           print("after autoreduce")
+ #           self.show()
+ #           for _ in self.S:
+ #               _.Lder().show()
+
+            self.S = CompleteSystem(self.S, context)
+#            print("after complete system")
+#            self.show()
+
+            self.conditions = split_by_function(self.S, context)
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
-                       ]            
-            if not reduced:                
+                       ]
+            if not reduced:
                 self.S = Reorder(self.S, context)
                 return
             self.S += [_ for _ in reduced if
                        not (_ in self.S or eq(_.expression(), 0))]
-            self.S = Autoreduce(self.S, context)
             self.S = Reorder(self.S, context, ascending=True)
 
     def show(self, rich=False):
