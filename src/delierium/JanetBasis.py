@@ -112,20 +112,20 @@ class _Dterm:
 
     def show(self, rich=True):
         if not rich:
-            return str(self)        
-        
+            return str(self)
+
         dlatex = latex(self._coeff)
         denominator_pattern = re.compile(r"(-)?\\frac\{.*}{(.* )?(?P<nomfunc>\w+)?\\left\((?P<vars>[\w ,]*)\\right\).*")
         res     = []
         funcname= ""
-        while match := denominator_pattern.match(dlatex):        
+        while match := denominator_pattern.match(dlatex):
             to_replace = r"%s\left(%s\right)" % (match.groupdict()['nomfunc'], match.groupdict()['vars'])
             dlatex = dlatex.replace (to_replace, match.groupdict()['nomfunc'])
         if self._coeff != 1:
             return " ".join ((dlatex, latexer(self._d)))
         else:
             return latexer(self._d)
-    
+
     def __hash__(self):
         return hash(self._expression)
 
@@ -234,7 +234,6 @@ class _Differential_Polynomial:
         return all(eq(_[0]._d, _[1]._d) for _ in zip(self._p, other._p))
 
     def show(self, rich=True):
-        from IPython.core.debugger import set_trace
         if not rich:
             return str(self)
         res = ""
@@ -271,12 +270,53 @@ def Reorder(S, context, ascending=False):
 
 def reduceS(e: _Differential_Polynomial,
             S: list, context: Context) -> _Differential_Polynomial:
+    """
+    Algorithm 2.5 from Schwarz, p.48
+    >>> # Example 2.34, p.48
+    >>> x, y = var("x y")
+    >>> z = function("z")(x,y)
+    >>> ctx = Context([z], [x,y])
+    >>> e1 = _Differential_Polynomial(diff(z,y) - (x**2)*diff(z, x)/(y**2) - (x-y)*z/(y**2), ctx)
+    >>> f1 = _Differential_Polynomial(diff(z,x) + z/x, ctx)
+    >>> f2 = _Differential_Polynomial(diff(z,y) + z/y, ctx)
+    >>> print(reduceS(e1, [f1, f2], ctx))
+    <BLANKLINE>
+    >>> from delierium.helpers import eq
+    >>> eq.cache_clear()
+    >>> # Example 2.34, reversed order of f1,f2
+    >>> x, y = var("x y")
+    >>> z = function("z")(x,y)
+    >>> ctx = Context([z], [x,y])
+    >>> e1 = _Differential_Polynomial(diff(z,y) - (x**2)*diff(z, x)/(y**2) - (x-y)*z/(y**2), ctx)
+    >>> f1 = _Differential_Polynomial(diff(z,x) + z/x, ctx)
+    >>> f2 = _Differential_Polynomial(diff(z,y) + z/y, ctx)
+    >>> print(reduceS(e1, [f2, f1], ctx))
+    <BLANKLINE>
+    >>> from delierium.helpers import eq
+    >>> eq.cache_clear()
+    >>> # Example 2.35
+    >>> x, y = var("x y")
+    >>> z = function("z")(x,y)
+    >>> w = function("w")(x,y)
+    >>> ctx = Context([w, z], [x,y])
+    >>> f4 = _Differential_Polynomial(\
+    diff(w, x,  y) \
+    + diff(z, x, y) \
+    + diff(w, y)/(2*y) \
+    - diff(w, x)/y \
+    + x*diff(z, y)/y \
+    - w/(2*y**2), ctx)
+    >>> f1 = _Differential_Polynomial(diff(w,y) + x*diff(z,y)/(2*y*(x**2 +y)) - w/y, ctx)
+    >>> f2 = _Differential_Polynomial(diff(z,x, y) + y*diff(w,y)/x + 2*y*diff(z, x)/x, ctx)
+    >>> print(reduceS(f4, [f1, f2], ctx))
+    """
     reducing = True
     gen = (_ for _ in S)
     while reducing:
         for dp in gen:
+#            set_trace();
             enew = reduce(e, dp, context)
-            # XXX check wheter we can repalce "==" by 'is'
+            # XXX check whether we can replace "==" by 'is'
             if enew == e:
                 reducing = False
             else:
@@ -285,40 +325,92 @@ def reduceS(e: _Differential_Polynomial,
                 reducing = True
     return enew
 
+def _order(der, context):
+    if der != 1:
+        return order_of_derivative(der, len(context._independent))
+    return [0]*len(context._independent)
+
+
+def _reduce_inner(e1, e2, context):
+    e2_order = _order(e2.Lder(), context)
+    lf = func(e2.Lder())
+    for t in (_ for _ in e1._p if eq(func(_._d), lf)):
+        # S1 from Algorithm 2.4
+        c = t._coeff
+        e1_order = _order(t._d, context)
+        dif = [a-b for a, b in zip(e1_order, e2_order)]
+        if all(map(lambda h: h == 0, dif)):
+            # S2 from Algorithm 2.4
+            return _Differential_Polynomial(
+                e1.expression() - e2.expression() * c, context)
+        if all(map(lambda h: h >= 0, dif)):
+            # S2 from Algorithm 2.4
+            # toDo: as diff also accepts zerozh derivatives we may
+            # unfy these two branches
+            variables_to_diff = []
+            for i in range(len(context._independent)):
+                if dif[i] != 0:
+                    variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
+            return _Differential_Polynomial(
+                e1.expression() - c*diff(e2.expression(), *variables_to_diff),
+                context)
+    return e1
+
 
 def reduce(e1: _Differential_Polynomial,
            e2: _Differential_Polynomial,
            context: Context) -> _Differential_Polynomial:
-    def _order(der):
-        if der != 1:
-            return order_of_derivative(der, len(context._independent))
-        else:
-            return [0]*len(context._independent)
-
-    def _reduce_inner(e1, e2):
-        e2_order = _order(e2.Lder())
-        lf = func(e2.Lder())
-        for t in (_ for _ in e1._p if eq(func(_._d), lf)):
-            c = t._coeff
-            e1_order = _order(t._d)
-            dif = [a-b for a, b in zip(e1_order, e2_order)]
-            if all(map(lambda h: h == 0, dif)):
-                return _Differential_Polynomial(
-                    e1.expression() - e2.expression() * c, context)
-            if all(map(lambda h: h >= 0, dif)):
-                variables_to_diff = []
-                for i in range(len(context._independent)):
-                    if dif[i] != 0:
-                        variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
-                return _Differential_Polynomial(
-                    e1.expression() - c*diff(e2.expression(), *variables_to_diff), 
-                    context)
-        return e1
-    while not bool((_e1 := _reduce_inner(e1, e2)) == e1):
+    """
+    Algorithm 2.4 from Schwarz, p.48
+    >>> # Example 2.33(f1), p.48
+    >>> x, y = var("x y")
+    >>> z = function("z")(x,y)
+    >>> ctx = Context([z], [x,y])
+    >>> e1 = _Differential_Polynomial(diff(z,y) - (x**2)*diff(z, x)/(y**2) - (x-y)*z/(y**2), ctx)
+    >>> f1 = _Differential_Polynomial(diff(z,x) + z/x, ctx)
+    >>> print(_reduce_inner(e1, f1, ctx))
+    diff(z(x, y), y) + (1/y) * z(x, y)
+    >>> from delierium.helpers import eq
+    >>> eq.cache_clear()
+    >>> # Example 2.33(f2), p.48
+    >>> x, y = var("x y")
+    >>> z = function("z")(x,y)
+    >>> ctx = Context([z], [x,y])
+    >>> e1 = _Differential_Polynomial(diff(z,y) - (x**2)*diff(z, x)/(y**2) - (x-y)*z/(y**2), ctx)
+    >>> f2 = _Differential_Polynomial(diff(z,y) + z/y, ctx)
+    >>> print(_reduce_inner(e1, f2, ctx))
+    diff(z(x, y), x) + (1/x) * z(x, y)
+    """
+    while not bool((_e1 := _reduce_inner(e1, e2, context)) == e1):
         e1 = _e1
     return _e1
 
 def Autoreduce(S, context):
+    """
+    Algorithm 2.6, p.49
+    >>> x,y = var("x y")
+    >>> z = function("z")(x, y)
+    >>> w = function("w")(x, y)
+    >>> ctx = Context([w, z], [x,y])
+    >>> f1 = _Differential_Polynomial(diff(w,y) + x*diff(z,y)/(2*y*(x**2 +y)) - w/y, ctx)
+    >>> f2 = _Differential_Polynomial(diff(z,x, y) + y*diff(w,y)/x + 2*y*diff(z, x)/x, ctx)
+    >>> f3 = _Differential_Polynomial(diff(w, x, y) - 2*x*diff(z,x,x)/y - x*diff(w,x)/(y**2), ctx)
+    >>> f4 = _Differential_Polynomial(\
+    diff(w, x,  y) \
+    + diff(z, x, y) \
+    + diff(w, y)/(2*y) \
+    - diff(w, x)/y \
+    + x*diff(z, y)/y \
+    - w/(2*y**2), ctx)
+    >>> f5 = _Differential_Polynomial(diff(w,y,y)+diff(z,x,y)-diff(w,y)/y+w/(y**2), ctx)
+    >>> k = Autoreduce([f1,f2,f3,f4,f5], ctx)
+    >>> # Attention! The text doesn't show the minus sign in the third equation
+    >>> for _ in k: print(_)
+    diff(z(x, y), y)
+    diff(z(x, y), x) + (1/2/y) * w(x, y)
+    diff(w(x, y), y) + (-1/y) * w(x, y)
+    diff(w(x, y), x)
+    """
     dps = list(S)
     i = 0
     _p, r = dps[:i+1], dps[i+1:]
@@ -691,7 +783,7 @@ class Janet_Basis:
                 display(Math(_.show()))
             else:
                 print(_)
-        
+
 
     def rank(self):
         """Return the rank of the computed Janet basis."""
