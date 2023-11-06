@@ -116,15 +116,12 @@ class _Dterm:
 
         dlatex = latex(self._coeff)
         denominator_pattern = re.compile(r"(-)?\\frac\{.*}{(.* )?(?P<nomfunc>\w+)?\\left\((?P<vars>[\w ,]*)\\right\).*")
-        res     = []
-        funcname= ""
         while match := denominator_pattern.match(dlatex):
             to_replace = r"%s\left(%s\right)" % (match.groupdict()['nomfunc'], match.groupdict()['vars'])
             dlatex = dlatex.replace (to_replace, match.groupdict()['nomfunc'])
         if self._coeff != 1:
             return " ".join ((dlatex, latexer(self._d)))
-        else:
-            return latexer(self._d)
+        return latexer(self._d)
 
     def __hash__(self):
         return hash(self._expression)
@@ -184,7 +181,8 @@ class _Differential_Polynomial:
         pass
 
     def show_derivatives(self):
-        print([x for x in self.derivatives()])
+        print(self.derivatives())
+
 
     def Lterm(self):
         return self._p[0].term()
@@ -300,7 +298,7 @@ def reduceS(e: _Differential_Polynomial,
     >>> w = function("w")(x,y)
     >>> ctx = Context([w, z], [x,y])
     >>> f4 = _Differential_Polynomial(\
-    diff(w, x,  y) \
+      diff(w, x,  y) \
     + diff(z, x, y) \
     + diff(w, y)/(2*y) \
     - diff(w, x)/y \
@@ -308,10 +306,20 @@ def reduceS(e: _Differential_Polynomial,
     - w/(2*y**2), ctx)
     >>> f1 = _Differential_Polynomial(diff(w,y) + x*diff(z,y)/(2*y*(x**2 +y)) - w/y, ctx)
     >>> f2 = _Differential_Polynomial(diff(z,x, y) + y*diff(w,y)/x + 2*y*diff(z, x)/x, ctx)
-    >>> print(reduceS(f4, [f1, f2], ctx))
+    >>> result = reduceS(f4, [f1, f2], ctx)
+    >>> # f4d from p.49
+    >>> denominator = (x*(y*4*x**5 + 8*(x**3)*(y**2) -x**3 + 2*(x*y)**2 + 2*y*x**2 + 4*x*y**3 -2*x*y+2*y**3-2*y**2))
+    >>> ex = diff(z, y) \
+    - diff(z, x)*4*(y*2*x**2 - x +2*y**2)*(x**2+y)*y**2/denominator \
+    - w * (y*2*x**2 - x +2*y**2)*(x**2+y)*y/ denominator
+    >>> print(result.expression() - ex)
+    >>> print(f"{result.expression().expand()=}")
+    >>> print(f"{ex=}")
+    >>> print(bool(result.expression() == ex))
+    True
     """
     reducing = True
-    gen = (_ for _ in S)
+    gen = [_ for _ in S]
     while reducing:
         for dp in gen:
 #            set_trace();
@@ -320,8 +328,9 @@ def reduceS(e: _Differential_Polynomial,
             if enew == e:
                 reducing = False
             else:
+                print(f"{str(enew)=}")
                 e = enew
-                gen = (_ for _ in S)
+                gen = [_ for _ in S]
                 reducing = True
     return enew
 
