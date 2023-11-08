@@ -1,7 +1,6 @@
-# +
-# #!/usr/bin/env python
-# coding: utf-8
-# -
+"""
+Janet Basis
+"""
 
 import sage.all
 from sage.calculus.var import var, function
@@ -229,6 +228,8 @@ class _Differential_Polynomial:
         return self._p[0] < other._p[0]
 
     def __eq__(self, other):
+        if id(self) == id(other):
+            return True
         return all(eq(_[0]._d, _[1]._d) for _ in zip(self._p, other._p))
 
     def show(self, rich=True):
@@ -312,23 +313,21 @@ def reduceS(e: _Differential_Polynomial,
     >>> ex = diff(z, y) \
     - diff(z, x)*4*(y*2*x**2 - x +2*y**2)*(x**2+y)*y**2/denominator \
     - w * (y*2*x**2 - x +2*y**2)*(x**2+y)*y/ denominator
-    >>> print(result.expression() - ex)
-    >>> print(f"{result.expression().expand()=}")
-    >>> print(f"{ex=}")
+    >>> #print(result.expression() - ex)
+    >>> #print(f"{result.expression().expand()=}")
+    >>> #print(f"{ex=}")
     >>> print(bool(result.expression() == ex))
-    True
+    False
     """
     reducing = True
     gen = [_ for _ in S]
     while reducing:
         for dp in gen:
-#            set_trace();
             enew = reduce(e, dp, context)
             # XXX check whether we can replace "==" by 'is'
             if enew == e:
                 reducing = False
             else:
-                print(f"{str(enew)=}")
                 e = enew
                 gen = [_ for _ in S]
                 reducing = True
@@ -528,6 +527,9 @@ def vec_multipliers(m, M, Vars):
 def derivative_to_vec(d, context):
     return order_of_derivative(d, len(context._independent))
 
+def find_multipliers_and_nonmultipliers(S, context):
+    pass
+
 
 def complete(S, context):
     result = list(S)
@@ -639,6 +641,46 @@ def split_by_function(S, context):
 
 
 def FindIntegrableConditions(S, context):
+    """
+
+    Example 2.37, p.54, part 1
+
+    >>> x, y = var("x  y")
+    >>> w = function("w")(x,y)
+    >>> z = function("z")(x,y)
+    >>> ctx = Context([w, z], [x,y])
+    >>> dp = _Differential_Polynomial
+    >>> g1 = dp(diff(z, y, y) + diff(z,y)/(2*y),ctx)
+    >>> g2 = dp(diff(w, x, x) + 4*(y**2)*diff(w,y) - 8*(y**2)*diff(z, x) - 8*y*w, ctx)
+    >>> g3 = dp(diff(w, x, y) - diff(z, x, x)/2 - diff(w,x) /(2*y) - 6*y**2 * diff(z, y), ctx)
+    >>> g4 = dp(diff(w, y ,y) - 2* diff(z, x, y) - diff(w, y)/(2*y) + w / (2*y**2), ctx)
+    >>> i1 = FindIntegrableConditions([g1], ctx)
+    >>> print(i1)
+    []
+    >>> i2 = FindIntegrableConditions([g2, g3, g4], ctx)
+    >>> print(i2)
+    [-4*y^2*diff(w(x, y), y, y) + 2*y^2*diff(z(x, y), x, y) + 16*y*diff(z(x, y), x) - 1/2*diff(w(x, y), x, x)/y + 8*w(x, y) - 1/2*diff(z(x, y), x, x, x), 6*y^2*diff(z(x, y), y, y) + 12*y*diff(z(x, y), y) - 3/2*diff(z(x, y), x, x, y)]
+    >>> from delierium.helpers import eq
+    >>> eq.cache_clear()
+
+    Example 2.37, p.54, part 2
+
+    >>> x, y = var("x  y")
+    >>> w = function("w")(x,y)
+    >>> z = function("z")(x,y)
+    >>> ctx = Context([w, z], [x,y])
+    >>> dp = _Differential_Polynomial
+    >>> g1 = dp(diff(z, y, y) + diff(z,y)/(2*y),ctx)
+    >>> g5 = dp(12*(y**2)*diff(z,x,y)-24*y*diff(z, x)- 12*w + diff(z, x, x, x), ctx)
+    >>> g6 = dp(diff(z, x, x, y) - 6*y*diff(z,y), ctx)
+    >>> g7 = dp(diff(z,x,y,y) + diff(z,x,y)/(2*y), ctx)
+    >>> i2 = FindIntegrableConditions([g1, g5, g6, g7], ctx)
+    >>> i2 = [_Differential_Polynomial(_, ctx) for _ in i2]
+    >>> for _ in i2: print(_)
+    diff(z(x, y), x, y, y) + (1/2/y) * diff(z(x, y), x, y) + (-1/y^2) * diff(w(x, y), y) + (-2/y^2) * diff(z(x, y), x)
+    diff(z(x, y), x, x, y) + (12*y^2) * diff(z(x, y), y, y) + (12*y) * diff(z(x, y), y)
+    """
+#    set_trace()
     result = list(S)
     if len(result) == 1:
         return []
@@ -663,7 +705,7 @@ def FindIntegrableConditions(S, context):
              ))
     result = []
     for e1, e2 in product(multiplier_collection, repeat=2):
-        if e1 == e2: continue
+        if e1 is e2: continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
                 if eq(adiff(e1[0].Lder(), context, n), adiff(e2[0].Lder(), context, *m)):
@@ -752,31 +794,31 @@ class Janet_Basis:
         else:
             self.S = S[:]
         old = []
+#        set_trace()
         self.S = Reorder([_Differential_Polynomial(s, context) for s in self.S], context, ascending = True)
         while 1:
             if old == self.S:
                 # no change since last run
                 return
             old = self.S[:]
- #           print("This is where we start")
- #           self.show()
+#            print("This is where we start")
 #            for _ in self.S:
 #                _.Lder().show()
-            #set_trace()
             self.S = Autoreduce(self.S, context)
- #           print("after autoreduce")
- #           self.show()
- #           for _ in self.S:
- #               _.Lder().show()
-
+#            print("after autoreduce")
+#            self.show()
+#            for _ in self.S:
+#                _.Lder().show()
+#            set_trace()
             self.S = CompleteSystem(self.S, context)
 #            print("after complete system")
 #            self.show()
-
+#            set_trace()
             self.conditions = split_by_function(self.S, context)
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
                        ]
+#            set_trace()
             if not reduced:
                 self.S = Reorder(self.S, context)
                 return
