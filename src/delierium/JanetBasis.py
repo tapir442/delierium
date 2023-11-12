@@ -27,7 +27,7 @@ import re
 from sage.repl.rich_output.pretty_print import pretty_print
 
 from IPython.core.debugger import set_trace
-
+from IPython.display import Math
 
 @functools.cache
 def func(e):
@@ -116,7 +116,7 @@ class _Dterm:
         dlatex = latex(self._coeff)
         denominator_pattern = re.compile(r"(-)?\\frac\{.*}{(.* )?(?P<nomfunc>\w+)?\\left\((?P<vars>[\w ,]*)\\right\).*")
         while match := denominator_pattern.match(dlatex):
-            to_replace = r"%s\left(%s\right)" % (match.groupdict()['nomfunc'], match.groupdict()['vars'])
+            to_replace = rf"{match.groupdict()['nomfunc']}\left({match.groupdict()['vars']}\right)"
             dlatex = dlatex.replace (to_replace, match.groupdict()['nomfunc'])
         if self._coeff != 1:
             return " ".join ((dlatex, latexer(self._d)))
@@ -130,6 +130,9 @@ class _Differential_Polynomial:
     def __init__(self, e, context):
         self._context = context
         self._p = []
+        self.multipliers    = []
+        self.nonmultipliers = []
+
         if not eq(0, e):
             self._init(e.expand())
     def _init(self, e):
@@ -247,13 +250,17 @@ class _Differential_Polynomial:
                 res += s
             else:
                 res += " + " + s
+        res += f"{self.multipliers}, {self.nonmultipliers}"
         return res
 
     def diff(self, *args):
         return type(self)(diff(self.expression(), *args), self._context)
 
     def __str__(self):
-        return " + ".join([str(_) for _ in self._p])
+        m = [self._context._independent[_] for _ in self.multipliers]
+        n = [self._context._independent[_] for _ in self.nonmultipliers]
+        return " + ".join([str(_) for _ in self._p]) +\
+            f", {m}, {n}"
 
     def __hash__(self):
         return hash(self.expression())
@@ -506,6 +513,16 @@ def vec_multipliers(m, M, Vars):
     ([0], [1, 2])
     >>> vec_multipliers(U[5], U, (2,1,0))
     ([0], [1, 2])
+    >>> dp1 = (0,0,0,1,1)
+    >>> dp2 = (0,0,1,0,1)
+    >>> dp3 = (0,1,0,0,1)
+    >>> dp4 = (0,0,0,2,0)
+    >>> dp5 = (0,0,1,1,0)
+    >>> dp6 = (0,0,2,0,0)
+    >>> print("HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
+    >>> l = [dp1, dp2, dp3, dp4, dp5, dp6]
+    >>> vec_multipliers(dp1, l, (4,3,2,1,0))
+    <BLANKLINE>
     """
     d = max((vec_degree(v, u) for u in M for v in Vars), default=0)
     mult = []
@@ -532,14 +549,37 @@ def find_multipliers_and_nonmultipliers(S, context):
 
 
 def complete(S, context):
+    """
+    >>> # Example 3.2.6 from Iohara/Malbos, p.24
+    >>> #print("D"*200)
+    >>> # x1, x2, x3, x4, x5 = var("x1 x2 x3 x4 x5")
+    >>> # f = function("f")(x1, x2, x3, x4, x5)
+    >>> # ctx = Context([f], [x5,x4,x3,x2,x1])
+    >>> # dp1 = _Differential_Polynomial(diff(f, x5, x4), ctx)
+    >>> # dp2 = _Differential_Polynomial(diff(f, x5, x3), ctx)
+    >>> # dp3 = _Differential_Polynomial(diff(f, x5, x2), ctx)
+    >>> # dp4 = _Differential_Polynomial(diff(f, x4, x4), ctx)
+    >>> # dp5 = _Differential_Polynomial(diff(f, x3, x4), ctx)
+    >>> # dp6 = _Differential_Polynomial(diff(f, x3, x3), ctx)
+    >>> # complete([dp1, dp2,dp3,dp4,dp5,dp6], ctx)
+
+    """
     result = list(S)
+    print("A"*88)
+    for _ in result:
+        print(_)
+
     if len(result) == 1:
         return result
     vars = list(range(len(context._independent)))
 
     def map_old_to_new(v):
         return context._independent[vars.index(v)]
+
     while 1:
+        print("B"*88)
+        for _ in result:
+            print(_)
         monomials = [(_, derivative_to_vec(_.Lder(), context)) for _ in result]
         ms        = tuple([_[1] for _ in monomials])
         m0 = []
@@ -549,23 +589,26 @@ def complete(S, context):
         for dp, monom in monomials:
             # S1
             _multipliers, _nonmultipliers = vec_multipliers(monom, ms, vars)
-            multiplier_collection.append((monom, dp, _multipliers, _nonmultipliers))
-        for monom, dp, _multipliers, _nonmultipliers in multiplier_collection:
-            if not _nonmultipliers:
+            print(f"{_multipliers=}, {_nonmultipliers=}, {monom=}, {ms=}")
+            dp.multipliers = _multipliers
+            dp.nonmultipliers = _nonmultipliers
+            multiplier_collection.append((monom, dp))
+        for monom, dp, in multiplier_collection:
+            if not dp.nonmultipliers:
                 m0.append((monom, None, dp))
             else:
                 # todo: do we need subsets or is a multiplication by only one
                 # nonmultiplier one after the other enough ?
-                for n in _nonmultipliers:
+                for n in dp.nonmultipliers:
                     _m0 = list(monom)
                     _m0[n] += 1
                     m0.append((_m0, n, dp))
         to_remove = []
         for _m0 in m0:
             # S3: check whether in class of any of the monomials
-            for monomial, _, _multipliers, _nonmultipliers in multiplier_collection:
-                if all(_m0[0][x] >= monomial[x] for x in _multipliers) and \
-                   all(_m0[0][x] == monomial[x] for x in _nonmultipliers):
+            for monomial, dp in multiplier_collection:
+                if all(_m0[0][x] >= monomial[x] for x in dp.multipliers) and \
+                   all(_m0[0][x] == monomial[x] for x in dp.nonmultipliers):
                     # this is in _m0's class
                     to_remove.append(_m0)
         for _to in to_remove:
@@ -680,7 +723,6 @@ def FindIntegrableConditions(S, context):
     diff(z(x, y), x, y, y) + (1/2/y) * diff(z(x, y), x, y) + (-1/y^2) * diff(w(x, y), y) + (-2/y^2) * diff(z(x, y), x)
     diff(z(x, y), x, x, y) + (12*y^2) * diff(z(x, y), y, y) + (12*y) * diff(z(x, y), y)
     """
-#    set_trace()
     result = list(S)
     if len(result) == 1:
         return []
@@ -703,6 +745,8 @@ def FindIntegrableConditions(S, context):
              [map_old_to_new(_) for _ in _multipliers],
              [map_old_to_new(_) for _ in _nonmultipliers]
              ))
+    for k in multiplier_collection:
+        print(f"{str(k[0])=}, {k[1]=}, {k[2]=}")
     result = []
     for e1, e2 in product(multiplier_collection, repeat=2):
         if e1 is e2: continue
@@ -794,31 +838,32 @@ class Janet_Basis:
         else:
             self.S = S[:]
         old = []
-#        set_trace()
         self.S = Reorder([_Differential_Polynomial(s, context) for s in self.S], context, ascending = True)
         while 1:
+            # XXX try 'is'instead of '=='
             if old == self.S:
                 # no change since last run
                 return
             old = self.S[:]
-#            print("This is where we start")
-#            for _ in self.S:
-#                _.Lder().show()
+            print("This is where we start")
+            for _ in self.S:
+                _.Lder().show()
             self.S = Autoreduce(self.S, context)
-#            print("after autoreduce")
-#            self.show()
-#            for _ in self.S:
-#                _.Lder().show()
-#            set_trace()
+            print("after autoreduce")
+            self.show()
+            for _ in self.S:
+                _.Lder().show()
             self.S = CompleteSystem(self.S, context)
-#            print("after complete system")
-#            self.show()
-#            set_trace()
-            self.conditions = split_by_function(self.S, context)
+            print("after complete system")
+            self.show()
+            self.conditions = list(split_by_function(self.S, context))
+
+            print("This are the conditions")
+            print(f"{self.conditions}")
+
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
                        for _m in self.conditions
                        ]
-#            set_trace()
             if not reduced:
                 self.S = Reorder(self.S, context)
                 return
@@ -828,7 +873,6 @@ class Janet_Basis:
 
     def show(self, rich=False):
         """Print the Janet basis with leading derivative first."""
-        from IPython.display import Math
         for _ in self.S:
             if rich:
                 display(Math(_.show()))

@@ -91,7 +91,16 @@ class Multipliers:
         [1] [0]
         >>> print(r.multipliers, r.nonmultipliers)
         [1] [0]
-        
+        >>> dp1 = (0,0,0,1,1)
+        >>> dp2 = (0,0,1,0,1)
+        >>> dp3 = (0,1,0,0,1)
+        >>> dp4 = (0,0,0,2,0)
+        >>> dp5 = (0,0,1,1,0)
+        >>> dp6 = (0,0,2,0,0)
+        >>> print("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL")
+        >>> l = [dp1, dp2, dp3, dp4, dp5, dp6]
+        >>> r = Multipliers[dp1, l]
+        >>> print(r)
         """
         d = max((vec_degree(v, u) for u in M for v in Vars), default=0)
         mult = []
@@ -110,7 +119,7 @@ class Multipliers:
         self.nonmultipliers = list(sorted(set(Vars) - set(mult)))
 
 def complete(S):
-    # S: list of monomial tuples. Highest variable ist the last index 
+    # S: list of monomial tuples. Highest variable ist the last index
     result = list(S)
     if len(result) == 1:
         return result
@@ -162,12 +171,12 @@ def complete(S):
                 dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new(_m0[1])).expression(), context)
                 if dp not in result:
                     result.append(dp)
-        result = Reorder(result, context, ascending=False)        
-        
-        
-        
+        result = Reorder(result, context, ascending=False)
+
+
+
 #def complete(S):
-#    # S: list of monomial tuples. Highest variable ist the last index 
+#    # S: list of monomial tuples. Highest variable ist the last index
 #    # highest index is most important, we, have xn >...> x1
 #    from IPython.core.debugger import set_trace
 #    monomials = S[:]
@@ -195,7 +204,7 @@ def complete(S):
 #                    # this is in _m0's class
 #                    to_remove.append(_m0)
 #                    break
-#                    
+#
 #        for _to in to_remove:
 #            try:
 #                m0.remove(_to)
@@ -207,9 +216,9 @@ def complete(S):
 #        else:
 #            result.extend(m0)
 #            monomials.extend([tuple(_[0]) for _ in m0])
-        
-        
-        
+
+
+
         # https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt#overlay-context=contents
 #Janet:=proc(u,U,Vars)
 #local n,m,d,L,i,j,dd,V,v,Mult;
@@ -239,48 +248,43 @@ def complete(S):
 
 def degree_of_set(j, U):
     return max(u[j] for u in U)
-    
-def degree(j):
-    return u[j]
+
+from IPython.core.debugger import set_trace
 
 class My_Multiplier:
-    def __init__(self, M):
-        self.degrees = {}
+    def __init__(self, monoms):
+        self.monoms = monoms
         # no of variables
-        n = len(M[0])
+        n = len(monoms[0])
+        self.degrees = [0]*n
         for i in range(n):
-            self.degrees[i] = 0
-            for m in M:
-                self.degrees[i] = max(self.degrees[i], m[i])
-        self.max_degree = max (self.degrees.values())
-        self.mults = {}
-        for m in M:
-            self.mults[tuple(m)] = set()
-        self.alphas = {}
-        for m in M:
-            if m[n-1] == self.degrees[n-1]:
-                self.mults[m].add(n-1)
-        tuples = [ele for ele in itertools.product(range(0, self.max_degree+1), repeat = 1)]
+            for monom in self.monoms:
+                self.degrees[i] = max(self.degrees[i], monom[i])
+        self.max_degree = max (self.degrees)
+        self.mults = dict((tuple(_), set()) for _ in self.monoms)
+        # initialize with highest ranked variable
+        self.add_multipliers(n-1)
+        # self.alphas contains the alpha tuples as mentioned in Schwarz, p.384,
+        # or, much better, in Iohara/Malbos, p.21
+        self._alphas(j=n-1, repeat=1)
+        for j in reversed(range(n-1)):
+            self.add_multipliers(n-1)
+            for monom in self.monoms:
+                for idx in self.alphas:
+                    if monom in self.alphas[idx] and monom[j] == degree_of_set(j, self.alphas[idx]):
+                        self.mults[monom].add(j)
+            self._alphas(j=j, repeat=n-j)
+
+    def _alphas(self, j, repeat):
+        tuples = list(itertools.product(range(0, self.max_degree+1), repeat = repeat))
         self.alphas = {}
         for t in tuples:
-            self.alphas[t] = set([m for m in M if all(m[n-1] == _t for _t in t)])
-        to_delete = [_ for _ in self.alphas if not self.alphas[_]]
-        for t in to_delete:
-            del self.alphas[t]
+            s = set(m for m in self.monoms if list(m[j:]) == list(t))
+            if s:
+                self.alphas[t] = s
 
-        for j in reversed(range(n-1)):
-            for m in M:
-                if m[j] == self.degrees[j]:
-                    self.mults[m].add(j)
-            for m in M:
-                for a in self.alphas:
-                    if m in self.alphas[a] and m[j] == degree_of_set(j, self.alphas[a]):
-                        self.mults[m].add(j)
-            if n != 0:
-                tuples = [ele for ele in itertools.product(range(0, self.max_degree+1), repeat = n - j)]       
-                self.alphas = {}
-                for t in tuples:
-                    self.alphas[t] = set(m for m in M if list(m[j:]) == list(t))
-                to_delete = [_ for _ in self.alphas if not self.alphas[_]]                    
-                for t in to_delete:
-                    del self.alphas[t]
+    def add_multipliers(self, idx):
+        # ToDo: better name, as we add multipliers a second time
+        for m in self.monoms:
+            if m[idx] == self.degrees[idx]:
+                self.mults[m].add(idx)
