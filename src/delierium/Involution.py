@@ -275,6 +275,7 @@ class My_Multiplier:
                         self.mults[monom].add(j)
             self._alphas(j=j, repeat=n-j)
 
+
     def _alphas(self, j, repeat):
         tuples = list(itertools.product(range(0, self.max_degree+1), repeat = repeat))
         self.alphas = {}
