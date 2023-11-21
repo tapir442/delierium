@@ -14,7 +14,7 @@ import doctest
 
 
 import functools
-from delierium.helpers import eq, order_of_derivative, is_derivative, \
+from delierium.helpers import eq, is_derivative, \
         is_function
 
 
@@ -108,7 +108,6 @@ class Context:
     def __init__ (self, dependent, independent, weight = Mgrevlex):
         """ sorting : (in)dependent [i] > dependent [i+i]
         """
-        # XXX maybe we can create the matrices here?
         self._independent = tuple(independent)
         self._dependent   = tuple((_.operator() if is_function(_) else _
                                    for _ in dependent))
@@ -122,43 +121,16 @@ class Context:
         for entry in r:
             if entry:
                 return entry > 0
-        return False        
-        
-_cache={}
+        return False
 
 #@functools.cache
-def higher(d1, d2, context):
-    # XXX move to context?
+def higher(d1, d2, context: Context):
+    # XXX move to context? Or to _Dterm? As for type annotione we have to import JanetBasus._Dterm
     '''Algorithm 2.3 from [Schwarz].'''
-    @functools.cache
-    def analyze_dterm(dd):
-        # XXX use "_order" from DTerm directly
-        if is_derivative(dd):
-            f = dd.operator().function()
-        elif is_function(dd):
-            f = dd.operator()
-        else:
-            f = [_ for _ in dd.operands() if is_function(_) or is_derivative(_)][0]
-            if is_derivative(f):
-                f = f.operator().function()
-        return f
-
-    def idx(d):
-        # faster than functools.cache
-        return context._dependent.index(analyze_dterm(d))
-
-    @functools.cache
-    def get_derivative_vector(d):
-        iv = [0]*len(context._dependent)
-        iv[idx(d)] += 1
-        return vector(order_of_derivative(d, len(context._independent)) + iv)
-        
-    i1 = get_derivative_vector(d1)
-    i2 = get_derivative_vector(d2)    
-    return context.gt(i1, i2)
+    return context.gt(i1.comparison_vector, i2.comparison_vector)
 
 
-@functools.cache
+#@functools.cache
 def sorter(d1, d2, context=Mgrevlex):
     '''sorts two derivatives d1 and d2 using the weight matrix M
     according to the sort order given in the tuple of  dependent and

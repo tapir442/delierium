@@ -14,7 +14,7 @@ from sage.graphs.graph import Graph
 from anytree import Node, RenderTree, AnyNode, NodeMixin, PreOrderIter
 
 
-@functools.cache
+#@functools.cache
 def eq(d1, d2):
     '''This cheap trick gives as a lot of performance gain (> 80%!)
     because maxima comparisons are expensive,and we can expect
@@ -79,14 +79,14 @@ def order_of_derivative(e, required_len=0):
     >>> d = diff(f, x,x,y,z,z,z)
     >>> from delierium.helpers import order_of_derivative
     >>> order_of_derivative (d)
-    [2, 1, 3]
+    ([2, 1, 3], f)
     '''
     opr = e.operator()
     opd = e.operands()
     if not isinstance(opr, sage.symbolic.operators.FDerivativeOperator):
         return [0] * max((len(e.variables()), required_len))
     res = [opr.parameter_set().count(i) for i in range(len(opd))]
-    return res
+    return (res, opr.function())
 
 
 def is_derivative(e):
@@ -378,21 +378,21 @@ class ExpressionTree:
     '''
     def __init__(self, expr):
         self.root = None
-        self.latex_names = {}        
+        self.latex_names = {}
         self.gschisti = set()
         self._expand(expr, self.root)
         self.diffs  = set([node.value for node in PreOrderIter(self.root) if node.value.operator().__class__ == FDerivativeOperator])
         self.funcs  = set([node.value for node in PreOrderIter(self.root) if node.value.operator().__class__.__name__ == 'NewSymbolicFunction'])
-        self.powers = set([node.value for node in PreOrderIter(self.root) if str(node.value.operator()) == '<built-in function pow>'])            
+        self.powers = set([node.value for node in PreOrderIter(self.root) if str(node.value.operator()) == '<built-in function pow>'])
         self.latex  = set([(node.value, node.latex) for node in PreOrderIter(self.root)])
-    
-    def _expand(self, e, parent):            
+
+    def _expand(self, e, parent):
         try:
             opr = e.operator()
         except AttributeError:  # e.g. if expr is an integer
-            opr = None       
+            opr = None
         l = ""
-        if opr:                
+        if opr:
             if "FDerivativeOperator" in opr.__class__.__name__:
                 l = "%s_{%s}" % (opr.function()._latex_(), ",".join([str(_) for _ in e.operands()]))
             elif "NewSymbolicFunction" in opr.__class__.__name__:
@@ -406,7 +406,7 @@ class ExpressionTree:
             self.latex_names[str(opr)] = opr._latex_()
         except AttributeError:
             self.latex_names[str(e)] = e._latex_()
-            
+
         n = Node(str(e), value = e, operator = opr, parent = parent, latex = l)
         self.root = n if self.root is None else self.root
         if opr is not None:
@@ -445,4 +445,3 @@ class ExpressionTree:
 # Sum
 # Symmetric Power
 # # Syzygys
-
