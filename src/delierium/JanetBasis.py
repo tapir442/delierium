@@ -47,7 +47,7 @@ class _Dterm:
         >>> f     = function("f")(x,y,z)
         >>> g     = function("g")(x,y,z)
         >>> h     = function("h")(x,y,z)
-        >>> ctx   = Context ((f,g),(x,y,z))
+        >>> ctx   = Context ((f,g,h),(x,y,z))
         >>> d     = (x**2) * diff(f, x, y)
         >>> dterm = _Dterm(d,ctx)
         >>> print (dterm)
@@ -116,7 +116,7 @@ class _Dterm:
         >>> f     = function("f")(x,y,z)
         >>> g     = function("g")(x,y,z)
         >>> h     = function("h")(x,y,z)
-        >>> ctx   = Context ((f,g,h),(x,y,z))
+        >>> ctx   = Context ((f,g,h),(x,y,z), Mlex)
         >>> d1    = (x**2) * diff(f, x, y)
         >>> d2    = diff(f, x, y, z)
         >>> dterm1 = _Dterm(d1,ctx)
@@ -147,7 +147,7 @@ class _Dterm:
         return latexer(self._d)
 
     def __hash__(self):
-        return hash(self._expression)
+        return hash(self.expression)
 
     def sorter(self, other):
         '''sorts two derivatives d1 and d2 using the weight matrix M
@@ -420,13 +420,10 @@ def _order(der, context):
 
 
 def _reduce_inner(e1, e2, context):
-    e2_order = e2.order
-    lf = e2.function
-    for t in (_ for _ in e1._p if eq(_.function, lf)):
+    for t in (_ for _ in e1._p if eq(_.function, e2.function)):
         # S1 from Algorithm 2.4
         c = t._coeff
-        e1_order = e1.order
-        dif = [a-b for a, b in zip(e1_order, e2_order)]
+        dif = [a-b for a, b in zip(t.order, e2.order)]
         if all(map(lambda h: h == 0, dif)):
             # S2 from Algorithm 2.4
             return _Differential_Polynomial(
@@ -612,15 +609,6 @@ def vec_multipliers(m, M, Vars):
     return mult, list(sorted(set(Vars) - set(mult)))
 
 
-#@functools.cache
-def derivative_to_vec(d, context):
-    # pretty sure that we don't need it
-    return order_of_derivative(d, len(context._independent))
-
-def find_multipliers_and_nonmultipliers(S, context):
-    pass
-
-
 def complete(S, context):
     """
     >>> # Example 3.2.6 from Iohara/Malbos, p.24
@@ -654,7 +642,6 @@ def complete(S, context):
         new_multipliers = My_Multiplier([tuple(_[1]) for _ in monomials]).mults
         for monom, dp in zip(monomials, result):
             # S1
-            _nonmultipliers = list(set(vars) - set())
             dp.multipliers = new_multipliers[tuple(monom[1])]
             dp.nonmultipliers = list(set(vars) - set(dp.multipliers))
             multiplier_collection.append((monom[1], dp))
@@ -849,8 +836,8 @@ class Janet_Basis:
         >>> checkS=Janet_Basis(system_2_24, (w,z), vars)
         >>> checkS.show()
         diff(z(x, y), y), [y, x], []
-        diff(w(x, y), y) + (-1/y) * w(x, y), [x ,y], []
         diff(z(x, y), x) + (1/2/y) * w(x, y), [y, x], []
+        diff(w(x, y), y) + (-1/y) * w(x, y), [x ,y], []
         diff(w(x, y), x), [x, y], []
         >>> vars = var ("x y")
         >>> z = function("z")(*vars)
@@ -896,7 +883,7 @@ class Janet_Basis:
         diff(z(x, y), x) + (1/2/y) * w(x, y), [y, x], []
         diff(z(x, y), y), [y, x], []
         """
-#        eq.cache_clear()
+        eq.cache_clear()
         context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # bad criterion
@@ -913,23 +900,22 @@ class Janet_Basis:
                 return
             old = self.S[:]
             loop += 1
-            print("*"*88)
-            print(f"This is where we start, {loop=}")
-#            set_trace()
-            for _ in self.S:
-                print(_)
+#            print("*"*88)
+#            print(f"This is where we start, {loop=}")
+#            for _ in self.S:
+#                print(_)
             self.S = Autoreduce(self.S, context)
-            print("after autoreduce")
-            for _ in self.S:
-                print(_)
+#            print("after autoreduce")
+#            for _ in self.S:
+#                print(_)
             self.S = CompleteSystem(self.S, context)
-            print("after complete system")
-            for _ in self.S:
-                print(_)
+#            print("after complete system")
+#            for _ in self.S:
+#                print(_)
             self.conditions = list(split_by_function(self.S, context))
 
-            print("This are the conditions")
-            print(f"{self.conditions}")
+#            print("This are the conditions")
+#            print(f"{self.conditions}")
             if not self.conditions:
                 self.S = Reorder(self.S, context, ascending=True)
                 return
@@ -940,8 +926,8 @@ class Janet_Basis:
             self.S += [_ for _ in reduced if
                        not (_ in self.S or eq(_.expression(), 0))]
             self.S = Reorder(self.S, context, ascending=True)
-            for _ in self.S:
-                print(_.Lder())
+ #           for _ in self.S:
+ #               print(_.Lder())
 
     def show(self, rich=False):
         """Print the Janet basis with leading derivative first."""

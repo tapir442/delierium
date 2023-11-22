@@ -14,7 +14,7 @@ from sage.graphs.graph import Graph
 from anytree import Node, RenderTree, AnyNode, NodeMixin, PreOrderIter
 
 
-#@functools.cache
+@functools.cache
 def eq(d1, d2):
     '''This cheap trick gives as a lot of performance gain (> 80%!)
     because maxima comparisons are expensive,and we can expect
