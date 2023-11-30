@@ -2,19 +2,19 @@
 Janet Basis
 """
 
+from delierium.typedefs import *
+
 import sage.all
 from sage.calculus.var import var, function
 from sage.misc.reset import reset
 from sage.modules.free_module_element import vector
 from sage.calculus.functional import diff
-try :
-    from delierium.helpers import (is_derivative, is_function, eq,
-                                   order_of_derivative, adiff, latexer)
+try:
+    from delierium.helpers import (is_derivative, is_function, eq, order_of_derivative, adiff, latexer)
     from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
     from delierium.Involution import My_Multiplier
 except ModuleNotFoundError:
-    from helpers import (is_derivative, is_function, eq,
-                         order_of_derivative, adiff, latexer)
+    from helpers import (is_derivative, is_function, eq, order_of_derivative, adiff, latexer)
     from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
     from Involution import My_Multiplier
 
@@ -32,6 +32,7 @@ from sage.repl.rich_output.pretty_print import pretty_print
 from IPython.core.debugger import set_trace
 from IPython.display import Math
 
+
 #@functools.cache
 def func(e):
     try:
@@ -39,7 +40,9 @@ def func(e):
     except AttributeError:
         return e.operator()
 
+
 class _Dterm:
+
     def __init__(self, e, context=None):
         r'''differential term
 
@@ -54,10 +57,10 @@ class _Dterm:
         (x^2) * diff(f(x, y, z), x, y)
         '''
         self._coeff, self._d = 1, 1
-        self._context        = context
-        self._has_minus      = False
+        self._context = context
+        self._has_minus = False
         if is_derivative(e) or is_function(e):
-            self._d     = e
+            self._d = e
         else:
             r = []
             for o in e.operands():
@@ -73,17 +76,16 @@ class _Dterm:
         self.expression = self._coeff * self._d
 
     def _compute_comparison_vector(self):
-        iv = [0]*len(self._context._dependent)
+        iv = [0] * len(self._context._dependent)
         if self.function in self._context._dependent:
             iv[self._context._dependent.index(self.function)] += 1
         return vector(self.order + iv)
-
 
     def __str__(self):
         try:
             return f"({self._coeff.expression()}) * {self._d}"
         except AttributeError:
-            if eq (self._coeff, 1):
+            if eq(self._coeff, 1):
                 return f"{self._d}"
             return f"({self._coeff}) * { self._d}"
 
@@ -129,7 +131,9 @@ class _Dterm:
         return not eq(self, other) and \
             self._context.gt(self.comparison_vector, other.comparison_vector)
 
+
 #    @functools.cache
+
     def __eq__(self, other):
         return eq(self._d, other._d) and eq(self._coeff, other._coeff)
 
@@ -141,9 +145,9 @@ class _Dterm:
         denominator_pattern = re.compile(r"(-)?\\frac\{.*}{(.* )?(?P<nomfunc>\w+)?\\left\((?P<vars>[\w ,]*)\\right\).*")
         while match := denominator_pattern.match(dlatex):
             to_replace = rf"{match.groupdict()['nomfunc']}\left({match.groupdict()['vars']}\right)"
-            dlatex = dlatex.replace (to_replace, match.groupdict()['nomfunc'])
+            dlatex = dlatex.replace(to_replace, match.groupdict()['nomfunc'])
         if self._coeff != 1:
-            return " ".join ((dlatex, latexer(self._d)))
+            return " ".join((dlatex, latexer(self._d)))
         return latexer(self._d)
 
     def __hash__(self):
@@ -193,14 +197,16 @@ class _Dterm:
 
 
 class _Differential_Polynomial:
+
     def __init__(self, e, context):
         self._context = context
         self._p = []
-        self.multipliers    = []
+        self.multipliers = []
         self.nonmultipliers = []
 
         if not eq(0, e):
             self._init(e.expand())
+
     def _init(self, e):
         if is_derivative(e) or is_function(e):
             self._p.append(_Dterm(e, self._context))
@@ -228,12 +234,10 @@ class _Differential_Polynomial:
                     else:
                         self._p.append(_Dterm(coeff, self._context))
 
-        self._p.sort(key=functools.cmp_to_key(
-            lambda item1, item2: item1.sorter(item2)), reverse=True
-        )
+        self._p.sort(key=functools.cmp_to_key(lambda item1, item2: item1.sorter(item2)), reverse=True)
         self.normalize()
         self.order = self._p[0].order
-        self.function =  self._p[0].function
+        self.function = self._p[0].function
 
     def expression(self):
         return self._expression
@@ -246,7 +250,6 @@ class _Differential_Polynomial:
 
     def show_derivatives(self):
         print(self.derivatives())
-
 
     def Lterm(self):
         return self._p[0].term()
@@ -281,8 +284,7 @@ class _Differential_Polynomial:
     def normalize(self):
         if self._p and self._p[0]._coeff != 1:
             c = self._p[0]._coeff
-            self._p = [_Dterm((_._coeff / c).simplify() * _._d, self._context)
-                       for _ in self._p]
+            self._p = [_Dterm((_._coeff / c).simplify() * _._d, self._context) for _ in self._p]
         self._expression = sum(_.expression() for _ in self._p)
 
     def __nonzero__(self):
@@ -332,21 +334,18 @@ class _Differential_Polynomial:
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ...
 def Reorder(S, context, ascending=False):
-    s = list(sorted(S, key=functools.cmp_to_key(
-        lambda item1, item2:
-            item1._p[0].sorter(item2._p[0])),
-        reverse=not ascending))
-#    from more_itertools import pairwise
-#    print(context._dependent, context._independent)
-#    for k in pairwise(s):
-#        print(k[0].Lder(), k[1].Lder())
-#    assert all(map(lambda a: a[0].Lder() <= a[1].Lder(), pairwise(s)))
+    s = list(
+        sorted(S, key=functools.cmp_to_key(lambda item1, item2: item1._p[0].sorter(item2._p[0])),
+               reverse=not ascending))
+    #    from more_itertools import pairwise
+    #    print(context._dependent, context._independent)
+    #    for k in pairwise(s):
+    #        print(k[0].Lder(), k[1].Lder())
+    #    assert all(map(lambda a: a[0].Lder() <= a[1].Lder(), pairwise(s)))
     return s
 
 
-
-def reduceS(e: _Differential_Polynomial,
-            S: list, context: Context) -> _Differential_Polynomial:
+def reduceS(e: _Differential_Polynomial, S: list, context: Context) -> _Differential_Polynomial:
     """
     Algorithm 2.5 from Schwarz, p.48
     >>> # Example 2.34, p.48
@@ -411,23 +410,23 @@ def reduceS(e: _Differential_Polynomial,
                 reducing = True
     return enew
 
+
 #@functools.cache
 def _order(der, context):
     # pretty sure we don't need it
     if der != 1:
         return order_of_derivative(der, len(context._independent))
-    return [0]*len(context._independent)
+    return [0] * len(context._independent)
 
 
 def _reduce_inner(e1, e2, context):
     for t in (_ for _ in e1._p if eq(_.function, e2.function)):
         # S1 from Algorithm 2.4
         c = t._coeff
-        dif = [a-b for a, b in zip(t.order, e2.order)]
+        dif = [a - b for a, b in zip(t.order, e2.order)]
         if all(map(lambda h: h == 0, dif)):
             # S2 from Algorithm 2.4
-            return _Differential_Polynomial(
-                e1.expression() - e2.expression() * c, context)
+            return _Differential_Polynomial(e1.expression() - e2.expression() * c, context)
         if all(map(lambda h: h >= 0, dif)):
             # S2 from Algorithm 2.4
             # toDo: as diff also accepts zerozh derivatives we may
@@ -435,16 +434,12 @@ def _reduce_inner(e1, e2, context):
             variables_to_diff = []
             for i in range(len(context._independent)):
                 if dif[i] != 0:
-                    variables_to_diff.extend([context._independent[i]]*abs(dif[i]))
-            return _Differential_Polynomial(
-                e1.expression() - c*diff(e2.expression(), *variables_to_diff),
-                context)
+                    variables_to_diff.extend([context._independent[i]] * abs(dif[i]))
+            return _Differential_Polynomial(e1.expression() - c * diff(e2.expression(), *variables_to_diff), context)
     return e1
 
 
-def reduce(e1: _Differential_Polynomial,
-           e2: _Differential_Polynomial,
-           context: Context) -> _Differential_Polynomial:
+def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial, context: Context) -> _Differential_Polynomial:
     """
     Algorithm 2.4 from Schwarz, p.48
     >>> # Example 2.33(f1), p.48
@@ -469,6 +464,7 @@ def reduce(e1: _Differential_Polynomial,
     while not bool((_e1 := _reduce_inner(e1, e2, context)) == e1):
         e1 = _e1
     return _e1
+
 
 def Autoreduce(S, context):
     """
@@ -498,7 +494,7 @@ def Autoreduce(S, context):
     """
     dps = list(S)
     i = 0
-    _p, r = dps[:i+1], dps[i+1:]
+    _p, r = dps[:i + 1], dps[i + 1:]
     while r:
         newdps = []
         have_reduced = False
@@ -511,7 +507,7 @@ def Autoreduce(S, context):
             i += 1
         else:
             i = 0
-        _p, r = dps[:i+1], dps[i+1:]
+        _p, r = dps[:i + 1], dps[i + 1:]
     return dps
 
 
@@ -635,7 +631,7 @@ def complete(S, context):
 
     while 1:
         monomials = [(_, _.order) for _ in result]
-        ms        = tuple([_[1] for _ in monomials])
+        ms = tuple([_[1] for _ in monomials])
         m0 = []
 
         multiplier_collection = []
@@ -790,19 +786,17 @@ def FindIntegrableConditions(S, context):
     multiplier_collection = []
     monomial_tuples = [tuple(_[1]) for _ in monomials]
     new_multipliers = My_Multiplier(monomial_tuples).mults
-    for mon, dp in zip (monomial_tuples, result):
+    for mon, dp in zip(monomial_tuples, result):
         # S1
         # damned! Variables are messed up!
         _multipliers = new_multipliers[mon]
         _nonmultipliers = list(set(vars) - set(_multipliers))
         multiplier_collection.append(
-            (dp,
-             [map_old_to_new(_) for _ in _multipliers],
-             [map_old_to_new(_) for _ in _nonmultipliers]
-             ))
+            (dp, [map_old_to_new(_) for _ in _multipliers], [map_old_to_new(_) for _ in _nonmultipliers]))
     result = []
     for e1, e2 in product(multiplier_collection, repeat=2):
-        if e1 is e2: continue
+        if e1 is e2:
+            continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
                 if eq(adiff(e1[0].Lder(), context, n), adiff(e2[0].Lder(), context, *m)):
@@ -816,6 +810,7 @@ def FindIntegrableConditions(S, context):
 
 
 class Janet_Basis:
+
     def __init__(self, S, dependent, independent, sort_order=Mgrevlex):
         """
         Parameters:
@@ -891,7 +886,7 @@ class Janet_Basis:
         else:
             self.S = S[:]
         old = []
-        self.S = Reorder([_Differential_Polynomial(s, context) for s in self.S], context, ascending = True)
+        self.S = Reorder([_Differential_Polynomial(s, context) for s in self.S], context, ascending=True)
         loop = 0
         while 1:
             # XXX try 'is'instead of '=='
@@ -900,34 +895,33 @@ class Janet_Basis:
                 return
             old = self.S[:]
             loop += 1
-#            print("*"*88)
-#            print(f"This is where we start, {loop=}")
-#            for _ in self.S:
-#                print(_)
+            #            print("*"*88)
+            #            print(f"This is where we start, {loop=}")
+            #            for _ in self.S:
+            #                print(_)
             self.S = Autoreduce(self.S, context)
-#            print("after autoreduce")
-#            for _ in self.S:
-#                print(_)
+            #            print("after autoreduce")
+            #            for _ in self.S:
+            #                print(_)
             self.S = CompleteSystem(self.S, context)
-#            print("after complete system")
-#            for _ in self.S:
-#                print(_)
+            #            print("after complete system")
+            #            for _ in self.S:
+            #                print(_)
             self.conditions = list(split_by_function(self.S, context))
 
-#            print("This are the conditions")
-#            print(f"{self.conditions}")
+            #            print("This are the conditions")
+            #            print(f"{self.conditions}")
             if not self.conditions:
                 self.S = Reorder(self.S, context, ascending=True)
                 return
 
-            reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context)
-                       for _m in self.conditions
-                       ]
-            self.S += [_ for _ in reduced if
-                       not (_ in self.S or eq(_.expression(), 0))]
+            reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context) for _m in self.conditions]
+            self.S += [_ for _ in reduced if not (_ in self.S or eq(_.expression(), 0))]
             self.S = Reorder(self.S, context, ascending=True)
- #           for _ in self.S:
- #               print(_.Lder())
+
+
+#           for _ in self.S:
+#               print(_.Lder())
 
     def show(self, rich=False):
         """Print the Janet basis with leading derivative first."""
@@ -936,7 +930,6 @@ class Janet_Basis:
                 display(Math(_.show()))
             else:
                 print(_)
-
 
     def rank(self):
         """Return the rank of the computed Janet basis."""
@@ -952,7 +945,6 @@ class Janet_Basis:
         '''Computes the type of the Janet Basis, i.e. the leading derivatives
         '''
         self._type = [_.Lder() for _ in self.S]
-
 
 if __name__ == "__main__":
     import doctest
