@@ -10,11 +10,11 @@ from sage.misc.reset import reset
 from sage.modules.free_module_element import vector
 from sage.calculus.functional import diff
 try:
-    from delierium.helpers import (is_derivative, is_function, eq, order_of_derivative, adiff, latexer)
+    from delierium.helpers import (is_derivative, is_function, eq, order_of_derivative, adiff, latexer, pairs_exclude_diagonal)
     from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
     from delierium.Involution import My_Multiplier
 except ModuleNotFoundError:
-    from helpers import (is_derivative, is_function, eq, order_of_derivative, adiff, latexer)
+    from helpers import (is_derivative, is_function, eq, order_of_derivative, adiff, latexer, pairs_exclude_diagonal)
     from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
     from Involution import My_Multiplier
 
@@ -25,9 +25,7 @@ from more_itertools import powerset, bucket, flatten
 from itertools import product, islice
 
 from sage.misc.latex import latex
-from sage.misc.html import html
 import re
-from sage.repl.rich_output.pretty_print import pretty_print
 
 from IPython.core.debugger import set_trace
 from IPython.display import Math
@@ -59,21 +57,28 @@ class _Dterm:
         self._coeff, self._d = 1, 1
         self._context = context
         self._has_minus = False
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa")
+        print(f"{e=}")
+        print(f"{is_derivative(e)=}, {is_function(e)=}")
         if is_derivative(e) or is_function(e):
             self._d = e
         else:
-            r = []
             for o in e.operands():
-                if is_derivative(o) or is_function(o):
+                print(f"{o=}")
+                print(f"{is_derivative(o)=}, {is_function(o)=}, {ctxfunc(o, self._context)=}")
+
+                # XXX code duplication ?
+                if (is_derivative(o) and ctxfunc(o, self._context)) or is_function(o):
                     self._d = o
+                    print("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
                 else:
                     if o == -1:
                         self._has_minus = True
                     self._coeff *= o
-                    r.append(o)
         self.order, self.function = self._compute_order()
         self.comparison_vector = self._compute_comparison_vector()
         self.expression = self._coeff * self._d
+        print(f"MMMMMMMMMMMMMMMMM, {str(self)=}")
 
     def _compute_comparison_vector(self):
         iv = [0] * len(self._context._dependent)
@@ -95,7 +100,7 @@ class _Dterm:
     def _compute_order(self):
         """computes the monomial tuple from the derivative part"""
         if is_derivative(self._d):
-            return order_of_derivative(self._d, len(self._context._independent))
+            return order_of_derivative(self._d, self._context, len(self._context._independent))
         # XXX: Check can that be within a system of linead PDEs ?
         return [0] * len(self._context._independent), None
 
@@ -195,6 +200,10 @@ class _Dterm:
             return 1
         return -1
 
+#XXX move to context
+def ctxfunc(e, context):
+    return func(e) and func(e) in context._dependent
+
 
 class _Differential_Polynomial:
 
@@ -219,7 +228,14 @@ class _Differential_Polynomial:
                     d.append(s)
                 else:
                     for item in s.operands():
-                        (d if (is_derivative(item) or self.ctxfunc(item)) else coeff).append(item)
+                        if is_derivative(item):
+                            try:
+                                if ctxfunc(item, self.context):
+                                    d.append(item)
+                            except AttributeError:
+                                coeff.append(item)
+                        else:
+                            coeff.append(item)
                 coeff = functools.reduce(mul, coeff, 1)
                 found = False
                 if d:
@@ -242,8 +258,6 @@ class _Differential_Polynomial:
     def expression(self):
         return self._expression
 
-    def ctxfunc(self, e):
-        return func(e) and func(e) in self._context._dependent
 
     def _collect_terms(self, e):
         pass
@@ -415,7 +429,7 @@ def reduceS(e: _Differential_Polynomial, S: list, context: Context) -> _Differen
 def _order(der, context):
     # pretty sure we don't need it
     if der != 1:
-        return order_of_derivative(der, len(context._independent))
+        return order_of_derivative(der, context, len(context._independent))
     return [0] * len(context._independent)
 
 
@@ -605,6 +619,10 @@ def vec_multipliers(m, M, Vars):
     return mult, list(sorted(set(Vars) - set(mult)))
 
 
+def map_old_to_new(v, context):
+    return context._independent[len(context._independent) - v - 1]
+
+
 def complete(S, context):
     """
     >>> # Example 3.2.6 from Iohara/Malbos, p.24
@@ -621,27 +639,21 @@ def complete(S, context):
     >>> complete([dp1, dp2,dp3,dp4,dp5,dp6], ctx)
 
     """
-    result = list(S)
-    if len(result) == 1:
-        return result
-    vars = list(range(len(context._independent)))
 
-    def map_old_to_new(v):
-        return context._independent[vars.index(v)]
+    result = list(S)
+    vars = list(range(len(context._independent)))
 
     while 1:
         monomials = [(_, _.order) for _ in result]
-        ms = tuple([_[1] for _ in monomials])
-        m0 = []
-
         multiplier_collection = []
-        new_multipliers = My_Multiplier([tuple(_[1]) for _ in monomials]).mults
+        new_multipliers = My_Multiplier([tuple(reversed(_[1])) for _ in monomials]).mults
         for monom, dp in zip(monomials, result):
             # S1
-            dp.multipliers = new_multipliers[tuple(monom[1])]
+            dp.multipliers = new_multipliers[tuple(reversed(monom[1]))]
             dp.nonmultipliers = list(set(vars) - set(dp.multipliers))
-            multiplier_collection.append((monom[1], dp))
+            multiplier_collection.append((tuple(reversed(monom[1])), dp))
 
+        m0 = []
         for monom, dp in multiplier_collection:
             if not dp.nonmultipliers:
                 m0.append((monom, None, dp))
@@ -668,7 +680,7 @@ def complete(S, context):
             return result
         else:
             for _m0 in m0:
-                dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new(_m0[1])).expression(), context)
+                dp = _Differential_Polynomial(_m0[2].diff(map_old_to_new(_m0[1], context)).expression(), context)
                 if dp not in result:
                     result.append(dp)
         result = Reorder(result, context, ascending=False)
@@ -730,6 +742,9 @@ def split_by_function(S, context):
     s = bucket(S, key=lambda d: d.Lfunc())
     return flatten([FindIntegrableConditions(s[k], context) for k in s])
 
+from collections import namedtuple
+dp_with_mults = namedtuple("dp_with_mults", ["dp", "mult", "nonmult"])
+
 
 def FindIntegrableConditions(S, context):
     """
@@ -772,40 +787,40 @@ def FindIntegrableConditions(S, context):
     diff(z(x, y), x, x, y) + (12*y^2) * diff(z(x, y), y, y) + (12*y) * diff(z(x, y), y)
     """
     result = list(S)
-    if len(result) == 1:
-        return []
     vars = list(range(len(context._independent)))
     monomials = [(_, _.order) for _ in result]
 
-    ms = tuple([_[1] for _ in monomials])
-
-    def map_old_to_new(i):
-        return context._independent[vars.index(i)]
-
     # multiplier-collection is our M
     multiplier_collection = []
-    monomial_tuples = [tuple(_[1]) for _ in monomials]
-    new_multipliers = My_Multiplier(monomial_tuples).mults
-    for mon, dp in zip(monomial_tuples, result):
+    new_multipliers = My_Multiplier([tuple(reversed(_[1])) for _ in monomials]).mults
+    set_trace()
+    for monom, dp in zip(monomials, result):
         # S1
-        # damned! Variables are messed up!
-        _multipliers = new_multipliers[mon]
+        _multipliers = new_multipliers[tuple(reversed(monom[1]))]
         _nonmultipliers = list(set(vars) - set(_multipliers))
         multiplier_collection.append(
-            (dp, [map_old_to_new(_) for _ in _multipliers], [map_old_to_new(_) for _ in _nonmultipliers]))
+            dp_with_mults(dp,
+                          [map_old_to_new(_, context) for _ in _multipliers],
+                          [map_old_to_new(_, context) for _ in _nonmultipliers]
+                          )
+        )
     result = []
-    for e1, e2 in product(multiplier_collection, repeat=2):
-        if e1 is e2:
-            continue
-        for n in e1[2]:
-            for m in islice(powerset(e2[1]), 1, None):
-                if eq(adiff(e1[0].Lder(), context, n), adiff(e2[0].Lder(), context, *m)):
+    for e1, e2 in pairs_exclude_diagonal(multiplier_collection):
+        for n in e1.nonmult:
+            print(f"{str(e1)=}, {n=}")
+            for m in islice(powerset(e2.mult), 1, None):
+                print(f"{str(e2)=}, {m=}")
+                print(f"{e1.dp.Lder()}, {adiff(e1.dp.Lder(), context, n)=}, {adiff(e2.dp.Lder(), context, *m)=}")
+                if eq(adiff(e1.dp.Lder(), context, n), adiff(e2.dp.Lder(), context, *m)):
                     # integrability condition
                     # don't need leading coefficients because in DPs
                     # it is always 1
-                    c = adiff(e1[0].expression(), context, n) - \
-                        adiff(e2[0].expression(), context, *m)
-                    result.append(c)
+                    print("AAAAAAAAAAAAA")
+                    c = adiff(e1.dp.expression(), context, n) - \
+                        adiff(e2.dp.expression(), context, *m)
+                    if c != 0:
+                        print(f"adding {c=} to result")
+                        result.append(c)
     return result
 
 
@@ -878,7 +893,7 @@ class Janet_Basis:
         diff(z(x, y), x) + (1/2/y) * w(x, y), [y, x], []
         diff(z(x, y), y), [y, x], []
         """
-        eq.cache_clear()
+#        eq.cache_clear()
         context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # bad criterion

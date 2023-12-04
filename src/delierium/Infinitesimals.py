@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Created on Fri Jan  7 18:49:33 2022
 
@@ -65,7 +63,7 @@ def prolongation(eq, dependent, independent):
     >>> print(prolongation([diff(y(x),x,2)], [y], [x])[0].expand())
     -D[1, 1](xi_1)(x, y(x))*diff(y(x), x)^3 + D[1, 1](phi_1)(x, y(x))*diff(y(x), x)^2 - 2*D[0, 1](xi_1)(x, y(x))*diff(y(x), x)^2 - 3*D[1](xi_1)(x, y(x))*diff(y(x), x)*diff(y(x), x, x) + 2*D[0, 1](phi_1)(x, y(x))*diff(y(x), x) - D[0, 0](xi_1)(x, y(x))*diff(y(x), x) + D[1](phi_1)(x, y(x))*diff(y(x), x, x) - 2*D[0](xi_1)(x, y(x))*diff(y(x), x, x) + D[0, 0](phi_1)(x, y(x))
     """
-    
+
     Depend = [d(*independent) for d in dependent]
     vars   = independent + Depend
     xi     = [function("xi_%s" % (j+1), latex_name = r"\xi_{i+1}") for j in range(len(independent))]
@@ -95,9 +93,9 @@ def prolongation(eq, dependent, independent):
     return prol
 
 
-def prolongationODE(equations, 
-                    dependent, 
-                    independent, 
+def prolongationODE(equations,
+                    dependent,
+                    independent,
                     infinitesimals=None):
     """
     >>> # Baumann, ex 1, pp.136
@@ -138,23 +136,23 @@ from collections import namedtuple
 term = namedtuple("term", ["power", "coeff"])
 import types
 
-def overdeterminedSystemODE (ode, 
-                       dependent, 
-                       independent,  
+def overdeterminedSystemODE (ode,
+                       dependent,
+                       independent,
                        infinitesimals=None
                        , *args, **kw):
     """Computes the overdetermined system which is computed from the prolongation
     of an ODE of order > 1
-    
+
     Parameters
     ----------
     ode: a sagemath expression as the left side of '<expr> == 0'. No need to
         add " == 0'!!
     dependent: the name of the dependent variable, i.e. the unknown function
-    independent: 
+    independent:
         the name of the independent variable
-    infinitesimals: ordered pair of sagemath variables, to be used as the names 
-        for the infinitesimals, to avoid potential name clashes with  variables in your 
+    infinitesimals: ordered pair of sagemath variables, to be used as the names
+        for the infinitesimals, to avoid potential name clashes with  variables in your
         application. If not specified, 'xi' and 'phi' are used as the defaults
 
     Returns
@@ -162,8 +160,8 @@ def overdeterminedSystemODE (ode,
     list
         a list of expressions, each expression to be interpreted as left side of an
         'expr' == 0. For further manipulation ane has to add ' == 0'.
-    
-    
+
+
     >>> # Arrigo Example 2.20
     >>> x   = var('x')
     >>> y   = function('y')
@@ -171,7 +169,7 @@ def overdeterminedSystemODE (ode,
     >>> X=function('X')
     >>> Y=function('Y')
     >>> inf = overdeterminedSystemODE(ode, y, x, infinitesimals=(X,Y))
-    >>> for _ in inf: 
+    >>> for _ in inf:
     ...     print(_)
     -3*D[0](X)(y(x), x)
     -6*D[0, 0](X)(y(x), x)
@@ -186,7 +184,7 @@ def overdeterminedSystemODE (ode,
     if infinitesimals is None:
         infinitesimals = (function("xi", latex_name=r"\xi"), function("phi", latex_name=r"\phi"))
     prolongation = prolongationODE(ode, dependent, independent, infinitesimals=infinitesimals)[0].expand()
-    tree = ExpressionTree(prolongation)         
+    tree = ExpressionTree(prolongation)
     mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
     order= max([len(_.operator().parameter_set()) for _ in mine])
     if order == 1:
@@ -194,7 +192,7 @@ def overdeterminedSystemODE (ode,
         return []
     s1  = solve(ode==0, diff(dependent(independent),independent, order))
     ode1 = prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
-    tree = ExpressionTree(ode1)    
+    tree = ExpressionTree(ode1)
     l = (_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent, order)))
     equations = []
     e         = next(l)
@@ -203,16 +201,16 @@ def overdeterminedSystemODE (ode,
         # powercollector: an array which stores powers of derivatives
         # the index is the(reversed) order, the value is the power
         # of the derivative.
-        # Example: we have an ODE of order three. The prolongation and 
+        # Example: we have an ODE of order three. The prolongation and
         # substitution step produces 'ode1' which is now of reduced order
         # two. So we can have differentials of order one and to, so we need an
         # array of lenght two which is initialized with zeroes. A term like
-        #    diff(y, x)^5 * diff(y, x, x)^2 
-        # will create the entry 
+        #    diff(y, x)^5 * diff(y, x, x)^2
+        # will create the entry
         #    [2,5]
         # The higher order (=2) has power 2, so the first entry (=highest order)
         # will be set to 2, the lowest order(=1) has power 5, so the index 1 contains
-        # the power 5. This way we now have on ordered list which than can be 
+        # the power 5. This way we now have on ordered list which than can be
         # looped over from highest_order^highest_power to lowest_order^lowest_power
         # to factor out the derivatives to get the determining equations
         powercollector = [0]*(order-1)
@@ -223,7 +221,7 @@ def overdeterminedSystemODE (ode,
             # standalone diff operator
             if v.operands()[0] != independent:
                 # differential coming from prolongation, ignore
-                continue           
+                continue
             powercollector[order - len(v.operator().parameter_set())-1] = 1
             all_this_stuff.add(term(tuple(powercollector), v))
             continue
@@ -236,20 +234,20 @@ def overdeterminedSystemODE (ode,
             for w in v.operands():
                 if isinstance(w.operator(), FDerivativeOperator):
                     if w.operands()[0] != independent:
-                        # differential coming from prolongation, ignore                        
+                        # differential coming from prolongation, ignore
                         continue
-                    local_term *= w                        
+                    local_term *= w
                     powercollector[order - len(w.operator().parameter_set())-1] = 1
                 if isinstance(w.operator(), types.BuiltinFunctionType):
                     if w.operator().__qualname__ != 'pow':
                         continue
                     if isinstance (w.operands()[0].operator(), FDerivativeOperator):
                         if w.operands()[0].operands()[0] != independent:
-                            # differential coming from prolongation, ignore                            
+                            # differential coming from prolongation, ignore
                             continue
                         local_term *= w
                         powercollector[order - len(w.operands()[0].operator().parameter_set())-1] = w.operands()[-1]
-                        
+
             if powercollector != [0]*(order-1):
                 all_this_stuff.add(term(tuple(powercollector), local_term))
     for _ in reversed(sorted(all_this_stuff)):
@@ -263,17 +261,17 @@ def overdeterminedSystemODE (ode,
 
 def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
     overdetermined_system = overdeterminedSystemODE(ode, dependent, independent)
-    #ToDo: 2 way: 
-    #    * either as Janet_Basis 
+    #ToDo: 2 way:
+    #    * either as Janet_Basis
     #    * or try to solve the undetermined system
     Y = var('Y')
     intermediate_system = []
     for e in overdetermined_system:
         # ToDo: make the next three lines into a function for helpers(code duplication
         #       with overdeterminedSystemODE. Idea: return a dict with {function: order}#
-        tree = ExpressionTree(e)        
+        tree = ExpressionTree(e)
         mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
-        order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0  
+        order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0
         e = e.subs({dependent(independent) : Y})
         for j in range(1, order+1):
             d = diff(dependent(independent), independent, j)
@@ -282,7 +280,7 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
     # ToDo: get rid of hardcoded phi and xi
     janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
     pols = map(lambda _ : _.expression().subs({Y : dependent(independent)}), janet.S)
-    return pols    
+    return pols
 
 
 if __name__ == "__main__":

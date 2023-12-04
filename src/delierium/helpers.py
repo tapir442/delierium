@@ -1,5 +1,6 @@
-from sage.all import *
+import sage.all
 import functools
+import itertools
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
 from sage.symbolic.operators import FDerivativeOperator
@@ -14,7 +15,7 @@ from sage.graphs.graph import Graph
 from anytree import Node, RenderTree, AnyNode, NodeMixin, PreOrderIter
 
 
-@functools.cache
+#@functools.cache
 def eq(d1, d2):
     '''This cheap trick gives as a lot of performance gain (> 80%!)
     because maxima comparisons are expensive,and we can expect
@@ -24,6 +25,10 @@ def eq(d1, d2):
     '''
     return bool((d1 is d2) or (d1 == d2))
 
+def pairs_exclude_diagonal(it):
+    for x, y in itertools.product(it, repeat=2):
+        if x != y:
+            yield (x, y)
 
 def tangent_vector(f):
     # https://doc.sagemath.org/html/en/reference/manifolds/sage/manifolds/differentiable/tangent_vector.html?highlight=partial%20differential
@@ -71,23 +76,26 @@ def tangent_vector(f):
 
 
 @functools.cache
-def order_of_derivative(e, required_len=0):
+def order_of_derivative(e, context, required_len=0):
     '''Returns the vector of the orders of a derivative respect to its variables
 
     >>> x,y,z = var ("x,y,z")
     >>> f = function("f")(x,y,z)
+    >>> ctx = Context([f], [x,y,z])
     >>> d = diff(f, x,x,y,z,z,z)
     >>> from delierium.helpers import order_of_derivative
-    >>> order_of_derivative (d)
+    >>> order_of_derivative (d, ctx)
     ([2, 1, 3], f)
     '''
-    opr = e.operator()
-    opd = e.operands()
-    if not isinstance(opr, sage.symbolic.operators.FDerivativeOperator):
-        return [0] * max((len(e.variables()), required_len))
-    res = [opr.parameter_set().count(i) for i in range(len(opd))]
-    return (res, opr.function())
+    res = [0] * max((len(e.variables()), required_len))
 
+    if not is_derivative(e):
+        return res
+    opr = e.operator()
+    for variable in e.variables():
+        i = context._independent.index(variable)
+        res[i] = opr.parameter_set().count(i)
+    return (res, opr.function())
 
 def is_derivative(e):
     '''checks whether an expression 'e' is a pure derivative
