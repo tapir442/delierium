@@ -117,7 +117,7 @@ class Context:
         """Computes the weigthed difference vector of v1 and v2
         and returns 'True' if the first nonzero entry is > 0
         """
-        r = self._weight * vector(v1-v2)
+        r = self._weight * (vector(v1)-vector(v2))
         for entry in r:
             if entry:
                 return entry > 0
