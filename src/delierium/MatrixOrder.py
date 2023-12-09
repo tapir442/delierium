@@ -12,6 +12,7 @@ from sage.misc.prandom import shuffle
 from functools import cmp_to_key
 import doctest
 
+from delierium.exception import DelieriumInconsistentVariableOrder
 
 import functools
 from delierium.helpers import eq, is_derivative, \
@@ -105,10 +106,13 @@ def Mgrevlex(funcs, vars):
 
 class Context:
     __slots__ = ["_dependent", "_independent", "_weight"]
+    # ToDo: raise a warning when order of functions variables differs from context
     def __init__ (self, dependent, independent, weight = Mgrevlex):
         """ sorting : (in)dependent [i] > dependent [i+i]
         """
         self._independent = tuple(independent)
+        if len(set(tuple(_.operands()) for _ in dependent)) > 1:
+            raise DelieriumInconsistentVariableOrder(dependent)
         self._dependent   = tuple((_.operator() if is_function(_) else _
                                    for _ in dependent))
         self._weight      = weight (self._dependent, self._independent)
