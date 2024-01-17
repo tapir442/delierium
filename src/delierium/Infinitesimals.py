@@ -278,6 +278,7 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
             e = e.subs({d : 0})
         intermediate_system.append(e)
     # ToDo: get rid of hardcoded phi and xi
+
     janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
     pols = map(lambda _ : _.expression().subs({Y : dependent(independent)}), janet.S)
     return pols

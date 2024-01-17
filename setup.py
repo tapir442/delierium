@@ -5,14 +5,6 @@ import fnmatch
 
 here = pathlib.Path(__file__).parent.resolve()
 
-excluded=['src/delierium/Involution.py',
-          'src/delierium/JanetBasis.py',
-          'src/delierium/MatrixOrder.py',
-          'src/delierium/higher_infinitesimals.py',
-          'src/tests/*']
-
-
-print("O"*88)
 excluded = []
 class build_py(build_py_orig):
     def find_package_modules(self, package, package_dir):
@@ -34,7 +26,7 @@ setup(
     long_description_content_type='text/markdown',
     setup_requires=["more-itertools", "anytree"],
     install_requires=["more-itertools", "anytree"],
-    python_requires = ">=3.10",
+    python_requires = ">=3.11",
     author='Martin Mayerhofer-Schöpf',
     author_email='tapir@aon.at',
     license='MIT',
@@ -46,8 +38,6 @@ setup(
         'Topic :: Scientific/Engineering :: Mathematics'
         ],
     keywords='ODE PDE Lie Symmetry',
-    package_dir={"": "src"},
-    packages=find_packages() + find_packages("src"),
     cmdclass={'build_py': build_py},
     package_data={'delierium/notebooks' : ['notebooks/Arrigo_Chapter_2.5.ipynb']},
     project_urls={'Source': 'https://github.com/tapir442/delierium'}

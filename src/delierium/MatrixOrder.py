@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import sage.all
+#import sage.all
 from sage.matrix.constructor import identity_matrix, matrix, Matrix
 from sage.calculus.var import var, function
 from sage.calculus.functional import diff
@@ -105,14 +105,14 @@ def Mgrevlex(funcs, vars):
 
 
 class Context:
-    __slots__ = ["_dependent", "_independent", "_weight"]
     # ToDo: raise a warning when order of functions variables differs from context
     def __init__ (self, dependent, independent, weight = Mgrevlex):
-        """ sorting : (in)dependent [i] > dependent [i+i]
+        """ sorting : (in)dependent [i] > (in)dependent [i+i]
+        which means: descending
         """
         self._independent = tuple(independent)
-        if len(set(tuple(_.operands()) for _ in dependent)) > 1:
-            raise DelieriumInconsistentVariableOrder(dependent)
+#        if len(set(tuple(_.operands()) for _ in dependent)) > 1:
+#            raise DelieriumInconsistentVariableOrder(dependent)
         self._dependent   = tuple((_.operator() if is_function(_) else _
                                    for _ in dependent))
         self._weight      = weight (self._dependent, self._independent)
@@ -127,11 +127,39 @@ class Context:
                 return entry > 0
         return False
 
+    def is_ctxfunc(self, f):
+        return is_function(f) and f in self._dependent
+
+    def order_of_derivative(self, e):
+        """Returns the vector of the orders of a derivative respect to its variables
+
+        >>> x,y,z = var ("x,y,z")
+        >>> f = function("f")(x,y,z)
+        >>> ctx = Context([f], [x,y,z])
+        >>> d = diff(f, x,x,y,z,z,z)
+        >>> from delierium.helpers import order_of_derivative
+        >>> ctx.order_of_derivative (d)
+        ([2, 1, 3], f)
+        """
+        res = [0] * len(e.variables())
+        if not is_derivative(e):
+            return res, None
+        for idx, variable in enumerate(e.variables()):
+            # XXX. here seems to be the crucial part: order can depend on:
+            # - either the order given by sage by
+            # -- sage order
+            # -- order given by the order given by function definition
+            # - the order given by context
+            i = self._independent.index(variable)
+            res[i] = e.operator().parameter_set().count(idx)
+        return res, e.function()
+
+
 #@functools.cache
 def higher(d1, d2, context: Context):
     # XXX move to context? Or to _Dterm? As for type annotione we have to import JanetBasus._Dterm
     '''Algorithm 2.3 from [Schwarz].'''
-    return context.gt(i1.comparison_vector, i2.comparison_vector)
+    return context.gt(d1.comparison_vector, d2.comparison_vector)
 
 
 #@functools.cache
