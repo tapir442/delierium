@@ -128,7 +128,7 @@ class Context:
         return False
 
     def is_ctxfunc(self, f):
-        return is_function(f) and f in self._dependent
+        return f in self._dependent or f.function().operator() in self._dependent
 
     def order_of_derivative(self, e):
         """Returns the vector of the orders of a derivative respect to its variables
@@ -143,7 +143,7 @@ class Context:
         """
         res = [0] * len(e.variables())
         if not is_derivative(e):
-            return res, None
+            return res
         for idx, variable in enumerate(e.variables()):
             # XXX. here seems to be the crucial part: order can depend on:
             # - either the order given by sage by
@@ -152,7 +152,7 @@ class Context:
             # - the order given by context
             i = self._independent.index(variable)
             res[i] = e.operator().parameter_set().count(idx)
-        return res, e.function()
+        return res
 
 
 #@functools.cache

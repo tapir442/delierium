@@ -10,17 +10,12 @@ from sage.modules.free_module_element import vector
 
 from delierium.typedefs import *
 
-try:
-    from delierium.helpers import (adiff, eq, is_derivative, is_function,
-                                   latexer, order_of_derivative,
+from delierium.helpers import (adiff, eq, is_derivative, is_function,
+                                   latexer,
                                    pairs_exclude_diagonal)
-    from delierium.Involution import My_Multiplier
-    from delierium.MatrixOrder import Context, Mgrevlex, Mgrlex, higher, sorter
-except ModuleNotFoundError:
-    from helpers import (is_derivative, is_function, eq, order_of_derivative,
-                         adiff, latexer, pairs_exclude_diagonal)
-    from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
-    from Involution import My_Multiplier
+from delierium.Involution import My_Multiplier
+from delierium.MatrixOrder import Context, Mgrevlex, Mgrlex, higher, sorter
+from delierium.exception import DelieriumNotALinearPDE
 
 import functools
 import re
@@ -52,7 +47,8 @@ class _Dterm:
         >>> print (dterm)
         (x^2) * diff(f(x, y, z), x, y)
         '''
-        set_trace()
+       # print("===============>", e)
+        #set_trace()
         self._coeff, self._d = 1, 1
         self._context = context
         if is_derivative(e) or is_function(e):
@@ -68,7 +64,11 @@ class _Dterm:
                     self._d = o
                 else:
                     self._coeff *= o
-        self.order, self.function = self._compute_order()
+        self.order = self._compute_order()
+        if is_function(self._d):
+            self.function = self._d.operator()
+        else:
+            self.function = self._d.operator().function()
         self.comparison_vector = self._compute_comparison_vector()
         self.expression = self._coeff * self._d
 
@@ -96,10 +96,9 @@ class _Dterm:
     def _compute_order(self):
         """computes the monomial tuple from the derivative part"""
         if is_derivative(self._d):
-            return order_of_derivative(self._d, self._context,
-                                       len(self._context._independent))
-        # XXX: Check can that be within a system of linead PDEs ?
-        return [0] * len(self._context._independent), None
+            return self._context.order_of_derivative(self._d)
+        # XXX: Check can that be within a system of linear PDEs ?
+        return [0] * len(self._context._independent)
 
     def is_coefficient(self):
         # XXX nonsense

@@ -83,12 +83,6 @@ def tangent_vector(f):
     return [d.coefficient(_) for _ in newvars]
 
 
-#@functools.cache
-def order_of_derivative(e, context, required_len=0):
-    """moved to Context"""
-    pass
-
-
 def is_derivative(e):
     """checks whether an expression 'e' is a pure derivative
 
