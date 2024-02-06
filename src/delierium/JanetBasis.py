@@ -28,6 +28,8 @@ from IPython.display import Math
 from more_itertools import bucket, flatten, powerset
 from sage.misc.latex import latex
 
+from collections import namedtuple
+
 
 Sage_Expression = sage.symbolic.expression.Expression
 
@@ -172,7 +174,7 @@ class _Dterm:
             c = coeff.expand().simplify_full()._latex_()
             if hasattr(coeff, "operator") and \
                 coeff.operator() != None and \
-                coeff.operator().__name__ == "add_vararg":
+                ((hasattr(coeff.operator(), "__name__") and coeff.operator().__name__ == "add_vararg") or is_function(coeff.operator())):
                 return rf"({c})"
             return c
 
@@ -558,7 +560,6 @@ def Autoreduce(S, context):
     while r:
         newdps = []
         have_reduced = False
-        c += 1
         for _r in r:
             rnew = reduceS(_r, _p, context)
             have_reduced = have_reduced or rnew != _r
@@ -573,6 +574,7 @@ def Autoreduce(S, context):
             i += 1
         else:
             i = 0
+            c += 1
         _p, r = dps[:i + 1], dps[i + 1:]
     return dps
 
@@ -797,8 +799,6 @@ def split_by_function(S, context):
     s = bucket(S, key=lambda d: d.Lfunc())
     return flatten([FindIntegrableConditions(s[k], context) for k in s])
 
-
-from collections import namedtuple
 
 dp_with_mults = namedtuple("dp_with_mults", ["dp", "mult", "nonmult"])
 
