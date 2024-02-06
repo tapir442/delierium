@@ -47,71 +47,69 @@ class _Dterm:
         >>> print (dterm)
         (x^2) * diff(f(x, y, z), x, y)
         '''
-       # print("===============>", e)
-        #set_trace()
-        self._coeff, self._d = 1, 1
-        self._context = context
+        self.coeff, self._d = 1, 1
+        self.context = context
         if is_derivative(e) or is_function(e):
-            self._d = e
+            self.d = e
         else:
             for o in e.operands():
                 # XXX code duplication ?
                 if (is_derivative(o) and
-                     (self._context.is_ctxfunc(o.function()) or
-                      self._context.is_ctxfunc(o.function().operator().function())
+                     (self.context.is_ctxfunc(o.function()) or
+                      self.context.is_ctxfunc(o.function().operator().function())
                       )
-                    ) or self._context.is_ctxfunc(o):
-                    self._d = o
+                    ) or self.context.is_ctxfunc(o):
+                    self.d = o
                 else:
-                    self._coeff *= o
+                    self.coeff *= o
         self.order = self._compute_order()
-        if is_function(self._d):
-            self.function = self._d.operator()
+        if is_function(self.d):
+            self.function = self.d.operator()
         else:
-            self.function = self._d.operator().function()
+            self.function = self.d.operator().function()
         self.comparison_vector = self._compute_comparison_vector()
-        self.expression = self._coeff * self._d
+        self.expression = self.coeff * self.d
 
     def _compute_comparison_vector(self):
-        iv = [0] * len(self._context._dependent)
-        if self.function in self._context._dependent:
-            iv[self._context._dependent.index(self.function)] = 1
-        elif hasattr(self.function, "operator") and self.function.operator() in self._context._dependent:
-            iv[self._context._dependent.index(self.function,operator())] = 1
+        iv = [0] * len(self.context._dependent)
+        if self.function in self.context._dependent:
+            iv[self.context._dependent.index(self.function)] = 1
+        elif hasattr(self.function, "operator") and self.function.operator() in self.context._dependent:
+            iv[self.context._dependent.index(self.function,operator())] = 1
         else:
             pass
         return vector(self.order + iv)
 
     def __str__(self):
         try:
-            return f"({self._coeff.expression()}) * {self._d}"
+            return f"({self.coeff.expression()}) * {self.d}"
         except AttributeError:
-            if eq(self._coeff, 1):
-                return f"{self._d}"
-            return f"({self._coeff}) * { self._d}"
+            if eq(self.coeff, 1):
+                return f"{self.d}"
+            return f"({self.coeff}) * { self.d}"
 
     def term(self):
-        return self._coeff * self._d
+        return self.coeff * self.d
 
     def _compute_order(self):
         """computes the monomial tuple from the derivative part"""
-        if is_derivative(self._d):
-            return self._context.order_of_derivative(self._d)
+        if is_derivative(self.d):
+            return self.context.order_of_derivative(self.d)
         # XXX: Check can that be within a system of linear PDEs ?
-        return [0] * len(self._context._independent)
+        return [0] * len(self.context._independent)
 
     def is_coefficient(self):
         # XXX nonsense
-        return self._d == 1
+        return self.d == 1
 
     def __nonzero__(self):
-        return self._d != 1
+        return self.d != 1
 
     def derivative(self):
-        return self._d
+        return self.d
 
     def is_monic(self):
-        return self._d != 1 and bool(self._coeff == 1)
+        return self.d != 1 and bool(self.coeff == 1)
 
     def __lt__(self, other):
         """
@@ -130,26 +128,26 @@ class _Dterm:
         """
         # XXX context.gt still a bad place
         return not eq(self, other) and \
-            self._context.gt(self.comparison_vector, other.comparison_vector)
+            self.context.gt(self.comparison_vector, other.comparison_vector)
 
 #    @functools.cache
 
     def __eq__(self, other):
-        return eq(self._d, other._d) and eq(self._coeff, other._coeff)
+        return eq(self.d, other._d) and eq(self.coeff, other.coeff)
 
     def show(self, rich=True):
         if not rich:
             return str(self)
 
-#        dlatex = latex(self._coeff)
+#        dlatex = latex(self.coeff)
 #       denominator_pattern = re.compile(
 #          r"(-)?\\frac\{.*}{(.* )?(?P<nomfunc>\w+)?\\left\((?P<vars>[\w ,]*)\\right\).*"
 #        )
 #       while match := denominator_pattern.match(dlatex):
 #            to_replace = rf"{match.groupdict()['nomfunc']}\left({match.groupdict()['vars']}\right)"
 #            dlatex = dlatex.replace(to_replace, match.groupdict()['nomfunc'])
-#        if self._coeff != 1:
-#            return " ".join((dlatex, latexer(self._d)))
+#        if self.coeff != 1:
+#            return " ".join((dlatex, latexer(self.d)))
         return self.latex()
 
     def latex(self):
@@ -178,8 +176,8 @@ class _Dterm:
                 return rf"({c})"
             return c
 
-        d = _latex_derivative(self._context, self._d)
-        c = _latex_coeff(self._context, self._coeff)
+        d = _latex_derivative(self.context, self.d)
+        c = _latex_coeff(self.context, self.coeff)
         return f"{c} {d}"
 
     def __hash__(self):
@@ -223,7 +221,7 @@ class _Dterm:
         '''
         if eq(self, other):
             return 1
-        if self._context.gt(self.comparison_vector, other.comparison_vector):
+        if self.context.gt(self.comparison_vector, other.comparison_vector):
             return 1
         return -1
 
@@ -239,9 +237,9 @@ class _Differential_Polynomial:
 
         if not eq(0, e):
             self._init(e.expand())
-        print("after creation of DP")
-        for _ in self.p:
-            print(f"===> {str(_)=},  {_.comparison_vector}")
+#        print("after creation of DP")
+#        for _ in self.p:
+#            print(f"===> {str(_)=},  {_.comparison_vector}")
 
     def _init(self, e):
         if is_derivative(e) or is_function(e):
@@ -260,8 +258,8 @@ class _Differential_Polynomial:
                 found = False
                 if d:
                     for _p in self.p:
-                        if eq(_p._d, d[0]):
-                            _p._coeff += coeff
+                        if eq(_p.d, d[0]):
+                            _p.coeff += coeff
                             found = True
                             break
                 if not found:
@@ -290,15 +288,15 @@ class _Differential_Polynomial:
         return self.p[0].term()
 
     def Lder(self):
-        return self.p[0]._d
+        return self.p[0].d
 
     def Lfunc(self):
-        if is_function(self.p[0]._d):
-            return self.p[0]._d.operator()
-        return self.p[0]._d.operator().function()
+        if is_function(self.p[0].d):
+            return self.p[0].d.operator()
+        return self.p[0].d.operator().function()
 
     def Lcoeff(self):
-        return self.p[0]._coeff
+        return self.p[0].coeff
 
     def terms(self):
         for p in self.p:
@@ -306,7 +304,7 @@ class _Differential_Polynomial:
 
     def derivatives(self):
         for p in self.p:
-            yield p._d
+            yield p.d
 
     def Ldervec(self):
         # implement asap
@@ -314,13 +312,13 @@ class _Differential_Polynomial:
 
     def coefficients(self):
         for p in self.p:
-            yield p._coeff
+            yield p.coeff
 
     def normalize(self):
-        if self.p and self.p[0]._coeff != 1:
-            c = self.p[0]._coeff
+        if self.p and self.p[0].coeff != 1:
+            c = self.p[0].coeff
             self.p = [
-                _Dterm((_._coeff / c).simplify() * _._d, self.context)
+                _Dterm((_.coeff / c).simplify() * _.d, self.context)
                 for _ in self.p
             ]
         self._expression = sum(_.expression() for _ in self.p)
@@ -465,17 +463,17 @@ def _order(der, context):
 
 
 def _reduce_inner(e1, e2, context):
-    print("reduce_inner")
+#    print("reduce_inner")
     for t in (_ for _ in e1.p if eq(_.function, e2.function)):
         # S1 from Algorithm 2.4
-        c = t._coeff
-        print(f"{str(t)=}")
+        c = t.coeff
+#        print(f"{str(t)=}")
         dif = [a - b for a, b in zip(t.order, e2.order)]
-        print(f"   {str(e1)=}")
-        print(f"   {str(e2)=}")
+#        print(f"   {str(e1)=}")
+#        print(f"   {str(e2)=}")
         if all(map(lambda h: h == 0, dif)):
             # S2 from Algorithm 2.4
-            print(f"   ===> subtract, *{c}")
+#            print(f"   ===> subtract, *{c}")
             return _Differential_Polynomial(
                 e1.expression() - e2.expression() * c, context)
         if all(map(lambda h: h >= 0, dif)):
@@ -487,11 +485,11 @@ def _reduce_inner(e1, e2, context):
                 if dif[i] != 0:
                     variables_to_diff.extend([context._independent[i]] *
                                              abs(dif[i]))
-            print(f"   ===> diff, *{c}, {variables_to_diff}")
+#            print(f"   ===> diff, *{c}, {variables_to_diff}")
             return _Differential_Polynomial(
                 e1.expression() - c * diff(e2.expression(), *variables_to_diff),
                 context)
-    print("nothing to reduce")
+#    print("nothing to reduce")
     return e1
 
 
@@ -519,10 +517,10 @@ def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
     diff(z(x, y), x) + (1/x) * z(x, y), [], []
     """
     while not bool((_e1 := _reduce_inner(e1, e2, context)) == e1):
-        print("  after _reduce_inner: ")
-        display(Math(e1.show(rich=True)))
-        display(Math(e2.show(rich=True)))
-        display(Math(_e1.show(rich=True)))
+#        print("  after _reduce_inner: ")
+#        display(Math(e1.show(rich=True)))
+#        display(Math(e2.show(rich=True)))
+#        display(Math(_e1.show(rich=True)))
         e1 = _e1
     return _e1
 
@@ -556,9 +554,11 @@ def Autoreduce(S, context):
     dps = list(S)
     i = 0
     _p, r = dps[:i + 1], dps[i + 1:]
+    c = 0
     while r:
         newdps = []
         have_reduced = False
+        c += 1
         for _r in r:
             rnew = reduceS(_r, _p, context)
             have_reduced = have_reduced or rnew != _r
@@ -566,7 +566,7 @@ def Autoreduce(S, context):
         dps = Reorder(_p + [_ for _ in newdps if _ not in _p],
                       context,
                       ascending=True)
-        print("A"*99)
+        print("A"*99, c)
         for _ in dps:
             display(Math(_.latex()))
         if not have_reduced:
