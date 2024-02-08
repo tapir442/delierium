@@ -299,7 +299,7 @@ class _Differential_Polynomial:
             c = self.p[0].coeff
             self.p = [
                 _Dterm((_.coeff / c), _.derivative, self.context)
-                for _ in self.p
+                for _ in self.p if _.coeff
             ]
         self._expression = sum(_.expression() for _ in self.p)
 
