@@ -128,7 +128,11 @@ class Context:
         return False
 
     def is_ctxfunc(self, f):
-        return f in self._dependent or f.function().operator() in self._dependent
+        if f in self._dependent:
+            return True
+        if hasattr(f, "function") and f.function().operator() in self._dependent:
+            return True
+        return False
 
     def order_of_derivative(self, e):
         """Returns the vector of the orders of a derivative respect to its variables
