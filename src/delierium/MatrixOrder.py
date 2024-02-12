@@ -9,8 +9,7 @@ from sage.modules.free_module_element import vector
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.rational_field import QQ
 from sage.misc.prandom import shuffle
-from functools import cmp_to_key
-import doctest
+from functools import cmp_to_key, cache
 
 from delierium.exception import DelieriumInconsistentVariableOrder
 
@@ -106,18 +105,19 @@ def Mgrevlex(funcs, vars):
 
 class Context:
     # ToDo: raise a warning when order of functions variables differs from context
-    def __init__ (self, dependent, independent, weight = Mgrevlex):
+    def __init__(self, dependent, independent, weight = Mgrevlex):
         """ sorting : (in)dependent [i] > (in)dependent [i+i]
         which means: descending
         """
         self._independent = tuple(independent)
 #        if len(set(tuple(_.operands()) for _ in dependent)) > 1:
 #            raise DelieriumInconsistentVariableOrder(dependent)
-        self._dependent   = tuple((_.operator() if is_function(_) else _
-                                   for _ in dependent))
-        self._weight      = weight (self._dependent, self._independent)
+        self._dependent = tuple((_.operator() if is_function(_) else _
+                                 for _ in dependent))
+        self._weight = weight(self._dependent, self._independent)
 
-    def gt(self, v1: vector, v2: vector) -> int:
+    @cache
+    def gt(self,v1, v2) -> int:
         """Computes the weigthed difference vector of v1 and v2
         and returns 'True' if the first nonzero entry is > 0
         """
@@ -127,6 +127,7 @@ class Context:
                 return entry > 0
         return False
 
+    @cache
     def is_ctxfunc(self, f):
         if f in self._dependent:
             return True
@@ -134,6 +135,7 @@ class Context:
             return True
         return False
 
+    @cache
     def order_of_derivative(self, e):
         """Returns the vector of the orders of a derivative respect to its variables
 

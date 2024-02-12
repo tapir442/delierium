@@ -21,7 +21,7 @@ Sage_Expression: TypeAlias = sage.symbolic.expression.Expression
 
 
 
-# @functools.cache
+@cache
 def eq(d1, d2):
     """This cheap trick gives as a lot of performance gain (> 80%!)
     because maxima comparisons are expensive,and we can expect
@@ -83,6 +83,7 @@ def tangent_vector(f):
     return [d.coefficient(_) for _ in newvars]
 
 
+@cache
 def is_derivative(e):
     """checks whether an expression 'e' is a pure derivative
 
@@ -102,6 +103,7 @@ def is_derivative(e):
         return False
 
 
+@cache
 def is_function(e:Sage_Expression) -> bool:
     """checks whether an expression 'e' is a pure function without any
     derivative as a factor
@@ -451,6 +453,98 @@ class ExpressionTree:
                             self.gschisti.add(e)
                 self._expand(o, n)
 
+
+class BSTNode:
+    def __init__(self, val=None):
+        self.left = None
+        self.right = None
+        self.val = val
+
+
+    def insert(self, val):
+        if not self.val:
+            self.val = val
+            return
+        if self.val == val:
+            return
+        if val < self.val:
+            if self.left:
+                self.left.insert(val)
+                return
+            self.left = BSTNode(val)
+            return
+        if self.right:
+            self.right.insert(val)
+            return
+        self.right = BSTNode(val)
+    def get_min(self):
+        current = self
+        while current.left is not None:
+            current = current.left
+        return current.val
+
+    def get_max(self):
+        current = self
+        while current.right is not None:
+            current = current.right
+        return current.val
+
+    def delete(self, val):
+        if self == None:
+            return self
+        if self.val.context.gt(val.comparison_vector, self.val.comparison_vector):
+            self.right = self.right.delete(val)
+            return self
+        if not self.val.context.gt(val.comparison_vector, self.val.comparison_vector) \
+           and val.comparison_vector != self.val.comparison_vector:
+            self.left = self.left.delete(val)
+            return self
+        if self.right == None:
+            return self.left
+        if self.left == None:
+            return self.right
+        min_larger_node = self.right
+        while min_larger_node.left:
+            min_larger_node = min_larger_node.left
+        self.val = min_larger_node.val
+        self.right = self.right.delete(min_larger_node.val)
+        return self
+
+    def exists(self, val):
+        if val == self.val:
+            return True
+
+        if val < self.val:
+            if self.left == None:
+                return False
+            return self.left.exists(val)
+
+        if self.right == None:
+            return False
+        return self.right.exists(val)
+
+    def get_val_with_key(self, key):
+        if key == self.val.comparison_vector:
+            return self.val
+        if not self.val.context.gt(key, self.val.comparison_vector):
+            if self.left == None:
+                return None
+            return self.left.exists(key)
+
+        if self.right == None:
+            return None
+        return self.right.exists(key)
+
+
+
+    def inorder(self, vals):
+        if self.left is not None:
+            self.left.inorder(vals)
+        if self.val is not None:
+            vals.append(self.val)
+        if self.right is not None:
+            self.right.inorder(vals)
+        return vals
 
 # ToDo (from AllTypes.de
 #    cfdgfdgfd
