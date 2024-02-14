@@ -21,7 +21,6 @@ Sage_Expression: TypeAlias = sage.symbolic.expression.Expression
 
 
 
-@cache
 def eq(d1, d2):
     """This cheap trick gives as a lot of performance gain (> 80%!)
     because maxima comparisons are expensive,and we can expect
@@ -83,7 +82,6 @@ def tangent_vector(f):
     return [d.coefficient(_) for _ in newvars]
 
 
-@cache
 def is_derivative(e):
     """checks whether an expression 'e' is a pure derivative
 
@@ -103,7 +101,6 @@ def is_derivative(e):
         return False
 
 
-@cache
 def is_function(e:Sage_Expression) -> bool:
     """checks whether an expression 'e' is a pure function without any
     derivative as a factor
@@ -462,12 +459,15 @@ class BSTNode:
 
 
     def insert(self, val):
+        if val:
+            existing_node = self.get_val_with_key(val.comparison_vector)
+            if existing_node:
+                existing_node.coeff += val.coeff
+                return
         if not self.val:
             self.val = val
             return
-        if self.val == val:
-            return
-        if val < self.val:
+        if val.context.lt(val.comparison_vector, self.val.comparison_vector):
             if self.left:
                 self.left.insert(val)
                 return
@@ -495,8 +495,7 @@ class BSTNode:
         if self.val.context.gt(val.comparison_vector, self.val.comparison_vector):
             self.right = self.right.delete(val)
             return self
-        if not self.val.context.gt(val.comparison_vector, self.val.comparison_vector) \
-           and val.comparison_vector != self.val.comparison_vector:
+        if self.val.context.lt(val.comparison_vector, self.val.comparison_vector):
             self.left = self.left.delete(val)
             return self
         if self.right == None:
@@ -514,7 +513,7 @@ class BSTNode:
         if val == self.val:
             return True
 
-        if val < self.val:
+        if val.context.lt(val.comparison_vector, self.val.comparison_vector):
             if self.left == None:
                 return False
             return self.left.exists(val)
@@ -524,18 +523,18 @@ class BSTNode:
         return self.right.exists(val)
 
     def get_val_with_key(self, key):
+        if self.val is None:
+            return None
         if key == self.val.comparison_vector:
             return self.val
-        if not self.val.context.gt(key, self.val.comparison_vector):
+        if self.val.context.gt(key, self.val.comparison_vector):
             if self.left == None:
                 return None
-            return self.left.exists(key)
+            return self.left.get_val_with_key(key)
 
         if self.right == None:
             return None
-        return self.right.exists(key)
-
-
+        return self.right.get_val_with_key(key)
 
     def inorder(self, vals):
         if self.left is not None:
@@ -545,6 +544,17 @@ class BSTNode:
         if self.right is not None:
             self.right.inorder(vals)
         return vals
+
+    def reverseorder(self, vals):
+        if self.right is not None:
+            self.right.reverseorder(vals)
+        if self.val is not None:
+            vals.append(self.val)
+        if self.left is not None:
+            self.left.reverseorder(vals)
+        return vals
+
+
 
 # ToDo (from AllTypes.de
 #    cfdgfdgfd

@@ -116,7 +116,7 @@ class Context:
                                  for _ in dependent))
         self._weight = weight(self._dependent, self._independent)
 
-    @cache
+
     def gt(self,v1, v2) -> int:
         """Computes the weigthed difference vector of v1 and v2
         and returns 'True' if the first nonzero entry is > 0
@@ -127,7 +127,10 @@ class Context:
                 return entry > 0
         return False
 
-    @cache
+    def lt(self, v1, v2):
+        return v1 != v2 and not self.gt(v1, v2)
+
+
     def is_ctxfunc(self, f):
         if f in self._dependent:
             return True
@@ -135,7 +138,7 @@ class Context:
             return True
         return False
 
-    @cache
+
     def order_of_derivative(self, e):
         """Returns the vector of the orders of a derivative respect to its variables
 
@@ -161,14 +164,13 @@ class Context:
         return res
 
 
-#@functools.cache
 def higher(d1, d2, context: Context):
     # XXX move to context? Or to _Dterm? As for type annotione we have to import JanetBasus._Dterm
     '''Algorithm 2.3 from [Schwarz].'''
     return context.gt(d1.comparison_vector, d2.comparison_vector)
 
 
-#@functools.cache
+
 def sorter(d1, d2, context=Mgrevlex):
     '''sorts two derivatives d1 and d2 using the weight matrix M
     according to the sort order given in the tuple of  dependent and

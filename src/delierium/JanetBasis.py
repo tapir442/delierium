@@ -126,7 +126,6 @@ class _Dterm:
             return str(self)
         return self.latex()
 
-    @cache
     def latex(self):
         def _latex_derivative(deriv):
             if is_derivative(deriv):
@@ -285,12 +284,17 @@ class _Differential_Polynomial:
 #        print(f"    _init6: {time()-start}")
         self.order = self.p[0].order
         self.function = self.p[0].function
+        self.comparison_vector = self.p[0].comparison_vector
         self.bst = BSTNode()
+#        set_trace()
+        import random
+        random.shuffle(self.p)
         for _ in self.p:
             self.bst.insert(_)
- #       print("inorder:")
- #       print(self.bst.inorder([]))
- #       print("#")
+
+        print("inorder:")
+        print(self.bst.inorder([]))
+        print("#")
 
 
     def expression(self):
@@ -342,21 +346,17 @@ class _Differential_Polynomial:
     def __nonzero__(self):
         return len(self.p) > 0
 
-    @cache
     def __lt__(self, other):
         return self.p[0] < other.p[0]
 
-    @cache
     def __le__(self, other):
         return self == other or self < other
 
-    @cache
     def __eq__(self, other):
         if self is other:
             return True
         return all(eq(_[0].expression, _[1].expression) for _ in zip(self.p, other.p))
 
-    @cache
     def show(self, rich=True):
         if not rich:
             return str(self)
@@ -375,9 +375,8 @@ class _Differential_Polynomial:
         res += f"{self.multipliers}, {self.nonmultipliers}"
         return res
 
-    @cache
     def latex(self):
-        return "+".join(_.latex() for _ in self.bst.inorder([])).replace("(-", "(").replace(
+        return "+".join(_.latex() for _ in self.bst.reverseorder([])).replace("(-", "(").replace(
             "+-", "-")
 
     def diff(self, *args):
@@ -482,6 +481,7 @@ def _reduce_inner(e1, e2, context):
     print("................ reduce_inner")
     print(f"     e1:, {[_.derivative for _ in e1.bst.inorder([])]}")
     print(f"     e2:, {[_.derivative for _ in e2.bst.inorder([])]}")
+#    set_trace()
     for t in (_ for _ in e1.bst.inorder([]) if eq(_.function, e2.function)):
         # S1 from Algorithm 2.4
         c = t.coeff
@@ -493,7 +493,7 @@ def _reduce_inner(e1, e2, context):
             # S2 from Algorithm 2.4
             print(f"     subt {t.derivative=}, *{c=} {time() - start}")
             for _e2 in e2.bst.inorder([]):
-                myval = e1.bst.get_val_with_key(t.comparison_vector)
+                myval = e1.bst.get_val_with_key(_e2.comparison_vector)
                 if myval:
                     myval.coeff -= c * _e2.coeff
                 else:
@@ -646,7 +646,7 @@ def Autoreduce(S, context):
 #        dps = Reorder(_p + [_ for _ in newdps if _ not in _p],
 #                      context,
 #                      ascending=True)
-        dps = newdps.inorder([])
+        dps = newdps.reverseorder([])
         print(f"duration reorder: {time() - start}")
         print("A"*99, c)
         for _ in dps:
