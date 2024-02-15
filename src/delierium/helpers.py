@@ -28,7 +28,7 @@ def eq(d1, d2):
     All other caching is neglegible compared to this here
     70 % of the time is spent here!
     """
-    return bool((d1 is d2) or (d1 == d2))
+    return bool(d1 == d2)
 
 
 def pairs_exclude_diagonal(it: Iterable[Any]) -> Generator[Tuple[(Any, Any)], None, None]:
@@ -528,13 +528,13 @@ class BSTNode:
         if key == self.val.comparison_vector:
             return self.val
         if self.val.context.gt(key, self.val.comparison_vector):
-            if self.left == None:
+            if self.right == None:
                 return None
-            return self.left.get_val_with_key(key)
+            return self.right.get_val_with_key(key)
 
-        if self.right == None:
+        if self.left == None:
             return None
-        return self.right.get_val_with_key(key)
+        return self.left.get_val_with_key(key)
 
     def inorder(self, vals):
         if self.left is not None:
@@ -554,6 +554,24 @@ class BSTNode:
             self.left.reverseorder(vals)
         return vals
 
+    min_to_max =  inorder
+    max_to_min = reverseorder
+
+class BSTNode_DP(BSTNode):
+    def insert(self, val):
+        if not self.val:
+            self.val = val
+            return
+        if val.context.lt(val.comparison_vector, self.val.comparison_vector):
+            if self.left:
+                self.left.insert(val)
+                return
+            self.left = BSTNode(val)
+            return
+        if self.right:
+            self.right.insert(val)
+            return
+        self.right = BSTNode(val)
 
 
 # ToDo (from AllTypes.de
