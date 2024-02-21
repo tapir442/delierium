@@ -25,7 +25,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     setup_requires=["more-itertools", "anytree"],
-    install_requires=["more-itertools", "anytree"],
+    install_requires=["more-itertools", "anytree", "binarytree"],
     python_requires = ">=3.11",
     author='Martin Mayerhofer-Schöpf',
     author_email='tapir@aon.at',

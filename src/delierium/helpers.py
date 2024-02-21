@@ -20,7 +20,6 @@ from typing import Iterable, Tuple, Any, Generator, TypeAlias
 Sage_Expression: TypeAlias = sage.symbolic.expression.Expression
 
 
-#@cache
 def eq(d1, d2):
     """This cheap trick gives as a lot of performance gain (> 80%!)
     because maxima comparisons are expensive,and we can expect
@@ -28,7 +27,7 @@ def eq(d1, d2):
     All other caching is neglegible compared to this here
     70 % of the time is spent here!
     """
-    return bool((d1 is d2) or (d1 == d2))
+    return bool(d1 == d2)
 
 
 def pairs_exclude_diagonal(it: Iterable[Any]) -> Generator[Tuple[(Any, Any)], None, None]:
@@ -449,6 +448,129 @@ class ExpressionTree:
                             self.gschisti.add(o)
                             self.gschisti.add(e)
                 self._expand(o, n)
+
+
+class BSTNode:
+    def __init__(self, val=None):
+        self.left = None
+        self.right = None
+        self.val = val
+
+
+    def insert(self, val):
+        if val:
+            existing_node = self.get_val_with_key(val.comparison_vector)
+            if existing_node:
+                existing_node.coeff += val.coeff
+                return
+        if not self.val:
+            self.val = val
+            return
+        if val.context.lt(val.comparison_vector, self.val.comparison_vector):
+            if self.left:
+                self.left.insert(val)
+                return
+            self.left = BSTNode(val)
+            return
+        if self.right:
+            self.right.insert(val)
+            return
+        self.right = BSTNode(val)
+    def get_min(self):
+        current = self
+        while current.left is not None:
+            current = current.left
+        return current.val
+
+    def get_max(self):
+        current = self
+        while current.right is not None:
+            current = current.right
+        return current.val
+
+    def delete(self, val):
+        if self == None:
+            return self
+        if self.val.context.gt(val.comparison_vector, self.val.comparison_vector):
+            self.right = self.right.delete(val)
+            return self
+        if self.val.context.lt(val.comparison_vector, self.val.comparison_vector):
+            self.left = self.left.delete(val)
+            return self
+        if self.right == None:
+            return self.left
+        if self.left == None:
+            return self.right
+        min_larger_node = self.right
+        while min_larger_node.left:
+            min_larger_node = min_larger_node.left
+        self.val = min_larger_node.val
+        self.right = self.right.delete(min_larger_node.val)
+        return self
+
+    def exists(self, val):
+        if val == self.val:
+            return True
+
+        if val.context.lt(val.comparison_vector, self.val.comparison_vector):
+            if self.left == None:
+                return False
+            return self.left.exists(val)
+
+        if self.right == None:
+            return False
+        return self.right.exists(val)
+
+    def get_val_with_key(self, key):
+        if self.val is None:
+            return None
+        if key == self.val.comparison_vector:
+            return self.val
+        if self.val.context.gt(key, self.val.comparison_vector):
+            if self.right == None:
+                return None
+            return self.right.get_val_with_key(key)
+
+        if self.left == None:
+            return None
+        return self.left.get_val_with_key(key)
+
+    def inorder(self, vals):
+        if self.left is not None:
+            self.left.inorder(vals)
+        if self.val is not None:
+            vals.append(self.val)
+        if self.right is not None:
+            self.right.inorder(vals)
+        return vals
+
+    def reverseorder(self, vals):
+        if self.right is not None:
+            self.right.reverseorder(vals)
+        if self.val is not None:
+            vals.append(self.val)
+        if self.left is not None:
+            self.left.reverseorder(vals)
+        return vals
+
+    min_to_max =  inorder
+    max_to_min = reverseorder
+
+class BSTNode_DP(BSTNode):
+    def insert(self, val):
+        if not self.val:
+            self.val = val
+            return
+        if val.context.lt(val.comparison_vector, self.val.comparison_vector):
+            if self.left:
+                self.left.insert(val)
+                return
+            self.left = BSTNode(val)
+            return
+        if self.right:
+            self.right.insert(val)
+            return
+        self.right = BSTNode(val)
 
 
 # ToDo (from AllTypes.de
