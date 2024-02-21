@@ -117,8 +117,9 @@ class Context:
                                    for _ in dependent))
         self._weight      = weight (self._dependent, self._independent)
 
+    @functools.cache
     def gt(self, v1: vector, v2: vector) -> int:
-        """Computes the weigthed difference vector of v1 and v2
+        """Computes the weighted difference vector of v1 and v2
         and returns 'True' if the first nonzero entry is > 0
         """
         r = self._weight * (vector(v1)-vector(v2))
