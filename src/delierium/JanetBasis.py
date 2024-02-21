@@ -33,6 +33,24 @@ from time import time
 start = time()
 from line_profiler import profile
 
+def compute_comparison_vector(dependent, function, ctxcheck):
+    iv = [0] * len(dependent)
+    if function in dependent:
+        iv[dependent.index(function)] = 1
+    elif ctxcheck(function):
+        iv[dependent.index(function.operator())] = 1
+    else:
+        pass
+    return iv
+
+def compute_order(derivative, independent, comp_order):
+    """computes the monomial tuple from the derivative part"""
+    if is_derivative(derivative):
+        return comp_order(derivative)
+    # XXX: Check can that be within a system of linear PDEs ?
+    return [0] * len(independent)
+
+
 @dataclass
 class _Dterm:
     coeff: int
@@ -310,6 +328,7 @@ class _Differential_Polynomial:
                 for _ in self.p if _.coeff
             ]
         self._expression = sum(_.expression for _ in self.p)
+        self.comparison_vector =  self.p[0].comparison_vector
 
     def __nonzero__(self):
         return len(self.p) > 0
@@ -327,8 +346,6 @@ class _Differential_Polynomial:
         return self == other or self < other
     @profile
     def __eq__(self, other):
-        if self is other:
-            return True
         return all(_[0].expression == _[1].expression for _ in zip(self.p, other.p))
 
     def show(self, rich=True):
@@ -457,33 +474,87 @@ def _order(der, context):
 @profile
 def _reduce_inner(e1, e2, context):
 #    print("reduce_inner")
-    for t in (_ for _ in e1.p if _.function == e2.function):
-        # S1 from Algorithm 2.4
-        c = t.coeff
-#        print(f"{str(t)=}")
-        dif = [a - b for a, b in zip(t.order, e2.order)]
-#        print(f"   {str(e1)=}")
-#        print(f"   {str(e2)=}")
-        if all(map(lambda h: h == 0, dif)):
-            # S2 from Algorithm 2.4
-#            print(f"   ===> subtract, *{c}")
-            return _Differential_Polynomial(
-                e1.expression() - e2.expression() * c, context)
-        if all(map(lambda h: h >= 0, dif)):
-            # S2 from Algorithm 2.4
-            # toDo: as diff also accepts zerozh derivatives we may
-            # unfy these two branches
-            variables_to_diff = []
-            for i in range(len(context._independent)):
-                if dif[i] != 0:
-                    variables_to_diff.extend([context._independent[i]] *
-                                             abs(dif[i]))
-#            print(f"   ===> diff, *{c}, {variables_to_diff}")
-            return _Differential_Polynomial(
-                e1.expression() - c * diff(e2.expression(), *variables_to_diff),
-                context)
-#    print("nothing to reduce")
-    return e1
+    set_trace()
+    changed = False
+    t = [_ for _ in e1.p if _.function == e2.function]
+    if not t:
+        return False
+    t = t[0]
+    # S1 from Algorithm 2.4
+    c = t.coeff
+    #        print(f"{str(t)=}")
+    dif = [a - b for a, b in zip(t.order, e2.order)]
+    #        print(f"   {str(e1)=}")
+    #        print(f"   {str(e2)=}")
+    if all(map(lambda h: h == 0, dif)):
+        # S2 from Algorithm 2.4
+        subs=[]
+        print(f"   ===> subtract, *{c}")
+        for p2 in e2.p:
+            hits = [_ for _ in e1.p if _.comparison_vector == p2.comparison_vector]
+            assert(len(hits) in [0,1])
+            if hits:
+                hits[0].coeff -= c * p2.coeff
+                changed = True
+            else:
+                subs.append(_Dterm(coeff = -p2.coeff*c,
+                                   derivative =p2.derivative,
+                                   context = e1.context
+                                   ))
+                changed = True
+    elif all(map(lambda h: h >= 0, dif)):
+        # S2 from Algorithm 2.4
+        # toDo: as diff also accepts zerozh derivatives we may
+        # unfy these two branches
+        variables_to_diff = []
+        for i in range(len(context._independent)):
+            if dif[i] != 0:
+                variables_to_diff.extend([context._independent[i]] *
+                                         abs(dif[i]))
+        print(f"   ===> diff, *{c}, {variables_to_diff}")
+        subs=[]
+        for p2 in e2.p:
+            f = p2.coeff
+            gstrich = diff(p2.derivative, *variables_to_diff)
+            fstrich = diff(p2.coeff, *variables_to_diff)
+            g = p2.derivative
+            order = compute_order(gstrich, e1.context._independent, e1.context.order_of_derivative)
+            cmpvec = compute_comparison_vector(e1.context._dependent, p2.function, p2.context.is_ctxfunc)
+            hits = [_ for _ in e1.p if _.comparison_vector == p2.comparison_vector]
+            assert(len(hits) in [0,1])
+            if hits:
+                hits[0].coeff -= c * p2.coeff
+                changed = True
+            else:
+                subs.append(_Dterm(coeff = -f*c,
+                                   derivative = gstrich,
+                                   context = p2.context
+                                   ))
+                changed = True
+            order = compute_order(fstrich, e1.context._independent, e1.context.order_of_derivative)
+            cmpvec = list(p2.comparison_vector)
+            hits = [_ for _ in e1.p if _.comparison_vector == tuple(cmpvec)]
+            assert(len(hits) in [0,1])
+            if hits:
+                hits[0].coeff -= c*fstrich
+                changed = True
+            else:
+                subs.append(_Dterm(coeff = -c*fstrich,
+                                   derivative = g,
+                                   context = e1.context
+                                   )
+                            )
+                changed = True
+
+
+    if changed:
+        e1.p.extend(subs)
+        e1.p = [_ for _ in e1.p if _.coeff]
+        e1.p.sort(reverse=True)
+        e1.normalize()
+        e1.show(rich=True)
+
+    return changed
 
 
 def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
@@ -509,11 +580,9 @@ def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
     >>> print(_reduce_inner(e1, f2, ctx))
     diff(z(x, y), x) + (1/x) * z(x, y), [], []
     """
-    _e1 = _reduce_inner(e1, e2, context)
-    while bool(_e1 is not e1):
-        e1 = _e1
-        _e1 = _reduce_inner(e1, e2, context)
-    return _e1
+    while _reduce_inner(e1, e2, context):
+        pass
+    return e1
 
 @profile
 def Autoreduce(S, context):
