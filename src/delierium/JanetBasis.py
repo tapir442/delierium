@@ -243,7 +243,8 @@ class _Differential_Polynomial:
         self.p = []
         self.multipliers = []
         self.nonmultipliers = []
-        self.changed = False
+        self.changed = True
+        self.hash = 0
         if not 0 == e:
             self._init(e.expand())
 
@@ -358,6 +359,8 @@ class _Differential_Polynomial:
         return self == other or self < other
     @profile
     def __eq__(self, other):
+        if hash(self) == hash(other):
+            return True
         return all(_[0].expression == _[1].expression for _ in zip(self.p, other.p))
 
     def show(self, rich=True):
@@ -391,7 +394,9 @@ class _Differential_Polynomial:
         return " + ".join([str(_) for _ in self.p]) +\
             f", {m}, {n}"
     def __hash__(self):
-        return hash("".join([str(hash(_)) for _ in self.p]))
+        if self.changed or self.hash == 0:
+            self.hash = hash("".join([str(hash(_)) for _ in self.p]))
+        return self.hash
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ...
 @profile
@@ -574,9 +579,7 @@ def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
     e1_hash = hash(e1)
     while _reduce_inner(e1, e2, context):
         pass
-    if e1_hash != hash(e1):
-        return True
-    return False
+    return e1_hash != hash(e1)
 
 @profile
 def Autoreduce(S, context):
@@ -614,13 +617,13 @@ def Autoreduce(S, context):
         have_reduced = False
 #        set_trace()
         for _r in r:
-            have_reduced = reduceS(_r, _p, context)
-            # XXX wrong criterion as rnew and _r are the same!
-            if have_reduced:
-                newdps.add(rnew)
-        dps = Reorder(_p + [_ for _ in newdps if _ not in _p],
+            reduceS(_r, _p, context)
+        dps = Reorder([_ for _ in newdps if _],
                       context,
                       ascending=True)
+        print("A"*99, c)
+        for _ in dps:
+            display(Math(_.latex()))
         if not have_reduced:
             i += 1
         else:
