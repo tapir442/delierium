@@ -1,244 +1,322 @@
-# +
-# #!/usr/bin/env python
-# coding: utf-8
-# -
-
-import sage.all
-from sage.calculus.var import var, function
-from sage.misc.reset import reset
-from sage.calculus.functional import diff
-try :
-    from delierium.helpers import (is_derivative, is_function, eq,
-                                   order_of_derivative, adiff, latexer)
-    from delierium.MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
-except ModuleNotFoundError:
-    from helpers import (is_derivative, is_function, eq,
-                         order_of_derivative, adiff, latexer)
-    from MatrixOrder import higher, sorter, Context, Mgrlex, Mgrevlex
+"""
+Janet Basis
+"""
+from time import time
 
 import functools
+from collections import namedtuple
+from collections.abc import Iterable
+from dataclasses import dataclass
+from itertools import groupby, islice, zip_longest
+from functools import cache
+from itertools import groupby, islice
 from operator import mul
 from collections.abc import Iterable
 from more_itertools import powerset, bucket, flatten
 from itertools import product, islice
 
-from sage.misc.latex import latex
-from sage.misc.html import html
-import re
-from sage.repl.rich_output.pretty_print import pretty_print
-
+import sage.all
 from IPython.core.debugger import set_trace
+from IPython.display import Math
+from more_itertools import bucket, flatten, powerset
+from sage.calculus.functional import diff
+from sage.calculus.var import function, var
+from sage.misc.latex import latex
+from sage.misc.reset import reset
+from sage.modules.free_module_element import vector
+
+from delierium.exception import DelieriumNotALinearPDE
+from delierium.helpers import (adiff, eq, is_derivative, is_function,
+                               pairs_exclude_diagonal)
+from delierium.Involution import My_Multiplier
+from delierium.matrix_order import Context, Mgrevlex, Mgrlex
+from delierium.typedefs import *
+
+from line_profiler import LineProfiler
 
 
-@functools.cache
-def func(e):
-    try:
-        return e.operator().function()
-    except AttributeError:
-        return e.operator()
+Sage_Expression = sage.symbolic.expression.Expression
 
+from functools import cache
+from time import time
+start = time()
+
+
+profiler = LineProfiler()
+
+def profile(func):
+    def inner(*args, **kwargs):
+        profiler.add_function(func)
+        profiler.enable_by_count()
+        return func(*args, **kwargs)
+    return inner
+
+
+def compute_comparison_vector(dependent, function, ctxcheck):
+    iv = [0] * len(dependent)
+    if function in dependent:
+        iv[dependent.index(function)] = 1
+    elif ctxcheck(function):
+        iv[dependent.index(function.operator())] = 1
+    else:
+        pass
+    return iv
+
+def compute_order(derivative, independent, comp_order):
+    """computes the monomial tuple from the derivative part"""
+    if is_derivative(derivative):
+        return comp_order(derivative)
+    # XXX: Check can that be within a system of linear PDEs ?
+    return [0] * len(independent)
+
+
+@dataclass
 class _Dterm:
-    def __init__(self, e, context=None):
-        r'''differential term
+    coeff: int
+    derivative: int
+    context: Context
 
+    def __post_init__ (self):
+        self.order = self._compute_order()
+        if is_derivative(self.derivative):
+            self.function = self.derivative.operator().function()
+        else:
+            self.function = self.derivative
+        self.comparison_vector = self._compute_comparison_vector()
+
+    def expression(self):
+        return self.coeff * self.derivative
+    
+    def _compute_comparison_vector(self):
+        iv = compute_comparison_vector(self.context._dependent,
+                                      self.function,
+                                      self.context.is_ctxfunc
+                                      )
+        return tuple(self.order + iv)
+
+    def __str__(self):
+        try:
+            return f"({self.coeff.expression()}) * {self.derivative}"
+        except AttributeError:
+            if self.coeff == 1:
+                return f"{self.derivative}"
+            return f"({self.coeff}) * { self.derivative}"
+
+    def term(self):
+        return self.coeff * self.derivative
+
+    def _compute_order(self):
+        """computes the monomial tuple from the derivative part"""
+        return compute_order(self.derivative, self.context._independent, self.context.order_of_derivative)
+
+
+    def is_coefficient(self):
+        # XXX nonsense
+        return self.derivative == 1
+
+    def __bool__(self):
+        return self.derivative != 1
+
+    def is_monic(self):
+        return self.derivative != 1 and bool(self.coeff == 1)
+
+
+    def __lt__(self, other):
+        """
         >>> x,y,z = var("x y z")
         >>> f     = function("f")(x,y,z)
         >>> g     = function("g")(x,y,z)
         >>> h     = function("h")(x,y,z)
-        >>> ctx   = Context ((f,g),(x,y,z))
-        >>> d     = (x**2) * diff(f, x, y)
-        >>> dterm = _Dterm(d,ctx)
-        >>> print (dterm)
-        (x^2) * diff(f(x, y, z), x, y)
+        >>> ctx   = Context ((f,g,h),(x,y,z), Mlex)
+        >>> d1    = (x**2) * diff(f, x, y)
+        >>> d2    = diff(f, x, y, z)
+        >>> dterm1 = _Dterm(d1,ctx)
+        >>> dterm2 = _Dterm(d2,ctx)
+        >>> print(bool(dterm1 < dterm2))
+        True
         '''
-        self._coeff, self._d = 1, 1
-        self._context        = context
-        self._has_minus      = False
-        if is_derivative(e) or is_function(e):
-            self._d     = e
-        else:
-            r = []
-            for o in e.operands():
-                #print (f"{e=}, {o=}")
-                if is_derivative(o) or is_function(o):
-                    self._d = o
-                else:
-                    if o == -1:
-                        self._has_minus = True
-                    self._coeff *= o
-                    r.append(o)
-        self._order      = self._compute_order()
-        self._expression = self._coeff * self._d
+        """
+        # XXX context.gt still a bad place
+        return not (self is other) and not self == other and \
+            self.context.gt(other.comparison_vector, self.comparison_vector)
 
-    def __str__(self):
-        try:
-            return f"({self._coeff.expression()}) * {self._d}"
-        except AttributeError:
-            if eq (self._coeff, 1):
-                return f"{self._d}"
-            else:
-                return f"({self._coeff}) * { self._d}"
-    def term(self):
-        return self._coeff * self._d
-    def expression(self):
-        return self._expression
-    def _compute_order(self):
-        """computes the monomial tuple from the derivative part"""
-        if is_derivative(self._d):
-            return order_of_derivative(self._d, len(self._context._independent))
-        else:
-            return [0] * len(self._context._independent)
-    def order(self):
-        return self._order
-    def is_coefficient(self):
-        # XXX nonsense
-        return self._d == 1
-
-    def __nonzero__(self):
-        return self._d != 1
-
-    def derivative(self):
-        return self._d
-
-    def is_monic(self):
-        return self._d != 1 and bool(self._coeff == 1)
-
-    def __lt__(self, other):
-        return not eq(self, other) and higher(self, other, self._context)
-
-    @functools.cache
     def __eq__(self, other):
-        return eq(self._d, other._d) and eq(self._coeff, other._coeff)
+        return self.derivative == other.derivative  and self.coeff == other.coeff
 
     def show(self, rich=True):
         if not rich:
-            return str(self)        
-        
-        dlatex = latex(self._coeff)
-        denominator_pattern = re.compile(r"(-)?\\frac\{.*}{(.* )?(?P<nomfunc>\w+)?\\left\((?P<vars>[\w ,]*)\\right\).*")
-        res     = []
-        funcname= ""
-        while match := denominator_pattern.match(dlatex):        
-            to_replace = r"%s\left(%s\right)" % (match.groupdict()['nomfunc'], match.groupdict()['vars'])
-            dlatex = dlatex.replace (to_replace, match.groupdict()['nomfunc'])
-        if self._coeff != 1:
-            return " ".join ((dlatex, latexer(self._d)))
-        else:
-            return latexer(self._d)
-    
-    def __hash__(self):
-        return hash(self._expression)
+            return str(self)
+        return self.latex()
 
+    def latex(self):
+        """Converts a _Dterm into Lie traditional form, latex style"""
+        def _latex_derivative(deriv):
+            if is_derivative(deriv):
+                func = deriv.function().operator().function()._latex_()
+                ps = deriv.operator().parameter_set()
+                variables = deriv.operands()
+                sub = ",".join(map(lambda _: variables[_]._latex_(), ps))
+                return "%s_{%s}" % (func, sub)
+            elif hasattr(deriv, "function"):
+                return deriv.function().operator()._latex_()
+            else:
+                return str(deriv)
+
+        def _latex_coeff(coeff):
+            if str(coeff) in ['1', '1.0']:
+                return ""
+            if str(coeff) in ['-1', '-1.0']:
+                return "-"
+            # ToDo: need to be more fine granular
+            if hasattr(coeff, "expand"):
+                c = coeff.expand().simplify_full()._latex_()
+            else:
+                c = coeff
+            if hasattr(coeff, "operator") and \
+                coeff.operator() != None and \
+                ((hasattr(coeff.operator(), "__name__") and coeff.operator().__name__ == "add_vararg") or is_function(coeff.operator())):
+                return rf"({c})"
+            return c
+
+        d = _latex_derivative(self.derivative)
+        c = _latex_coeff(self.coeff)
+        return  f"{c} {d}"
+
+    def __hash__(self):
+        return hash(str(self.coeff) + str(self.derivative))
 
 class _Differential_Polynomial:
+
     def __init__(self, e, context):
-        self._context = context
-        self._p = []
-        if not eq(0, e):
+        self.context = context
+        self.p = []
+        self.multipliers = []
+        self.nonmultipliers = []
+        self.hash = 0
+        if not 0 == e:
             self._init(e.expand())
-    def _init(self, e):
-   #     def is_a_real_derivative(op):
-   #         # XXX make this part of context ?
-   #         return (is_derivative(op) and op.operator().function() in self._context._dependent) or \
-   #             is_function(o)
-   #     operands = e.operands()
-   #     operator = e.operator()
-        if is_derivative(e) or is_function(e):
-            self._p.append(_Dterm(e, self._context))
-        elif e.operator().__name__ == 'mul_vararg':
-            self._p.append(_Dterm(e, self._context))
+
+
+    def _analyze(self, term):
+        if hasattr(term.operator(), "__name__") and term.operator().__name__ == 'mul_vararg':
+            operands = term.operands()
         else:
-            for s in e.operands():
-                coeff, d = [], []
-                if is_derivative(s) or is_function(s):
-                    d.append(s)
+            operands = [term]
+        coeffs = []
+        d = []
+        for operand in operands:
+            if is_function(operand):
+                if self.context.is_ctxfunc(operand):
+                    d.append(operand)
                 else:
-                    for item in s.operands():
-                        (d if (is_derivative(item) or self.ctxfunc(item)) else coeff).append(item)
-                coeff = functools.reduce(mul, coeff, 1)
-                found = False
-                if d:
-                    for _p in self._p:
-                        if eq(_p._d, d[0]):
-                            _p._coeff += coeff
-                            found = True
-                            break
-                if not found:
-                    if d:
-                        self._p.append(_Dterm(coeff * d[0], self._context))
-                    else:
-                        self._p.append(_Dterm(coeff, self._context))
-        self._p.sort(key=functools.cmp_to_key(
-            lambda item1, item2: sorter(item1._d, item2._d, self._context)
-            ), reverse=True
-        )
+                    coeffs.append(operand)
+            elif is_derivative(operand):
+                if self.context.is_ctxfunc(operand.operator().function()):
+                    d.append(operand)
+                else:
+                    coeffs.append(operand)
+            else:
+                coeffs.append(operand)
+
+        coeffs = functools.reduce(mul, coeffs, 1)
+        return str(d[0]), d[0], coeffs
+
+    def _init(self, e):
+        operands = []
+        o = e.operator()
+        if hasattr(o, "__name__") and o.__name__ == 'add_vararg':
+            operands = e.operands()
+        else:
+            operands = [e]
+        r = [self._analyze(o) for o in operands]
+        dterms = {}
+        for _r in r:
+            dterms.setdefault(_r[0], []).append((_r[1], _r[2]))
+        self.p = []
+        for v in dterms.values():
+            # v is a list of tuples
+            c = 0
+            for tup in v:
+                c+=tup[1]
+            self.p.append(_Dterm(derivative=v[0][0], coeff=c, context=self.context))
+        self.p.sort(reverse=True)
         self.normalize()
-
+        
     def expression(self):
-        return self._expression
-
-    def ctxfunc(self, e):
-        return func(e) and func(e) in self._context._dependent
+        return sum(_.expression() for _ in self.p)
 
     def _collect_terms(self, e):
         pass
 
     def show_derivatives(self):
-        print([x for x in self.derivatives()])
+        print(self.derivatives())
 
     def Lterm(self):
-        return self._p[0].term()
+        return self.p[0].term()
 
     def Lder(self):
-        return self._p[0]._d
+        return self.Lterm().derivative
 
     def Lfunc(self):
-        if is_function(self._p[0]._d):
-            return self._p[0]._d.operator()
-        else:
-            return self._p[0]._d.operator().function()
+        return self.Lterm().function
 
     def Lcoeff(self):
-        return self._p[0]._coeff
+        return self.Lterm().coeff
 
     def terms(self):
-        for p in self._p:
+        for p in self.p:
             yield p.term()
 
     def derivatives(self):
-        for p in self._p:
-            yield p._d
+        for p in self.p:
+            yield p.derivative
 
     def Ldervec(self):
         # implement asap
         pass
 
     def coefficients(self):
-        for p in self._p:
-            yield p._coeff
+        for p in self.p:
+            yield p.coeff
 
     def normalize(self):
-        if self._p and self._p[0]._coeff != 1:
-            c = self._p[0]._coeff
-            self._p = [_Dterm((_._coeff / c).simplify() * _._d, self._context)
-                       for _ in self._p]
-        self._expression = sum(_.expression() for _ in self._p)
+        if self.p and self.p[0].coeff != 1:
+            c = self.p[0].coeff
+            self.p = [
+                _Dterm((_.coeff / c), _.derivative, self.context)
+                for _ in self.p if _.coeff
+            ]
+        # XXX: wrong place?
+        if self.p:
+            self.order = self.p[0].order
+            self.function = self.p[0].function
+            self.comparison_vector =  self.p[0].comparison_vector
 
-    def __nonzero__(self):
-        return len(self._p) > 0
+    def __bool__(self):
+        return len(self.p) > 0
 
     def __lt__(self, other):
-        return self._p[0] < other._p[0]
+        for _ in zip(self.p, other.p):
+            if _[0] < _[1]:
+                return True
+            if _[0] == _[1]:
+                continue
+            return False
+        return False
+
+    def __le__(self, other):
+        return self == other or self < other
 
     def __eq__(self, other):
-        return all(eq(_[0]._d, _[1]._d) for _ in zip(self._p, other._p))
+        if hash(self) == hash(other):
+            return True
+        return self.p == other.p
 
     def show(self, rich=True):
-        from IPython.core.debugger import set_trace
         if not rich:
             return str(self)
         res = ""
-        for _ in self._p:
+        for _ in self.p:
             s = _.show()
             if not res:
                 res = s
@@ -249,24 +327,29 @@ class _Differential_Polynomial:
                 res += s
             else:
                 res += " + " + s
+        res += f"{self.multipliers}, {self.nonmultipliers}"
         return res
 
+    def latex(self):
+        return "+".join(_.latex() for _ in self.p).replace("(-", "(").replace(
+            "+-", "-")
+
     def diff(self, *args):
-        return type(self)(diff(self.expression(), *args), self._context)
+        return type(self)(diff(self.expression(), *args), self.context)
 
     def __str__(self):
-        return " + ".join([str(_) for _ in self._p])
-
+        m = [self.context._independent[_] for _ in self.multipliers]
+        n = [self.context._independent[_] for _ in self.nonmultipliers]
+        return " + ".join([str(_) for _ in self.p]) +\
+            f", {m}, {n}"
     def __hash__(self):
-        return hash(self.expression())
-
+        if self.hash == 0:
+            self.hash = hash("".join([str(hash(_)) for _ in self.p]))
+        return self.hash
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ...
 def Reorder(S, context, ascending=False):
-    return sorted(S, key=functools.cmp_to_key(
-        lambda item1, item2:
-            sorter(item1.Lder(), item2.Lder(), context)),
-        reverse=not ascending)
+    return list(sorted(S))
 
 
 def reduceS(e: _Differential_Polynomial,
@@ -286,21 +369,24 @@ def reduceS(e: _Differential_Polynomial,
     return enew
 
 
-def reduce(e1: _Differential_Polynomial,
-           e2: _Differential_Polynomial,
+
+#@functools.cache
+def _order(der, context):
+    # pretty sure we don't need it
+    if der != 1:
+        return context.order_of_derivative(der)
+    return [0] * len(context._independent)
+
+
+def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
            context: Context) -> _Differential_Polynomial:
-    def _order(der):
-        if der != 1:
-            return order_of_derivative(der, len(context._independent))
-        else:
-            return [0]*len(context._independent)
 
     def _reduce_inner(e1, e2):
-        e2_order = _order(e2.Lder())
-        lf = func(e2.Lder())
-        for t in (_ for _ in e1._p if eq(func(_._d), lf)):
-            c = t._coeff
-            e1_order = _order(t._d)
+        e2_order = e2.order
+        lf = e2.function
+        for t in (_ for _ in e1.p if eq(_.function, lf)):
+            c = t.coeff
+            e1_order = t.order
             dif = [a-b for a, b in zip(e1_order, e2_order)]
             if all(map(lambda h: h == 0, dif)):
                 return _Differential_Polynomial(
@@ -643,7 +729,7 @@ class Janet_Basis:
         diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
         """
-        eq.cache_clear()
+#        eq.cache_clear()
         context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # bad criterion
@@ -665,9 +751,9 @@ class Janet_Basis:
             self.S = Autoreduce(self.S, context)
  #           print("after autoreduce")
  #           self.show()
- #           for _ in self.S:
- #               _.Lder().show()
-
+            for _ in self.S:
+                display(Math(_.show(rich=True)))
+            return
             self.S = CompleteSystem(self.S, context)
 #            print("after complete system")
 #            self.show()
