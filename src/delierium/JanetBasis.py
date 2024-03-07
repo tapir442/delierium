@@ -124,17 +124,15 @@ class _Dterm:
     def __lt__(self, other):
         """
         >>> x,y,z = var("x y z")
+        >>> from delierium.matrix_order import Mlex
         >>> f     = function("f")(x,y,z)
         >>> g     = function("g")(x,y,z)
         >>> h     = function("h")(x,y,z)
         >>> ctx   = Context ((f,g,h),(x,y,z), Mlex)
-        >>> d1    = (x**2) * diff(f, x, y)
-        >>> d2    = diff(f, x, y, z)
-        >>> dterm1 = _Dterm(d1,ctx)
-        >>> dterm2 = _Dterm(d2,ctx)
+        >>> dterm1 = _Dterm(derivative=diff(f, x, y), coeff=x**2, context=ctx)
+        >>> dterm2 = _Dterm(derivative=diff(f, x, y, z), coeff=1 , context=ctx)
         >>> print(bool(dterm1 < dterm2))
         True
-        '''
         """
         # XXX context.gt still a bad place
         return not (self is other) and not self == other and \
