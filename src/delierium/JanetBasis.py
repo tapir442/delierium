@@ -749,9 +749,9 @@ class Janet_Basis:
             self.S = Autoreduce(self.S, context)
  #           print("after autoreduce")
  #           self.show()
-            for _ in self.S:
-                display(Math(_.show(rich=True)))
-            return
+#            for _ in self.S:
+#                display(Math(_.show(rich=True)))
+#            return
             self.S = CompleteSystem(self.S, context)
 #            print("after complete system")
 #            self.show()

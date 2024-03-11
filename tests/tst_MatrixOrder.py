@@ -2,8 +2,8 @@
 import sys
 # why manipulate the sys.path needed?
 sys.path.insert (0, "../delierium")
-import .helpers
-import delierium.MatrixOrder as M
+import delierium.helpers
+import delierium.matrix_order as M
 import delierium.JanetBasis as JB
 from collections.abc import Iterable
 import functools
@@ -11,17 +11,20 @@ from operator import mul, sub
 from pprint import pprint
 
 
-#from sage.all import *
+import sage.all
+from sage.calculus.functional import diff
+from sage.calculus.var import function, var
+
 
 var ("x y")
 w = function ("w")(x,y)
 z = function ("z")(x,y)
 
 
+ctx = M.Context([w,z], [y,x], M.Mlex)
+j = JB._Dterm (derivative = w, context=ctx)
 
-j = JB.DTerm (w(x,y), ctx)
-
-dp = JB.Differential_Polynomial(w (x,y), ctx)
+dp = JB.Differential_Polynomial(w, ctx)
 print ("only function", dp._p)
 
 dp = JB.Differential_Polynomial(diff(w, x,y), ctx)

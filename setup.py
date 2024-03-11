@@ -14,9 +14,8 @@ setup(
     long_description_content_type='text/markdown',
     setup_requires=["more-itertools"],
     install_requires=["more-itertools", "pylatexenc", "sage>=9.6"],
-    python_requires = ">=3.6",
-    author='Martin Mayerhofer-Schöpf',
-    author_email='tapir@aon.at',
+    python_requires = ">=3.11",
+    authoremail='tapir@aon.at',
     license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -28,6 +27,6 @@ setup(
         ],
     keywords='ODE PDE Lie Symmetry',
     # fixme: an empty key should be enough?
-    package_dir={'delierium': 'delierium'},
+    package_dir={'delierium': 'src/delierium'},
     project_urls={'Source': 'https://github.com/tapir442/delierium'}
 )
