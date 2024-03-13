@@ -10,7 +10,7 @@ from sage.modules.free_module_element import vector  # pylint: disable=E0611
 
 from delierium.helpers import is_derivative, is_function
 
-
+from functools import cache
 
 #
 # standard weight matrices for lex, grlex and grevlex order
@@ -95,7 +95,6 @@ def Mgrevlex(funcs, variables):  # pylint: disable=C0103
         l = insert_row(l, 2+idx, _v)
     return l
 
-
 class Context:
     """Define the context for comparisons, orders, etc."""
     def __init__(self, dependent, independent, weight = Mgrevlex):
@@ -107,6 +106,7 @@ class Context:
                                  for _ in dependent))
         self._weight = weight(self._dependent, self._independent)
 
+    @cache
     def gt(self, v1: vector, v2: vector) -> int:
         """Computes the weighted difference vector of v1 and v2
         and returns 'True' if the first nonzero entry is > 0
@@ -117,11 +117,14 @@ class Context:
                 return entry > 0
         return False
 
+        return _gt(self._weight, v1, v2)
+
+    @cache
     def lt(self, v1, v2):
         """Checks if v1 < v2."""
         return v1 != v2 and not self.gt(v1, v2)
 
-
+    @cache
     def is_ctxfunc(self, f):
         """Check if 'f' is in the list of independet variables."""
         if f in self._dependent:
