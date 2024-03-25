@@ -144,7 +144,7 @@ class _Dterm:
                 ps = deriv.operator().parameter_set()
                 variables = deriv.operands()
                 sub = ",".join(map(lambda _: variables[_]._latex_(), ps))
-                return "%s_{%s}" % (func, sub)
+                return f"{func}_{{sub}}"
             elif hasattr(deriv, "function"):
                 return deriv.function().operator()._latex_()
             else:
@@ -563,6 +563,8 @@ def complete(S, context):
 
     def map_old_to_new(v):
         return context._independent[vars.index(v)]
+    def map_new_to_old(v):
+        pass
     while 1:
         monomials = [(_, derivative_to_vec(_.Lder(), context)) for _ in result]
         ms        = tuple([_[1] for _ in monomials])
