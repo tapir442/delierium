@@ -27,7 +27,7 @@ from sage.modules.free_module_element import vector
 
 from delierium.exception import DelieriumNotALinearPDE
 from delierium.helpers import (adiff, eq, is_derivative, is_function,
-                               pairs_exclude_diagonal)
+                               pairs_exclude_diagonal, expr_eq, expr_is_zero)
 from delierium.Involution import My_Multiplier
 from delierium.matrix_order import Context, Mgrevlex, Mgrlex
 from delierium.typedefs import *
@@ -99,17 +99,15 @@ class _Dterm:
         return compute_order(self.derivative, self.context._independent, self.context.order_of_derivative)
 
 
+    def is_zero(self):
+        return expr_is_zero(self.coeff)
+
     def is_coefficient(self):
         # XXX nonsense
         return self.derivative == 1
 
     def __bool__(self):
-        if isinstance(self.coeff, (int, float, complex)):
-            return self.coeff != 0
-        return not self.coeff.is_zero()
-
-    def is_monic(self):
-        return self.derivative != 1 and bool(self.coeff == 1)
+        return not self.is_zero()
 
     def __lt__(self, other):
         """
@@ -129,7 +127,17 @@ class _Dterm:
             self.context.gt(other.comparison_vector, self.comparison_vector)
 
     def __eq__(self, other):
-        return eq(self.derivative, other.derivative) and eq(self.coeff, other.coeff)
+        print("AAAAAAAAAAAAAAAAAAAAAAAAA")
+        print(f"{self.derivative=}, {self.order=}")
+        print(f"{other.derivative=}, {other.order=}")
+        print(f"{self.derivative==other.derivative=}")
+        print(f"{eq(self.derivative, other.derivative)=}")
+        print(f"{self.order==other.order=}")
+        print("......")
+        print(f"{self.derivative == other.derivative and expr_eq(self.coeff, other.coeff)=}")
+        print(f"{self.order == other.order and expr_eq(self.coeff, other.coeff)=}")
+        return eq(self.derivative, other.derivative) and \
+            expr_eq(self.coeff, other.coeff)
 
     def show(self, rich=True):
         if not rich:
@@ -276,7 +284,7 @@ class _Differential_Polynomial:
             c = self.p[0].coeff
             self.p = [
                 _Dterm((_.coeff / c), _.derivative, self.context)
-                for _ in self.p if _.coeff
+                for _ in self.p if not _.is_zero()
             ]
         # XXX: wrong place?
         if self.p:
@@ -300,9 +308,11 @@ class _Differential_Polynomial:
         return eq(self, other) or self < other
 
     def __eq__(self, other):
-        if self is other or hash(self) == hash(other):
+        if self is other:
             return True
-        return self.p == other.p
+        if len(self.p) != len(other.p):
+            return False
+        return all(_[0] == _[1] for _ in zip(self.p, other.p))
 
     def show(self, rich=True):
         if not rich:
@@ -383,17 +393,22 @@ def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
                 # S2 from Algorithm 2.4
                 subs = []
                 changed = e1.p
+                import random
+
                 for p2 in e2.p:
+                    pc = (p2.coeff*c)
                     hits = [_ for _ in e1.p if _.comparison_vector == p2.comparison_vector]
                     if hits:
-                        # XXX:this one we should remove!?!
-                        hits[0].coeff -= p2.coeff*c
+                        if not expr_eq(hits[0].coeff, pc):
+                            hits[0].coeff -= pc
+                        else:
+                            changed.remove(hits[0])
                     else:
-                        subs.append(_Dterm(coeff = -p2.coeff*c,
-                                   derivative =p2.derivative,
+                        subs.append(_Dterm(coeff = -pc,
+                                   derivative = p2.derivative,
                                    context = e1.context
                                    ))
-                dterms = [_ for _ in changed + subs if _.coeff]
+                dterms = changed + subs
                 return _Differential_Polynomial(e=0, context=e2.context, dterms=dterms)
             if all(map(lambda h: h >= 0, dif)):
                 variables_to_diff = []
@@ -414,8 +429,12 @@ def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
                     cmpvec = compute_comparison_vector(e1.context._dependent, p2.function, p2.context.is_ctxfunc)
                     hits = [_ for _ in e1.p if _.comparison_vector == tuple(order + cmpvec)]
                     assert(len(hits) in [0,1])
+                    pc = p2.coeff * c
                     if hits:
-                        hits[0].coeff -= c * p2.coeff
+                        if not expr_eq(hits[0].coeff, pc):
+                            hits[0].coeff -= pc
+                        else:
+                            changed.remove(hits[0])
                     else:
                         dt = _Dterm(coeff = -f*c,
                                     derivative = gstrich,
@@ -427,9 +446,13 @@ def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
                     order = compute_order(fstrich, e1.context._independent, e1.context.order_of_derivative)
                     cmpvec = list(p2.comparison_vector)
                     hits = [_ for _ in e1.p if _.comparison_vector == tuple(cmpvec)]
+                    print(hits)
                     assert(len(hits) in [0,1])
                     if hits:
-                        hits[0].coeff -= c*fstrich
+                        if not expr_eq(hits[0].coeff, c*fstrich):
+                            hits[0].coeff -= c*fstrich
+                        else:
+                            changed.remove(hits[0])
                     else:
                         dt = _Dterm(coeff = -c*fstrich,
                                        derivative = g,
@@ -437,7 +460,7 @@ def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
                                    )
                         if dt:
                             subs.append(dt)
-                dterms = [_ for _ in changed + subs if _.coeff]
+                dterms = changed + subs
                 return _Differential_Polynomial(e=0, context=e2.context, dterms=dterms)
         return e1
     while not bool((_e1 := _reduce_inner(e1, e2)) == e1):

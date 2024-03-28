@@ -1,6 +1,7 @@
 """Convenience functions"""
 
 import itertools
+import random
 import re
 from functools import cache
 
@@ -30,6 +31,57 @@ def eq(d1, d2):
     if d1.__class__ != d2.__class__:
         return False
     return bool(d1 == d2)
+
+
+def expr_eq(e1, e2):
+    try:
+        l = e1.variables()
+    except AttributeError:
+        l = []
+    try:
+        l.extend(e2.variables())
+    except AttributeError:
+        pass
+    i = 0
+    if not l:
+        return bool(e1 == e2)
+    rlist= []
+    while i != len(l):
+        r = random.randint(-1_000_000_000, 1_000_000_000)
+        if r:
+            rlist.append(r)
+            i += 1
+    r = dict(zip(l, rlist))
+    try:
+        ev1 = e1.subs(r)
+    except AttributeError:
+        ev1 = e1
+    try:
+        ev2 = e2.subs(r)
+    except AttributeError:
+        ev2 = e2
+    # XXX maket test twice
+    return bool(ev1 == ev2)
+
+def expr_is_zero(e):
+    try:
+        vars=e.variables()
+    except AttributeError:
+        return bool(e == 0)
+    i = 0
+    rlist= []
+    while i != len(vars):
+        r = random.randint(-1_000_000_000, 1_000_000_000)
+        if r:
+            rlist.append(r)
+            i += 1
+    try:
+        ev = e.subs(dict(zip(vars, rlist)))
+    except AttributeError:
+        ev = e
+    # XXX make test twice
+    return bool(ev == 0)
+
 
 
 def pairs_exclude_diagonal(it: Iterable[Any]) -> Generator[Tuple[(Any, Any)], None, None]:
