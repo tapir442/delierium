@@ -20,7 +20,6 @@ from typing import Iterable, Tuple, Any, Generator, TypeAlias
 
 sageexpression: TypeAlias = sage.symbolic.expression.Expression
 
-@cache
 def eq(d1, d2):
     """This cheap trick gives as a lot of performance gain (> 80%!)
     because maxima comparisons are expensive,and we can expect

@@ -44,6 +44,13 @@ def Mlex(funcs, variables):  # pylint: disable=C0103
     [1 0 0 0 0]
     [0 1 0 0 0]
     [0 0 1 0 0]
+    >>> x,y = var ("x y")
+    >>> w = function("w")(x,y)
+    >>> z = function("z")(x,y)
+    >>> Mlex((z,w), (x,y))
+    [0 0 2 1]
+    [1 0 0 0]
+    [0 1 0 0]
     '''
     no_funcs = len(funcs)
     no_vars = len(variables)

@@ -123,20 +123,11 @@ class _Dterm:
         True
         """
         # XXX context.gt still a bad place
-        return not (self is other) and not eq(self, other) and \
+        return not self == other and \
             self.context.gt(other.comparison_vector, self.comparison_vector)
 
     def __eq__(self, other):
-        print("AAAAAAAAAAAAAAAAAAAAAAAAA")
-        print(f"{self.derivative=}, {self.order=}")
-        print(f"{other.derivative=}, {other.order=}")
-        print(f"{self.derivative==other.derivative=}")
-        print(f"{eq(self.derivative, other.derivative)=}")
-        print(f"{self.order==other.order=}")
-        print("......")
-        print(f"{self.derivative == other.derivative and expr_eq(self.coeff, other.coeff)=}")
-        print(f"{self.order == other.order and expr_eq(self.coeff, other.coeff)=}")
-        return eq(self.derivative, other.derivative) and \
+        return self is other or self.comparison_vector == other.comparison_vector and \
             expr_eq(self.coeff, other.coeff)
 
     def show(self, rich=True):
@@ -394,7 +385,6 @@ def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
                 subs = []
                 changed = e1.p
                 import random
-
                 for p2 in e2.p:
                     pc = (p2.coeff*c)
                     hits = [_ for _ in e1.p if _.comparison_vector == p2.comparison_vector]
@@ -446,7 +436,6 @@ def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial,
                     order = compute_order(fstrich, e1.context._independent, e1.context.order_of_derivative)
                     cmpvec = list(p2.comparison_vector)
                     hits = [_ for _ in e1.p if _.comparison_vector == tuple(cmpvec)]
-                    print(hits)
                     assert(len(hits) in [0,1])
                     if hits:
                         if not expr_eq(hits[0].coeff, c*fstrich):
@@ -795,7 +784,7 @@ class Janet_Basis:
         diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
         """
-        eq.cache_clear()
+ #       eq.cache_clear()
         context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # bad criterion
@@ -809,8 +798,8 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
- #           print("This is where we start")
- #           self.show()
+            print("This is where we start")
+            self.show()
 #            for _ in self.S:
 #                _.Lder().show()
             #set_trace()
