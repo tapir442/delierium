@@ -9,15 +9,14 @@ from anytree import Node, RenderTree, AnyNode, NodeMixin, PreOrderIter
 
 import sage.all
 from sage.calculus.functional import diff
-from sage.calculus.var import function, var
-from sage.misc.html import html
+from sage.calculus.var import function, var  # pylint
 from sage.symbolic.operators import FDerivativeOperator
 from sage.symbolic.relation import solve
 
 from .DerivativeOperators import FrechetD
-from .helpers import latexer, ExpressionTree
+from .helpers import ExpressionTree
 from .JanetBasis import Janet_Basis
-from IPython.display import Math
+
 
 def prolongationFunction(f: list, x: list, order) -> list:
     '''
@@ -271,17 +270,18 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
         #       with overdeterminedSystemODE. Idea: return a dict with {function: order}#
         tree = ExpressionTree(e)
         mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
-        order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0
+        order= max((len(_.operator().parameter_set()) for _ in mine)) if mine else 0
         e = e.subs({dependent(independent) : Y})
         for j in range(1, order+1):
             d = diff(dependent(independent), independent, j)
-            e = e.subs({d : 0})
+            e = e.subs({d: 0})
         intermediate_system.append(e)
     # ToDo: get rid of hardcoded phi and xi
 
     janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
-    pols = map(lambda _ : _.expression().subs({Y : dependent(independent)}), janet.S)
-    return pols
+    pols = map(lambda _: _.expression().subs({Y : dependent(independent)}), janet.S)
+    return list(pols)
+
 
 
 if __name__ == "__main__":

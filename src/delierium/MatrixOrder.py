@@ -40,7 +40,7 @@ def Mlex(funcs, vars):
     OUTPUT: a matrix which when multiplying an augmented vector (func + var)
             gives the vector in lex order
 
-            same applies mutatiss mutandis for Mgrlex and Mgrevlex
+            same applies mutatis mutandis for Mgrlex and Mgrevlex
 
     >>> x,y,z = var ("x y z")
     >>> f = function("f")(x,y,z)
@@ -109,19 +109,19 @@ class Context:
         """ sorting : (in)dependent [i] > (in)dependent [i+i]
         which means: descending
         """
-        self._independent = tuple(independent)
+        self.independent = tuple(independent)
 #        if len(set(tuple(_.operands()) for _ in dependent)) > 1:
 #            raise DelieriumInconsistentVariableOrder(dependent)
-        self._dependent = tuple((_.operator() if is_function(_) else _
+        self.dependent = tuple((_.operator() if is_function(_) else _
                                  for _ in dependent))
-        self._weight = weight(self._dependent, self._independent)
+        self.weight = weight(self.dependent, self.independent)
 
 #    @functools.cache
     def gt(self, v1: vector, v2: vector) -> int:
         """Computes the weighted difference vector of v1 and v2
         and returns 'True' if the first nonzero entry is > 0
         """
-        r = self._weight * (vector(v1)-vector(v2))
+        r = self.weight * (vector(v1)-vector(v2))
         for entry in r:
             if entry:
                 return entry > 0
@@ -132,9 +132,9 @@ class Context:
 
 
     def is_ctxfunc(self, f):
-        if f in self._dependent:
+        if f in self.dependent:
             return True
-        if hasattr(f, "function") and f.function().operator() in self._dependent:
+        if hasattr(f, "function") and f.function().operator() in self.dependent:
             return True
         return False
 
@@ -159,7 +159,7 @@ class Context:
             # -- sage order
             # -- order given by the order given by function definition
             # - the order given by context
-            i = self._independent.index(variable)
+            i = self.independent.index(variable)
             res[i] = e.operator().parameter_set().count(idx)
         return res
 

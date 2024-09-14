@@ -135,14 +135,14 @@ def adiff(f, context, *vars):
     if use_func_diff:
         for v in vars:
             if "NewSymbolicFunction" in v.__class__.__name__:
-                f = func_diff(f, v(context._independent[1]))
+                f = func_diff(f, v(context.independent[1]))
             else:
                 xx = SR.var("xx")
                 gg = f.subs(
-                    {context._dependent[0](context._independent[1]): xx})
+                    {context.dependent[0](context.independent[1]): xx})
                 gg = diff(gg, v)
                 f = gg.subs(
-                    {xx: context._dependent[0](context._independent[1])})
+                    {xx: context.dependent[0](context.independent[1])})
     else:
         f = f.diff(*vars)
     return f
