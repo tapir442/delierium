@@ -31,3 +31,16 @@ def test_insert_row(no_vars, expected):
     im = identity_matrix(no_vars)
     i = insert_row(im, 0, [4]*no_vars)
     assert i == expected
+
+
+
+def test_mlex(context_x_y_z_u_v_w_mlex):
+    print(context_x_y_z_u_v_w_mlex)
+#    assert context_x_y_z_u_v_w_mlex.independent == [x,y,z]
+#    assert context_x_y_z_u_v_w_mlex.dependent == [u,v,w]
+    print(dir(context_x_y_z_u_v_w_mlex.weight))
+    assert context_x_y_z_u_v_w_mlex.weight == matrix\
+        ([[0, 0, 0, 3, 2, 1],
+          [1, 0, 0, 0, 0, 0],
+          [0, 1, 0, 0, 0, 0],
+          [0, 0, 1, 0, 0, 0]])

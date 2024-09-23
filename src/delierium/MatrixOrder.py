@@ -94,13 +94,13 @@ def Mgrevlex(funcs, vars):
     '''
     no_funcs = len(funcs)
     no_vars = len(vars)
-    l = matrix([1]*no_vars + [0]*no_funcs)
-    l = insert_row(l, 1, vector([0]*no_vars + list(range(no_funcs, 0, -1))))
+    mat = matrix([1]*no_vars + [0]*no_funcs)
+    mat = insert_row(mat, 1, vector([0]*no_vars + list(range(no_funcs, 0, -1))))
     for idx in range(no_vars):
         _v = vector([0]*(no_vars+no_funcs))
         _v[no_vars-idx-1] = -1
-        l = insert_row(l, 2+idx, _v)
-    return l
+        mat = insert_row(mat, 2+idx, _v)
+    return mat
 
 
 class Context:
