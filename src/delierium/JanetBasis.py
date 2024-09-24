@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from itertools import islice
 from operator import mul
 from time import time
-from types import Any, Callable
+from typing import Any, TypeVar, Generic
 
 import sage.all  # pylint: disable=import-error
 from IPython.core.debugger import set_trace
@@ -27,9 +27,11 @@ from delierium.Involution import My_Multiplier
 from delierium.MatrixOrder import Context, Mgrevlex
 from delierium.typedefs import sage_function, sage_var
 
+from sage.symbolic.expression import Expression
+
 start = time()
 
-Sage_Expression = sage.symbolic.expression.Expression
+TypeVar Sage_Expression = Generic['Sage_Expression']
 
 
 def compute_comparison_vector(
@@ -1008,7 +1010,6 @@ class Janet_Basis:
             print("after autoreduce")
             self.show(rich=True)
             print(time()-start)
-            return
             self.S = CompleteSystem(self.S, context)
             print("after complete system")
 #            self.show(rich=True)
