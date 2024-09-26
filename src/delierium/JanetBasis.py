@@ -31,13 +31,13 @@ from sage.symbolic.expression import Expression
 
 start = time()
 
-TypeVar Sage_Expression = Generic['Sage_Expression']
+#TypeVar Sage_Expression = Generic['Sage_Expression']
 
 
 def compute_comparison_vector(
         dependent: [sage_function],
         func: sage_function,
-        ctxcheck: Callable) -> [sage_function]:
+        ctxcheck) -> [sage_function]:
     iv = [0] * len(dependent)
     if func in dependent:
         iv[dependent.index(func)] = 1
@@ -48,7 +48,7 @@ def compute_comparison_vector(
     return iv
 
 
-def compute_order(derivative: Any, independent: sage_var, comp_order: Callable):
+def compute_order(derivative: Any, independent: sage_var, comp_order):
     """computes the monomial tuple from the derivative part"""
     if is_derivative(derivative):
         return comp_order(derivative)
@@ -62,7 +62,7 @@ start = time()
 @dataclass
 class _Dterm:
     coeff: int
-    derivative: Sage_Expression
+    derivative: int
     context: Context
 
     @profile

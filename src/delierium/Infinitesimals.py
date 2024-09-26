@@ -116,7 +116,8 @@ def prolongationODE(equations,
     >>> print(p.expand())
     -f(x)^2*g(u(x))^2*D[0](xi)(u(x), x) - g(u(x))*xi(u(x), x)*diff(f(x), x) - f(x)*phi(u(x), x)*D[0](g)(u(x)) + f(x)*g(u(x))*D[0](phi)(u(x), x) - f(x)*g(u(x))*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)
     """
-    vars     = [dependent(independent), independent]
+    import pdb; pdb.set_trace()
+    vars     = [dependent, independent]
     if infinitesimals is None:
         infinitesimals = (function("xi", latex_name=r"\xi"), function("phi", latex_name=r"\phi"))
     xi, phi  = infinitesimals
