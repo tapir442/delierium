@@ -1,14 +1,11 @@
 #%display latex
 import sys
-# why manipulate the sys.path needed?
-sys.path.insert (0, "../delierium")
 import delierium.helpers
 import delierium.matrix_order as M
 import delierium.JanetBasis as JB
 from collections.abc import Iterable
 import functools
 from operator import mul, sub
-from pprint import pprint
 
 
 import sage.all
@@ -44,7 +41,6 @@ flist = [diff(w,x,x,t),
      z(x,y,t), diff(z,x,t), diff(z, x,y), diff (z,y), diff(z,x), diff (z,y,y), diff(z,y,y,y),
         u(x,y,t), diff(u,x,x,t), diff(u, x,y), diff (u,y), diff(u,x), diff (u,y,y), diff(u,y,y,y)]
 
-print ("********************** Mlex *******************")
 l = [JB.Differential_Polynomial (_, ctx) for _ in flist]
 for _ in sorted (l):
     print (_)

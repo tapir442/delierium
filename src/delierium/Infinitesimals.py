@@ -6,20 +6,21 @@ Created on Fri Jan  7 18:49:33 2022
 @author: tapir
 """
 
+import types
+from collections import namedtuple
 from itertools import product
-from anytree import Node, RenderTree, AnyNode, NodeMixin, PreOrderIter
 
 import sage.all
+from anytree import PreOrderIter
 from sage.calculus.functional import diff
-from sage.calculus.var import function, var
-from sage.misc.html import html
+from sage.calculus.var import function, var  # pylint: disable=no-name-in-module
 from sage.symbolic.operators import FDerivativeOperator
 from sage.symbolic.relation import solve
 
 from .DerivativeOperators import FrechetD
-from .helpers import latexer, ExpressionTree
 from .JanetBasis import Janet_Basis
-from IPython.display import Math
+from .helpers import ExpressionTree
+
 
 def prolongationFunction(f: list, x: list, order) -> list:
     '''
@@ -33,13 +34,14 @@ def prolongationFunction(f: list, x: list, order) -> list:
     True
     '''
     result = f
-    aux    = result[:]
+    aux = result[:]
 
     def outer(fun, l1, l2):
         return list(map(lambda v: fun(v[0], v[1]), product(l1, l2)))
     for i in range(order):
-        result += (aux:= outer(diff, aux, x)[:])
-    return(sorted(list(set(result))))
+        result += (aux := outer(diff, aux, x)[:])
+    return sorted(list(set(result)))
+
 
 def infini(eq):
     pass
@@ -66,11 +68,11 @@ def prolongation(eq, dependent, independent):
     -D[1, 1](xi_1)(x, y(x))*diff(y(x), x)^3 + D[1, 1](phi_1)(x, y(x))*diff(y(x), x)^2 - 2*D[0, 1](xi_1)(x, y(x))*diff(y(x), x)^2 - 3*D[1](xi_1)(x, y(x))*diff(y(x), x)*diff(y(x), x, x) + 2*D[0, 1](phi_1)(x, y(x))*diff(y(x), x) - D[0, 0](xi_1)(x, y(x))*diff(y(x), x) + D[1](phi_1)(x, y(x))*diff(y(x), x, x) - 2*D[0](xi_1)(x, y(x))*diff(y(x), x, x) + D[0, 0](phi_1)(x, y(x))
     """
     Depend = [d(*independent) for d in dependent]
-    vars   = independent + Depend
-    xi     = [function("xi_%s" % (j+1), latex_name = r"\xi_{i+1}") for j in range(len(independent))]
-    eta    = []
+    vars = independent + Depend
+    xi = [function("xi_%s" % (j+1), latex_name = r"\xi_{i+1}") for j in range(len(independent))]
+    eta = []
     for i in range(len(dependent)):
-        phi = function("phi_%s" % (i+1), latex_name = r"\phi_{i+1}")
+        phi = function(f"phi_{i+1}", latex_name = fr"\phi_{i+1}")
         eta.append(phi(*vars) -
                    sum(xi[j](*vars) *
                        Depend[i].diff(independent[j])
@@ -81,7 +83,7 @@ def prolongation(eq, dependent, independent):
     for p in prolong:
         _p = []
         for l in p:
-            _p.extend([l.substitute_function(test[i], _e.function()) for _e in  eta])
+            _p.extend([l.substitute_function(test[i], _e.function()) for _e in eta])
         prol.append(sum(_ for _ in _p))
     prolong = prol[:]
     prol = []
@@ -131,11 +133,7 @@ def prolongationODE(equations,
         prol.append(sum(_ for _ in _p))
     return list(map (lambda _ : _ + xi(*vars) * equations.diff(independent), prol))
 
-
-from collections import namedtuple
-
 term = namedtuple("term", ["power", "coeff"])
-import types
 
 def overdeterminedSystemODE (ode,
                        dependent,
@@ -191,7 +189,7 @@ def overdeterminedSystemODE (ode,
     if order == 1:
         print("Order 1 ODEs have no meaningful infinitesimals")
         return []
-    s1  = solve(ode==0, diff(dependent(independent),independent, order))
+    s1 = solve(ode==0, diff(dependent(independent),independent, order))
     ode1 = prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
     tree = ExpressionTree(ode1)
     l = (_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent, order)))
@@ -204,7 +202,7 @@ def overdeterminedSystemODE (ode,
         # of the derivative.
         # Example: we have an ODE of order three. The prolongation and
         # substitution step produces 'ode1' which is now of reduced order
-        # two. So we can have differentials of order one and to, so we need an
+        # two. So we can have differentials of order one and two, so we need an
         # array of lenght two which is initialized with zeroes. A term like
         #    diff(y, x)^5 * diff(y, x, x)^2
         # will create the entry
@@ -217,7 +215,7 @@ def overdeterminedSystemODE (ode,
         powercollector = [0]*(order-1)
         v = node.value
         if v.operator() in [sage.symbolic.operators.add_vararg, None]:
-            continue
+             continue
         if isinstance(v.operator(), FDerivativeOperator):
             # standalone diff operator
             if v.operands()[0] != independent:
@@ -231,7 +229,7 @@ def overdeterminedSystemODE (ode,
             # We will analize them factor by factor, put powers and orders into
             # 'power_collector', and multiply these factors together into 'local_term',
             # ans store both together into 'all_this_stuff'
-            local_term    = 1
+            local_term = 1
             for w in v.operands():
                 if isinstance(w.operator(), FDerivativeOperator):
                     if w.operands()[0] != independent:
@@ -239,11 +237,10 @@ def overdeterminedSystemODE (ode,
                         continue
                     local_term *= w
                     powercollector[order - len(w.operator().parameter_set())-1] = 1
-                    local_term *= w
                 if isinstance(w.operator(), types.BuiltinFunctionType):
                     if w.operator().__qualname__ != 'pow':
                         continue
-                    if isinstance (w.operands()[0].operator(), FDerivativeOperator):
+                    if isinstance(w.operands()[0].operator(), FDerivativeOperator):
                         if w.operands()[0].operands()[0] != independent:
                             # differential coming from prolongation, ignore
                             continue
@@ -274,10 +271,10 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
         tree = ExpressionTree(e)
         mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
         order= max([len(_.operator().parameter_set()) for _ in mine]) if mine else 0
-        e = e.subs({dependent(independent) : Y})
+        e = e.subs({dependent(independent): Y})
         for j in range(1, order+1):
             d = diff(dependent(independent), independent, j)
-            e = e.subs({d : 0})
+            e = e.subs({d: 0})
         intermediate_system.append(e)
     # ToDo: get rid of hardcoded phi and xi
 

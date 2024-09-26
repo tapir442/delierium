@@ -108,10 +108,10 @@ class Context:
         """ sorting : (in)dependent [i] > (in)dependent [i+i]
         which means: descending
         """
-        self._independent = tuple(independent)
-        self._dependent = tuple((_.operator() if is_function(_) else _
+        self.independent = tuple(independent)
+        self.dependent = tuple((_.operator() if is_function(_) else _
                                  for _ in dependent))
-        self._weight = weight(self._dependent, self._independent)
+        self._weight = weight(self.dependent, self.independent)
 
     @cache
     def gt(self, v1: vector, v2: vector) -> int:
@@ -134,9 +134,9 @@ class Context:
     @cache
     def is_ctxfunc(self, f):
         """Check if 'f' is in the list of independet variables."""
-        if f in self._dependent:
+        if f in self.dependent:
             return True
-        if hasattr(f, "function") and f.function().operator() in self._dependent:
+        if hasattr(f, "function") and f.function().operator() in self.dependent:
             return True
         return False
 
@@ -160,7 +160,7 @@ class Context:
             # -- sage order
             # -- order given by the order given by function definition
             # - the order given by context
-            i = self._independent.index(variable)
+            i = self.independent.index(variable)
             res[i] = e.operator().parameter_set().count(idx)
         return res
 

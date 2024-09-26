@@ -1,7 +1,6 @@
 import pytest
 import sys
-sys.path.insert (0, "../delierium")
-import delierium.matrix_order as M
+from delierium import *
 from sage.all import *
 
 @pytest.fixture
@@ -9,7 +8,7 @@ def context_x_y_w_z ():
     var ("x y")
     w = function ("w")(x,y)
     z = function ("z")(x,y)
-    ctx = M.Context ((w, z), (x,y))
+    ctx = matrix_order.Context ((w, z), (x,y))
     return ctx
 
 @pytest.fixture
@@ -18,7 +17,7 @@ def context_x_y_z_u_v_w ():
     u = function ("u")(x,y,z)
     v = function ("v")(x,y,z)
     w = function ("w")(x,y,z)
-    ctx = M.Context ((u,v,w), (x,y,z))
+    ctx = matrix_order.Context ((u,v,w), (x,y,z))
     return ctx
 
 @pytest.fixture

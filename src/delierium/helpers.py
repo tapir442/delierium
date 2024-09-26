@@ -20,6 +20,7 @@ from typing import Iterable, Tuple, Any, Generator, TypeAlias
 
 sageexpression: TypeAlias = sage.symbolic.expression.Expression
 
+@cache
 def eq(d1, d2):
     """This cheap trick gives as a lot of performance gain (> 80%!)
     because maxima comparisons are expensive,and we can expect
@@ -29,10 +30,12 @@ def eq(d1, d2):
     """
     if d1.__class__ != d2.__class__:
         return False
-    return bool(d1 == d2)
+    return d1 == d2
 
 
+@cache
 def expr_eq(e1, e2):
+    """Substitute variables by random numbers an compare output."""
     try:
         l = e1.variables()
     except AttributeError:
@@ -41,10 +44,10 @@ def expr_eq(e1, e2):
         l.extend(e2.variables())
     except AttributeError:
         pass
-    i = 0
     if not l:
-        return bool(e1 == e2)
-    rlist= []
+        return e1 == e2
+    rlist = []
+    i = 0
     while i != len(l):
         r = random.randint(-1_000_000_000, 1_000_000_000)
         if r:
@@ -59,8 +62,8 @@ def expr_eq(e1, e2):
         ev2 = e2.subs(r)
     except AttributeError:
         ev2 = e2
-    # XXX maket test twice
-    return bool(ev1 == ev2)
+    # XXX make test twice
+    return ev1 == ev2
 
 def expr_is_zero(e):
     try:
@@ -132,6 +135,7 @@ def tangent_vector(f):
         f = f.subs({o: o + t * n})
     d = diff(f, t).limit(t=0)
     return [d.coefficient(_) for _ in newvars]
+
 
 def order_of_derivative(e, required_len=0):
     '''Returns the vector of the orders of a derivative respect to its variables
