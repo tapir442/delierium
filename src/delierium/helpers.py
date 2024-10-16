@@ -20,7 +20,6 @@ from typing import Iterable, Tuple, Any, Generator, TypeAlias
 
 sageexpression: TypeAlias = sage.symbolic.expression.Expression
 
-@cache
 def eq(d1, d2):
     """This cheap trick gives as a lot of performance gain (> 80%!)
     because maxima comparisons are expensive,and we can expect
@@ -33,7 +32,6 @@ def eq(d1, d2):
     return d1 == d2
 
 
-@cache
 def expr_eq(e1, e2):
     """Substitute variables by random numbers an compare output."""
     try:
@@ -46,37 +44,32 @@ def expr_eq(e1, e2):
         pass
     if not l:
         return e1 == e2
-    rlist = []
-    i = 0
-    while i != len(l):
-        r = random.randint(-1_000_000_000, 1_000_000_000)
-        if r:
-            rlist.append(r)
-            i += 1
+    substituted = False
+    rlist = [random.randint(100, 1_000) for i in range(len(l))]
     r = dict(zip(l, rlist))
     try:
         ev1 = e1.subs(r)
+        substituted = True
     except AttributeError:
         ev1 = e1
     try:
         ev2 = e2.subs(r)
+        substituted = True
     except AttributeError:
         ev2 = e2
-    # XXX make test twice
-    return ev1 == ev2
+    try:
+        # we can compare numbers
+        if substituted:
+            return ev1.n() == ev2.n()
+    except Exception:
+        return bool(ev1 == ev2)
 
 def expr_is_zero(e):
     try:
         vars=e.variables()
     except AttributeError:
         return bool(e == 0)
-    i = 0
-    rlist= []
-    while i != len(vars):
-        r = random.randint(-1_000_000_000, 1_000_000_000)
-        if r:
-            rlist.append(r)
-            i += 1
+    rlist = [random.randint(100, 1_000) for i in range(len(vars))]
     try:
         ev = e.subs(dict(zip(vars, rlist)))
     except AttributeError:
@@ -199,13 +192,13 @@ def compactify(*vars):
     return result
 
 
-#@functools.cache
 def adiff(f, context, *vars):
     use_func_diff = any(
         "NewSymbolicFunction" in v.__class__.__name__ for v in vars)
     for op in f.operands():
         if "NewSymbolicFunction" in op.operator().__class__.__name__:
             use_func_diff = True
+            break
     if use_func_diff:
         for v in vars:
             if "NewSymbolicFunction" in v.__class__.__name__:

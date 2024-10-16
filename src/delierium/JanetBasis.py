@@ -6,7 +6,7 @@ import functools
 from collections import namedtuple
 from collections.abc import Iterable
 from dataclasses import dataclass
-from itertools import islice, product
+from itertools import islice, product, groupby
 from operator import mul
 
 import sage.all
@@ -28,6 +28,15 @@ from delierium.typedefs import *
 
 Sage_Expression = sage.symbolic.expression.Expression
 
+from line_profiler import profile
+
+
+try:
+    __IPYTHON__
+    _in_ipython_session = True
+except NameError:
+    _in_ipython_session = False
+
 
 def compute_comparison_vector(dependent, func, ctxcheck):
     iv = [0] * len(dependent)
@@ -39,7 +48,7 @@ def compute_comparison_vector(dependent, func, ctxcheck):
         pass
     return iv
 
-
+@profile
 def compute_order(derivative, independent, comp_order):
     """Computes the monomial tuple from the derivative part."""
     if is_derivative(derivative):
@@ -54,6 +63,7 @@ class _Dterm(SageObject):
     derivative: int
     context: Context
 
+    @profile
     def __post_init__(self):
         object.__setattr__(self, 'order', self._compute_order())
         if is_derivative(self.derivative):
@@ -62,9 +72,10 @@ class _Dterm(SageObject):
             object.__setattr__(self, 'function', self.derivative.function().operator())
         object.__setattr__(self, 'comparison_vector', self._compute_comparison_vector())
 
+    @profile
     def expression(self):
         return self.coeff * self.derivative
-
+    @profile
     def _compute_comparison_vector(self):
         """Concatenates order and comparison vector for input for ..."""
         iv = compute_comparison_vector(self.context.dependent, self.function, self.context.is_ctxfunc)
@@ -80,11 +91,12 @@ class _Dterm(SageObject):
 
     def term(self):
         return self.coeff * self.derivative
-
+    @profile
     def _compute_order(self):
         """computes the monomial tuple from the derivative part"""
         return compute_order(self.derivative, self.context.independent, self.context.order_of_derivative)
 
+    @profile
     def is_zero(self):
         return expr_is_zero(self.coeff)
 
@@ -92,9 +104,12 @@ class _Dterm(SageObject):
         # XXX nonsense
         return self.derivative == 1
 
+
+    @profile
     def __bool__(self):
         return not self.is_zero()
 
+    @profile
     def __lt__(self, other):
         """
         >>> x,y,z = var("x y z")
@@ -110,18 +125,13 @@ class _Dterm(SageObject):
         return not self == other and \
             self.context.gt(other.comparison_vector, self.comparison_vector)
 
+    @profile
     def __eq__(self, other):
         return self is other or \
             (self.comparison_vector == other.comparison_vector and \
              expr_eq(self.coeff, other.coeff))
 
     def show(self, rich=True):
-        try:
-            __IPYTHON__
-            _in_ipython_session = True
-        except NameError:
-            _in_ipython_session = False
-
         if not rich:
             return str(self)
         return self.latex()
@@ -164,12 +174,19 @@ class _Dterm(SageObject):
 
     _latex_ = latex
 
+    def add_coefficient(self, c):
+        pass
+
+
+    @profile
     def __hash__(self):
         return hash(str(self.coeff) + str(self.derivative))
 
+    _cache_key = __hash__
 
 class _Differential_Polynomial(SageObject):
 
+    @profile
     def __init__(self, e, context, dterms=[]):
         self.context = context
         self.p = []
@@ -186,6 +203,7 @@ class _Differential_Polynomial(SageObject):
         self.p.sort(reverse=True)
         self.normalize()
 
+    @profile
     def _analyze(self, term):
         if hasattr(term.operator(), "__name__") and term.operator().__name__ == 'mul_vararg':
             operands = term.operands()
@@ -266,6 +284,7 @@ class _Differential_Polynomial(SageObject):
         for p in self.p:
             yield p.coeff
 
+    @profile
     def normalize(self):
         if self.p and self.p[0].coeff != 1:
             c = self.p[0].coeff
@@ -279,6 +298,8 @@ class _Differential_Polynomial(SageObject):
     def __bool__(self):
         return len(self.p) > 0
 
+    @profile
+#    @cache
     def __lt__(self, other):
         for _ in zip(self.p, other.p):
             if eq(_[0], _[1]):
@@ -288,9 +309,11 @@ class _Differential_Polynomial(SageObject):
             return False
         return False
 
+    @profile
     def __le__(self, other):
         return eq(self, other) or self < other
 
+    @profile
     def __eq__(self, other):
         if self is other:
             return True
@@ -343,6 +366,7 @@ class _Differential_Polynomial(SageObject):
             self.hash = hash("".join([str(hash(_)) for _ in self.p]))
         return self.hash
 
+    _cache_key = __hash__
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ...
 
@@ -370,6 +394,7 @@ def reduceS(e: _Differential_Polynomial, S: list, context: Context) -> _Differen
 
 
 #@functools.cache
+@profile
 def _order(der, context):
     # pretty sure we don't need it
     if der != 1:
@@ -377,90 +402,97 @@ def _order(der, context):
     return [0] * len(context.independent)
 
 
+def collapse_dterms(dterms):
+    result = []
+    for _, value in groupby(dterms, key=lambda x: x.comparison_vector):
+        dts = list(value)
+        if len(dts) == 1:
+            result.append(dts[0])
+        else:
+            s = sum(_.coeff for _ in dts)
+            if s.is_numeric() and s.n() == 0:
+                continue
+            result.append(_Dterm(coeff=sum(_.coeff for _ in dts),
+                                 derivative=dts[0].derivative,
+                                 context=dts[0].derivative))
+    return result
+
+
+
+def _reduce_inner(e1, e2, context):
+    for t in (_ for _ in e1.p if _.function == e2.function):
+        c = t.coeff
+        dif = [a - b for a, b in zip(t.order, e2.order)]
+        if all(map(lambda h: h == 0, dif)):
+            # S2 from Algorithm 2.4
+            subs = []
+            changed = e1.p
+            for p2 in e2.p:
+                pc = p2.coeff * c
+                hits = [_ for _ in e1.p if _.comparison_vector == p2.comparison_vector]
+                if hits:
+                    if not expr_eq(hits[0].coeff, pc):
+                        hits[0].coeff -= pc
+                    else:
+                        changed.remove(hits[0])
+                else:
+                    dt = _Dterm(coeff=-pc, derivative=p2.derivative, context=e1.context)
+                    if dt:
+                        subs.append(dt)
+            dterms = collapse_dterms(changed + subs)
+            return _Differential_Polynomial(e=0, context=e2.context, dterms=dterms)
+
+        elif all(map(lambda h: h >= 0, dif)):
+            variables_to_diff = []
+            for i in range(len(context.independent)):
+                if dif[i] != 0:
+                    variables_to_diff.extend([context.independent[i]] * abs(dif[i]))
+            subs = []
+            changed = e1.p
+            for p2 in e2.p:
+                # product rule
+                f = p2.coeff
+                gstrich = diff(p2.derivative, *variables_to_diff)
+                fstrich = diff(p2.coeff, *variables_to_diff)
+                g = p2.derivative
+                # f*g'
+                order = compute_order(gstrich, e1.context.independent, e1.context.order_of_derivative)
+                cmpvec = compute_comparison_vector(e1.context.dependent, p2.function, p2.context.is_ctxfunc)
+                hits = [_ for _ in e1.p if _.comparison_vector == tuple(order + cmpvec)]
+                pc = p2.coeff * c
+                if hits:
+                    if not expr_eq(hits[0].coeff, pc):
+                        hits[0].coeff -= pc
+                    else:
+                        changed.remove(hits[0])
+                else:
+                    dt = _Dterm(coeff=-f * c, derivative=gstrich, context=p2.context)
+                    if dt:
+                        subs.append(dt)
+                # f'*g
+                order = compute_order(fstrich, e1.context.independent, e1.context.order_of_derivative)
+                cmpvec = list(p2.comparison_vector)
+                hits = [_ for _ in e1.p if _.comparison_vector == tuple(cmpvec)]
+                if hits:
+                    prod = c * fstrich
+                    if not expr_eq(hits[0].coeff, prod):
+                        hits[0].coeff -= prod
+                    else:
+                        changed.remove(hits[0])
+                else:
+                    dt = _Dterm(coeff=-c * fstrich, derivative=g, context=e1.context)
+                    if dt:
+                        subs.append(dt)
+            dterms = collapse_dterms(changed + subs)
+            return _Differential_Polynomial(e=0, context=e2.context, dterms=dterms)
+        else:
+            pass
+    return e1
+
+
 def reduce(e1: _Differential_Polynomial, e2: _Differential_Polynomial, context: Context) -> _Differential_Polynomial:
-
-    def _reduce_inner(e1, e2):
-        for t in (_ for _ in e1.p if _.function == e2.function):
-            c = t.coeff
-            dif = [a - b for a, b in zip(t.order, e2.order)]
-            if all(map(lambda h: h == 0, dif)):
-                # S2 from Algorithm 2.4
-                subs = []
-                changed = e1.p
-                for p2 in e2.p:
-                    pc = p2.coeff * c
-                    hits = [_ for _ in e1.p if _.comparison_vector == p2.comparison_vector]
-                    if hits:
-                        if not expr_eq(hits[0].coeff, pc):
-                            hits[0].coeff -= pc
-                        else:
-                            changed.remove(hits[0])
-                    else:
-                        dt = _Dterm(coeff=-pc, derivative=p2.derivative, context=e1.context)
-                        if dt:
-                            subs.append(dt)
-                dterms = changed + subs
-                return _Differential_Polynomial(e=0, context=e2.context, dterms=dterms)
-
-            elif all(map(lambda h: h >= 0, dif)):
-                variables_to_diff = []
-                for i in range(len(context.independent)):
-                    if dif[i] != 0:
-                        variables_to_diff.extend([context.independent[i]] * abs(dif[i]))
-                subs = []
-                changed = e1.p
-                for p2 in e2.p:
-                    # product rule
-                    f = p2.coeff
-                    gstrich = diff(p2.derivative, *variables_to_diff)
-                    fstrich = diff(p2.coeff, *variables_to_diff)
-                    g = p2.derivative
-                    # f*g'
-                    order = compute_order(gstrich, e1.context.independent, e1.context.order_of_derivative)
-                    cmpvec = compute_comparison_vector(e1.context.dependent, p2.function, p2.context.is_ctxfunc)
-                    hits = [_ for _ in e1.p if _.comparison_vector == tuple(order + cmpvec)]
-                    assert (len(hits) in [0, 1])
-                    pc = p2.coeff * c
-                    if hits:
-                        if not expr_eq(hits[0].coeff, pc):
-                            hits[0].coeff -= pc
-                        else:
-                            changed.remove(hits[0])
-                    else:
-                        dt = _Dterm(coeff=-f * c, derivative=gstrich, context=p2.context)
-                        if dt:
-                            subs.append(dt)
-                    # f'*g
-                    order = compute_order(fstrich, e1.context.independent, e1.context.order_of_derivative)
-                    cmpvec = list(p2.comparison_vector)
-                    hits = [_ for _ in e1.p if _.comparison_vector == tuple(cmpvec)]
-                    assert len(hits) in [0, 1]
-                    if hits:
-                        prod = c * fstrich
-                        if not expr_eq(hits[0].coeff, prod):
-                            hits[0].coeff -= prod
-                        else:
-                            changed.remove(hits[0])
-                    else:
-                        dt = _Dterm(coeff=-c * fstrich, derivative=g, context=e1.context)
-                        if dt:
-                            subs.append(dt)
-                dterms = changed + subs
-                return _Differential_Polynomial(e=0, context=e2.context, dterms=dterms)
-            else:
-                pass
-        return e1
-
-#    print("************ e2 *******************")
-#    e2.show_derivatives()
-#    e1.show_derivatives()
-    #display(Math(e1.show()))
-    #display(Math(e2.show()))
-    #  import pdb; pdb.set_trace()
-    while not bool((new_e1 := _reduce_inner(e1, e2)) == e1):
+    while not (new_e1 := _reduce_inner(e1, e2, context)) == e1:
         e1 = new_e1
-#        e1.show_derivatives()
-#        print("...... this was e1 .................")
     return new_e1
 
 
@@ -488,7 +520,7 @@ def Autoreduce(S, context):
 def vec_degree(v, m):
     return m[v]
 
-
+@profile
 def vec_multipliers(m, M, Vars):
     """multipliers and nonmultipliers for differential vectors aka tuples
 
@@ -569,7 +601,7 @@ def vec_multipliers(m, M, Vars):
             mult.append(v)
     return mult, list(sorted(set(Vars) - set(mult)))
 
-
+@profile
 def complete(S, context):
     result = list(S)
     if len(result) == 1:
@@ -578,11 +610,6 @@ def complete(S, context):
 
     def map_old_to_new(v):
         return context.independent[vars.index(v)]
-
-    def map_new_to_old(v):
-        new = [0] * len(v)
-        for idx in v:
-            pass
 
     while 1:
         monomials = [(_, _.order) for _ in result]
@@ -617,7 +644,6 @@ def complete(S, context):
                     # this is in _m0's class
                     to_remove.append(_m0)
         for _to in to_remove:
-            set_trace()
             try:
                 m0.remove(_to)
             except:
@@ -688,7 +714,7 @@ def split_by_function(S, context):
     s = bucket(S, key=lambda d: d.Lfunc())
     return flatten([FindIntegrableConditions(s[k], context) for k in s])
 
-
+@profile
 def FindIntegrableConditions(S, context):
     result = list(S)
     if len(result) == 1:
@@ -703,7 +729,9 @@ def FindIntegrableConditions(S, context):
     ms = tuple([_[1] for _ in monomials])
 
     def map_old_to_new(i):
-        return context.independent[vars.index(i)]
+        # this is the crucial part of all af this algorithm: Think about it again
+        return context.independent[vars.index(len(vars)-1-i)]
+
 
     # multiplier-collection is our M
     multiplier_collection = []
@@ -711,19 +739,29 @@ def FindIntegrableConditions(S, context):
         # S1
         # damned! Variables are messed up!
         _multipliers, _nonmultipliers = vec_multipliers(monom, ms, vars)
+#        print(f"=======================> {dp.Lder()=}, {_multipliers=}, {[map_old_to_new(_) for _ in _multipliers]=}, {_nonmultipliers=}, {[map_old_to_new(_) for _ in _nonmultipliers]=}")
         multiplier_collection.append(
             (dp, [map_old_to_new(_) for _ in _multipliers], [map_old_to_new(_) for _ in _nonmultipliers]))
     result = []
+ #   print("."*80)
+ #   print(locals())
+#    import pdb; pdb.set_trace()
     for e1, e2 in product(multiplier_collection, repeat=2):
         if e1 == e2: continue
         for n in e1[2]:
             for m in islice(powerset(e2[1]), 1, None):
-                if eq(adiff(e1[0].Lder(), context, n), adiff(e2[0].Lder(), context, *m)):
+                a1 = adiff(e1[0].Lder(), context, n)
+                a2 = adiff(e2[0].Lder(), context, *m)
+#                print(f"{n=}, {m=}, {a1=}, {a2=}")
+                # compare parameter_sets for performance reasons as
+                # the functions are always the same
+                if a1.operator().parameter_set() == a2.operator().parameter_set():
                     # integrability condition
                     # don't need leading coefficients because in DPs
                     # it is always 1
                     c = adiff(e1[0].expression(), context, n) - \
                         adiff(e2[0].expression(), context, *m)
+#                    print(f"{c=}")
                     if c:
                         result.append(c)
     return result
@@ -798,7 +836,7 @@ class Janet_Basis:
         diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
         """
-        eq.cache_clear()
+#        eq.cache_clear()
         context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # XXX bad criterion
@@ -812,19 +850,23 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
-            print("This is where we start")
-            self.show(rich=False, short=True)
-            self.S = Autoreduce(self.S, context)
-            print("after autoreduce")
-            self.show(rich=False, short=True)
-            self.S = CompleteSystem(self.S, context)
-            print("after complete system")
-            self.show(rich=False, short=True)
+#            print("This is where we start")
+#            self.show(rich=False, short=False)
 
-            conditions = split_by_function(self.S, context)
-            print("after conditions")
+            self.S = Autoreduce(self.S, context)
+#            print("after autoreduce")
+#            self.show(rich=False, short=True)
+            self.S = CompleteSystem(self.S, context)
+#            print("after complete system")
+#            self.show(rich=False, short=True)
+
+            conditions = list(split_by_function(self.S, context))
+#            print("after conditions")
+#            print(conditions)
+#            import pdb; pdb.set_trace()
             reduced = [reduceS(_Differential_Polynomial(_m, context), self.S, context) for _m in conditions]
-            print("after reduced", reduced)
+            reduced = [_ for _ in reduced if _]
+#            print("after reduced", reduced)
             if not reduced:
                 self.S = Reorder(self.S, context)
                 return
@@ -833,13 +875,6 @@ class Janet_Basis:
 
     def show(self, rich=True, short=False):
         """Print the Janet basis with leading derivative first."""
-        try:
-            __IPYTHON__
-            _in_ipython_session = True
-        except NameError:
-            _in_ipython_session = False
-
-        from IPython.display import Math
         for _ in self.S:
             if rich:
                 if _in_ipython_session:
