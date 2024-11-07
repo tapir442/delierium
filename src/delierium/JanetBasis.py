@@ -350,6 +350,8 @@ class LHDP:
 
     @profile
     def __eq__(self, other):
+        if other is None:
+            return False
         if self is other:
             return True
         if len(self.p) != len(other.p):
@@ -455,20 +457,19 @@ def Reorder(S, context, ascending=False):
     return list(sorted(S, reverse = not ascending))
 
 
-def reduceS(e: LHDP, S: list, context: Context) -> LHDP:
+def reduceS(e: LHDP, S: list, context: Context) -> LHDP | None:
     reducing = True
-    for _ in S:
-        _.show(rich=True, short=True)
-    gen = (_ for _ in S)
+    gen = S[:]
     while reducing:
         for dp in gen:
             enew = reduce(e, dp, context)
-            # XXX check wheter we can replace "==" by 'is'
-            if enew == e:
+            if enew is None:
+                return None
+            elif e == enew:
                 reducing = False
             else:
                 e = enew
-                gen = (_ for _ in S if _)
+                gen = [_ for _ in S if _]
                 reducing = True
     return enew
 
@@ -486,7 +487,6 @@ def _reduce_inner(e1, e2, context):
 #    print("===================")
 #    print(f"{e1=}")
 #    print(f"{e2=}")
-    #import pdb; pdb.set_trace()
     for t in (_ for _ in e1.p if _.function == e2.function):
         c = t.coeff
         dif = [a - b for a, b in zip(t.order, e2.order)]
@@ -537,6 +537,8 @@ def _reduce_inner(e1, e2, context):
             dterms = [_ for _ in [*changed.values()] + subs if _]
             if dterms:
                 return LHDP(e=0, context=e2.context, dterms=dterms)
+            else:
+                return None
 
     return e1
 
@@ -548,10 +550,15 @@ def get_diff_vars(context, dif):
     return variables
 
 
-def reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
-    while not (new_e1 := _reduce_inner(e1, e2, context)) == e1:
+def reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
+    while True:
+        new_e1 = _reduce_inner(e1, e2, context)
+        if not new_e1:
+            return None
+        if e1 == new_e1:
+            return  e1
         e1 = new_e1
-    return new_e1
+
 
 
 def Autoreduce(S, context):
@@ -563,7 +570,7 @@ def Autoreduce(S, context):
         have_reduced = False
         for _r in r:
             rnew = reduceS(_r, _p, context)
-            have_reduced = have_reduced or rnew != _r
+            have_reduced = have_reduced or _r != rnew
             if rnew:
                 newdps.append(rnew)
         dps = Reorder(_p + [_ for _ in newdps if _ not in _p], context, ascending=True)
@@ -681,6 +688,7 @@ def complete(S, context):
             _multipliers, _nonmultipliers = vec_multipliers(monom, ms, vars)
             multiplier_collection.append(
                 coll(monom, dp,_multipliers, _nonmultipliers))
+
         for entry in multiplier_collection:
             if not entry.nonmultipliers:
                 m0.append((entry.monom, None, entry.dp))
@@ -915,25 +923,27 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
-            print("This is where we start")
+#            print("This is where we start")
 #            self.show(rich=False, short=False)
-            #import pdb; pdb.set_trace()
+#            import pdb; pdb.set_trace()
             self.S = Autoreduce(self.S, context)
-            print("after autoreduce")
+#            print("after autoreduce")
 #            self.show(rich=False, short=False)
 #            import pdb; pdb.set_trace()
             self.S = CompleteSystem(self.S, context)
-            print("after complete system")
+#            print("after complete system")
 #            self.show(rich=False, short=False)
             conditions = list(split_by_function(self.S, context))
-            print("after conditions")
+#            print("after conditions")
 #            print(conditions)
             reduced = [reduceS(_m, self.S, context) for _m in conditions]
+#            print("after reduced")
+#            print(reduced)
             reduced = [_ for _ in reduced if _]
-            print("after reduced")
+#            print("after reduced")
             if not reduced:
                 self.S = Reorder(self.S, context, ascending=True)
-                print("ÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖ")
+#                print("ÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖ")
                 return
             self.S += [_ for _ in reduced if not (_ in self.S)]
             self.S = Reorder(self.S, context, ascending=True)

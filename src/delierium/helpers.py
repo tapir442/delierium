@@ -396,7 +396,9 @@ class ExpressionTree:
     """
 
     def __init__(self, expr):
-        self.root = None
+        for arg in preorder_traversal(expr):
+            yield(arg)
+        #for item in s
         self.latex_names = {}
         self.gschisti = set()
         self._expand(expr, self.root)
