@@ -232,6 +232,11 @@ class _Dterm:
 
     _cache_key = __hash__
 
+max_dterms: int = 0
+number_of_polynomials: int = 0
+max_complexity = 0
+mean_complexity = 0
+
 class LHDP:
     """Linear Homogenious Differential Polynomial."""
     @profile
@@ -248,7 +253,21 @@ class LHDP:
 
         self.p.sort(reverse=True)
         self.normalize()
-
+        global max_dterms
+        global number_of_polynomials
+        global max_complexity
+        global mean_complexity
+        max_dterms = max(max_dterms, len(self.p))
+        number_of_polynomials += 1
+        g = 0
+        for d in [_.coeff for _ in self.p]:
+            r = 0
+            for arg in preorder_traversal(d):
+                r += 1
+            g = max(g, r)
+        max_complexity = max(max_complexity, g)
+        print(f"{max_complexity=}")
+        
     @profile
     def _init(self, e):
         if type(e) == FunctionSymbol:
@@ -910,6 +929,13 @@ class Janet_Basis:
         diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
         """
+        global max_dterms
+        global number_of_polynomials
+        global max_complexity
+        
+        max_dterms = 0
+        number_of_polynomials = 0
+        max_complexity = 0
         context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # XXX bad criterion
@@ -950,6 +976,13 @@ class Janet_Basis:
 
     def show(self, rich=True, short=False):
         """Print the Janet basis with leading derivative first."""
+        global max_dterms
+        global number_of_polynomials
+        global max_complexity
+        
+        print(f"{max_dterms=}")
+        print(f"{number_of_polynomials=}")        
+        print(f"{max_complexity=}")
         for _ in self.S:
             if rich:
                 if _in_ipython_session:
@@ -961,6 +994,7 @@ class Janet_Basis:
                     print(_)
                 else:
                     print([p.derivative for p in _.p])
+                    
 
     def rank(self):
         """Return the rank of the computed Janet basis."""

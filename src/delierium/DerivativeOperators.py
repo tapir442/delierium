@@ -125,7 +125,7 @@ def func_diff(L, u_in):
 #print(func_diff(l(s, q(s), q.diff(s)), u))
 
 
-t = var('t')
+
 
 def EulerD(density, depend, independ):
     r'''
@@ -198,7 +198,7 @@ def FrechetD (support, dependVar, independVar, testfunction):
     Derivative(w2(x, t), t)
     """
     frechet = []
-    eps = var ("eps")
+    eps = symbols("eps")
     for j in range (len(support)):
         deriv = []
         for i in range (len(support)):
@@ -210,6 +210,7 @@ def FrechetD (support, dependVar, independVar, testfunction):
             #    return dependVar[i](*independVar)+ testfunction[i](*independVar) * eps
             #r0 = function('r0', eval_func=_r0)
             _r0 = r0
+            print(f"{support[j].__class__}")
             s  =  support[j].replace(dependVar[i], _r0)
             f = lambda _: s
             deriv.append (diff(f(eps), eps).subs ({eps: 0}))

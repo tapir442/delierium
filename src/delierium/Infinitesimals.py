@@ -17,6 +17,7 @@ from delierium.DerivativeOperators import FrechetD
 from delierium.JanetBasis import Janet_Basis
 from delierium.helpers import ExpressionTree
 
+from more_itertools import bucket, flatten, powerset
 
 def prolongationFunction(f: list, x: list, order) -> list:
     '''
@@ -51,7 +52,7 @@ def prolongation(eq, dependent, independent):
     >>> u = Function('u')
     >>> u_x = u(x)
     >>> f = Function("f")
-    >>> f_x = f(x, u_x, diff(u_x, x))
+    >>> f_x = Function("f_x")(x, u_x, diff(u_x, x))
     >>> ppp = prolongation([f_x], [u], [x])
     >>> print(ppp[0].expand())
     -D[2](f)(x, u(x), Derivative(u(x), x))*Derivative(u(x), x)^2*D[1](xi_1)(x, u(x)) + D[2](f)(x, u(x), Derivative(u(x), x))*D[1](phi_1)(x, u(x))*Derivative(u(x), x) - D[2](f)(x, u(x), Derivative(u(x), x))*Derivative(u(x), x)*D[0](xi_1)(x, u(x)) + xi_1(x, u(x))*D[0](f)(x, u(x), Derivative(u(x), x)) + phi_1(x, u(x))*D[1](f)(x, u(x), Derivative(u(x), x)) + D[2](f)(x, u(x), Derivative(u(x), x))*D[0](phi_1)(x, u(x))
@@ -60,7 +61,7 @@ def prolongation(eq, dependent, independent):
     >>> # Baumann's example p. 94
     >>> x = symbols('x')
     >>> y = Function('y')
-    >>> print(prolongation([Derivative(y(x),x,2)], [y], [x])[0].expand())
+    >>> print(prolongation([diff(y(x),x,2)], [y], [x])[0].expand())
     -D[1, 1](xi_1)(x, y(x))*Derivative(y(x), x)^3 + D[1, 1](phi_1)(x, y(x))*Derivative(y(x), x)^2 - 2*D[0, 1](xi_1)(x, y(x))*Derivative(y(x), x)^2 - 3*D[1](xi_1)(x, y(x))*Derivative(y(x), x)*Derivative(y(x), x, x) + 2*D[0, 1](phi_1)(x, y(x))*Derivative(y(x), x) - D[0, 0](xi_1)(x, y(x))*Derivative(y(x), x) + D[1](phi_1)(x, y(x))*Derivative(y(x), x, x) - 2*D[0](xi_1)(x, y(x))*Derivative(y(x), x, x) + D[0, 0](phi_1)(x, y(x))
     """
     Depend = [d(*independent) for d in dependent]
@@ -74,13 +75,13 @@ def prolongation(eq, dependent, independent):
                        Depend[i].diff(independent[j])
                        for j in range(len(independent))))
     test = list(map(lambda _: Function("t_%s" % _),  range(len(Depend))))
+    print(f"{eq=}")
     prolong = FrechetD(eq, dependent, independent, testfunction=test)
     prol = []
     for p in prolong:
         _p = []
         for l in p:
-
-            _p.extend([l.subs(test[i], _e) for _e in eta])
+            _p.extend([l.doit().subs(test[i], _e) for _e in eta])
         prol.append(sum(_ for _ in _p))
     prolong = prol[:]
     prol = []
@@ -99,7 +100,7 @@ def prolongationODE(equations,
                     infinitesimals=None):
     """
     >>> # Baumann, ex 1, pp.136
-    >>> x    = symbols"x")
+    >>> x    = symbols("x")
     >>> u    = Function('u')
     >>> F    = Function("F")
     >>> ode3 = diff(u(x), x) - F(u(x),x)
