@@ -1,0 +1,10 @@
+jupyterlab
+sympy
+symengine
+#python3-lsprotocol
+#python3-pylsp
+#python3-pylsp-mypy
+#python3-pylsp-isort
+#python3-pyslp-rope
+pylint
+more-itertools
