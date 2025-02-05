@@ -13,9 +13,10 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     setup_requires=["more-itertools"],
-    install_requires=["more-itertools", "pylatexenc"], # , "sage>=10.2"],
-    python_requires = ">=3.11",
-#    authoremail='tapir@aon.at',
+    install_requires=["more-itertools", "pylatexenc", "sympy", "symengine"],
+    python_requires = ">=3.13",
+    authoremail='tapir@aon.at',
+
     license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
