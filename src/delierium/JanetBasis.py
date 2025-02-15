@@ -10,7 +10,7 @@ import os
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from dataclasses import dataclass
-from itertools import groupby, islice
+from itertools import islice
 from operator import mul
 
 from IPython.core.debugger import set_trace
@@ -267,7 +267,7 @@ class LHDP:
             g = max(g, r)
         max_complexity = max(max_complexity, g)
         print(f"{max_complexity=}")
-        
+
     @profile
     def _init(self, e):
         if type(e) == FunctionSymbol:
@@ -932,7 +932,7 @@ class Janet_Basis:
         global max_dterms
         global number_of_polynomials
         global max_complexity
-        
+
         max_dterms = 0
         number_of_polynomials = 0
         max_complexity = 0
@@ -979,9 +979,9 @@ class Janet_Basis:
         global max_dterms
         global number_of_polynomials
         global max_complexity
-        
+
         print(f"{max_dterms=}")
-        print(f"{number_of_polynomials=}")        
+        print(f"{number_of_polynomials=}")
         print(f"{max_complexity=}")
         for _ in self.S:
             if rich:
@@ -994,7 +994,7 @@ class Janet_Basis:
                     print(_)
                 else:
                     print([p.derivative for p in _.p])
-                    
+
 
     def rank(self):
         """Return the rank of the computed Janet basis."""

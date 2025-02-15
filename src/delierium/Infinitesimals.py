@@ -11,7 +11,7 @@ from collections import namedtuple
 from itertools import product
 
 from anytree import PreOrderIter
-from sympy.core.backend import symbols, Function, diff
+from sympy.core.backend import symbols, Function, diff, Derivative
 
 from delierium.DerivativeOperators import FrechetD
 from delierium.JanetBasis import Janet_Basis
@@ -52,8 +52,8 @@ def prolongation(eq, dependent, independent):
     >>> u = Function('u')
     >>> u_x = u(x)
     >>> f = Function("f")
-    >>> f_x = Function("f_x")(x, u_x, diff(u_x, x))
-    >>> ppp = prolongation([f_x], [u], [x])
+    >>> fx = f(x, u(x), Derivative(u(x), x))
+    >>> ppp = prolongation([fx], [u], [x])
     >>> print(ppp[0].expand())
     -D[2](f)(x, u(x), Derivative(u(x), x))*Derivative(u(x), x)^2*D[1](xi_1)(x, u(x)) + D[2](f)(x, u(x), Derivative(u(x), x))*D[1](phi_1)(x, u(x))*Derivative(u(x), x) - D[2](f)(x, u(x), Derivative(u(x), x))*Derivative(u(x), x)*D[0](xi_1)(x, u(x)) + xi_1(x, u(x))*D[0](f)(x, u(x), Derivative(u(x), x)) + phi_1(x, u(x))*D[1](f)(x, u(x), Derivative(u(x), x)) + D[2](f)(x, u(x), Derivative(u(x), x))*D[0](phi_1)(x, u(x))
     >>> # this one here is from Baumann, p.93

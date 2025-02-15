@@ -210,10 +210,16 @@ def FrechetD (support, dependVar, independVar, testfunction):
             #    return dependVar[i](*independVar)+ testfunction[i](*independVar) * eps
             #r0 = function('r0', eval_func=_r0)
             _r0 = r0
+            breakpoint()
             print(f"{support[j].__class__}")
-            s  =  support[j].replace(dependVar[i], _r0)
-            f = lambda _: s
-            deriv.append (diff(f(eps), eps).subs ({eps: 0}))
+            s  =  support[j].subs({dependVar[i](*independVar) :
+                                   dependVar[i](*independVar)+ testfunction[i](*independVar) * eps})
+            kk=s.subs({dependVar[i](*independVar) : Symbol('mausi')})
+            kuku = kk.diff(eps)
+            susu = kuku.subs({Symbol('mausi') : dependVar[i](*independVar)})
+            lulu = susu.subs({eps : 0})
+
+            deriv.append (susu)
         frechet.append (deriv)
     return frechet
 
