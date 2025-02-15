@@ -1,0 +1,8 @@
+sympy
+symengine
+line_profiler
+jupyter
+more-itertools
+numpy # for symengine
+pylint
+mypy
