@@ -29,7 +29,7 @@ from typing import ClassVar, Optional, Union
 from line_profiler import profile
 
 
-#from sympy import *
+from sympy import *
 
 os.environ["USE_SYMENGINE"] = "1"
 

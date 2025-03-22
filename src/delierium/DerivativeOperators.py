@@ -7,6 +7,7 @@ Created on Tue Jan 18 13:45:11 2022
 """
 # from https://ask.sagemath.org/question/7929/computing-variational-derivatives/
 from IPython.core.debugger import set_trace
+import os
 from delierium.helpers import is_function, is_derivative
 import functools
 from operator import mul
@@ -15,7 +16,7 @@ os.environ["USE_SYMENGINE"] = "1"
 
 from sympy.core.backend import *
 
-from sympy import *
+#from sympy import *
 
 
 from symengine.lib.symengine_wrapper import FunctionSymbol
