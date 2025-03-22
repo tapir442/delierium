@@ -2,9 +2,9 @@
 Janet Basis
 """
 
-
-
 import functools
+
+
 import os
 
 from collections import OrderedDict, namedtuple
@@ -24,13 +24,14 @@ from delierium.Involution import My_Multiplier
 from delierium.matrix_order import Context, Mgrevlex, Mgrlex
 from delierium.typedefs import *
 
-from collections.abc import Callable, Iterator
 from typing import ClassVar, Optional, Union
 
 from line_profiler import profile
 
 
-from sympy import *
+#from sympy import *
+
+os.environ["USE_SYMENGINE"] = "1"
 
 from sympy.core.backend import *
 from symengine import FunctionSymbol
@@ -232,10 +233,6 @@ class _Dterm:
 
     _cache_key = __hash__
 
-max_dterms: int = 0
-number_of_polynomials: int = 0
-max_complexity = 0
-mean_complexity = 0
 
 class LHDP:
     """Linear Homogenious Differential Polynomial."""
@@ -253,30 +250,12 @@ class LHDP:
 
         self.p.sort(reverse=True)
         self.normalize()
-        global max_dterms
-        global number_of_polynomials
-        global max_complexity
-        global mean_complexity
-        max_dterms = max(max_dterms, len(self.p))
-        number_of_polynomials += 1
-        g = 0
-        for d in [_.coeff for _ in self.p]:
-            r = 0
-            for arg in preorder_traversal(d):
-                r += 1
-            g = max(g, r)
-        max_complexity = max(max_complexity, g)
-        print(f"{max_complexity=}")
 
     @profile
     def _init(self, e):
-        if type(e) == FunctionSymbol:
+        if any(type[e] is _ for _ in (FunctionSymbol, Derivative, Mul)):
             operands = [e]
-        elif type(e) == Derivative:
-            operands = [e]
-        elif type(e) == Mul:
-            operands = [e]
-        elif type(e) == Symbol:
+        elif type(e) is Symbol:
             raise ValueError(f"{e} is no term in a LHDP")
         else:
             operands = e.make_args(e)
@@ -333,15 +312,15 @@ class LHDP:
     def normalize(self):
         if self.p:
             intermediate = [_Dterm(coeff=Rational(1, 1),
-                                  derivative=self.p[0].derivative,
-                                   context = self.p[0].context)
+                                   derivative=self.p[0].derivative,
+                                   context=self.p[0].context)
                            ]
             c = self.Lcoeff()
             for _ in self.p[1:]:
-                intermediate.append(_Dterm(coeff = _.coeff/c, # nsimplify done in _Dterm
-                                               derivative = _.derivative,
-                                               context = _.context
-                                               ))
+                intermediate.append(_Dterm(coeff=_.coeff/c, # nsimplify done in LHDP
+                                            derivative = _.derivative,
+                                            context = _.context
+                                           ))
             self.p = intermediate[:]
         # XXX: wrong place?
         if self.p:
@@ -577,7 +556,6 @@ def reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
         if e1 == new_e1:
             return  e1
         e1 = new_e1
-
 
 
 def Autoreduce(S, context):
@@ -980,9 +958,9 @@ class Janet_Basis:
         global number_of_polynomials
         global max_complexity
 
-        print(f"{max_dterms=}")
-        print(f"{number_of_polynomials=}")
-        print(f"{max_complexity=}")
+        #print(f"{max_dterms=}")
+        #print(f"{number_of_polynomials=}")
+        #print(f"{max_complexity=}")
         for _ in self.S:
             if rich:
                 if _in_ipython_session:

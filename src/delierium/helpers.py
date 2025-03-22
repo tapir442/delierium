@@ -2,6 +2,7 @@
 
 import itertools
 import random
+import os
 import re
 from functools import cache
 
@@ -10,12 +11,16 @@ from IPython.core.debugger import set_trace  # type: ignore
 
 from typing import Iterable, Tuple, Any, Generator, TypeAlias
 
+os.environ["USE_SYMENGINE"] = "1"
+
+from sympy.core.backend import *
+from symengine import FunctionSymbol
+
 from sympy import *
 from sympy.core.relational import Equality
 from sympy.core.numbers import Integer, Rational, Zero, One, NegativeOne, Half
 from sympy import ordered, sympify
 
-from sympy.core.backend import *
 
 from line_profiler import profile
 

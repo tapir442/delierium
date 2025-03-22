@@ -2,6 +2,10 @@
 
 from dataclasses import dataclass
 from more_itertools import flatten
+import os
+
+os.environ["USE_SYMENGINE"] = "1"
+
 from sympy.core.backend import *
 from sympy.printing.pretty import pretty
 

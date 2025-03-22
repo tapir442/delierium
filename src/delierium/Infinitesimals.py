@@ -10,7 +10,6 @@ import types
 from collections import namedtuple
 from itertools import product
 
-from anytree import PreOrderIter
 from sympy.core.backend import symbols, Function, diff, Derivative
 
 from delierium.DerivativeOperators import FrechetD

@@ -11,8 +11,11 @@ from delierium.helpers import is_function, is_derivative
 import functools
 from operator import mul
 
+os.environ["USE_SYMENGINE"] = "1"
+
+from sympy.core.backend import *
+
 from sympy import *
-from sympy.core.backend import diff
 
 
 from symengine.lib.symengine_wrapper import FunctionSymbol
@@ -63,11 +66,9 @@ def iter_du_orders(expr, u):
         if sub_expr == []:
             # hit end of tree
             continue
-
-        elif is_op_du(sub_expr.operator(), u):
+        if is_op_du(sub_expr.operator(), u):
             # yield order of differentiation
             yield len(sub_expr.operator().parameter_set())
-
         else:
             # iterate into sub expression
             for order in iter_du_orders(sub_expr, u):
