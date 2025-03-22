@@ -374,7 +374,8 @@ class LHDP:
                     res += s
                 else:
                     res += " + " + s
-        res += f"{self.multipliers}, {self.nonmultipliers}"
+        if self.multipliers or self.nonmultipliers:
+            res += f"[{self.multipliers}], [{self.nonmultipliers}]"
         return res
 
     def latex(self):
