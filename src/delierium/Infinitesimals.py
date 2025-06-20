@@ -126,7 +126,7 @@ def prolongationODE(equations,
     prolong  = FrechetD([equations], [dependent], [independent], testfunction=[test])
     prol     = []
     for p in prolong:
-        _p = (l.substitute_Function(test, eta.Function()).expand() for l in p)
+        _p = (l.subs({test(independent): eta}).expand() for l in p)
         prol.append(sum(_ for _ in _p))
     return list(map (lambda _ : _ + xi(*vars) * equations.diff(independent), prol))
 
@@ -188,6 +188,7 @@ def overdeterminedSystemODE (ode,
     if infinitesimals is None:
         infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
     prolongation = prolongationODE(ode, dependent, independent, infinitesimals=infinitesimals)[0].expand()
+    print(prolongation)
     tree = ExpressionTree(prolongation)
     mine = [_ for _ in tree.diffs if _.operator().Function() in [dependent]]
     order= max([len(_.operator().parameter_set()) for _ in mine])

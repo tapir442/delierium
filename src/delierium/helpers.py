@@ -300,6 +300,7 @@ def latexer(e):
     Linear differential polynomials have their on latex style, but we don't
     have them always i hand, so this may still be useful
     """
+    print(dir(re))
     re_diff1 = re.compile(
         r".*(?P<D>D\[)(?P<vars>.+)\]\((?P<f1>[^\)]+)\)\((?P<args>\S*\), [^)]\)).*"
     )

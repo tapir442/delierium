@@ -1,14 +1,16 @@
-<<<<<<< HEAD
 sympy
 symengine
 line_profiler
-jupyter
-more-itertools
+#jupyter
 numpy # for symengine
 pylint
 mypy
-=======
+
 jupyterlab
+jupyter_copilot
+
+delierium
+
 sympy
 symengine
 #python3-lsprotocol
@@ -16,6 +18,4 @@ symengine
 #python3-pylsp-mypy
 #python3-pylsp-isort
 #python3-pyslp-rope
-pylint
 more-itertools
->>>>>>> 24be0e50ccfd91f5f6b52420f6388860f4f16c5f
