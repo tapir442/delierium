@@ -1,3 +1,6 @@
+import sys
+print(sys.path)
+
 import delierium.matrix_order as M
 import delierium.JanetBasis as JB
 import functools

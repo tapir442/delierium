@@ -24,24 +24,31 @@ from sympy import ordered, sympify
 
 from line_profiler import profile
 
-@profile
+# Schnelle Lösung für Profiling:
+def profile_if_enabled(func):
+    if os.environ.get('JANET_PROFILE', 'false').lower() == 'true':
+        return profile(func)
+    return func
+
+
+@profile_if_enabled
 def eq(d1, d2):
     if d1.__class__ != d2.__class__:
         return False
     return d1 == d2
 
 
-@profile
+@profile_if_enabled
 def is_numeric(e):
     return type(e) in (Integer, Rational, int, float, complex, Zero, One, NegativeOne, Half) \
         and not type(e) == bool
 
-@profile
+@profile_if_enabled
 def expr_eq(e1, e2):
     res = e1 - e2 == 0
     return res
 
-@profile
+@profile_if_enabled
 def expr_is_zero(e):
     return e == 0
 
@@ -136,11 +143,11 @@ def compactify(*vars):
     return result
 
 
-@profile
+@profile_if_enabled
 def _adiff(f, *vars):
     return f.diff(*vars)
 
-@profile
+@profile_if_enabled
 def adiff(f, context, *vars):
     return _adiff(f, *tuple(vars))
     return  f.diff(*vars)
@@ -165,7 +172,7 @@ def adiff(f, context, *vars):
         f = f.diff(*vars)
     return f
 
-
+@profile_if_enabled
 def is_op_du(expr_op, u):
     is_derivative = isinstance(expr_op,
                                sage.symbolic.operators.FDerivativeOperator)
@@ -175,7 +182,7 @@ def is_op_du(expr_op, u):
     else:
         return False
 
-
+@profile_if_enabled
 def iter_du_orders(expr, u):
     for sub_expr in expr.operands():
         if sub_expr == []:
@@ -189,7 +196,7 @@ def iter_du_orders(expr, u):
             for order in iter_du_orders(sub_expr, u):
                 yield order
 
-
+@profile_if_enabled
 def func_diff(L, u_in):
     """`u` must be a callable symbolic expression"""
     #    https://ask.sagemath.org/question/7929/computing-variational-derivatives/
@@ -300,6 +307,7 @@ def latexer(e):
     Linear differential polynomials have their on latex style, but we don't
     have them always i hand, so this may still be useful
     """
+    print(dir(re))
     re_diff1 = re.compile(
         r".*(?P<D>D\[)(?P<vars>.+)\]\((?P<f1>[^\)]+)\)\((?P<args>\S*\), [^)]\)).*"
     )
@@ -401,9 +409,11 @@ class ExpressionTree:
     """
 
     def __init__(self, expr):
-        for arg in preorder_traversal(expr):
-            yield(arg)
+        #for arg in preorder_traversal(expr):
+        #    yield(arg)
         #for item in s
+        for _ in expr.args:
+            print("=====>", _)
         self.latex_names = {}
         self.gschisti = set()
         self._expand(expr, self.root)

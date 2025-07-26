@@ -3,13 +3,14 @@
 from dataclasses import dataclass
 from more_itertools import flatten
 import os
+from functools import lru_cache
 
 os.environ["USE_SYMENGINE"] = "1"
 
 from sympy.core.backend import *
 from sympy.printing.pretty import pretty
 
-from delierium.helpers import is_derivative, is_function
+from delierium.helpers import is_derivative, is_function, profile_if_enabled
 
 #
 # standard weight matrices for lex, grlex and grevlex order
@@ -104,6 +105,7 @@ class Context:
         self.dependent = tuple(dependent)
         self._weight = weight(self.dependent, self.independent)
 
+    @profile_if_enabled
     def gt(self, v1, v2) -> int:
         """Computes the weighted difference vector of v1 and v2
         and returns 'True' if the first nonzero entry is > 0
@@ -124,7 +126,7 @@ class Context:
         """Check if 'f' is in the list of dependent variables."""
         return f in self.dependent
 
-
+    @profile_if_enabled
     def order_of_derivative(self, e):
         """Returns the vector of the orders of a derivative respect to its variables
 

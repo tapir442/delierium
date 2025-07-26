@@ -11,6 +11,9 @@ from collections import namedtuple
 from itertools import product
 
 from sympy.core.backend import symbols, Function, diff, Derivative
+from sympy import srepr
+
+from sympy.simplify import collect
 
 from delierium.DerivativeOperators import FrechetD
 from delierium.JanetBasis import Janet_Basis
@@ -80,7 +83,7 @@ def prolongation(eq, dependent, independent):
     for p in prolong:
         _p = []
         for l in p:
-            _p.extend([l.doit().subs(test[i], _e) for _e in eta])
+            _p.extend([l.doit().xreplace({test[i]:  _e}) for _e in eta])
         prol.append(sum(_ for _ in _p))
     prolong = prol[:]
     prol = []
@@ -120,13 +123,13 @@ def prolongationODE(equations,
     vars     = [dependent(independent), independent]
     if infinitesimals is None:
         infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
-    xi, phi  = infinitesimals
-    eta      = phi(*vars) - xi(*vars) * diff(dependent(independent), independent)
-    test     = Function('test')
-    prolong  = FrechetD([equations], [dependent], [independent], testfunction=[test])
-    prol     = []
+    xi, phi = infinitesimals
+    eta=phi(*vars) - xi(*vars) * diff(dependent(independent), independent)
+    test=Function('test')
+    prolong=FrechetD([equations], [dependent], [independent], testfunction=[test])
+    prol=[]
     for p in prolong:
-        _p = (l.substitute_Function(test, eta.Function()).expand() for l in p)
+        _p = (_.subs({test(independent): eta}).expand() for _ in p)
         prol.append(sum(_ for _ in _p))
     return list(map (lambda _ : _ + xi(*vars) * equations.diff(independent), prol))
 
@@ -142,7 +145,7 @@ def overdeterminedSystemODE (ode,
 
     Parameters
     ----------
-    ode: a sagemath expression as the left side of '<expr> == 0'. No need to
+    ode: a sympy expression as the left side of '<expr> == 0'. No need to
         add " == 0'!!
     dependent: the name of the dependent variable, i.e. the unknown function
     independent:
@@ -165,6 +168,7 @@ def overdeterminedSystemODE (ode,
     >>> X=Function('X')
     >>> Y=Function('Y')
     >>> inf = overdeterminedSystemODE(ode, y, x, infinitesimals=(X,Y))
+    >>> print(f"{inf=}")
     >>> for _ in inf:
     ...     print(_)
     -3*D[0](X)(y(x), x)
@@ -177,83 +181,35 @@ def overdeterminedSystemODE (ode,
     -y(x)*D[1, 1](X)(y(x), x) + 2*y(x)*D[0, 1](Y)(y(x), x) - D[1, 1, 1](X)(y(x), x) + 3*D[0, 1, 1](Y)(y(x), x)
     y(x)*D[1, 1](Y)(y(x), x) + D[1, 1, 1](Y)(y(x), x)
     """
-    class My_Function(Function):
-        def __init__(self, *args, **kw):
-            super().__init__(*args, **kw)
-            self._latex_name = kw.get("_latex_name", "")
-
-        def _latex(self, printer):
-            return rf"{self._latex_name}"
 
     if infinitesimals is None:
         infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
     prolongation = prolongationODE(ode, dependent, independent, infinitesimals=infinitesimals)[0].expand()
-    tree = ExpressionTree(prolongation)
-    mine = [_ for _ in tree.diffs if _.operator().Function() in [dependent]]
-    order= max([len(_.operator().parameter_set()) for _ in mine])
-    if order == 1:
-        print("Order 1 ODEs have no meaningful infinitesimals")
-        return []
-    s1 = solve(ode==0, diff(dependent(independent),independent, order))
-    ode1 = prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
-    tree = ExpressionTree(ode1)
-    l = (_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent, order)))
-    equations = []
-    e         = next(l)
-    all_this_stuff = set()
-    for node in PreOrderIter(tree.root):
-        # powercollector: an array which stores powers of derivatives
-        # the index is the(reversed) order, the value is the power
-        # of the derivative.
-        # Example: we have an ODE of order three. The prolongation and
-        # substitution step produces 'ode1' which is now of reduced order
-        # two. So we can have differentials of order one and two, so we need an
-        # array of lenght two which is initialized with zeroes. A term like
-        #    diff(y, x)^5 * diff(y, x, x)^2
-        # will create the entry
-        #    [2,5]
-        # The higher order (=2) has power 2, so the first entry (=highest order)
-        # will be set to 2, the lowest order(=1) has power 5, so the index 1 contains
-        # the power 5. This way we now have on ordered list which than can be
-        # looped over from highest_order^highest_power to lowest_order^lowest_power
-        # to factor out the derivatives to get the determining equations
-        powercollector = [0]*(order-1)
-        v = node.value
-        if v.operator() in [sage.symbolic.operators.add_vararg, None]:
-             continue
-        if isinstance(v.operator(), FDerivativeOperator):
-            # standalone diff operator
-            if v.operands()[0] != independent:
-                # differential coming from prolongation, ignore
-                continue
-            powercollector[order - len(v.operator().parameter_set())-1] = 1
-            all_this_stuff.add(term(tuple(powercollector), v))
-            continue
-        if v.operator() is sage.symbolic.operators.mul_vararg:
-            # the factors containing derivatives can be combined multiplicatively
-            # We will analize them factor by factor, put powers and orders into
-            # 'power_collector', and multiply these factors together into 'local_term',
-            # ans store both together into 'all_this_stuff'
-            local_term = 1
-            for w in v.operands():
-                if isinstance(w.operator(), FDerivativeOperator):
-                    if w.operands()[0] != independent:
-                        # differential coming from prolongation, ignore
-                        continue
-                    local_term *= w
-                    powercollector[order - len(w.operator().parameter_set())-1] = 1
-                if isinstance(w.operator(), types.BuiltinFunctionType):
-                    if w.operator().__qualname__ != 'pow':
-                        continue
-                    if isinstance(w.operands()[0].operator(), FDerivativeOperator):
-                        if w.operands()[0].operands()[0] != independent:
-                            # differential coming from prolongation, ignore
-                            continue
-                        local_term *= w
-                        powercollector[order - len(w.operands()[0].operator().parameter_set())-1] = w.operands()[-1]
+    print(f"{prolongation=}")
+    
+    from sympy import preorder_traversal
+    from sympy.core.function import Derivative
+    from sympy import solve
+    from sympy.solvers.deutils import ode_order
+    lhs = diff(dependent(independent),independent, ode_order(ode, dependent))
+    print(f"{lhs=}")
+    
+    s1 = solve(ode, diff(dependent(independent),independent, ode_order(ode, dependent)))
+    print(f"{s1=}")
 
-            if powercollector != [0]*(order-1):
-                all_this_stuff.add(term(tuple(powercollector), local_term))
+    ode1 = prolongation.subs({ diff(dependent(independent),independent, ode_order(ode, dependent)) : s1[0]}).simplify()
+    from IPython.core.debugger import set_trace
+    l = [diff(dependent(independent), independent, i)
+                                           for i in range(ode_order(ode, dependent), 0, -1)] + [dependent(independent)]
+    print(f"{l=}")
+    equations = []
+    for i in l:
+        k = collect(ode1, i, evaluate=False, exact=True)
+        from pprint import pprint
+        pprint(k.__class__)
+        for j in k.items():
+            print(f"{j=}")
+       
     for _ in reversed(sorted(all_this_stuff)):
         new = e.coefficient(_.coeff)
         if new != 0:

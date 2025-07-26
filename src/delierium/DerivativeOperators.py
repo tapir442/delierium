@@ -79,7 +79,6 @@ def iter_du_orders(expr, u):
 def func_diff(L, u_in):
     # `u` must be a callable symbolic expression
     # in one variable.
-    set_trace()
     if len(u_in.variables()) == 1:
         x = u_in.variables()[0]
         u = u_in.function(x)
@@ -212,8 +211,6 @@ def FrechetD (support, dependVar, independVar, testfunction):
             #    return dependVar[i](*independVar)+ testfunction[i](*independVar) * eps
             #r0 = function('r0', eval_func=_r0)
             _r0 = r0
-            breakpoint()
-            print(f"{support[j].__class__}")
             s  =  support[j].subs({dependVar[i](*independVar) :
                                    dependVar[i](*independVar)+ testfunction[i](*independVar) * eps})
             kk=s.subs({dependVar[i](*independVar) : Symbol('mausi')})

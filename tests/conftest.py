@@ -1,7 +1,7 @@
 import pytest
 import sys
 from delierium import *
-from sage.all import *
+from sympy import *
 
 @pytest.fixture
 def context_x_y_w_z ():

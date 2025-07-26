@@ -3,39 +3,26 @@ Janet Basis
 """
 
 import functools
-
-
 import os
-
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from dataclasses import dataclass
 from itertools import islice
 from operator import mul
 
-from IPython.core.debugger import set_trace
 from IPython.display import Math
 from more_itertools import bucket, flatten, powerset
-
-from delierium.exception import DelieriumNotALinearPDE
-from delierium.helpers import (_adiff, adiff, eq, expr_eq, expr_is_zero, is_derivative,
-                               is_function, pairs_exclude_diagonal, is_numeric)
-from delierium.Involution import My_Multiplier
-from delierium.matrix_order import Context, Mgrevlex, Mgrlex
-from delierium.typedefs import *
-
-from typing import ClassVar, Optional, Union
-
-from line_profiler import profile
-
-
+from symengine import FunctionSymbol
 from sympy import *
+from sympy.core.backend import *
+
+from delierium.helpers import (adiff, eq, expr_eq, expr_is_zero,
+                               is_derivative, is_function, is_numeric,
+                               pairs_exclude_diagonal, profile_if_enabled)
+from delierium.matrix_order import Context, Mgrevlex
+
 
 os.environ["USE_SYMENGINE"] = "1"
-
-from sympy.core.backend import *
-from symengine import FunctionSymbol
-
 
 try:
     __IPYTHON__
@@ -44,6 +31,9 @@ except NameError:
     _in_ipython_session = False
 
 
+
+
+@profile_if_enabled
 def compute_comparison_vector(dependent, func, ctxcheck):
     iv = [0] * len(dependent)
     if func in dependent:
@@ -51,7 +41,7 @@ def compute_comparison_vector(dependent, func, ctxcheck):
     return iv
 
 
-@profile
+@profile_if_enabled
 def compute_order(derivative, independent, comp_order):
     """Computes the monomial tuple from the derivative part."""
     if is_derivative(derivative):
@@ -66,7 +56,7 @@ class _Dterm:
     derivative: int
     context: Context
 
-    @profile
+    @profile_if_enabled
     def __post_init__(self):
         object.__setattr__(self, 'coeff', nsimplify(self.coeff))
         object.__setattr__(self, 'order', self._compute_order())
@@ -76,10 +66,10 @@ class _Dterm:
             object.__setattr__(self, 'function', self.derivative)
         object.__setattr__(self, 'comparison_vector', self._compute_comparison_vector())
 
-    @profile
+    @profile_if_enabled
     def expression(self):
         return self.coeff * self.derivative
-    @profile
+    @profile_if_enabled
     def _compute_comparison_vector(self):
         """Concatenates order and comparison vector for input for ..."""
         iv = compute_comparison_vector(self.context.dependent, self.function, self.context.is_ctxfunc)
@@ -94,42 +84,43 @@ class _Dterm:
 
     def term(self):
         return self.coeff * self.derivative
-    @profile
+    @profile_if_enabled
     def _compute_order(self):
         """computes the monomial tuple from the derivative part"""
         return compute_order(self.derivative, self.context.independent, self.context.order_of_derivative)
 
-    @profile
+    @profile_if_enabled
     def is_zero(self):
         return expr_is_zero(self.coeff)
 
+    @profile_if_enabled
     def __sub__(self, other):
         if self.comparison_vector != other.comparison_vector:
             raise ValueError
-        return self.__class__(coeff = self.coeff - other.coeff,
-                              derivative = self.derivative,
-                              context = self.context)
-
+        return self.__class__(coeff=self.coeff - other.coeff,
+                              derivative=self.derivative,
+                              context=self.context)
+    @profile_if_enabled
     def __add__(self, other):
         if self.comparison_vector != other.comparison_vector:
             raise ValueError
-        return self.__class__(coeff = self.coeff + other.coeff,
-                              derivative = self.derivative,
-                              context = self.context)
+        return self.__class__(coeff=self.coeff + other.coeff,
+                              derivative=self.derivative,
+                              context=self.context)
 
 
-
+    @profile_if_enabled
     def is_coefficient(self):
         # XXX nonsense
         return self.derivative == 1
 
 
-    @profile
+    @profile_if_enabled
     def __bool__(self):
         # ToDo, lets think about that again, may be too slow
         return not self.is_zero()
 
-    @profile
+    @profile_if_enabled
     def __lt__(self, other):
         """
         >>> x,y,z = symbols("x y z")
@@ -145,13 +136,13 @@ class _Dterm:
         return not self == other and \
             self.context.gt(other.comparison_vector, self.comparison_vector)
 
-    @profile
-    def __eq__(self, other):
+    @profile_if_enabled
+    def __eq__(self, other) -> bool:
         return self is other or \
             (self.comparison_vector == other.comparison_vector and \
              expr_eq(self.coeff, other.coeff))
 
-    def show(self, rich=True):
+    def show(self, rich=True) -> None:
         if not rich:
             return str(self)
         return self.latex()
@@ -173,10 +164,9 @@ class _Dterm:
                 sub = ",".join(map(str, inter))
 
                 return f"{func.name}_{{{sub}}}"
-            elif is_function(deriv):
+            if is_function(deriv):
                 return latex(deriv.func)
-            else:
-                return latex(deriv)
+            return latex(deriv)
 
         def _latex_coeff(coeff):
             if str(coeff) in ['1', '1.0']:
@@ -193,19 +183,19 @@ class _Dterm:
                 ((hasattr(coeff.operator(), "__name__") and coeff.operator().__name__ == "add_vararg") or is_function(coeff.operator())):
                 return rf"({c})"
             return c
-
         d = _latex_derivative(self.derivative)
         c = _latex_coeff(self.coeff)
         return f"{c} {d}"
 
     _latex_ = latex
 
+    @profile_if_enabled
     def add_coefficient(self, c):
         return _Dterm(coeff = self.coeff + c,
                       derivative = self.derivative,
                       context = self.context)
 
-    @profile
+    @profile_if_enabled
     def diff(self, *variables):
         f = self.coeff
         g = self.derivative
@@ -227,7 +217,7 @@ class _Dterm:
             result.append(d2)
         return result
 
-    @profile
+    @profile_if_enabled
     def __hash__(self):
         return hash(str(self.coeff) + str(self.derivative))
 
@@ -236,7 +226,7 @@ class _Dterm:
 
 class LHDP:
     """Linear Homogenious Differential Polynomial."""
-    @profile
+    @profile_if_enabled
     def __init__(self, e, context, dterms=[]):
         self.context = context
         self.p = []
@@ -251,7 +241,7 @@ class LHDP:
         self.p.sort(reverse=True)
         self.normalize()
 
-    @profile
+    @profile_if_enabled
     def _init(self, e):
         if any(type[e] is _ for _ in (FunctionSymbol, Derivative, Mul)):
             operands = [e]
@@ -308,7 +298,7 @@ class LHDP:
         for p in self.p:
             yield p.coeff
 
-    @profile
+    @profile_if_enabled
     def normalize(self):
         if self.p:
             intermediate = [_Dterm(coeff=Rational(1, 1),
@@ -331,7 +321,7 @@ class LHDP:
     def __bool__(self):
         return len(self.p) > 0
 
-    @profile
+    @profile_if_enabled
 #    @cache
     def __lt__(self, other):
         for _ in zip(self.p, other.p):
@@ -342,11 +332,11 @@ class LHDP:
             return False
         return False
 
-    @profile
+    @profile_if_enabled
     def __le__(self, other):
         return eq(self, other) or self < other
 
-    @profile
+    @profile_if_enabled
     def __eq__(self, other):
         if other is None:
             return False
@@ -383,7 +373,7 @@ class LHDP:
 
     _latex_ = latex
 
-    @profile
+    @profile_if_enabled
     def diff(self, *args):
         new_dterms = {}
         for dterm in self.p:
@@ -415,6 +405,7 @@ class LHDP:
 
     _cache_key = __hash__
 
+@profile_if_enabled
 def analyze_term(context, term):
     operands = split_into_operands(term)
     coeffs = []
@@ -435,7 +426,7 @@ def analyze_term(context, term):
     coeffs = functools.reduce(mul, coeffs, 1)
     return str(d[0]), d[0], coeffs
 
-
+@profile_if_enabled
 def split_into_operands(term):
     if is_derivative(term):
         operands = [term]
@@ -451,11 +442,11 @@ def split_into_operands(term):
 
 # ToDo: Janet_Basis as class as this object has properties like rank, order ...
 
-
+@profile_if_enabled
 def Reorder(S, context, ascending=False):
     return list(sorted(S, reverse = not ascending))
 
-
+@profile_if_enabled
 def reduceS(e: LHDP, S: list, context: Context) -> LHDP | None:
     reducing = True
     gen = S[:]
@@ -474,14 +465,14 @@ def reduceS(e: LHDP, S: list, context: Context) -> LHDP | None:
 
 
 #@functools.cache
-@profile
+@profile_if_enabled
 def _order(der, context):
     # pretty sure we don't need it
     if der != 1:
         return context.order_of_derivative(der)
     return [0] * len(context.independent)
 
-
+@profile_if_enabled
 def _reduce_inner(e1, e2, context):
 #    print("===================")
 #    print(f"{e1=}")
@@ -541,6 +532,7 @@ def _reduce_inner(e1, e2, context):
 
     return e1
 
+@profile_if_enabled
 def get_diff_vars(context, dif):
     variables = []
     for i in range(len(context.independent)):
@@ -548,17 +540,17 @@ def get_diff_vars(context, dif):
             variables.extend([context.independent[i]] * abs(dif[i]))
     return variables
 
-
+@profile_if_enabled
 def reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
     while True:
         new_e1 = _reduce_inner(e1, e2, context)
         if not new_e1:
             return None
         if e1 == new_e1:
-            return  e1
+            return e1
         e1 = new_e1
 
-
+@profile_if_enabled
 def Autoreduce(S, context):
     dps = list(S)
     i = 0
@@ -583,7 +575,7 @@ def Autoreduce(S, context):
 def vec_degree(v, m):
     return m[v]
 
-@profile
+@profile_if_enabled
 def vec_multipliers(m, M, Vars):
     """multipliers and nonmultipliers for differential vectors aka tuples
 
@@ -666,7 +658,7 @@ def vec_multipliers(m, M, Vars):
 
 coll = namedtuple('coll', ['monom', 'dp', 'multipliers', 'nonmultipliers'])
 
-@profile
+@profile_if_enabled
 def complete(S, context):
     result = set(S)
     if len(result) == 1:
@@ -720,7 +712,7 @@ def complete(S, context):
             result.add(dp)
         result = set(Reorder(list(result), context, ascending=False))
 
-
+@profile_if_enabled
 def CompleteSystem(S, context):
     """
     Algorithm C1, p. 385
@@ -772,13 +764,13 @@ def CompleteSystem(S, context):
     res = flatten([complete(s[k], context) for k in s])
     return Reorder(res, context, ascending=True)
 
-
+@profile_if_enabled
 def split_by_function(S, context):
     s = bucket(S, key=lambda d: d.Lfunc())
     murksi=[FindIntegrableConditions(s[k], context) for k in s]
     return flatten(murksi)
 
-@profile
+@profile_if_enabled
 def FindIntegrableConditions(S, context):
     result = list(S)
     if len(result) == 1:
@@ -827,7 +819,7 @@ def FindIntegrableConditions(S, context):
                             terms_from_first[s.comparison_vector].coeff -= s.coeff
                         else:
                             new_terms.append(
-                                _Dterm(coeff = -s.coeff,
+                                _Dterm(coeff=-s.coeff,
                                        derivative = s.derivative,
                                        context = context)
                             )
