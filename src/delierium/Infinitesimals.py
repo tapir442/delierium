@@ -8,11 +8,9 @@ Created on Fri Jan  7 18:49:33 2022
 
 import types, os
 from collections import namedtuple
+from itertools import product
 
 
-from sympy import diff, symbols, Function
-
-os.environ["USE_SYMENGINE"] = "1"
 
 
 from sympy import srepr
@@ -22,14 +20,14 @@ from sympy.simplify import collect
 from delierium.DerivativeOperators import FrechetD
 from delierium.JanetBasis import Janet_Basis
 from delierium.helpers import ExpressionTree
-from sympy.core.backend import *
+
 from more_itertools import bucket, flatten, powerset
 
-from itertools import product
 
-#print(dir(product))
+os.environ["USE_SYMENGINE"] = "1"
+from sympy.core.backend import *
 
-def prolongationFunction(f: list, x: list, order: int) -> list:
+def prolongationFunction(f: list, x: list, order) -> list:
     '''
     >>> x, y, z = symbols("x y z")
     >>> f = Function("f")(x, y, z)
@@ -40,20 +38,14 @@ def prolongationFunction(f: list, x: list, order: int) -> list:
     ... diff(f, y, y), diff(f, y, z)])
     True
     '''
-    print("BBBBBBBBBBBBBBBBBBBBBB")
     result = f
     aux = result[:]
-    print(f"{result=}")
-    print(f"{aux=}")
+
     def outer(fun, l1, l2):
-        return list(map(lambda v: fun(v[0], v[1]), product(l1, l2)))
-    aux = outer(diff, aux, x)[:]
-    print(f"AAAUX {aux=}")
+        return list(map(lambda v: fun(v[0], v[1]), product(l1, l2)))]
     for i in range(order):
-        result += aux
-        print(f"BBBBBBBBBB {result=}")
-        aux = outer(diff, aux, x)[:]
-        
+        result += (aux := outer(diff, aux, x)[:])
+        print(f"{result=}")
     return set(result)
 
 
@@ -174,7 +166,7 @@ def overdeterminedSystemODE (ode,
     dependent: the name of the dependent variable, i.e. the unknown function
     independent:
         the name of the independent variable
-    infinitesimals: ordered pair of sagemath variables, to be used as the names
+    infinitesimals: ordered pair of sympy variables, to be used as the names
         for the infinitesimals, to avoid potential name clashes with  variables in your
         application. If not specified, 'xi' and 'phi' are used as the defaults
 
@@ -209,7 +201,7 @@ def overdeterminedSystemODE (ode,
     if infinitesimals is None:
         infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
     prolongation = prolongationODE(ode, dependent, independent, infinitesimals=infinitesimals)[0].expand()
-    print(f"{ode=}")
+    print(f"{
     print(f"{prolongation=}")
     os.environ["USE_SYMENGINE"] = "1"    
     from sympy import preorder_traversal
