@@ -2,8 +2,12 @@
 Janet Basis
 """
 
-import functools
 import os
+
+os.environ["USE_SYMENGINE"] = "1"
+
+import functools
+
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -22,7 +26,7 @@ from delierium.helpers import (adiff, eq, expr_eq, expr_is_zero,
 from delierium.matrix_order import Context, Mgrevlex
 
 
-os.environ["USE_SYMENGINE"] = "1"
+
 
 try:
     __IPYTHON__
@@ -156,7 +160,7 @@ class _Dterm:
                 ps = deriv.args[1:]
                 inter = []
                 for entry in ps:
-                    if type(entry) == Tuple:  # sympy's tuple
+                    if type(entry) is Tuple:  # sympy's tuple
                         for i in range(entry[1]):
                             inter.append(entry[0])
                     else:

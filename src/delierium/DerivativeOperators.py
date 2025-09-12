@@ -14,9 +14,10 @@ from operator import mul
 
 os.environ["USE_SYMENGINE"] = "1"
 
+from sympy import *
 from sympy.core.backend import *
 
-#from sympy import *
+
 
 
 from symengine.lib.symengine_wrapper import FunctionSymbol
@@ -151,8 +152,12 @@ def EulerD(density, depend, independ):
             return y + e * w
         def dep(*args):
             return depend[j](independ)
-        fh = density.replace(depend[j], f0)
-        fh = fh.replace(y, dep)
+        print(f"{density=}, {density.__class__}")
+        print(f"{depend[j]=}, {depend[j].__class__=}")
+        print(f"{f0=}")
+#        import pytest; pytest.set_trace()
+        fh = density.xreplace({depend[j]: y + e*w})
+        fh = fh.replace(y, depend[j](independ))
         fh = fh.replace(w, wtable[j](independ))
         fh = fh.diff(e)
         fh = fh.subs({e:0}).expand()
@@ -165,7 +170,7 @@ def EulerD(density, depend, independ):
             coeff = []
             for _ops in operand.args:
                 if is_op_du(_ops, wtable[j](independ)):
-                    d = _ops.args[1][1]
+                    d = _ops.args[1]
                 elif is_function(_ops) and _ops.func == wtable[j]:
                     pass
                 else:
@@ -178,7 +183,7 @@ def EulerD(density, depend, independ):
     return result
 
 
-def FrechetD (support, dependVar, independVar, testfunction):
+def FrechetD(support, dependVar, independVar, testfunction):
     """
     >>> x,t = symbols("x t")
     >>> v   = Function("v")
@@ -211,15 +216,15 @@ def FrechetD (support, dependVar, independVar, testfunction):
             #    return dependVar[i](*independVar)+ testfunction[i](*independVar) * eps
             #r0 = function('r0', eval_func=_r0)
             _r0 = r0
-            s  =  support[j].subs({dependVar[i](*independVar) :
+            s  =  support[j].xreplace({dependVar[i](*independVar) :
                                    dependVar[i](*independVar)+ testfunction[i](*independVar) * eps})
-            kk=s.subs({dependVar[i](*independVar) : Symbol('mausi')})
+            kk=s.xreplace({dependVar[i](*independVar) : Symbol('mausi')})
             kuku = kk.diff(eps)
-            susu = kuku.subs({Symbol('mausi') : dependVar[i](*independVar)})
-            lulu = susu.subs({eps : 0})
+            susu = kuku.xreplace({Symbol('mausi') : dependVar[i](*independVar)})
+            lulu = susu.xreplace({eps : 0})
 
-            deriv.append (susu)
-        frechet.append (deriv)
+            deriv.append(susu)
+        frechet.append(deriv)
     return frechet
 
 

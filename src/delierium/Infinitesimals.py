@@ -6,11 +6,15 @@ Created on Fri Jan  7 18:49:33 2022
 @author: tapir
 """
 
-import types
+import types, os
 from collections import namedtuple
-from itertools import product
 
-from sympy.core.backend import symbols, Function, diff, Derivative
+
+from sympy import diff, symbols, Function
+
+os.environ["USE_SYMENGINE"] = "1"
+
+
 from sympy import srepr
 
 from sympy.simplify import collect
@@ -18,12 +22,16 @@ from sympy.simplify import collect
 from delierium.DerivativeOperators import FrechetD
 from delierium.JanetBasis import Janet_Basis
 from delierium.helpers import ExpressionTree
-
+from sympy.core.backend import *
 from more_itertools import bucket, flatten, powerset
 
-def prolongationFunction(f: list, x: list, order) -> list:
+from itertools import product
+
+#print(dir(product))
+
+def prolongationFunction(f: list, x: list, order: int) -> list:
     '''
-    >>> x, y, z = symbols(g"x y z")
+    >>> x, y, z = symbols("x y z")
     >>> f = Function("f")(x, y, z)
     >>> set(prolongationFunction([f], [x, y, z], 2)) == set(
     ... [diff(f, z, z), diff(f, y), diff(f, x),
@@ -32,14 +40,21 @@ def prolongationFunction(f: list, x: list, order) -> list:
     ... diff(f, y, y), diff(f, y, z)])
     True
     '''
+    print("BBBBBBBBBBBBBBBBBBBBBB")
     result = f
     aux = result[:]
-
+    print(f"{result=}")
+    print(f"{aux=}")
     def outer(fun, l1, l2):
         return list(map(lambda v: fun(v[0], v[1]), product(l1, l2)))
+    aux = outer(diff, aux, x)[:]
+    print(f"AAAUX {aux=}")
     for i in range(order):
-        result += (aux := outer(diff, aux, x)[:])
-    return sorted(list(set(result)))
+        result += aux
+        print(f"BBBBBBBBBB {result=}")
+        aux = outer(diff, aux, x)[:]
+        
+    return set(result)
 
 
 def infini(eq):
@@ -68,21 +83,30 @@ def prolongation(eq, dependent, independent):
     """
     Depend = [d(*independent) for d in dependent]
     vars = independent + Depend
-    xi = [Function("xi_%s" % (j+1), latex_name = r"\xi_{i+1}") for j in range(len(independent))]
+    print(Function.__doc__)
+    xi = [Function("xi_%s" % (j+1), latex_name = r"\xi_{i+1}")(*vars) for j in range(len(independent))]
     eta = []
     for i in range(len(dependent)):
-        phi = Function(f"phi_{i+1}", latex_name = fr"\phi_{i+1}")
-        eta.append(phi(*vars) -
-                   sum(xi[j](*vars) *
+        phi = Function(f"phi_{i+1}", latex_name = fr"\phi_{i+1}")(*vars)
+        eta.append(phi -
+                   sum(xi[j] *
                        Depend[i].diff(independent[j])
                        for j in range(len(independent))))
-    test = list(map(lambda _: Function("t_%s" % _),  range(len(Depend))))
+    test = list(map(lambda _: Function("t_%s" % _)(*independent),  range(len(Depend))))
+    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+    from pprint import pprint
+    pprint(locals())
+    print(f"{Function=}")
+    for _ in locals():
+        print(f"{_=}, {_.__class__=}")
     print(f"{eq=}")
     prolong = FrechetD(eq, dependent, independent, testfunction=test)
     prol = []
     for p in prolong:
         _p = []
         for l in p:
+            print(f"   ===> {l=}, {l.__class__=}")
+            print(f"   ===> {test[i]=}")
             _p.extend([l.doit().xreplace({test[i]:  _e}) for _e in eta])
         prol.append(sum(_ for _ in _p))
     prolong = prol[:]
@@ -185,8 +209,9 @@ def overdeterminedSystemODE (ode,
     if infinitesimals is None:
         infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
     prolongation = prolongationODE(ode, dependent, independent, infinitesimals=infinitesimals)[0].expand()
+    print(f"{ode=}")
     print(f"{prolongation=}")
-    
+    os.environ["USE_SYMENGINE"] = "1"    
     from sympy import preorder_traversal
     from sympy.core.function import Derivative
     from sympy import solve
@@ -209,7 +234,7 @@ def overdeterminedSystemODE (ode,
         pprint(k.__class__)
         for j in k.items():
             print(f"{j=}")
-       
+    from IPython.core.debugger import set_trace; set_trace()
     for _ in reversed(sorted(all_this_stuff)):
         new = e.coefficient(_.coeff)
         if new != 0:

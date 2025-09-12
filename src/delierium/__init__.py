@@ -1,3 +1,7 @@
+import os
+
+os.environ["USE_SYMENGINE"] = "1"
+
 from .DerivativeOperators import EulerD, FrechetD
 from .helpers import eq, is_derivative, is_function, tangent_vector
 from .Infinitesimals import prolongationODE
