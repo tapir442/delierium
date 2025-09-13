@@ -120,11 +120,11 @@ def FrechetD(support, dependVar, independVar, testfunction):
     >>> m[0, 0]
     -w1(x, t)
     >>> m[0, 1]
-    diff(w2(x, t), x)
+    Derivative(w2(x, t), x)
     >>> m[1, 0]
-    2*w1(x, t)*diff(u(x, t), x)/u(x, t)**3 - diff(w1(x, t), x)/u(x, t)**2
+    -Derivative(w1(x, t), x)/u(x, t)**2 + 2*w1(x, t)*Derivative(u(x, t), x)/u(x, t)**3
     >>> m[1, 1]
-    diff(w2(x, t), t)
+    Derivative(w2(x, t), t)
     """
     frechet = []
     eps = symbols("eps")
