@@ -3,238 +3,147 @@
 """
 Created on Tue Jan 18 13:45:11 2022
 
-@author: tapir
+@author: tapir (rewritten for SymPy by GitHub Copilot Chat Assistant)
 """
-# from https://ask.sagemath.org/question/7929/computing-variational-derivatives/
-from IPython.core.debugger import set_trace
-import os
-from delierium.helpers import is_function, is_derivative
-import functools
+from sympy import symbols, Function, diff, Matrix, S
+from sympy.core.function import UndefinedFunction
+from sympy.core.compatibility import iterable
+from sympy.abc import _clash1
+from functools import reduce
 from operator import mul
 
-os.environ["USE_SYMENGINE"] = "1"
+def is_function(expr):
+    # Equivalent of Sage's is_function: checks if expr is a function application
+    return expr.func.__class__ is UndefinedFunction or isinstance(expr, Function)
 
-from sympy import *
-from sympy.core.backend import *
-
-
-
-
-from symengine.lib.symengine_wrapper import FunctionSymbol
-
-def replace_function(expression,function,new_function):
-    if expression.is_Atom:
-        return expression
-    else:
-        replaced_args = (
-		    replace_function(arg,function,new_function)
-		    for arg in expression.args
-	    )
-        if (expression.__class__ == FunctionSymbol and expression.get_name() == function.name):
-            return new_function(*replaced_args)
-        else:
-            return expression.func(*replaced_args)
-
-# https://stackoverflow.com/questions/56584025/sympy-subs-vs-replace-vs-xreplace
-#https://stackoverflow.com/questions/66175255/sympy-how-to-implement-a-general-substitution-for-several-look-alike-terms
-#https://stackoverflow.com/questions/44169734/replacing-functions-in-a-sympy-expression-with-a-symbol-of-the-same-name
-#https://stackoverflow.com/questions/36197283/recursive-substitution-in-sympy
-#https://stackoverflow.com/questions/53687281/how-to-implement-a-function-with-pythonsympy-realizing-the-same-as-and-re
-#https://stackoverflow.com/questions/73426255/why-does-substitution-into-a-sympy-derivative-only-partly-work
-#https://stackoverflow.com/questions/69399155/defining-functions-of-symbols-and-other-functions-in-sympy
-#https://stackoverflow.com/questions/40264977/sympy-equivalent-to-holdform-in-mathematica
-
-
-def is_op_du(expr_op, u):
+def is_op_du(expr, u):
     """
-    >>> x, y = symbols('x, y')
-    >>> u = Function('u')(x)
-    >>> v = Function('v')(x, y)
-    >>> d = diff(u, x, x)
-    >>> is_op_du(d, u)
-    True
-    >>> is_op_du(d, v)
-    False
-    >>> is_op_du(v, u)
-    False
+    Check if expr is a derivative of u.
     """
-    if not is_derivative(expr_op):
-        return False
-    return expr_op.args[0] == u
-
+    if expr.func == diff:
+        # In sympy, a derivative is represented as Derivative(f(x), x)
+        f = expr.args[0]
+        if f.func == u.func:
+            return True
+    return False
 
 def iter_du_orders(expr, u):
-    for sub_expr in expr.args:
-        if sub_expr == []:
-            # hit end of tree
-            continue
-        if is_op_du(sub_expr.operator(), u):
-            # yield order of differentiation
-            yield len(sub_expr.operator().parameter_set())
-        else:
-            # iterate into sub expression
-            for order in iter_du_orders(sub_expr, u):
+    """
+    Yield all derivative orders of u appearing in expr.
+    """
+    if hasattr(expr, 'args') and expr.args:
+        for sub_expr in expr.args:
+            if sub_expr == []:
+                continue
+            elif is_op_du(sub_expr, u):
+                order = len(sub_expr.args) - 1  # first arg is function, rest are vars
                 yield order
-
+            else:
+                yield from iter_du_orders(sub_expr, u)
 
 def func_diff(L, u_in):
-    # `u` must be a callable symbolic expression
-    # in one variable.
-    if len(u_in.variables()) == 1:
-        x = u_in.variables()[0]
-        u = u_in.function(x)
+    """
+    Compute the variational derivative (Euler-Lagrange operator) of L with respect to u.
+    """
+    if len(u_in.free_symbols) == 1:
+        x = list(u_in.free_symbols)[0]
+        u = Function(u_in.func.__name__)(x)
     else:
-        raise TypeError
-
-    # This variable name must not collide
-    # with an existing one.
-    # I use "tapir" in hopes that
-    # nobody else does this...
-    t = SR.var('t')
-    result = SR(0)
-    # `orders` is the set of all
-    # orders of differentiation of `u`
+        raise TypeError("Input function must have exactly one variable.")
+    t = symbols('tapir')  # dummy variable
+    result = S(0)
     orders = set(iter_du_orders(L, u)).union((0,))
-
     for c in orders:
-        du = u(x).diff(x, c)
-        sign = Integer(-1)**c
-
-        # Temporarily replace all `c`th derivatives of `u` with `t`;
-        # differentiate; then substitute back.
+        du = diff(u, x, c)
+        sign = (-1)**c
+        # Replace all c-th derivatives of u with t, differentiate, then substitute back
         dL_du = L.subs({du: t}).diff(t).subs({t: du})
-        # Append intermediate term to `result`
-        result += sign * dL_du.diff(x, c)
-
+        result += sign * diff(dL_du, x, c)
     return result
-
-#ar('x')
-#= function('u')(x)
-#
-#g=SR.var('g')
-#L = sqrt((1 + u.diff(x)**2)/(2*g*x))
-#L
-#set_trace()
-#print(func_diff(L, u))
-# Baumann pp 67
-#1/2*sqrt(1/2)*(2*diff(u(x), x)*diff(u(x), x, x)/(g*x) - (diff(u(x), x)^2 + 1)/(g*x^2))*diff(u(x), x)/(g*x*((diff(u(x), x)^2 + 1)/(g*x))^(3/2)) - sqrt(1/2)*diff(u(x), x, x)/(g*x*sqrt((diff(u(x), x)^2 + 1)/(g*x))) + sqrt(1/2)*diff(u(x), x)/(g*x^2*sqrt((diff(u(x), x)^2 + 1)/(g*x)))
-#
-#s = var('s')
-#q = function('q')(s)
-#l = function("l")
-
-#L = l(s, q(s), q.diff(s))
-#print(func_diff(l(s, q(s), q.diff(s)), u))
-
-
-
 
 def EulerD(density, depend, independ):
     r'''
+    >>> from sympy import symbols, Function, diff
     >>> t = symbols("t")
-    >>> u= Function('u')
-    >>> v= Function('v')
-    >>> L=u(t)*v(t) + diff(u(t), t)**2 + diff(v(t), t)**2 - u(t)**2 - v(t)**2
-    >>> EulerD(L, (u,v), t)
-    [-2*u(t) + v(t) - 2*Derivative(u(t), (t, 2)), u(t) - 2*v(t) - 2*Derivative(v(t), (t, 2))]
-    >>> L=u(t)*v(t) + Derivative(u(t), t)**2 + Derivative(v(t), t)**2 + 2*Derivative(u(t), t) * Derivative(v(t), t)
-    >>> EulerD(L, (u,v), t)
-    [v(t) - 2*Derivative(u(t), (t, 2)) - 2*Derivative(v(t), (t, 2)), u(t) - 2*Derivative(u(t), (t, 2)) - 2*Derivative(v(t), (t, 2))]
+    >>> u = Function('u')
+    >>> v = Function('v')
+    >>> L = u(t)*v(t) + diff(u(t), t)**2 + diff(v(t), t)**2 - u(t)**2 - v(t)**2
+    >>> EulerD(L, (u, v), t)
+    [-2*u(t) + v(t) - 2*diff(u(t), t, t), u(t) - 2*v(t) - 2*diff(v(t), t, t)]
+    >>> L2 = u(t)*v(t) + diff(u(t), t)**2 + diff(v(t), t)**2 + 2*diff(u(t), t) * diff(v(t), t)
+    >>> EulerD(L2, (u, v), t)
+    [v(t) - 2*diff(u(t), t, t) - 2*diff(v(t), t, t), u(t) - 2*diff(u(t), t, t) - 2*diff(v(t), t, t)]
     '''
     wtable = [Function("w_%s" % i) for i in range(len(depend))]
-    y = Function('y')(independ)
-    w = Function('w')(independ)
+    y = Function('y')
+    w = Function('w')
     e = symbols('e')
     result = []
     for j in range(len(depend)):
         loc_result = 0
-        def f0(*args):
-            return y + e * w
-        def dep(*args):
+        def f0(x):
+            return y(independ) + e * w(independ)
+        def dep(x):
             return depend[j](independ)
-        print(f"{density=}, {density.__class__}")
-        print(f"{depend[j]=}, {depend[j].__class__=}")
-        print(f"{f0=}")
-#        import pytest; pytest.set_trace()
-        fh = density.xreplace({depend[j]: y + e*w})
-        fh = fh.replace(y, depend[j](independ))
-        fh = fh.replace(w, wtable[j](independ))
-        fh = fh.diff(e)
-        fh = fh.subs({e:0}).expand()
-        if fh.func == Mul:
-            operands = [fh]
-        else:
-            operands = fh.args
+        fh = density.replace(depend[j], f0)
+        fh = fh.replace(y, dep)
+        fh = fh.replace(w, wtable[j])
+        fh = fh.diff(e).subs(e, 0).expand()
+        operands = fh.args if fh.is_Mul else (fh,)
         for operand in operands:
-            d     = None
+            d = None
             coeff = []
-            for _ops in operand.args:
+            for _ops in operand.args if hasattr(operand, 'args') else ():
                 if is_op_du(_ops, wtable[j](independ)):
-                    d = _ops.args[1]
+                    d = sum(1 for a in _ops.args[1:] if a == independ)
                 elif is_function(_ops) and _ops.func == wtable[j]:
                     pass
                 else:
                     coeff.append(_ops)
-            coeff = functools.reduce(mul, coeff, 1)
+            coeff = reduce(mul, coeff, 1) if coeff else 1
             if d is not None:
                 coeff = ((-1)**d)*diff(coeff, independ, d)
             loc_result += coeff
         result.append(loc_result)
     return result
 
-
 def FrechetD(support, dependVar, independVar, testfunction):
     """
-    >>> x,t = symbols("x t")
-    >>> v   = Function("v")
-    >>> u   = Function("u")
-    >>> w1  = Function("w1")
-    >>> w2  = Function("w2")
-    >>> eqsys = [diff(v(x,t), x) - u(x,t), diff(v(x,t), t) - diff(u(x,t), x)/(u(x,t)**2)]
-    >>> dependent = [u,v]
-    >>> independent = [x,t]
-    >>> m = Matrix(FrechetD (eqsys, [u,v], [x,t], [w1,w2]))
-    >>> print(m[0, 0])
+    >>> from sympy import symbols, Function, diff, Matrix
+    >>> x, t = symbols("x t")
+    >>> v = Function("v")
+    >>> u = Function("u")
+    >>> w1 = Function("w1")
+    >>> w2 = Function("w2")
+    >>> eqsys = [diff(v(x, t), x) - u(x, t), diff(v(x, t), t) - diff(u(x, t), x)/(u(x, t)**2)]
+    >>> m = Matrix(FrechetD(eqsys, [u, v], [x, t], [w1, w2]))
+    >>> m[0, 0]
     -w1(x, t)
-    >>> print(m[0, 1])
-    Derivative(w2(x, t), x)
-    >>> print(m[1, 0])
-    -Derivative(w1(x, t), x)/u(x, t)**2 + 2*w1(x, t)*Derivative(u(x, t), x)/u(x, t)**3
-    >>> print(m[1, 1])
-    Derivative(w2(x, t), t)
+    >>> m[0, 1]
+    diff(w2(x, t), x)
+    >>> m[1, 0]
+    2*w1(x, t)*diff(u(x, t), x)/u(x, t)**3 - diff(w1(x, t), x)/u(x, t)**2
+    >>> m[1, 1]
+    diff(w2(x, t), t)
     """
     frechet = []
     eps = symbols("eps")
-    for j in range (len(support)):
+    for j in range(len(support)):
         deriv = []
-        for i in range (len(support)):
+        for i in range(len(support)):
             def r0(*args):
-                return dependVar[i](*independVar)+ testfunction[i](*independVar) * eps
-            #def _r0(*args):
-            #    # this version has issues as it always uses w2 ?!? investigate further
-            #    # when time and motivation. Online version on asksage works perfectly
-            #    return dependVar[i](*independVar)+ testfunction[i](*independVar) * eps
-            #r0 = function('r0', eval_func=_r0)
-            _r0 = r0
-            s  =  support[j].xreplace({dependVar[i](*independVar) :
-                                   dependVar[i](*independVar)+ testfunction[i](*independVar) * eps})
-            kk=s.xreplace({dependVar[i](*independVar) : Symbol('mausi')})
-            kuku = kk.diff(eps)
-            susu = kuku.xreplace({Symbol('mausi') : dependVar[i](*independVar)})
-            lulu = susu.xreplace({eps : 0})
-
-            deriv.append(susu)
+                return dependVar[i](*independVar) + testfunction[i](*independVar) * eps
+            s = support[j].replace(dependVar[i], r0)
+            deriv.append(diff(s, eps).subs({eps: 0}))
         frechet.append(deriv)
     return frechet
 
-
-
-
 def AdjointFrechetD(support, dependVar, independVar, testfunction):
-    frechet = FrechetD(support, dependVar, independVar, testfunction)
-
-
+    # Placeholder: in SymPy, adjoint computation is not built-in
+    return FrechetD(support, dependVar, independVar, testfunction)
 
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+
+

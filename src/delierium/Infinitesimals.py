@@ -42,10 +42,9 @@ def prolongationFunction(f: list, x: list, order) -> list:
     aux = result[:]
 
     def outer(fun, l1, l2):
-        return list(map(lambda v: fun(v[0], v[1]), product(l1, l2)))]
+        return list(map(lambda v: fun(v[0], v[1]), product(l1, l2)))
     for i in range(order):
         result += (aux := outer(diff, aux, x)[:])
-        print(f"{result=}")
     return set(result)
 
 
@@ -136,6 +135,7 @@ def prolongationODE(equations,
     >>> print(p.expand())
     -f(x)^2*g(u(x))^2*D[0](xi)(u(x), x) - g(u(x))*xi(u(x), x)*diff(f(x), x) - f(x)*phi(u(x), x)*D[0](g)(u(x)) + f(x)*g(u(x))*D[0](phi)(u(x), x) - f(x)*g(u(x))*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)
     """
+    from IPython.core.debugger import set_trace; set_trace()
     vars     = [dependent(independent), independent]
     if infinitesimals is None:
         infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
@@ -147,7 +147,8 @@ def prolongationODE(equations,
     for p in prolong:
         _p = (_.subs({test(independent): eta}).expand() for _ in p)
         prol.append(sum(_ for _ in _p))
-    return list(map (lambda _ : _ + xi(*vars) * equations.diff(independent), prol))
+    result = list(map (lambda _ : _ + xi(*vars) * equations.diff(independent), prol))
+    return result
 
 term = namedtuple("term", ["power", "coeff"])
 
@@ -201,7 +202,6 @@ def overdeterminedSystemODE (ode,
     if infinitesimals is None:
         infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
     prolongation = prolongationODE(ode, dependent, independent, infinitesimals=infinitesimals)[0].expand()
-    print(f"{
     print(f"{prolongation=}")
     os.environ["USE_SYMENGINE"] = "1"    
     from sympy import preorder_traversal
