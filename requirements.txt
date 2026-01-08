@@ -1,23 +1,8 @@
 sympy
 symengine
-line_profiler
-#jupyter
-numpy # for symengine
-pylint
-mypy
 
-jupyterlab
-jupyter_copilot
+numpy # for symengine
 
 delierium
 
-sympy
-symengine
-#python3-lsprotocol
-#python3-pylsp
-#python3-pylsp-mypy
-#python3-pylsp-isort
-#python3-pyslp-rope
 more-itertools
-pytest
-tox

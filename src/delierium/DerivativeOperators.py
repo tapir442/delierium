@@ -7,7 +7,6 @@ Created on Tue Jan 18 13:45:11 2022
 """
 from sympy import symbols, Function, diff, Matrix, S
 from sympy.core.function import UndefinedFunction
-from sympy.core.compatibility import iterable
 from sympy.abc import _clash1
 from functools import reduce
 from operator import mul
@@ -133,6 +132,8 @@ def FrechetD(support, dependVar, independVar, testfunction):
         for i in range(len(support)):
             def r0(*args):
                 return dependVar[i](*independVar) + testfunction[i](*independVar) * eps
+            from pprint import pprint
+            pprint(locals())
             s = support[j].replace(dependVar[i], r0)
             deriv.append(diff(s, eps).subs({eps: 0}))
         frechet.append(deriv)

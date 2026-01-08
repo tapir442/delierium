@@ -13,7 +13,7 @@ from itertools import product
 
 
 
-from sympy import srepr
+from sympy import srepr, pprint
 
 from sympy.simplify import collect
 
@@ -23,9 +23,11 @@ from delierium.helpers import ExpressionTree
 
 from more_itertools import bucket, flatten, powerset
 
+from IPython.core.debugger import set_trace
 
 os.environ["USE_SYMENGINE"] = "1"
-from sympy.core.backend import *
+from sympy import *
+init_printing()
 
 def prolongationFunction(f: list, x: list, order) -> list:
     '''
@@ -74,7 +76,6 @@ def prolongation(eq, dependent, independent):
     """
     Depend = [d(*independent) for d in dependent]
     vars = independent + Depend
-    print(Function.__doc__)
     xi = [Function("xi_%s" % (j+1), latex_name = r"\xi_{i+1}")(*vars) for j in range(len(independent))]
     eta = []
     for i in range(len(dependent)):
@@ -84,13 +85,6 @@ def prolongation(eq, dependent, independent):
                        Depend[i].diff(independent[j])
                        for j in range(len(independent))))
     test = list(map(lambda _: Function("t_%s" % _)(*independent),  range(len(Depend))))
-    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-    from pprint import pprint
-    pprint(locals())
-    print(f"{Function=}")
-    for _ in locals():
-        print(f"{_=}, {_.__class__=}")
-    print(f"{eq=}")
     prolong = FrechetD(eq, dependent, independent, testfunction=test)
     prol = []
     for p in prolong:
@@ -135,7 +129,6 @@ def prolongationODE(equations,
     >>> print(p.expand())
     -f(x)^2*g(u(x))^2*D[0](xi)(u(x), x) - g(u(x))*xi(u(x), x)*diff(f(x), x) - f(x)*phi(u(x), x)*D[0](g)(u(x)) + f(x)*g(u(x))*D[0](phi)(u(x), x) - f(x)*g(u(x))*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)
     """
-    from IPython.core.debugger import set_trace; set_trace()
     vars     = [dependent(independent), independent]
     if infinitesimals is None:
         infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
@@ -145,7 +138,7 @@ def prolongationODE(equations,
     prolong=FrechetD([equations], [dependent], [independent], testfunction=[test])
     prol=[]
     for p in prolong:
-        _p = (_.subs({test(independent): eta}).expand() for _ in p)
+        _p = [_.replace(test(independent), eta).expand() for _ in p]
         prol.append(sum(_ for _ in _p))
     result = list(map (lambda _ : _ + xi(*vars) * equations.diff(independent), prol))
     return result
@@ -201,32 +194,34 @@ def overdeterminedSystemODE (ode,
 
     if infinitesimals is None:
         infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
+    #display(ode)
     prolongation = prolongationODE(ode, dependent, independent, infinitesimals=infinitesimals)[0].expand()
-    print(f"{prolongation=}")
+    #print("prolongationODE")
+    #display(prolongation)
     os.environ["USE_SYMENGINE"] = "1"    
     from sympy import preorder_traversal
     from sympy.core.function import Derivative
     from sympy import solve
     from sympy.solvers.deutils import ode_order
     lhs = diff(dependent(independent),independent, ode_order(ode, dependent))
-    print(f"{lhs=}")
-    
+    #print("lhs=")
+    #display(lhs)
     s1 = solve(ode, diff(dependent(independent),independent, ode_order(ode, dependent)))
-    print(f"{s1=}")
+    #print("s1")
+    #display(s1)
 
-    ode1 = prolongation.subs({ diff(dependent(independent),independent, ode_order(ode, dependent)) : s1[0]}).simplify()
-    from IPython.core.debugger import set_trace
+    ode1 = prolongation.xreplace({diff(dependent(independent),independent, ode_order(ode, dependent)): s1[0]})
+    #display(ode1)
     l = [diff(dependent(independent), independent, i)
                                            for i in range(ode_order(ode, dependent), 0, -1)] + [dependent(independent)]
-    print(f"{l=}")
+    #pprint(f"{l=}")
     equations = []
     for i in l:
         k = collect(ode1, i, evaluate=False, exact=True)
-        from pprint import pprint
-        pprint(k.__class__)
-        for j in k.items():
-            print(f"{j=}")
-    from IPython.core.debugger import set_trace; set_trace()
+        #print(f"{k[i]=}")
+        #for j in k.items():
+        #    print(f"{j=}")
+    #
     for _ in reversed(sorted(all_this_stuff)):
         new = e.coefficient(_.coeff)
         if new != 0:
