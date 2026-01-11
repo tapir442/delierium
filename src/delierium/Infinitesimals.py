@@ -196,19 +196,70 @@ def overdeterminedSystemODE (ode,
         infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
     #display(ode)
     prolongation = prolongationODE(ode, dependent, independent, infinitesimals=infinitesimals)[0].expand()
-    #print("prolongationODE")
-    #display(prolongation)
-    os.environ["USE_SYMENGINE"] = "1"    
-    from sympy import preorder_traversal
-    from sympy.core.function import Derivative
-    from sympy import solve
-    from sympy.solvers.deutils import ode_order
-    lhs = diff(dependent(independent),independent, ode_order(ode, dependent))
-    #print("lhs=")
-    #display(lhs)
-    s1 = solve(ode, diff(dependent(independent),independent, ode_order(ode, dependent)))
-    #print("s1")
-    #display(s1)
+    print(prolongation)
+    tree = ExpressionTree(prolongation)
+    mine = [_ for _ in tree.diffs if _.operator().Function() in [dependent]]
+    order= max([len(_.operator().parameter_set()) for _ in mine])
+    if order == 1:
+        print("Order 1 ODEs have no meaningful infinitesimals")
+        return []
+    s1 = solve(ode==0, diff(dependent(independent),independent, order))
+    ode1 = prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
+    tree = ExpressionTree(ode1)
+    l = (_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent, order)))
+    equations = []
+    e         = next(l)
+    all_this_stuff = set()
+    for node in PreOrderIter(tree.root):
+        # powercollector: an array which stores powers of derivatives
+        # the index is the(reversed) order, the value is the power
+        # of the derivative.
+        # Example: we have an ODE of order three. The prolongation and
+        # substitution step produces 'ode1' which is now of reduced order
+        # two. So we can have differentials of order one and two, so we need an
+        # array of lenght two which is initialized with zeroes. A term like
+        #    diff(y, x)^5 * diff(y, x, x)^2
+        # will create the entry
+        #    [2,5]
+        # The higher order (=2) has power 2, so the first entry (=highest order)
+        # will be set to 2, the lowest order(=1) has power 5, so the index 1 contains
+        # the power 5. This way we now have on ordered list which than can be
+        # looped over from highest_order^highest_power to lowest_order^lowest_power
+        # to factor out the derivatives to get the determining equations
+        powercollector = [0]*(order-1)
+        v = node.value
+        if v.operator() in [sage.symbolic.operators.add_vararg, None]:
+             continue
+        if isinstance(v.operator(), FDerivativeOperator):
+            # standalone diff operator
+            if v.operands()[0] != independent:
+                # differential coming from prolongation, ignore
+                continue
+            powercollector[order - len(v.operator().parameter_set())-1] = 1
+            all_this_stuff.add(term(tuple(powercollector), v))
+            continue
+        if v.operator() is sage.symbolic.operators.mul_vararg:
+            # the factors containing derivatives can be combined multiplicatively
+            # We will analize them factor by factor, put powers and orders into
+            # 'power_collector', and multiply these factors together into 'local_term',
+            # ans store both together into 'all_this_stuff'
+            local_term = 1
+            for w in v.operands():
+                if isinstance(w.operator(), FDerivativeOperator):
+                    if w.operands()[0] != independent:
+                        # differential coming from prolongation, ignore
+                        continue
+                    local_term *= w
+                    powercollector[order - len(w.operator().parameter_set())-1] = 1
+                if isinstance(w.operator(), types.BuiltinFunctionType):
+                    if w.operator().__qualname__ != 'pow':
+                        continue
+                    if isinstance(w.operands()[0].operator(), FDerivativeOperator):
+                        if w.operands()[0].operands()[0] != independent:
+                            # differential coming from prolongation, ignore
+                            continue
+                        local_term *= w
+                        powercollector[order - len(w.operands()[0].operator().parameter_set())-1] = w.operands()[-1]
 
     ode1 = prolongation.xreplace({diff(dependent(independent),independent, ode_order(ode, dependent)): s1[0]})
     #display(ode1)

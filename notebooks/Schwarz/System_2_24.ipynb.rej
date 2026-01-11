@@ -1,0 +1,49 @@
+--- notebooks/Schwarz/System_2_24.ipynb
++++ notebooks/Schwarz/System_2_24.ipynb
+@@ -12,7 +12,7 @@
+     "\n",
+     "from sympy.core.backend import symbols, Function, diff\n",
+     "from delierium.matrix_order import Context, Mgrlex, Mgrevlex, Mlex\n",
+-    "from delierium.JanetBasis import Janet_Basis, _Differential_Polynomial\n",
++    "from delierium.JanetBasis import Janet_Basis, LHDP\n",
+     "from delierium.helpers import latexer\n",
+     "from IPython.display import Math\n",
+     "\n",
+@@ -45,13 +43,30 @@
+      "name": "stdout",
+      "output_type": "stream",
+      "text": [
+-      "> \u001b[0;32m/home/tapir/research-disk/delierium/src/delierium/JanetBasis.py\u001b[0m(253)\u001b[0;36m_init\u001b[0;34m()\u001b[0m\n",
+-      "\u001b[0;32m    251 \u001b[0;31m        \u001b[0moperands\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0me\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmake_args\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0me\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+-      "\u001b[0m\u001b[0;32m    252 \u001b[0;31m        \u001b[0;32mimport\u001b[0m \u001b[0mpdb\u001b[0m\u001b[0;34m;\u001b[0m \u001b[0mpdb\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mset_trace\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+-      "\u001b[0m\u001b[0;32m--> 253 \u001b[0;31m        \u001b[0mr\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m[\u001b[0m\u001b[0manalyze_term\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mcontext\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mo\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mfor\u001b[0m \u001b[0mo\u001b[0m \u001b[0;32min\u001b[0m \u001b[0moperands\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+-      "\u001b[0m\u001b[0;32m    254 \u001b[0;31m        \u001b[0mdterms\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m{\u001b[0m\u001b[0;34m}\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+-      "\u001b[0m\u001b[0;32m    255 \u001b[0;31m        \u001b[0;32mfor\u001b[0m \u001b[0m_r\u001b[0m \u001b[0;32min\u001b[0m \u001b[0mr\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+-      "\u001b[0m\n"
++      "[Derivative(w(x, y), y), Derivative(z(x, y), y), w(x, y)]\n",
++      "[Derivative(z(x, y), x), Derivative(z(x, y), y), w(x, y)]\n",
++      "[Derivative(z(x, y), y)]\n",
++      "[Derivative(w(x, y), x)]\n",
++      "0.2628912925720215\n",
++      "======================================================================================================================================================\n",
++      "[Derivative(w(x, y), y), Derivative(z(x, y), y), w(x, y)]\n",
++      "[Derivative(z(x, y), x), Derivative(z(x, y), y), w(x, y)]\n",
++      "[Derivative(z(x, y), y)]\n",
++      "[Derivative(w(x, y), x)]\n",
++      "0.10919857025146484\n",
++      "======================================================================================================================================================\n",
++      "[Derivative(w(x, y), y), Derivative(z(x, y), y), w(x, y)]\n",
++      "[Derivative(z(x, y), x), Derivative(z(x, y), y), w(x, y)]\n",
++      "[Derivative(z(x, y), y)]\n",
++      "[Derivative(w(x, y), x)]\n",
++      "0.10826301574707031\n",
++      "======================================================================================================================================================\n",
++      "[Derivative(w(x, y), y), Derivative(z(x, y), y), w(x, y)]\n",
++      "[Derivative(z(x, y), x), Derivative(z(x, y), y), w(x, y)]\n",
++      "[Derivative(z(x, y), y)]\n",
++      "[Derivative(w(x, y), x)]\n",
++      "0.1179361343383789\n",
++      "======================================================================================================================================================\n"
+      ]
+     }
+    ],
