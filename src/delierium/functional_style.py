@@ -1,3 +1,4 @@
+from collections import ChainMap
 from functools import reduce
 from itertools import combinations_with_replacement
 from typing import Any
@@ -80,6 +81,7 @@ def ltf(expr, dep, indep):
 
     fundic = dict([(_, sp.Symbol(_.name)) for _ in dep])
     output = output.xreplace(dreps2).xreplace(fundic)
+    display(output)
 
 def variable_combinations(variables: list[sp.Symbol], order:int) -> list(tuple[sp.Symbol]):
     return reduce(
@@ -207,29 +209,33 @@ def get_coeff_order(expr):
 
 def compute_determining_equations(expr, coeffs):
     acc = []
-    for _ in coeffs:
-        r = sum([term/_ for term in expr.expand().args if term.has(_)])
-        acc.append(r)
-        expr -= r * _
-    acc.append(expr)
+    for coeff in coeffs:
+        termsum = sum(term/coeff for term in expr.expand().args if term.has(coeff))
+        acc.append(termsum)
+        expr -= termsum * coeff
+    acc.append(expr.expand())
     return acc
 
 def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesimals):
+    
     eq_order, highest_term = order(eq, dep, indep)
     highest_term = list(highest_term)[0]
     combos = variable_combinations(indep, eq_order)
 
     dummies = {}
-    for _ in combos:
-        k = sp.Symbol(f"{dep[0].name}_{"".join([str(v) for v in _])}")
 
     for comb in combos:
         funcs, etas = compute_level(comb, dep, indep, infinitesimals)
         infinitesimals[funcs[0]] = etas[0]
         dummies[funcs[0]] = sp.Symbol(f"{dep[0].name}_{"".join([str(v) for v in comb])}")
 
-    r = prolongation(eq, eq_order, infinitesimals, dep, indep, dummies)
-
+    vdummies = {}
+    for i in dep + indep:
+        vdummies[i] = sp.Symbol(i.name)
+    
+    _dummies = ChainMap(dummies, vdummies)
+    r = prolongation(eq, eq_order, infinitesimals, dep, indep, _dummies)
+    
     sol = sp.solve(eq, highest_term)[0]
     r = r.xreplace(finish_substitution(r))
     r = r.xreplace({highest_term: sol})
@@ -241,292 +247,3 @@ def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesima
     return compute_determining_equations(r, coeffs)
 
 
-def main():
-    t, x = sp.symbols("t x")
-    u = sp.Function("u")(t, x)
-    heq = sp.Derivative(u, t) - sp.Derivative(u, x, x)
-
-    independents = [t, x]
-    dependents = [u]
-
-    infinitesimals = {
-        x: make_infinitesimal(x, t, x, u, name="X"),
-        t: make_infinitesimal(t, t, x, u, name="T"),
-        u: make_infinitesimal(u, t, x, u, name="U"),
-    }
-    result = compute_overdetermined_system_of_infinitesimals(
-        eq=heq,
-        dep=dependents,
-        indep=independents,
-        infinitesimals=infinitesimals,
-    )
-
-    for eq in result:
-        ltf(eq, [u], [x, t])
-
-    return result
-
-
-def main2():
-    y, x = sp.symbols("y x")
-    u = sp.Function("u")(x, y)
-    laplace_eq = sp.Derivative(u, y, y) + sp.Derivative(u, x, x)
-
-    print("Laplace equation")
-
-    independents = [y, x]
-    dependents = [u]
-
-    infinitesimals = {
-        x: make_infinitesimal(x, x, y, u, name="X"),
-        y: make_infinitesimal(y, x, y, u, name="Y"),
-        u: make_infinitesimal(u, x, y, u, name="U"),
-    }
-
-    result = compute_overdetermined_system_of_infinitesimals(
-        eq=laplace_eq,
-        dep=dependents,
-        indep=independents,
-        infinitesimals=infinitesimals,
-    )
-
-    for eq in set(result):
-         ltf(eq, dependents, independents)
-    return result
-
-
-def main3():
-    # XXX debug !!!
-    t, x = sp.symbols("t x")
-    u = sp.Function("u")(x, t)
-    burgers_eq = sp.Derivative(u, t) + u * sp.Derivative(u, x) - sp.Derivative(u, x, x)
-    print("Burgers equation")
-    independents = [t, x]
-    dependents = [u]
-
-    infinitesimals = {
-        x: make_infinitesimal(x, x, t, u, name="X"),
-        t: make_infinitesimal(t, x, t, u, name="T"),
-        u: make_infinitesimal(u, x, t, u, name="U"),
-    }
-
-    result = compute_overdetermined_system_of_infinitesimals(
-        eq=burgers_eq,
-        dep=dependents,
-        indep=independents,
-        infinitesimals=infinitesimals,
-    )
-
-    for eq in set(result):
-        ltf(eq, dependents, independents)
-
-    return result
-
-def main4():
-    x = sp.symbols("x")
-    y = sp.Function("y")(x)
-    ode= sp.Derivative(y, x,x)
-
-    print("Arrigo Example 2.17")
-
-    independents = [x]
-    dependents = [y]
-
-    infinitesimals = {
-        x: make_infinitesimal(x, x, y, name="X"),
-        y: make_infinitesimal(y, x, y, name="Y"),
-
-    }
-
-    result = compute_overdetermined_system_of_infinitesimals(
-        eq=ode,
-        dep=dependents,
-        indep=independents,
-        infinitesimals=infinitesimals,
-    )
-
-    for eq in set(result):
-        ltf(eq, dependents, independents)
-
-    return result
-
-
-def main5():
-    # XXX Debug
-    # arrigo Example 2.18
-    x = sp.symbols("x")
-    y = sp.Function("y")(x)
-    ode = sp.Derivative(y, x, x) + y*sp.Derivative(y, x) + x * y**4
-
-    print("Arrigo Eaxmple 2.18")
-
-    independents = [x]
-    dependents = [y]
-
-    infinitesimals = {
-        x: make_infinitesimal(x, x, y, name="X"),
-        y: make_infinitesimal(y, x, y, name="Y"),
-
-    }
-
-    result = compute_overdetermined_system_of_infinitesimals(
-        eq=ode,
-        dep=dependents,
-        indep=independents,
-        infinitesimals=infinitesimals,
-    )
-
-    for eq in set(result):
-        ltf(eq, dependents, independents)
-
-    return result
-
-
-def main6():
-    # XXX Debug
-    print("arrigo Example 2.19")
-    x = sp.symbols("x")
-    y = sp.Function("y")(x)
-    ode = sp.Derivative(y, x, x) + 3*y*sp.Derivative(y, x) + y**3
-
-    independents = [x]
-    dependents = [y]
-
-    infinitesimals = {
-        x: make_infinitesimal(x, x, y, name="X"),
-        y: make_infinitesimal(y, x, y, name="Y"),
-
-    }
-
-    result = compute_overdetermined_system_of_infinitesimals(
-        eq=ode,
-        dep=dependents,
-        indep=independents,
-        infinitesimals=infinitesimals,
-    )
-
-    for eq in set(result):
-        ltf(eq, dependents, independents)
-
-    return result
-
-def main7():
-    print("Arrigo Example 2.20")
-    x = sp.symbols("x")
-    y = sp.Function("y")(x)
-    ode = sp.Derivative(y, x, x, x) + y*sp.Derivative(y, x, x)
-
-    independents = [x]
-    dependents = [y]
-
-    infinitesimals = {
-        x: make_infinitesimal(x, x, y, name="X"),
-        y: make_infinitesimal(y, x, y, name="Y"),
-
-    }
-
-    result = compute_overdetermined_system_of_infinitesimals(
-        eq=ode,
-        dep=dependents,
-        indep=independents,
-        infinitesimals=infinitesimals,
-    )
-
-    for eq in set(result):
-        ltf(eq, dependents, independents)
-
-    return result
-
-def main8():
-    # XXX Debug
-    print("Arrigo Example 3.1, pp. 75")
-    # this is the same as Hydon, Example 8.1
-    x = sp.symbols("x")
-    t = sp.symbols("t")
-    u = sp.Function("u")(x, t)
-    pde = sp.Derivative(u, t) - sp.Derivative(u, x)**2
-
-
-    independents = [x, t]
-    dependents = [u]
-
-    infinitesimals = {
-        x: make_infinitesimal(x, x, t, u, name="X"),
-        t: make_infinitesimal(t, x, t, u, name="T"),
-        u: make_infinitesimal(u, x, t, u, name='U')
-    }
-    #set_trace()
-    result = compute_overdetermined_system_of_infinitesimals(
-        eq=pde,
-        dep=dependents,
-        indep=independents,
-        infinitesimals=infinitesimals,
-    )
-
-    for eq in result:
-        ltf(eq, dependents, independents)
-
-    return result
-
-def main9():
-    print("Blasius Equation")
-    x = sp.symbols("x")
-    y = sp.Function("y")(x)
-
-    pde = sp.Derivative(y, x,x,x)  + y*sp.Derivative(y, x, x)
-
-    independents = [x]
-    dependents = [y]
-
-    infinitesimals = {
-        x: make_infinitesimal(x, x, y, name="X"),
-        y: make_infinitesimal(y, x, y, name='Y')
-    }
-    result = compute_overdetermined_system_of_infinitesimals(
-        eq=pde,
-        dep=dependents,
-        indep=independents,
-        infinitesimals=infinitesimals,
-    )
-    for eq in result:
-        ltf(eq, dependents, independents)
-        sp.pretty_print(eq)
-
-    X = infinitesimals[x]
-    Y = infinitesimals[y]
-
-    # 2.137a
-    expected = [3*func_diff(func_diff(func_diff(Y, x), x), y) - func_diff(func_diff(func_diff(X, x), x), x) + y*(2*func_diff(func_diff(Y, x), y) - func_diff(func_diff(X, x),x))]
-    # 2.137b
-#    expected += [3*(func_diff(func_diff(func_diff(Y, x), y), y) - func_diff(func_diff(func_diff(X, x), x), y)) + y*(func_diff(func_diff(Y, y), y) - 2*func_diff(func_diff(X, x), y))]
-    # 2.137d
-    expected += [-func_diff(func_diff(func_diff(X, y), y), y)]
-
-    expected = [_.xreplace(finish_substitution(_)) for _ in expected]
-#    sp.pretty_print(expected[0])
-    for ex in expected:
-        ok = False
-        for re in result:
-            if ex == re:
-                ok = True
-        assert ok
-
-
-if __name__ == "__main__":
-#    main()
-#    print("." * 80)
-#    main2()
-#    print("." * 80)
-#    main3()
-#    print("." * 80)
-#    main4()
-#    print("." * 80)
-#    main5()
-#    print("." * 80)
-#    main6()
-#    print("." * 80)
-#    main7()
-#    print("." * 80)
-#    main8()
-#    print("." * 80)
-    main9()

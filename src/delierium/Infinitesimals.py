@@ -11,10 +11,10 @@ from collections import namedtuple
 from itertools import product
 
 
+import delierium.functional_style
 
 
 from sympy import srepr, pprint
-
 from sympy.simplify import collect
 
 from delierium.DerivativeOperators import FrechetD
@@ -145,32 +145,7 @@ def prolongationODE(equations,
 
 term = namedtuple("term", ["power", "coeff"])
 
-def overdeterminedSystemODE (ode,
-                       dependent,
-                       independent,
-                       infinitesimals=None
-                       , *args, **kw):
-    """Computes the overdetermined system which is computed from the prolongation
-    of an ODE of order > 1
-
-    Parameters
-    ----------
-    ode: a sympy expression as the left side of '<expr> == 0'. No need to
-        add " == 0'!!
-    dependent: the name of the dependent variable, i.e. the unknown function
-    independent:
-        the name of the independent variable
-    infinitesimals: ordered pair of sympy variables, to be used as the names
-        for the infinitesimals, to avoid potential name clashes with  variables in your
-        application. If not specified, 'xi' and 'phi' are used as the defaults
-
-    Returns
-    -------
-    list
-        a list of expressions, each expression to be interpreted as left side of an
-        'expr' == 0. For further manipulation ane has to add ' == 0'.
-
-
+"""
     >>> # Arrigo Example 2.20
     >>> x   = symbols('x')
     >>> y   = Function('y')
@@ -190,97 +165,16 @@ def overdeterminedSystemODE (ode,
     -2*y(x)*D[0, 1](X)(y(x), x) + y(x)*D[0, 0](Y)(y(x), x) - 3*D[0, 1, 1](X)(y(x), x) + 3*D[0, 0, 1](Y)(y(x), x)
     -y(x)*D[1, 1](X)(y(x), x) + 2*y(x)*D[0, 1](Y)(y(x), x) - D[1, 1, 1](X)(y(x), x) + 3*D[0, 1, 1](Y)(y(x), x)
     y(x)*D[1, 1](Y)(y(x), x) + D[1, 1, 1](Y)(y(x), x)
-    """
+"""
 
-    if infinitesimals is None:
-        infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
-    #display(ode)
-    prolongation = prolongationODE(ode, dependent, independent, infinitesimals=infinitesimals)[0].expand()
-    print(prolongation)
-    tree = ExpressionTree(prolongation)
-    mine = [_ for _ in tree.diffs if _.operator().Function() in [dependent]]
-    order= max([len(_.operator().parameter_set()) for _ in mine])
-    if order == 1:
-        print("Order 1 ODEs have no meaningful infinitesimals")
-        return []
-    s1 = solve(ode==0, diff(dependent(independent),independent, order))
-    ode1 = prolongation.subs({s1[0].lhs() : s1[0].rhs()}).simplify()
-    tree = ExpressionTree(ode1)
-    l = (_ [0] for _ in ode1.coefficients(diff(dependent(independent), independent, order)))
-    equations = []
-    e         = next(l)
-    all_this_stuff = set()
-    for node in PreOrderIter(tree.root):
-        # powercollector: an array which stores powers of derivatives
-        # the index is the(reversed) order, the value is the power
-        # of the derivative.
-        # Example: we have an ODE of order three. The prolongation and
-        # substitution step produces 'ode1' which is now of reduced order
-        # two. So we can have differentials of order one and two, so we need an
-        # array of lenght two which is initialized with zeroes. A term like
-        #    diff(y, x)^5 * diff(y, x, x)^2
-        # will create the entry
-        #    [2,5]
-        # The higher order (=2) has power 2, so the first entry (=highest order)
-        # will be set to 2, the lowest order(=1) has power 5, so the index 1 contains
-        # the power 5. This way we now have on ordered list which than can be
-        # looped over from highest_order^highest_power to lowest_order^lowest_power
-        # to factor out the derivatives to get the determining equations
-        powercollector = [0]*(order-1)
-        v = node.value
-        if v.operator() in [sage.symbolic.operators.add_vararg, None]:
-             continue
-        if isinstance(v.operator(), FDerivativeOperator):
-            # standalone diff operator
-            if v.operands()[0] != independent:
-                # differential coming from prolongation, ignore
-                continue
-            powercollector[order - len(v.operator().parameter_set())-1] = 1
-            all_this_stuff.add(term(tuple(powercollector), v))
-            continue
-        if v.operator() is sage.symbolic.operators.mul_vararg:
-            # the factors containing derivatives can be combined multiplicatively
-            # We will analize them factor by factor, put powers and orders into
-            # 'power_collector', and multiply these factors together into 'local_term',
-            # ans store both together into 'all_this_stuff'
-            local_term = 1
-            for w in v.operands():
-                if isinstance(w.operator(), FDerivativeOperator):
-                    if w.operands()[0] != independent:
-                        # differential coming from prolongation, ignore
-                        continue
-                    local_term *= w
-                    powercollector[order - len(w.operator().parameter_set())-1] = 1
-                if isinstance(w.operator(), types.BuiltinFunctionType):
-                    if w.operator().__qualname__ != 'pow':
-                        continue
-                    if isinstance(w.operands()[0].operator(), FDerivativeOperator):
-                        if w.operands()[0].operands()[0] != independent:
-                            # differential coming from prolongation, ignore
-                            continue
-                        local_term *= w
-                        powercollector[order - len(w.operands()[0].operator().parameter_set())-1] = w.operands()[-1]
 
-    ode1 = prolongation.xreplace({diff(dependent(independent),independent, ode_order(ode, dependent)): s1[0]})
-    #display(ode1)
-    l = [diff(dependent(independent), independent, i)
-                                           for i in range(ode_order(ode, dependent), 0, -1)] + [dependent(independent)]
-    #pprint(f"{l=}")
-    equations = []
-    for i in l:
-        k = collect(ode1, i, evaluate=False, exact=True)
-        #print(f"{k[i]=}")
-        #for j in k.items():
-        #    print(f"{j=}")
-    #
-    for _ in reversed(sorted(all_this_stuff)):
-        new = e.coefficient(_.coeff)
-        if new != 0:
-            equations.append(new)
-        e = (e - new * _.coeff).expand()
-    if e != 0:
-        equations.append(e)
-    return equations
+
+def overdeterminedSystemODE (ode,
+                       dependent,
+                       independent,
+                       infinitesimals=None
+                       , *args, **kw):
+    return delierium.functional_style.compute_overdetermined_system_of_infinitesimals(ode, dependent, independent, infinitesimals)
 
 def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
     overdetermined_system = overdeterminedSystemODE(ode, dependent, independent)
