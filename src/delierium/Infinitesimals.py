@@ -7,6 +7,9 @@ Created on Fri Jan  7 18:49:33 2022
 """
 
 import types, os
+
+os.environ["USE_SYMENGINE"] = "0"
+
 from collections import namedtuple
 from itertools import product
 
@@ -28,7 +31,7 @@ from more_itertools import bucket, flatten, powerset
 
 from IPython.core.debugger import set_trace
 
-os.environ["USE_SYMENGINE"] = "1"
+
 from sympy import *
 init_printing()
 
@@ -189,7 +192,6 @@ def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesima
     eq_order, highest_term = order(eq, dep, indep)
     highest_term = list(highest_term)[0]
     combos = variable_combinations(indep, eq_order)
-    from IPython.core.debugger import set_trace; set_trace()
     dummies = {}
 
     for comb in combos:
@@ -203,7 +205,6 @@ def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesima
     
     _dummies = ChainMap(dummies, vdummies)
     r = prolongation(eq, eq_order, infinitesimals, dep, indep, _dummies)
-    
     sol = sp.solve(eq, highest_term)[0]
     r = r.xreplace(finish_substitution(r))
     r = r.xreplace({highest_term: sol})

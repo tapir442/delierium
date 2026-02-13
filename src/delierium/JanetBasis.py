@@ -4,7 +4,7 @@ Janet Basis
 
 import os
 
-os.environ["USE_SYMENGINE"] = "1"
+os.environ["USE_SYMENGINE"] = "0"
 
 import functools
 
