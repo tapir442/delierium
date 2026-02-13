@@ -13,13 +13,16 @@ from itertools import product
 
 import delierium.functional_style
 
-
+from collections import ChainMap
+from functools import reduce
+from itertools import combinations_with_replacement
+from typing import Any
 from sympy import srepr, pprint
 from sympy.simplify import collect
 
 from delierium.DerivativeOperators import FrechetD
 from delierium.JanetBasis import Janet_Basis
-from delierium.helpers import ExpressionTree
+from delierium.helpers import ExpressionTree, finish_substitution
 
 from more_itertools import bucket, flatten, powerset
 
@@ -29,34 +32,71 @@ os.environ["USE_SYMENGINE"] = "1"
 from sympy import *
 init_printing()
 
-def prolongationFunction(f: list, x: list, order) -> list:
-    '''
-    >>> x, y, z = symbols("x y z")
-    >>> f = Function("f")(x, y, z)
-    >>> set(prolongationFunction([f], [x, y, z], 2)) == set(
-    ... [diff(f, z, z), diff(f, y), diff(f, x),
-    ... diff(f, z), f, diff(f, x, z),
-    ... diff(f, x, y), diff(f, x, x),
-    ... diff(f, y, y), diff(f, y, z)])
-    True
-    '''
-    result = f
-    aux = result[:]
-
-    def outer(fun, l1, l2):
-        return list(map(lambda v: fun(v[0], v[1]), product(l1, l2)))
-    for i in range(order):
-        result += (aux := outer(diff, aux, x)[:])
-    return set(result)
+import sympy as sp
 
 
-def infini(eq):
-    pass
+def variable_combinations(variables: list[sp.Symbol], order:int) -> list(tuple[sp.Symbol]):
+    return reduce(
+        lambda acc, i: acc + list(map(list, combinations_with_replacement(variables, i))),
+        range(1, order + 1),
+        [])
+
+def order(expr, dep, indep):
+    max_order = 0
+    max_deriv = set()
+    k = expr.expand().atoms(sp.Derivative)
+    for atom in k:
+        if atom.args[0].name in [_.name for _ in dep]:
+            _order = sum(cnt[1] for cnt in atom.args[1:])
+            if max_order == _order:
+                max_deriv |= set([atom])
+            elif max_order < _order:
+                max_deriv = set([atom])
+                max_order = _order
+    # XXX: return coefficients, too. When some coefficients are -1, or 1, or numerical
+    # return only those derivs
+    return (max_order, max_deriv)
+
+def func_diff(fun:sp.Function, var:sp.Symbol | sp.Function) -> sp.Derivative:
+    if var.is_Function or var.is_Derivative:
+        d = sp.Symbol('d')
+        r = fun.xreplace({var: d}).diff(d).xreplace({d: var}).doit()
+    else:
+        r = sp.Derivative(fun, var).doit()
+    return r
 
 
-def prolongation(eq, dependent, independent):
+def compute_level(deriv_vars_order: list[Any], dep, indep, infinitesimals):
+    """Compute all derivatives and infinitesimals for a given derivative order.
+    Extended Gamma operator (Arrigo, eq 2.85, or Schwarz, eq. 5.10)
     """
+    v = deriv_vars_order[-1]
+    # Base case (first order)
+    if len(deriv_vars_order) == 1:
+        funcs = dep
+        etas = [infinitesimals[f] for f in funcs]
+    else:
+        prev_order = deriv_vars_order[:-1]
+        funcs, etas = compute_level(prev_order, dep, indep, infinitesimals)
+    # Compute current derivatives and infinitesimals functionally
+    results = [
+                (
+                    func_diff(func, v),
+                    reduce(
+                        lambda acc, var: acc - func_diff(func, var)
+                        * func_diff(infinitesimals[var], v),
+                        indep,
+                        func_diff(eta, v)
+                    )
+                )
+                for func, eta in zip(funcs, etas)
+            ]
+    # Split result into separate lists
+    funcs_next, etas_next = zip(*results)
+    return list(funcs_next), list(etas_next)
 
+def prolongation(expr, n, infinitesimals, dep, indep, dummies):
+    """
     Doctest stolen from Baumann pp.92/93
     >>> x = symbols('x')
     >>> u = Function('u')
@@ -74,74 +114,106 @@ def prolongation(eq, dependent, independent):
     >>> print(prolongation([diff(y(x),x,2)], [y], [x])[0].expand())
     -D[1, 1](xi_1)(x, y(x))*Derivative(y(x), x)^3 + D[1, 1](phi_1)(x, y(x))*Derivative(y(x), x)^2 - 2*D[0, 1](xi_1)(x, y(x))*Derivative(y(x), x)^2 - 3*D[1](xi_1)(x, y(x))*Derivative(y(x), x)*Derivative(y(x), x, x) + 2*D[0, 1](phi_1)(x, y(x))*Derivative(y(x), x) - D[0, 0](xi_1)(x, y(x))*Derivative(y(x), x) + D[1](phi_1)(x, y(x))*Derivative(y(x), x, x) - 2*D[0](xi_1)(x, y(x))*Derivative(y(x), x, x) + D[0, 0](phi_1)(x, y(x))
     """
-    Depend = [d(*independent) for d in dependent]
-    vars = independent + Depend
-    xi = [Function("xi_%s" % (j+1), latex_name = r"\xi_{i+1}")(*vars) for j in range(len(independent))]
-    eta = []
-    for i in range(len(dependent)):
-        phi = Function(f"phi_{i+1}", latex_name = fr"\phi_{i+1}")(*vars)
-        eta.append(phi -
-                   sum(xi[j] *
-                       Depend[i].diff(independent[j])
-                       for j in range(len(independent))))
-    test = list(map(lambda _: Function("t_%s" % _)(*independent),  range(len(Depend))))
-    prolong = FrechetD(eq, dependent, independent, testfunction=test)
-    prol = []
-    for p in prolong:
-        _p = []
-        for l in p:
-            print(f"   ===> {l=}, {l.__class__=}")
-            print(f"   ===> {test[i]=}")
-            _p.extend([l.doit().xreplace({test[i]:  _e}) for _e in eta])
-        prol.append(sum(_ for _ in _p))
-    prolong = prol[:]
-    prol = []
-    for j in range(len(prolong)):
-        for i in range(len(independent)):
-            prol.append(
-                (prolong[j] +
-                 xi[i](*vars) * sum(_.diff(independent[i]) for _ in eq).expand())
-            )
-    return prol
 
+    for inf in infinitesimals:
+        d = finish_substitution(infinitesimals[inf])
+        infinitesimals[inf] = infinitesimals[inf].xreplace(d)
+    acc = 0
+    reverse_dummies = {}
+    for k, v in dummies.items():
+        reverse_dummies[v] = k
+    for _ in infinitesimals:
+        acc += infinitesimals[_] * func_diff(expr.xreplace(dummies), _.xreplace(dummies)).xreplace(reverse_dummies)
 
-def prolongationODE(equations,
-                    dependent,
-                    independent,
-                    infinitesimals=None):
-    """
-    >>> # Baumann, ex 1, pp.136
-    >>> x    = symbols("x")
-    >>> u    = Function('u')
-    >>> F    = Function("F")
-    >>> ode3 = diff(u(x), x) - F(u(x),x)
-    >>> X=Function('X')
-    >>> Y=Function('Y')
-    >>> prolongationODE(ode3,u,x, infinitesimals=(X,Y))
-    [X(u(x), x)*D[0](F)(u(x), x)*diff(u(x), x) - D[0](X)(u(x), x)*diff(u(x), x)^2 - (D[0](F)(u(x), x)*diff(u(x), x) + D[1](F)(u(x), x) - diff(u(x), x, x))*X(u(x), x) - Y(u(x), x)*D[0](F)(u(x), x) - D[1](X)(u(x), x)*diff(u(x), x) + D[0](Y)(u(x), x)*diff(u(x), x) - X(u(x), x)*diff(u(x), x, x) + D[1](Y)(u(x), x)]
-    >>> # Baumann, ex 2, p.137
-    >>> g = Function("g")
-    >>> f = Function("f")
-    >>> ode4 = diff(u(x),x)-g(u(x))*f(x)
-    >>> p = prolongationODE(ode4,u,x)[0].expand()
-    >>> sol = solve(ode4, diff(u(x), x))
-    >>> p = p.subs({sol[0].lhs() : sol[0].rhs()})
-    >>> print(p.expand())
-    -f(x)^2*g(u(x))^2*D[0](xi)(u(x), x) - g(u(x))*xi(u(x), x)*diff(f(x), x) - f(x)*phi(u(x), x)*D[0](g)(u(x)) + f(x)*g(u(x))*D[0](phi)(u(x), x) - f(x)*g(u(x))*D[1](xi)(u(x), x) + D[1](phi)(u(x), x)
-    """
-    vars     = [dependent(independent), independent]
-    if infinitesimals is None:
-        infinitesimals = (Function("xi", latex_name=r"\xi"), Function("phi", latex_name=r"\phi"))
-    xi, phi = infinitesimals
-    eta=phi(*vars) - xi(*vars) * diff(dependent(independent), independent)
-    test=Function('test')
-    prolong=FrechetD([equations], [dependent], [independent], testfunction=[test])
-    prol=[]
-    for p in prolong:
-        _p = [_.replace(test(independent), eta).expand() for _ in p]
-        prol.append(sum(_ for _ in _p))
-    result = list(map (lambda _ : _ + xi(*vars) * equations.diff(independent), prol))
-    return result
+    return acc
+
+def extract_coeffs(expr, dep, indep):
+    def analyze_power(factor):
+        base = factor.as_base_exp()[0]
+        if base.is_Derivative:
+            if base.args[0] in dep:
+                return factor
+        #if base.is_Function:
+        #    if base in dep:
+        #        return factor
+        return 1
+    args = expr.expand().args
+    all_i_need = set()
+    for term in args:
+        local_term = term.args
+        f = 1
+        for factor in local_term:
+            if factor.is_Pow:
+                f *= analyze_power(factor)
+            elif factor.is_Derivative:
+                if factor.args[0] in dep:
+                    f *= factor
+            elif factor.is_Function:
+                #if factor in dep:
+                #    f *= factor
+                pass
+            elif factor.is_number:
+                pass
+            else:
+                # XXx: explore with heateq
+                pass
+        if f != 1:
+            all_i_need.add(f)
+    return list(all_i_need)
+
+def get_coeff_order(expr):
+    acc = 0
+    if expr.is_Pow:
+        acc += expr.as_base_exp()[1]
+    elif expr.is_Mul:
+        for a in expr.args:
+            if a.is_Pow:
+                acc += a.as_base_exp()[1]
+            else:
+                acc += 1
+    else:
+        acc += 1
+    return acc
+
+def compute_determining_equations(expr, coeffs):
+    acc = []
+    for coeff in coeffs:
+        termsum = sum(term/coeff for term in expr.expand().args if term.has(coeff))
+        acc.append(termsum)
+        expr -= termsum * coeff
+    acc.append(expr.expand())
+    return acc
+
+def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesimals):
+    
+    eq_order, highest_term = order(eq, dep, indep)
+    highest_term = list(highest_term)[0]
+    combos = variable_combinations(indep, eq_order)
+    from IPython.core.debugger import set_trace; set_trace()
+    dummies = {}
+
+    for comb in combos:
+        funcs, etas = compute_level(comb, dep, indep, infinitesimals)
+        infinitesimals[funcs[0]] = etas[0]
+        dummies[funcs[0]] = sp.Symbol(f"{dep[0].name}_{"".join([str(v) for v in comb])}")
+
+    vdummies = {}
+    for i in dep + indep:
+        vdummies[i] = sp.Symbol(i.name)
+    
+    _dummies = ChainMap(dummies, vdummies)
+    r = prolongation(eq, eq_order, infinitesimals, dep, indep, _dummies)
+    
+    sol = sp.solve(eq, highest_term)[0]
+    r = r.xreplace(finish_substitution(r))
+    r = r.xreplace({highest_term: sol})
+    coeffs = sorted(
+        extract_coeffs(r, dep, indep),
+        key=get_coeff_order,
+        reverse=True,
+    )
+    return compute_determining_equations(r, coeffs)
+
 
 term = namedtuple("term", ["power", "coeff"])
 
@@ -167,14 +239,12 @@ term = namedtuple("term", ["power", "coeff"])
     y(x)*D[1, 1](Y)(y(x), x) + D[1, 1, 1](Y)(y(x), x)
 """
 
-
-
 def overdeterminedSystemODE (ode,
                        dependent,
                        independent,
                        infinitesimals=None
                        , *args, **kw):
-    return delierium.functional_style.compute_overdetermined_system_of_infinitesimals(ode, dependent, independent, infinitesimals)
+    return compute_overdetermined_system_of_infinitesimals(ode, dependent, independent, infinitesimals)
 
 def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
     overdetermined_system = overdeterminedSystemODE(ode, dependent, independent)

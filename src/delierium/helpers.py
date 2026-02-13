@@ -602,6 +602,88 @@ class BSTNode_DP(BSTNode):
         self.right = BSTNode(val)
 
 
+def finish_substitution(expr):
+    subs = set(expr.atoms(Subs))
+    subs_dic = {}
+    for s0 in subs:
+        bound = s0.bound_symbols
+        der = s0.args[0]
+        var = s0.args[2]
+        subs_dic[s0] = der.xreplace(dict(zip(bound, var)))
+    return subs_dic
+
+
+
+def ltf(expr, dep, indep):
+    """Lie Traditional Form."""
+    #set_trace()
+    functions = expr.atoms(Function)
+    reps = {}
+    for fun in [_ for _ in functions if _ not in dep]:
+        # Consider the case that some functions won't have the name
+        # attribute e.g. Abs of an elementary function
+        try:
+            reps[fun] = Symbol(fun.name) # Otherwise functions with greek symbols aren't replaced
+        except AttributeError:
+            continue
+    # first, resolve the dangling substitutions. Don't know why the
+    # substitution is not done, but it seems that it has to do with
+    # that a bound variable is within a function which is used as
+    # a derivation argument
+    subs_dic = finish_substitution(expr)
+    output = expr
+    output = output.xreplace(subs_dic)
+    used_symbols = {}
+    for deriv in output.atoms(Derivative):
+        # there is room to improve: collect indices and sort
+        subindex = []
+        for func_or_symbol, count in deriv.args[1:]:
+            if func_or_symbol.is_Function:
+                subindex.extend([func_or_symbol.name] * count)
+            elif func_or_symbol.is_Symbol:
+                subindex.extend([f"{func_or_symbol}"] * count)
+            else:
+                raise ValueError(f"{func_or_symbol=} has class {func_or_symbol.__class__=}")
+        subindex = "{" + "".join(sorted(subindex)) + "}"
+
+        fluffi = f"{deriv.args[0].name}_{subindex}"
+        if fluffi in used_symbols:
+            output = output.xreplace({deriv: used_symbols[fluffi]})
+        else:
+            s = Symbol(fluffi)
+            used_symbols[fluffi] = s
+            output = output.xreplace({deriv: used_symbols[fluffi]})
+
+    dreps2 = {}
+
+    if len(indep) == 1:
+        # the original dependent variables should be written with primes
+        dreps2 = dict([(deriv, (Symbol(deriv.output.subs(reps) +
+                                ' '.join("'" * deriv.args[-1][1]))))  \
+                 for deriv in output.atoms(Derivative) if deriv.args[0] in dep])
+    else:
+        derivatives = [_ for _ in output.atoms(Derivative) if _.args[0] in dep]
+        for dev in derivatives:
+            s = ""
+            for arg in dev.args[1:]:
+                import sympy as sp
+                match type(arg[0]):
+                    case sp.Function:
+                        n = arg[0].name
+                    case sp.Symbol:
+                        n = str(arg[0])
+                    case _:
+                        raise ValueError(f"{arg[0]} is type {type(arg[0])}")
+                s += n*arg[1]
+            dreps2[dev] = Symbol(f"{dev.args[0].name}_"  + "{" +f"{s}" + "}")
+
+    fundic = dict([(_, Symbol(_.name)) for _ in dep])
+    output = output.xreplace(dreps2).xreplace(fundic)
+    display(output)
+
+def make_infinitesimal(v, *variables, name=""):
+    return Function(f'{v.name.swapcase() if not name else name}')(*variables)
+
 # ToDo (from AllTypes.de
 #    cfdgfdgfd
 # CommutatorTable
