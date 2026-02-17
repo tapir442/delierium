@@ -249,9 +249,6 @@ def overdeterminedSystemODE (ode,
 
 def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
     overdetermined_system = overdeterminedSystemODE(ode, dependent, independent, infinitesimals=kw["infinitesimals"])
-    from IPython.core.debugger import set_trace; set_trace()
-    for it in  kw["infinitesimals"].items():
-        print(f"{it[0]=}, {it[1]}")
 
     inf = []
     for dep in dependent:
@@ -263,8 +260,8 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
         inf.append(kw["infinitesimals"][indep])
 
     r1 = [kw["infinitesimals"][dep], independent[0]]
-    
-    janet = Janet_Basis(overdetermined_system, inf, [r1])
+    set_trace()
+    janet = Janet_Basis(overdetermined_system, inf, r1)
     print("AAAAAAAAAAAAAAAAAAAAAA")
     print(janet)
     pols = list(map(lambda _ : _.expression().subs({Y : dependent(independent)}), janet.S))

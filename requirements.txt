@@ -3,13 +3,6 @@ symengine
 numpy # for symengine
 
 delierium
-line_profiler
-jupyter
-pylint
-mypy
-
-jupyterlab
-jupyter_copilot
 
 #python3-lsprotocol
 #python3-pylsp
