@@ -252,8 +252,8 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
 
     inf = []
     for dep in dependent:
-        print("====", kw["infinitesimals"][dep])
-        inf.append(kw["infinitesimals"][dep])
+        f = kw["infinitesimals"][dep]
+        inf.append(f)
     
     for indep in independent:
         print("====", kw["infinitesimals"][indep])
