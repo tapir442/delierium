@@ -137,6 +137,7 @@ class Context:
         >>> ctx.order_of_derivative (d)
         [2, 1, 3]
         """
+        from IPython.core.debugger import set_trace; set_trace()
         res = [0] * len(e.args[0].args)
         if not is_derivative(e):
             return res
