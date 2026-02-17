@@ -415,6 +415,7 @@ def analyze_term(context, term):
     operands = split_into_operands(term)
     coeffs = []
     d = []
+    from IPython.core.debugger import set_trace; set_trace()
     for operand in operands:
         if is_function(operand):
             if context.is_ctxfunc(operand):

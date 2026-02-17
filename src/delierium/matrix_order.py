@@ -124,6 +124,7 @@ class Context:
 
     def is_ctxfunc(self, f):
         """Check if 'f' is in the list of dependent variables."""
+        from IPython.core.debugger import set_trace; set_trace()
         return f in self.dependent
 
     @profile_if_enabled
