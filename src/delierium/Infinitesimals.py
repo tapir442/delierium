@@ -261,6 +261,33 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
 
     r1 = [kw["infinitesimals"][dep], independent[0]]
     set_trace()
+
+#ToDo: 2 way:
+    #    * either as Janet_Basis
+    #    * or try to solve the undetermined system
+    Y = var('Y')
+    intermediate_system = []
+    for e in overdetermined_system:
+        # ToDo: make the next three lines into a function for helpers(code duplication
+        #       with overdeterminedSystemODE. Idea: return a dict with {function: order}#
+        # tree = ExpressionTree(e)
+        # mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
+        mine = [_ for _ in e.atoms(Derivative) if _.args[0].func in dependent]
+        order= max((len(_.operator().parameter_set()) for _ in mine)) if mine else 0
+        #e = e.subs({dependent(independent) : Y})
+        e = e.subs({dependent[0]: Y})
+        for j in range(1, order+1):
+            d = diff(dependent(independent), independent, j)
+            e = e.subs({d: 0})
+        intermediate_system.append(e)
+    # ToDo: get rid of hardcoded phi and xi
+
+    #janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
+    #pols = map(lambda _: _.expression().subs({Y : dependent(independent)}), janet.S)
+    #return list(pols)
+
+
+    
     janet = Janet_Basis(overdetermined_system, inf, r1)
     print("AAAAAAAAAAAAAAAAAAAAAA")
     print(janet)
