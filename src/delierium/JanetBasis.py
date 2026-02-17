@@ -237,6 +237,7 @@ class LHDP:
         self.multipliers = []
         self.nonmultipliers = []
         self.hash = 0
+        from IPython.core.debugger import set_trace; set_trace()
         if dterms:
             self.p = dterms[:]
         else:
@@ -247,12 +248,12 @@ class LHDP:
 
     @profile_if_enabled
     def _init(self, e):
-        if any(type[e] is _ for _ in (FunctionSymbol, Derivative, Mul)):
+        if any(type(e) is _ for _ in (Symbol, Derivative, Mul)):
             operands = [e]
         elif type(e) is Symbol:
             raise ValueError(f"{e} is no term in a LHDP")
         else:
-            operands = e.make_args(e)
+            operands = e.args(e)
         r = [analyze_term(self.context, o) for o in operands]
         dterms = {}
         for _r in r:
