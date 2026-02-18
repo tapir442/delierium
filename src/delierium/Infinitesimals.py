@@ -250,12 +250,12 @@ def overdeterminedSystemODE (ode,
 def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
     overdetermined_system = overdeterminedSystemODE(ode, dependent, independent, infinitesimals=kw["infinitesimals"])
     Y = sp.Symbol("D")
-    set_trace()
+
     _dependent = dependent[0]
     _independent = independent[0]
     inf = [kw["infinitesimals"][_] for _ in [_dependent, _independent]]
     
-    r1 =  [_independent, Y]
+    r1 =  [Y, _independent]
 #ToDo: 2 way:
     #    * either as Janet_Basis
     #    * or try to solve the undetermined system
@@ -270,11 +270,6 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
         # mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
         e = e.replace(_dependent, Y)
         mine = [_ for _ in e.atoms(Derivative) if _.args[0].func  == _dependent]
-        print(f"{e=}")
-        print(f"{e.atoms(Derivative)=}")
-        for atom in e.atoms(Derivative):
-            print(f"{atom=}, {atom.args=}, {atom.args[0]=}, {atom.args[0].func=}, {_dependent=}")
-        print(f"{mine=}")
        
         order= max((len(_.operator().parameter_set()) for _ in mine)) if mine else 0
         #e = e.subs({dependent(independent) : Y})
@@ -291,10 +286,6 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
     #pols = map(lambda _: _.expression().subs({Y : dependent(independent)}), janet.S)
     #return list(pols)
 
-    for _ in intermediate_system:
-        display(_)
-    
-    set_trace()
     janet = Janet_Basis(intermediate_system, inf, r1)
     print("AAAAAAAAAAAAAAAAAAAAAA")
     print(janet)

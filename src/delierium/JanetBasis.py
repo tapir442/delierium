@@ -227,6 +227,7 @@ class _Dterm:
 
     _cache_key = __hash__
 
+from IPython.core.debugger import set_trace
 
 class LHDP:
     """Linear Homogenious Differential Polynomial."""
@@ -237,7 +238,6 @@ class LHDP:
         self.multipliers = []
         self.nonmultipliers = []
         self.hash = 0
-        from IPython.core.debugger import set_trace; set_trace()
         if dterms:
             self.p = dterms[:]
         else:
@@ -253,7 +253,8 @@ class LHDP:
         elif type(e) is Symbol:
             raise ValueError(f"{e} is no term in a LHDP")
         else:
-            operands = e.args(e)
+            assert type(e) == Add
+            operands = e.args
         r = [analyze_term(self.context, o) for o in operands]
         dterms = {}
         for _r in r:
@@ -415,7 +416,6 @@ def analyze_term(context, term):
     operands = split_into_operands(term)
     coeffs = []
     d = []
-    from IPython.core.debugger import set_trace; set_trace()
     for operand in operands:
         if is_function(operand):
             if context.is_ctxfunc(operand):
