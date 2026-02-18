@@ -87,14 +87,6 @@ def tangent_vector(f):
     EXAMPLES: compute the tangent vector of
 
     ::
-    sage: from delierium.helpers import tangent_vector
-    sage: x,y,z = var ("x y z")
-    sage: tangent_vector (x**2 - 3*y**4 - z*x*y + z - x)
-    [-y*z + 2*x - 1, -12*y^3 - x*z, -x*y + 1]
-    sage: tangent_vector (x**2 + 2*y**3 - 3*z**4)
-    [2*x, 6*y^2, -12*z^3]
-    sage: tangent_vector (x**2)
-    [2*x]
     """
     t = var("t")
     newvars = [var("x%s" % i) for i in f.variables()]

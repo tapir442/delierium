@@ -249,44 +249,40 @@ def overdeterminedSystemODE (ode,
 
 def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
     overdetermined_system = overdeterminedSystemODE(ode, dependent, independent, infinitesimals=kw["infinitesimals"])
-
-    inf = []
-    for dep in dependent:
-        f = kw["infinitesimals"][dep]
-        inf.append(f)
+    Y = sp.Symbol("D")
+    set_trace()
+    _dependent = dependent[0]
+    _independent = independent[0]
+    inf = [kw["infinitesimals"][_] for _ in [_dependent, _independent]]
     
-    for indep in independent:
-        print("====", kw["infinitesimals"][indep])
-        inf.append(kw["infinitesimals"][indep])
-
-    r1 = [kw["infinitesimals"][dep], independent[0]]
+    r1 =  [_independent, Y]
 #ToDo: 2 way:
     #    * either as Janet_Basis
     #    * or try to solve the undetermined system
-    Y = sp.Dummy()
-    inf = [_.xreplace({dependent[0]: Y}) for _ in inf]
-    print(f"{inf=}")
+
+    inf = [_.xreplace({_dependent: Y}) for _ in inf]
+    r1 = [_.xreplace({_dependent: Y}) for _ in r1]
     intermediate_system = []
     for e in overdetermined_system:
         # ToDo: make the next three lines into a function for helpers(code duplication
         #       with overdeterminedSystemODE. Idea: return a dict with {function: order}#
         # tree = ExpressionTree(e)
         # mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
-        mine = [_ for _ in e.atoms(Derivative) if _.args[0].func in dependent]
+        e = e.replace(_dependent, Y)
+        mine = [_ for _ in e.atoms(Derivative) if _.args[0].func  == _dependent]
         print(f"{e=}")
         print(f"{e.atoms(Derivative)=}")
         for atom in e.atoms(Derivative):
-            print(f"{atom=}, {atom.args=}, {atom.args[0]=}, {atom.args[0].func=}, {dependent=}")
+            print(f"{atom=}, {atom.args=}, {atom.args[0]=}, {atom.args[0].func=}, {_dependent=}")
         print(f"{mine=}")
-        if mine:
-            set_trace()
+       
         order= max((len(_.operator().parameter_set()) for _ in mine)) if mine else 0
         #e = e.subs({dependent(independent) : Y})
-        dependent = [_.xreplace({dependent[0]: Y}) for _ in dependent]
+        #_dependent = _dependent.xreplace({_dependent: Y})
 
         
         for j in range(1, order+1):
-            d = diff(dependent(independent), independent, j)
+            d = diff(_dependent(_independent), _independent, j)
             e = e.subs({d: 0})
         intermediate_system.append(e)
     # ToDo: get rid of hardcoded phi and xi
@@ -298,7 +294,7 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
     for _ in intermediate_system:
         display(_)
     
-    
+    set_trace()
     janet = Janet_Basis(intermediate_system, inf, r1)
     print("AAAAAAAAAAAAAAAAAAAAAA")
     print(janet)

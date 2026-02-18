@@ -2,7 +2,7 @@ sympy
 symengine
 numpy # for symengine
 
-delierium
+-e . 
 
 #python3-lsprotocol
 #python3-pylsp
