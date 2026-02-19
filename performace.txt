@@ -1,0 +1,39 @@
+Laptop 11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz
+=====================================================
+
+SYMENGINE = 0                      SYMENGINE=1
+
+System 2.25
+mgrevlex, [w, z], [x, y]: 0.14
+mgrevlex, [z, w], [x, y]: 0.19
+mgrevlex, [w, z], [y, x]: 0.12
+mgrevlex, [z, w], [y. x]: 0.27
+
+mgrlex, [w, z], [x, y]:   0.14
+mgrlex, [z, w], [x, y]:   0.14
+mgrlex, [w, z], [y, x]:   0.11
+mgrlex, [z, w], [y. x]:   0.24
+
+mlex, [w, z], [x, y]:     0.14
+mlex, [z, w], [x, y]:     0.18
+mlex, [w, z], [y, x]:     0.28
+mlex, [z, w], [y. x]:     1.21
+
+SYMENGINE = 0                      SYMENGINE=1
+
+System 2.24
+mgrevlex, [w, z], [x, y]:  0.35           0.41
+mgrevlex, [z, w], [x, y]: 18.17          15.44
+mgrevlex, [w, z], [y, x]:  3.63           3.71  
+mgrevlex, [z, w], [y. x]: 82.08         125.50
+
+mgrlex, [w, z], [x, y]:    0.24           0.27
+mgrlex, [z, w], [x, y]:   21.12          15.04
+mgrlex, [w, z], [y, x]:    3.79           3.26
+mgrlex, [z, w], [y. x]:   77.97          88.82
+
+mlex, [w, z], [x, y]:      0.21
+mlex, [z, w], [x, y]:    285.48
+mlex, [w, z], [y, x]:     15.24
+mlex, [z, w], [y. x]:   8105.51 
+

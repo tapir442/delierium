@@ -3,9 +3,9 @@
 from dataclasses import dataclass
 from more_itertools import flatten
 import os
-from functools import lru_cache
-
 os.environ["USE_SYMENGINE"] = "1"
+
+from functools import lru_cache
 
 from sympy.core.backend import *
 from sympy.printing.pretty import pretty

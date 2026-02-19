@@ -8,7 +8,9 @@ Created on Fri Jan  7 18:49:33 2022
 
 import types, os
 
-os.environ["USE_SYMENGINE"] = "0"
+import os
+
+os.environ["USE_SYMENGINE"] = "1"
 
 from collections import namedtuple
 from itertools import product
@@ -249,7 +251,7 @@ def overdeterminedSystemODE (ode,
 
 def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
     overdetermined_system = overdeterminedSystemODE(ode, dependent, independent, infinitesimals=kw["infinitesimals"])
-    Y = sp.Symbol("D")
+    Y = sp.Symbol("Y")
 
     _dependent = dependent[0]
     _independent = independent[0]
