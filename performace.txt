@@ -23,17 +23,17 @@ SYMENGINE = 0                      SYMENGINE=1
 
 System 2.24
 mgrevlex, [w, z], [x, y]:  0.35           0.41
-mgrevlex, [z, w], [x, y]: 18.17          15.44
+mgrevlex, [z, w], [x, y]: 17.17          15.44
 mgrevlex, [w, z], [y, x]:  3.63           3.71  
-mgrevlex, [z, w], [y. x]: 82.08         125.50
+mgrevlex, [z, w], [y. x]: 61.08         125.50
 
 mgrlex, [w, z], [x, y]:    0.24           0.27
-mgrlex, [z, w], [x, y]:   21.12          15.04
-mgrlex, [w, z], [y, x]:    3.79           3.26
-mgrlex, [z, w], [y. x]:   77.97          88.82
+mgrlex, [z, w], [x, y]:   17.12          15.04
+mgrlex, [w, z], [y, x]:    3.12           3.26
+mgrlex, [z, w], [y. x]:   59.13          88.82
 
 mlex, [w, z], [x, y]:      0.21
-mlex, [z, w], [x, y]:    285.48
-mlex, [w, z], [y, x]:     15.24
+mlex, [z, w], [x, y]:    226.48
+mlex, [w, z], [y, x]:     11.24
 mlex, [z, w], [y. x]:   8105.51 
 

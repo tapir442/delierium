@@ -10,8 +10,6 @@ import types, os
 
 import os
 
-os.environ["USE_SYMENGINE"] = "1"
-
 from collections import namedtuple
 from itertools import product
 
@@ -27,7 +25,9 @@ from sympy.simplify import collect
 
 from delierium.DerivativeOperators import FrechetD
 from delierium.JanetBasis import Janet_Basis
-from delierium.helpers import ExpressionTree, finish_substitution
+from delierium.helpers import ExpressionTree, finish_substitution, make_infinitesimal
+from delierium.matrix_order import Mgrevlex
+
 
 from more_itertools import bucket, flatten, powerset
 
@@ -189,8 +189,27 @@ def compute_determining_equations(expr, coeffs):
     acc.append(expr.expand())
     return acc
 
-def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesimals):
+
+def create_infinitesimals(dep, indep, inf=None):
+    infinitesimals = {}
+    if inf is None:
+        infinitesimals = {}
+        for d in dep + indep:
+            infinitesimals[d] = make_infinitesimal(d, *(dep + indep), name=d.name.swapcase())
+    else:
+        for v, i in inf.items():
+            if isinstance(i, str):
+                infinitesimals[v] = make_infinitesimal(v, *(dep + indep), name=i)
+            else:
+                infinitesimals[v] = i
+    return infinitesimals
+
     
+def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesimals=None):
+    """
+    infinitesimals : dict{Function/Symbol : new name}
+    """
+    infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
     eq_order, highest_term = order(eq, dep, indep)
     highest_term = list(highest_term)[0]
     combos = variable_combinations(indep, eq_order)
@@ -245,20 +264,21 @@ term = namedtuple("term", ["power", "coeff"])
 def overdeterminedSystemODE (ode,
                        dependent,
                        independent,
-                       infinitesimals=None
-                       , *args, **kw):
+                       infinitesimals=None,
+                       *args, **kw):
     return compute_overdetermined_system_of_infinitesimals(ode, dependent, independent, infinitesimals=infinitesimals)
 
-def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args, **kw):
-    overdetermined_system = overdeterminedSystemODE(ode, dependent, independent, infinitesimals=kw["infinitesimals"])
-    Y = sp.Symbol("Y")
-
+def Janet_Basis_from_ODE(ode, dependent, independent, sort_order = Mgrevlex, infinitesimals=None, *args, **kw):
+    infinitesimals = create_infinitesimals(dependent, independent, infinitesimals)
+    overdetermined_system = overdeterminedSystemODE(ode, dependent, independent, infinitesimals=infinitesimals)
+    Y = sp.Dummy()
+    Y = sp.Symbol("H")
     _dependent = dependent[0]
     _independent = independent[0]
-    inf = [kw["infinitesimals"][_] for _ in [_dependent, _independent]]
+    inf = [infinitesimals[_] for _ in [_dependent, _independent]]
     
     r1 =  [Y, _independent]
-#ToDo: 2 way:
+    #ToDo: 2 way:
     #    * either as Janet_Basis
     #    * or try to solve the undetermined system
 
@@ -282,16 +302,9 @@ def Janet_Basis_from_ODE(ode, dependent, independent, order = "Mgrevlex", *args,
             d = diff(_dependent(_independent), _independent, j)
             e = e.subs({d: 0})
         intermediate_system.append(e)
-    # ToDo: get rid of hardcoded phi and xi
-
-    #janet = Janet_Basis(intermediate_system, [phi, xi], [Y, independent])
-    #pols = map(lambda _: _.expression().subs({Y : dependent(independent)}), janet.S)
-    #return list(pols)
-
-    janet = Janet_Basis(intermediate_system, inf, r1)
-    print("AAAAAAAAAAAAAAAAAAAAAA")
-    print(janet)
-    pols = list(map(lambda _ : _.expression().subs({Y : dependent(independent)}), janet.S))
+    
+    janet = Janet_Basis(intermediate_system, inf, r1, sort_order=sort_order)
+    pols = [_.expression().xreplace({Y : _dependent}) for _ in janet.S]
     return pols
 
 

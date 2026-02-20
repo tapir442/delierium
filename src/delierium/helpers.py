@@ -20,7 +20,6 @@ from symengine import FunctionSymbol
 
 from sympy import *
 
-os.environ["USE_SYMENGINE"] = "0"
 
 from sympy.core.relational import Equality
 from sympy.core.numbers import Integer, Rational, Zero, One, NegativeOne, Half
@@ -491,7 +490,6 @@ def finish_substitution(expr):
 
 def ltf(expr, dep, indep):
     """Lie Traditional Form."""
-    #set_trace()
     try:
         functions = expr.atoms(Function)
     except AttributeError:
@@ -560,8 +558,9 @@ def ltf(expr, dep, indep):
     display(output)
 
 def make_infinitesimal(v, *variables, name=""):
-    #from IPython.core.debugger import set_trace; set_trace()
     return Function(f'{v.name.swapcase() if not name else name}')(*variables)
+
+
 
 # ToDo (from AllTypes.de
 #    cfdgfdgfd

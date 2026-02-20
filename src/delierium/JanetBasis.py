@@ -3,7 +3,7 @@ Janet Basis
 """
 
 import os
-os.environ["USE_SYMENGINE"] = "1"
+
 import functools
 
 from collections import OrderedDict, namedtuple
@@ -20,7 +20,7 @@ from sympy.core.backend import *
 
 from delierium.helpers import (adiff, eq, expr_eq, expr_is_zero,
                                is_derivative, is_function, is_numeric,
-                               pairs_exclude_diagonal, profile_if_enabled)
+                               pairs_exclude_diagonal, profile_if_enabled, ltf)
 from delierium.matrix_order import Context, Mgrevlex
 
 
@@ -271,9 +271,9 @@ class LHDP:
     def _collect_terms(self, e):
         pass
 
-    def atoms(self):
+    def atoms(self, e):
         # needed for ltf
-        return self.expression().atoms
+        return self.expression().atoms(e)
         
     def show_derivatives(self):
         print(list(self.derivatives()))
@@ -411,6 +411,9 @@ class LHDP:
             self.hash = hash("".join([str(hash(_)) for _ in self.p]))
         return self.hash
 
+    def xreplace(self, d):
+        return self.__class__(self.expression().xreplace(d), self.context)
+    
     _cache_key = __hash__
 
 @profile_if_enabled
@@ -461,8 +464,6 @@ def reduceS(e: LHDP, S: list, context: Context) -> LHDP | None:
     from delierium.helpers import ltf
     while reducing:
         for dp in gen:
-            print("before reduce")
-            ltf(dp, context.independent, context.dependent)
             enew = reduce(e, dp, context)
             if enew is None:
                 return None
@@ -488,12 +489,16 @@ def _reduce_inner(e1, e2, context):
     #print("===================")
     #print(f"{e1=}")
     #print(f"{e2=}")
+    ##set_trace()
+    #print(f"{e2=}")
     for t in (_ for _ in e1.p if _.function == e2.function):
-        c = t.coeff
         dif = [a - b for a, b in zip(t.order, e2.order)]
+        have_changed = False
+        if any(map(lambda _: _ < 0, dif)):
+            continue
+        c = t.coeff
         changed = OrderedDict([(_.comparison_vector, _) for _ in e1.p])
         subs = []
-        have_changed = False
         if all(map(lambda h: h == 0, dif)):
             have_changed = True
             # S2 from Algorithm 2.4
@@ -513,7 +518,6 @@ def _reduce_inner(e1, e2, context):
         elif all(map(lambda h: h >= 0, dif)):
             have_changed = True
             variables_to_diff = get_diff_vars(context, dif)
-            changed = OrderedDict([(_.comparison_vector, _) for _ in e1.p])
             subs = []
             for p2 in e2.p:
                 dterms = p2.diff(*variables_to_diff)
@@ -540,7 +544,6 @@ def _reduce_inner(e1, e2, context):
                 return LHDP(e=0, context=e2.context, dterms=dterms)
             else:
                 return None
-
     return e1
 
 @profile_if_enabled
@@ -557,7 +560,7 @@ def reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
         new_e1 = _reduce_inner(e1, e2, context)
         if not new_e1:
             return None
-        if e1 == new_e1:
+        if e1 is new_e1:
             return e1
         e1 = new_e1
 
@@ -574,9 +577,9 @@ def Autoreduce(S, context):
             have_reduced = have_reduced or _r != rnew
             if rnew:
                 newdps.append(rnew)
-        print("NNNNNNNNNNNNNNNNNNNNNNNN")
-        for _ in newdps:
-            print("===>", _)
+        #print("NNNNNNNNNNNNNNNNNNNNNNNN")
+        #for _ in newdps:
+        #    print("===>", _)
         dps = Reorder(_p + [_ for _ in newdps if _ not in _p], context, ascending=True)
         if not have_reduced:
             i += 1
@@ -934,24 +937,24 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
-            print("This is where we start")
-            self.show(rich=False, short=False)
+           # print("This is where we start")
+          #  self.show(rich=False, short=False)
    #         import pdb; pdb.set_trace()
             self.S = Autoreduce(self.S, context)
-            print("after autoreduce")
-            self.show(rich=False, short=False)
+          #  print("after autoreduce")
+          #  self.show(rich=False, short=False)
 #            import pdb; pdb.set_trace()
             self.S = CompleteSystem(self.S, context)
             print("after complete system")
-            self.show(rich=False, short=False)
+          #  self.show(rich=False, short=False)
             conditions = list(split_by_function(self.S, context))
-            print("after conditions")
-            for _ in conditions:
-                print(_)
+         #   print("after conditions")
+          #  for _ in conditions:
+          #      print(_)
             reduced = [reduceS(_m, self.S, context) for _m in conditions]
-            print("after reduced")
-            for _ in reduced:
-                print(_)
+          #  print("after reduced")
+         #   for _ in reduced:
+         #       print(_)
 #            print(reduced)
             reduced = [_ for _ in reduced if _]
 #            print("after reduced")

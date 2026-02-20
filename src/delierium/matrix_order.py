@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from more_itertools import flatten
 import os
-os.environ["USE_SYMENGINE"] = "1"
 
 from functools import lru_cache
 
