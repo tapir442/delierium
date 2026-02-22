@@ -6,6 +6,7 @@ import os
 
 from functools import lru_cache
 
+from sympy import *
 from sympy.core.backend import *
 from sympy.printing.pretty import pretty
 

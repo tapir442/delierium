@@ -19,12 +19,12 @@ from symengine import FunctionSymbol
 
 
 from sympy import *
-
+from sympy.core.backend import *
 
 from sympy.core.relational import Equality
 from sympy.core.numbers import Integer, Rational, Zero, One, NegativeOne, Half
 from sympy import ordered, sympify
-from sympy.core.backend import * 
+
 from line_profiler import profile
 
 # Schnelle Lösung für Profiling:
@@ -542,14 +542,12 @@ def ltf(expr, dep, indep):
         for dev in derivatives:
             s = ""
             for arg in dev.args[1:]:
-                import sympy as sp
-                match type(arg[0]):
-                    case sp.Function:
-                        n = arg[0].name
-                    case sp.Symbol:
-                        n = str(arg[0])
-                    case _:
-                        raise ValueError(f"{arg[0]} is type {type(arg[0])}")
+                if type(arg[0]) is Function:
+                    n = arg[0].name
+                elif type(arg[0]) is Symbol:
+                    n = str(arg[0])
+                else:
+                    raise ValueError(f"{arg[0]} is type {type(arg[0])}")
                 s += n*arg[1]
             dreps2[dev] = Symbol(f"{dev.args[0].name}_"  + "{" +f"{s}" + "}")
 

@@ -14,13 +14,10 @@ from collections import namedtuple
 from itertools import product
 
 
-import delierium.functional_style
-
 from collections import ChainMap
 from functools import reduce
 from itertools import combinations_with_replacement
 from typing import Any
-from sympy import srepr, pprint
 from sympy.simplify import collect
 
 from delierium.DerivativeOperators import FrechetD
@@ -28,19 +25,16 @@ from delierium.JanetBasis import Janet_Basis
 from delierium.helpers import ExpressionTree, finish_substitution, make_infinitesimal
 from delierium.matrix_order import Mgrevlex
 
+from sympy import *
+from sympy.core.backend import * 
 
 from more_itertools import bucket, flatten, powerset
 
 from IPython.core.debugger import set_trace
-
-
-from sympy import *
 init_printing()
 
-import sympy as sp
 
-
-def variable_combinations(variables: list[sp.Symbol], order:int) -> list(tuple[sp.Symbol]):
+def variable_combinations(variables: list[Symbol], order:int) -> list(tuple[Symbol]):
     return reduce(
         lambda acc, i: acc + list(map(list, combinations_with_replacement(variables, i))),
         range(1, order + 1),
@@ -49,7 +43,7 @@ def variable_combinations(variables: list[sp.Symbol], order:int) -> list(tuple[s
 def order(expr, dep, indep):
     max_order = 0
     max_deriv = set()
-    k = expr.expand().atoms(sp.Derivative)
+    k = expr.expand().atoms(Derivative)
     for atom in k:
         if atom.args[0].name in [_.name for _ in dep]:
             _order = sum(cnt[1] for cnt in atom.args[1:])
@@ -62,12 +56,12 @@ def order(expr, dep, indep):
     # return only those derivs
     return (max_order, max_deriv)
 
-def func_diff(fun:sp.Function, var:sp.Symbol | sp.Function) -> sp.Derivative:
+def func_diff(fun:Function, var:Symbol | Function) -> Derivative:
     if var.is_Function or var.is_Derivative:
-        d = sp.Symbol('d')
+        d = Symbol('d')
         r = fun.xreplace({var: d}).diff(d).xreplace({d: var}).doit()
     else:
-        r = sp.Derivative(fun, var).doit()
+        r = Derivative(fun, var).doit()
     return r
 
 
@@ -218,15 +212,15 @@ def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesima
     for comb in combos:
         funcs, etas = compute_level(comb, dep, indep, infinitesimals)
         infinitesimals[funcs[0]] = etas[0]
-        dummies[funcs[0]] = sp.Symbol(f"{dep[0].name}_{"".join([str(v) for v in comb])}")
+        dummies[funcs[0]] = Symbol(f"{dep[0].name}_{"".join([str(v) for v in comb])}")
 
     vdummies = {}
     for i in dep + indep:
-        vdummies[i] = sp.Symbol(i.name)
+        vdummies[i] = Symbol(i.name)
     
     _dummies = ChainMap(dummies, vdummies)
     r = prolongation(eq, eq_order, infinitesimals, dep, indep, _dummies)
-    sol = sp.solve(eq, highest_term)[0]
+    sol = solve(eq, highest_term)[0]
     r = r.xreplace(finish_substitution(r))
     r = r.xreplace({highest_term: sol})
     coeffs = sorted(
@@ -271,8 +265,8 @@ def overdeterminedSystemODE (ode,
 def Janet_Basis_from_ODE(ode, dependent, independent, sort_order = Mgrevlex, infinitesimals=None, *args, **kw):
     infinitesimals = create_infinitesimals(dependent, independent, infinitesimals)
     overdetermined_system = overdeterminedSystemODE(ode, dependent, independent, infinitesimals=infinitesimals)
-    Y = sp.Dummy()
-    Y = sp.Symbol("H")
+    Y = Dummy()
+    Y = Symbol("H")
     _dependent = dependent[0]
     _independent = independent[0]
     inf = [infinitesimals[_] for _ in [_dependent, _independent]]
