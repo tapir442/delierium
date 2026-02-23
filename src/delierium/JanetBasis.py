@@ -14,7 +14,7 @@ from operator import mul
 
 from IPython.display import Math
 from more_itertools import bucket, flatten, powerset
-from symengine import FunctionSymbol
+
 from sympy import *
 from sympy.core.backend import *
 
@@ -681,10 +681,10 @@ def complete(S, context):
     if len(result) == 1:
         return list(result)
     vars = list(range(len(context.independent)))
-    map_old_to_new = lambda v: context.independent[vars.index(len(vars)-1-v)]
+    map_old_to_new = lambda v: context.independent[v]
 
     while 1:
-        monomials = [(_,list(reversed(_.order))) for _ in result]
+        monomials = [(_,list(_.order)) for _ in result]
         ms = tuple([_[1] for _ in monomials])
         m0 = []
 
@@ -797,11 +797,11 @@ def FindIntegrableConditions(S, context):
 
     # reverse order as in context the highest independent is first,
     # but for multiplier computation it is last
-    monomials = [(_, list(reversed(_.order))) for _ in result]
+    monomials = [(_, list(_.order)) for _ in result]
 
     ms = tuple([_[1] for _ in monomials])
 
-    map_old_to_new = lambda i: context.independent[vars.index(len(vars)-1-i)]
+    map_old_to_new = lambda i: context.independent[i]
 
     # multiplier-collection is our M
     multiplier_collection = []
@@ -937,16 +937,16 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
-           # print("This is where we start")
-          #  self.show(rich=False, short=False)
+            #print("This is where we start")
+            #self.show(rich=True, short=False)
    #         import pdb; pdb.set_trace()
             self.S = Autoreduce(self.S, context)
-          #  print("after autoreduce")
-          #  self.show(rich=False, short=False)
+            #print("after autoreduce")
+            ##self.show(rich=True, short=False)
 #            import pdb; pdb.set_trace()
             self.S = CompleteSystem(self.S, context)
-            print("after complete system")
-          #  self.show(rich=False, short=False)
+            #print("after complete system")
+            #self.show(rich=True, short=False)
             conditions = list(split_by_function(self.S, context))
          #   print("after conditions")
           #  for _ in conditions:
