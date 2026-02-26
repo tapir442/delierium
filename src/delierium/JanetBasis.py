@@ -33,8 +33,6 @@ except NameError:
     _in_ipython_session = False
 
 
-
-
 @profile_if_enabled
 def compute_comparison_vector(dependent, func, ctxcheck):
     iv = [0] * len(dependent)
@@ -85,7 +83,8 @@ class _Dterm:
         return result.replace("Derivative", "D")
 
     def term(self):
-        return self.coeff * self.derivative
+        return self.expression()
+        
     @profile_if_enabled
     def _compute_order(self):
         """computes the monomial tuple from the derivative part"""
