@@ -308,17 +308,21 @@ class LHDP:
     @profile_if_enabled
     def normalize(self):
         if self.p:
-            intermediate = [_Dterm(coeff=Rational(1, 1),
-                                   derivative=self.p[0].derivative,
-                                   context=self.p[0].context)
-                           ]
-            c = self.Lcoeff()
+#            intermediate = [_Dterm(coeff=Rational(1, 1),
+#                                   derivative=self.p[0].derivative,
+#                                   context=self.p[0].context)
+#                           ]
+#            c = self.Lcoeff()
+#            for _ in self.p[1:]:
+#                intermediate.append(_Dterm(coeff=_.coeff/c, # nsimplify done in LHDP
+#                                            derivative = _.derivative,
+#                                            context = _.context
+#                                           ))
+#            self.p = intermediate[:]
+            coeff = self.p[0].coeff
+            self.p[0].coeff = Rational(1, 1)
             for _ in self.p[1:]:
-                intermediate.append(_Dterm(coeff=_.coeff/c, # nsimplify done in LHDP
-                                            derivative = _.derivative,
-                                            context = _.context
-                                           ))
-            self.p = intermediate[:]
+                _.coeff /= coeff
         # XXX: wrong place?
         if self.p:
             self.order = self.p[0].order
@@ -492,14 +496,12 @@ def _reduce_inner(e1, e2, context):
     #print(f"{e2=}")
     for t in (_ for _ in e1.p if _.function == e2.function):
         dif = [a - b for a, b in zip(t.order, e2.order)]
-        have_changed = False
         if any(map(lambda _: _ < 0, dif)):
             continue
         c = t.coeff
         changed = OrderedDict([(_.comparison_vector, _) for _ in e1.p])
         subs = []
         if all(map(lambda h: h == 0, dif)):
-            have_changed = True
             # S2 from Algorithm 2.4
             for p2 in e2.p:
                 pc = p2.coeff * c
@@ -510,20 +512,19 @@ def _reduce_inner(e1, e2, context):
                     else:
                         del changed[hit.comparison_vector]
                 else:
-                    dt = _Dterm(coeff=-pc, derivative=p2.derivative, context=e1.context)
-                    if dt:
-                        subs.append(dt)
+                    subs.append(_Dterm(coeff=-pc, 
+                                       derivative=p2.derivative, 
+                                       context=e1.context))
 
         elif all(map(lambda h: h >= 0, dif)):
-            have_changed = True
             variables_to_diff = get_diff_vars(context, dif)
             subs = []
             for p2 in e2.p:
                 dterms = p2.diff(*variables_to_diff)
                 for dterm in dterms:
                     hit = changed.get(dterm.comparison_vector, None)
-                    pc = dterm.coeff * c
                     if hit:
+                        pc = dterm.coeff * c
                         if not expr_eq(hit.coeff, pc):
                             hit.coeff -= pc
                         else:
@@ -534,15 +535,14 @@ def _reduce_inner(e1, e2, context):
                                            context=dterm.context))
         else:
             pass
-        if have_changed:
-            # avoid creating a _Dterm in case of no change
-            # destroys algorith, though it should create copy of e1 which
-            # should'nt hurt, but it hurts
-            dterms = [_ for _ in [*changed.values()] + subs if _]
-            if dterms:
-                return LHDP(e=0, context=e2.context, dterms=dterms)
-            else:
-                return None
+        # avoid creating a _Dterm in case of no change
+        # destroys algorith, though it should create copy of e1 which
+        # should'nt hurt, but it hurts
+        dterms = [_ for _ in [*changed.values()] + subs if _]
+        if dterms:
+            return LHDP(e=0, context=e2.context, dterms=dterms)
+        else:
+            return None
     return e1
 
 @profile_if_enabled
@@ -829,7 +829,7 @@ def FindIntegrableConditions(S, context):
                     terms_from_first = dict([(_.comparison_vector, _) for _ in d1.p])
                     # looks like overkill, but when coefficients get very
                     # groebnerish it pays to keep coefficients small, at least
-                    # with maxim. Let's see how sympy behaves
+                    # with maxima. Let's see how sympy behaves
                     for s in d2.p:
                         if s.comparison_vector in terms_from_first:
                             terms_from_first[s.comparison_vector].coeff -= s.coeff

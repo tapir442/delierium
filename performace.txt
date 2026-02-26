@@ -23,7 +23,7 @@ SYMENGINE = 0                      SYMENGINE=1
 
 System 2.24
 mgrevlex, [w, z], [x, y]:  0.35           0.32
-mgrevlex, [z, w], [x, y]: 17.17          93.44
+mgrevlex, [z, w], [x, y]: 17.17          93.44 <- Explore why
 mgrevlex, [w, z], [y, x]:  3.63           2.56  
 mgrevlex, [z, w], [y, x]: 61.08          12.59
 
