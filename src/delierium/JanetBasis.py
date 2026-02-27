@@ -2,10 +2,7 @@
 Janet Basis
 """
 
-import os
-
 import functools
-
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -14,17 +11,13 @@ from operator import mul
 
 from IPython.display import Math
 from more_itertools import bucket, flatten, powerset
-
 from sympy import *
 from sympy.core.backend import *
 
-from delierium.helpers import (adiff, eq, expr_eq, expr_is_zero,
-                               is_derivative, is_function, is_numeric,
-                               pairs_exclude_diagonal, profile_if_enabled, ltf)
+from delierium.helpers import (adiff, eq, expr_eq, expr_is_zero, is_derivative,
+                               is_function, is_numeric, ltf,
+                               pairs_exclude_diagonal, profile_if_enabled)
 from delierium.matrix_order import Context, Mgrevlex
-
-
-
 
 try:
     __IPYTHON__
@@ -58,7 +51,7 @@ class _Dterm:
 
     @profile_if_enabled
     def __post_init__(self):
-        object.__setattr__(self, 'coeff', nsimplify(self.coeff))
+        object.__setattr__(self, 'coeff', self.coeff)
         object.__setattr__(self, 'order', self._compute_order())
         if is_derivative(self.derivative):
             object.__setattr__(self, 'function', self.derivative.args[0])
@@ -84,7 +77,7 @@ class _Dterm:
 
     def term(self):
         return self.expression()
-        
+
     @profile_if_enabled
     def _compute_order(self):
         """computes the monomial tuple from the derivative part"""
@@ -157,7 +150,7 @@ class _Dterm:
                 ps = deriv.args[1:]
                 inter = []
                 for entry in ps:
-                    if type(entry) is Tuple:  # sympy's tuple
+                    if isinstance(entry, Tuple):  # sympy's tuple
                         for i in range(entry[1]):
                             inter.append(entry[0])
                     else:
@@ -190,19 +183,31 @@ class _Dterm:
 
     _latex_ = latex
 
+    from functools import cache
+
     @profile_if_enabled
     def add_coefficient(self, c):
         return _Dterm(coeff = self.coeff + c,
                       derivative = self.derivative,
                       context = self.context)
+    @cache
+    def _coeff_diff(self, coeff, *variables):
+        return coeff.diff(*variables)
+
+    def coeff_diff(self, coeff, *variables):
+        # XXX parallelize. Theere is a small performance gain (1-2 %) without it, anyway
+        return sum(self._coeff_diff(_, *variables) for _ in coeff.args)
+
 
     @profile_if_enabled
     def diff(self, *variables):
         f = self.coeff
         g = self.derivative
-        try:
-            fprime = adiff(f, self.context, *variables)
-        except AttributeError:
+        if isinstance(f, Add):
+            fprime = self.coeff_diff(f, *variables)
+        elif hasattr(f, "diff"):
+            fprime = f.diff(*variables)
+        else:
             fprime = 0
         result = []
         if not is_numeric(fprime) or (is_numeric(fprime) and fprime != 0):
@@ -210,7 +215,7 @@ class _Dterm:
                         derivative=g,
                         context=self.context)
             result = [d1]
-        gprime = adiff(g, self.context, *variables)
+        gprime = g.diff(*variables)
         d2 = _Dterm(coeff=f,
                     derivative=gprime,
                     context=self.context)
@@ -225,6 +230,7 @@ class _Dterm:
     _cache_key = __hash__
 
 from IPython.core.debugger import set_trace
+
 
 class LHDP:
     """Linear Homogenious Differential Polynomial."""
@@ -245,12 +251,12 @@ class LHDP:
 
     @profile_if_enabled
     def _init(self, e):
-        if any(type(e) is _ for _ in (Symbol, Derivative, Mul)):
+        if isinstance(e, (Symbol, Derivative, Mul)):
             operands = [e]
-        elif type(e) is Symbol:
+        elif isinstance(e, Symbol):
             raise ValueError(f"{e} is no term in a LHDP")
         else:
-            assert type(e) == Add
+            assert isinstance(e, Add)
             operands = e.args
         r = [analyze_term(self.context, o) for o in operands]
         dterms = {}
@@ -273,7 +279,7 @@ class LHDP:
     def atoms(self, e):
         # needed for ltf
         return self.expression().atoms(e)
-        
+
     def show_derivatives(self):
         print(list(self.derivatives()))
 
@@ -416,7 +422,7 @@ class LHDP:
 
     def xreplace(self, d):
         return self.__class__(self.expression().xreplace(d), self.context)
-    
+
     _cache_key = __hash__
 
 @profile_if_enabled
@@ -494,12 +500,12 @@ def _reduce_inner(e1, e2, context):
     #print(f"{e2=}")
     ##set_trace()
     #print(f"{e2=}")
+    changed = OrderedDict([(_.comparison_vector, _) for _ in e1.p])
     for t in (_ for _ in e1.p if _.function == e2.function):
         dif = [a - b for a, b in zip(t.order, e2.order)]
         if any(map(lambda _: _ < 0, dif)):
             continue
         c = t.coeff
-        changed = OrderedDict([(_.comparison_vector, _) for _ in e1.p])
         subs = []
         if all(map(lambda h: h == 0, dif)):
             # S2 from Algorithm 2.4
@@ -512,8 +518,8 @@ def _reduce_inner(e1, e2, context):
                     else:
                         del changed[hit.comparison_vector]
                 else:
-                    subs.append(_Dterm(coeff=-pc, 
-                                       derivative=p2.derivative, 
+                    subs.append(_Dterm(coeff=-pc,
+                                       derivative=p2.derivative,
                                        context=e1.context))
 
         elif all(map(lambda h: h >= 0, dif)):
@@ -923,7 +929,7 @@ class Janet_Basis:
         max_dterms = 0
         number_of_polynomials = 0
         max_complexity = 0
-        context = Context(dependent, independent, sort_order)
+        self.context = context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # XXX bad criterion
             self.S = [S]
@@ -976,7 +982,7 @@ class Janet_Basis:
         for _ in self.S:
             if rich:
                 if _in_ipython_session:
-                    display(Math(_.show()))
+                    display(_)
                 else:
                     print([p.derivative for p in _.p])
             else:

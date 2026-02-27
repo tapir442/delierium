@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from more_itertools import flatten
 import os
 
-from functools import lru_cache
+from functools import lru_cache, cache
 
 from sympy import *
 from sympy.core.backend import *
@@ -105,7 +105,7 @@ class Context:
         self.dependent = tuple(dependent)
         self._weight = weight(self.dependent, self.independent)
 
-    @profile_if_enabled
+    @cache
     def gt(self, v1, v2) -> int:
         """Computes the weighted difference vector of v1 and v2
         and returns 'True' if the first nonzero entry is > 0
@@ -118,15 +118,17 @@ class Context:
             return entry > 0
         return False
 
+    @cache
     def lt(self, v1, v2):
         """Checks if v1 < v2."""
         return v1 != v2 and not self.gt(v1, v2)
 
+    @cache
     def is_ctxfunc(self, f):
         """Check if 'f' is in the list of dependent variables."""
         return f in self.dependent
 
-    @profile_if_enabled
+    @cache
     def order_of_derivative(self, e):
         """Returns the vector of the orders of a derivative respect to its variables
 

@@ -37,3 +37,43 @@ mlex, [z, w], [x, y]:    226.48         263.13
 mlex, [w, z], [y, x]:     11.24           9.21
 mlex, [z, w], [y, x]:   7015.51        4279.31
 
+========================================================================
+desktop 24 × AMD Ryzen 9 7900X 12-Core Processor
+=====================================================
+
+SYMENGINE = 0                      SYMENGINE=1
+
+System 2.25
+mgrevlex, [w, z], [x, y]: 0.14
+mgrevlex, [z, w], [x, y]: 0.19
+mgrevlex, [w, z], [y, x]: 0.12
+mgrevlex, [z, w], [y, x]: 0.27
+
+mgrlex, [w, z], [x, y]:   0.14
+mgrlex, [z, w], [x, y]:   0.14
+mgrlex, [w, z], [y, x]:   0.11
+mgrlex, [z, w], [y, x]:   0.24
+
+mlex, [w, z], [x, y]:     0.14
+mlex, [z, w], [x, y]:     0.18
+mlex, [w, z], [y, x]:     0.28
+mlex, [z, w], [y, x]:     1.21
+
+SYMENGINE = 0                      SYMENGINE=1
+
+System 2.24
+mgrevlex, [w, z], [x, y]:  0.12           0.12
+mgrevlex, [z, w], [x, y]:  3.39           3.32 <- Explore why
+mgrevlex, [w, z], [y, x]:   0.7           0.69  
+mgrevlex, [z, w], [y, x]: 15.08          14.59
+
+mgrlex, [w, z], [x, y]:    0.03           0.03
+mgrlex, [z, w], [x, y]:    2.88           2.85
+mgrlex, [w, z], [y, x]:    0.44           0.44
+mgrlex, [z, w], [y, x]:   13.13          13.00
+
+mlex, [w, z], [x, y]:      0.21           0.05
+mlex, [z, w], [x, y]:     78.48          68.02
+mlex, [w, z], [y, x]:      3.88           3.37
+mlex, [z, w], [y, x]:   2542.51        2097.57
+

@@ -22,11 +22,11 @@ from sympy.simplify import collect
 
 from delierium.DerivativeOperators import FrechetD
 from delierium.JanetBasis import Janet_Basis
-from delierium.helpers import ExpressionTree, finish_substitution, make_infinitesimal
+from delierium.helpers import finish_substitution, make_infinitesimal
 from delierium.matrix_order import Mgrevlex
 
 from sympy import *
-from sympy.core.backend import * 
+from sympy.core.backend import *
 
 from more_itertools import bucket, flatten, powerset
 
@@ -198,7 +198,7 @@ def create_infinitesimals(dep, indep, inf=None):
                 infinitesimals[v] = i
     return infinitesimals
 
-    
+
 def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesimals=None):
     """
     infinitesimals : dict{Function/Symbol : new name}
@@ -217,7 +217,7 @@ def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesima
     vdummies = {}
     for i in dep + indep:
         vdummies[i] = Symbol(i.name)
-    
+
     _dummies = ChainMap(dummies, vdummies)
     r = prolongation(eq, eq_order, infinitesimals, dep, indep, _dummies)
     sol = solve(eq, highest_term)[0]
@@ -270,7 +270,7 @@ def Janet_Basis_from_ODE(ode, dependent, independent, sort_order = Mgrevlex, inf
     _dependent = dependent[0]
     _independent = independent[0]
     inf = [infinitesimals[_] for _ in [_dependent, _independent]]
-    
+
     r1 =  [Y, _independent]
     #ToDo: 2 way:
     #    * either as Janet_Basis
@@ -280,23 +280,16 @@ def Janet_Basis_from_ODE(ode, dependent, independent, sort_order = Mgrevlex, inf
     r1 = [_.xreplace({_dependent: Y}) for _ in r1]
     intermediate_system = []
     for e in overdetermined_system:
-        # ToDo: make the next three lines into a function for helpers(code duplication
-        #       with overdeterminedSystemODE. Idea: return a dict with {function: order}#
-        # tree = ExpressionTree(e)
-        # mine = [_ for _ in tree.diffs if _.operator().function() in [dependent]]
         e = e.replace(_dependent, Y)
         mine = [_ for _ in e.atoms(Derivative) if _.args[0].func  == _dependent]
-       
-        order= max((len(_.operator().parameter_set()) for _ in mine)) if mine else 0
-        #e = e.subs({dependent(independent) : Y})
-        #_dependent = _dependent.xreplace({_dependent: Y})
 
-        
+        order= max((len(_.operator().parameter_set()) for _ in mine)) if mine else 0
+
         for j in range(1, order+1):
             d = diff(_dependent(_independent), _independent, j)
             e = e.subs({d: 0})
         intermediate_system.append(e)
-    
+
     janet = Janet_Basis(intermediate_system, inf, r1, sort_order=sort_order)
     pols = [_.expression().xreplace({Y : _dependent}) for _ in janet.S]
     return pols
