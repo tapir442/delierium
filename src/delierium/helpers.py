@@ -48,13 +48,13 @@ def expr_eq(e1, e2):
 def expr_is_zero(e):
     return e == 0
 
-
+@profile_if_enabled
 def pairs_exclude_diagonal(it):
     for x, y in itertools.product(it, repeat=2):
         if x != y:
             yield (x, y)
 
-
+@profile_if_enabled
 def is_derivative(e):
     """checks whether an expression 'e' is a pure derivative
 
@@ -70,7 +70,7 @@ def is_derivative(e):
     """
     return e.is_Derivative
 
-
+@profile_if_enabled
 def is_function(e) -> bool:
     """checks whether an expression 'e' is a pure function without any
     derivative as a factor
@@ -108,7 +108,7 @@ def adiff(f, context, *vars):
         f = f.diff(*vars)
     return f
 
-
+@profile_if_enabled
 def finish_substitution(expr):
     subs = set(expr.atoms(Subs))
     subs_dic = {}
@@ -187,7 +187,7 @@ def ltf(expr, dep, indep):
     output = output.xreplace(dreps2).xreplace(fundic)
     display(output)
 
-
+@profile_if_enabled
 def make_infinitesimal(v, *variables, name=""):
     return Function(f'{v.name.swapcase() if not name else name}')(*variables)
 

@@ -11,13 +11,284 @@ from operator import mul
 
 from IPython.display import Math
 from more_itertools import bucket, flatten, powerset
-from sympy import *
-from sympy.core.backend import *
+from sympy import Derivative
+from sympy import Function, Dummy, Symbol, sympify, Basic, Tuple, Integer, Expr, Mul, Pow, Add, Rational, S
+
+from sympy.core.function import UndefinedFunction, AppliedUndef, _derivative_dispatch
+
 
 from delierium.helpers import (adiff, eq, expr_eq, expr_is_zero, is_derivative,
                                is_function, is_numeric, ltf,
                                pairs_exclude_diagonal, profile_if_enabled)
 from delierium.matrix_order import Context, Mgrevlex
+
+
+
+
+@profile_if_enabled
+def __new__(cls, expr, *variables, **kwargs):
+    """Tweak from original sympy.core.function.Derivatice.__new__
+
+    We removed some unnecessary steps to gain a lot of run timr improvement.
+    We (hopefully) don't need these checks as we use it only internally.
+
+    Fun fact: the most time consuming step is 'expr.free_symbols', which needs
+    80-90 % of the *whole* janet basis algorithm. If anyone has any idea hoe to get around
+    it, be welcome!
+    """
+    expr = sympify(expr)
+    if not isinstance(expr, Basic):
+        raise TypeError(f"Cannot represent derivative of {type(expr)}")
+
+#    Removed from original sympy.core.function.Derivative.__new__
+#    because this 'free_symbol' access eats all CPU, and we don't need it
+#    here, as we use it only internally
+#    symbols_or_none = getattr(expr, "free_symbols", None)
+#    has_symbol_set = isinstance(symbols_or_none, set)
+#
+#    if not has_symbol_set:
+#        raise ValueError(filldedent('''
+#            Since there are no variables in the expression %s,
+#            it cannot be differentiated.''' % expr))
+
+    # determine value for variables if it wasn't given
+#    Removed from original sympy.core.function.Derivative.__new__
+#    because we don't need it, as we use it only internally
+
+#    if not variables:
+#         variables = expr.free_symbols
+#         if len(variables) != 1:
+#             if expr.is_number:
+#                 return S.Zero
+#             if len(variables) == 0:
+#                 raise ValueError(filldedent('''
+#                     Since there are no variables in the expression,
+#                     the variable(s) of differentiation must be supplied
+#                     to differentiate %s''' % expr))
+#             else:
+#                 raise ValueError(filldedent('''
+#                     Since there is more than one variable in the
+#                     expression, the variable(s) of differentiation
+#                     must be supplied to differentiate %s''' % expr))
+
+    # Split the list of variables into a list of the variables we are diff
+    # wrt, where each element of the list has the form (s, count) where
+    # s is the entity to diff wrt and count is the order of the
+    # derivative.
+    variable_count = []
+    array_likes = (tuple, list, Tuple)
+
+    from sympy.tensor.array import Array, NDimArray
+
+    for i, v in enumerate(variables):
+        if isinstance(v, UndefinedFunction):
+            raise TypeError(
+                "cannot differentiate wrt "
+                "UndefinedFunction: %s" % v)
+
+        if isinstance(v, array_likes):
+            if len(v) == 0:
+                # Ignore empty tuples: Derivative(expr, ... , (), ... )
+                continue
+            if isinstance(v[0], array_likes):
+                # Derive by array: Derivative(expr, ... , [[x, y, z]], ... )
+                if len(v) == 1:
+                    v = Array(v[0])
+                    count = 1
+                else:
+                    v, count = v
+                    v = Array(v)
+            else:
+                v, count = v
+            if count == 0:
+                continue
+            variable_count.append(Tuple(v, count))
+            continue
+
+        v = sympify(v)
+        if isinstance(v, Integer):
+            if i == 0:
+                raise ValueError("First variable cannot be a number: %i" % v)
+            count = v
+            prev, prevcount = variable_count[-1]
+            if prevcount != 1:
+                raise TypeError("tuple {} followed by number {}".format((prev, prevcount), v))
+            if count == 0:
+                variable_count.pop()
+            else:
+                variable_count[-1] = Tuple(prev, count)
+        else:
+            count = 1
+            variable_count.append(Tuple(v, count))
+
+    # light evaluation of contiguous, identical
+    # items: (x, 1), (x, 1) -> (x, 2)
+    merged = []
+    for t in variable_count:
+        v, c = t
+        if c.is_negative:
+            raise ValueError(
+                'order of differentiation must be nonnegative')
+        if merged and merged[-1][0] == v:
+            c += merged[-1][1]
+            if not c:
+                merged.pop()
+            else:
+                merged[-1] = Tuple(v, c)
+        else:
+            merged.append(t)
+    variable_count = merged
+
+    # sanity check of variables of differentation; we waited
+    # until the counts were computed since some variables may
+    # have been removed because the count was 0
+    for v, c in variable_count:
+        # v must have _diff_wrt True
+        if not v._diff_wrt:
+            __ = ''  # filler to make error message neater
+            raise ValueError(filldedent('''
+                Can't calculate derivative wrt %s.%s''' % (v,
+                __)))
+
+    # We make a special case for 0th derivative, because there is no
+    # good way to unambiguously print this.
+    if len(variable_count) == 0:
+        return expr
+
+    evaluate = kwargs.get('evaluate', False)
+    if evaluate:
+        if isinstance(expr, Derivative):
+            expr = expr.canonical
+        variable_count = [
+            (v.canonical if isinstance(v, Derivative) else v, c)
+            for v, c in variable_count]
+
+        # Look for a quick exit if there are symbols that don't appear in
+        # expression at all. Note, this cannot check non-symbols like
+        # Derivatives as those can be created by intermediate
+        # derivtives.
+        zero = False
+        free = expr.free_symbols # XXX: 90 percent of the time goes here
+        from sympy.matrices.expressions.matexpr import MatrixExpr
+
+        for v, c in variable_count:
+            vfree = v.free_symbols
+            if c.is_positive and vfree:
+                if isinstance(v, AppliedUndef):
+                    # these match exactly since
+                    # x.diff(f(x)) == g(x).diff(f(x)) == 0
+                    # and are not created by differentiation
+                    D = Dummy()
+                    if not expr.xreplace({v: D}).has(D):
+                        zero = True
+                        break
+                elif isinstance(v, MatrixExpr):
+                    zero = False
+                    break
+                elif isinstance(v, Symbol) and v not in free:
+                    zero = True
+                    break
+                else:
+                    if not free & vfree:
+                        # e.g. v is IndexedBase or Matrix
+                        zero = True
+                        break
+        if zero:
+            return cls._get_zero_with_shape_like(expr)
+
+        # make the order of symbols canonical
+        #TODO: check if assumption of discontinuous derivatives exist
+        variable_count = cls._sort_variable_count(variable_count)
+
+    # denest
+    if isinstance(expr, Derivative):
+        variable_count = list(expr.variable_count) + variable_count
+        expr = expr.expr
+        return _derivative_dispatch(expr, *variable_count, **kwargs)
+
+    # we return here if evaluate is False or if there is no
+    # _eval_derivative method
+    if not evaluate or not hasattr(expr, '_eval_derivative'):
+        # return an unevaluated Derivative
+        if evaluate and variable_count == [(expr, 1)] and expr.is_scalar:
+            # special hack providing evaluation for classes
+            # that have defined is_scalar=True but have no
+            # _eval_derivative defined
+            return S.One
+        return Expr.__new__(cls, expr, *variable_count)
+
+    # evaluate the derivative by calling _eval_derivative method
+    # of expr for each variable
+    # -------------------------------------------------------------
+    nderivs = 0  # how many derivatives were performed
+    unhandled = []
+    from sympy.matrices.matrixbase import MatrixBase
+    for i, (v, count) in enumerate(variable_count):
+        old_expr = expr
+        old_v = None
+
+        is_symbol = v.is_symbol or isinstance(v,
+            (Iterable, Tuple, MatrixBase, NDimArray))
+        if not is_symbol:
+            old_v = v
+            v = Dummy('xi')
+            expr = expr.xreplace({old_v: v})
+            # Derivatives and UndefinedFunctions are independent
+            # of all others
+            clashing = not (isinstance(old_v, (Derivative, AppliedUndef)))
+            if v not in expr.free_symbols and not clashing:
+                return expr.diff(v)  # expr's version of 0
+            if not old_v.is_scalar and not hasattr(
+                    old_v, '_eval_derivative'):
+                # special hack providing evaluation for classes
+                # that have defined is_scalar=True but have no
+                # _eval_derivative defined
+                expr *= old_v.diff(old_v)
+
+        obj = cls._dispatch_eval_derivative_n_times(expr, v, count)
+        if obj is not None and obj.is_zero:
+            return obj
+
+        nderivs += count
+
+        if old_v is not None:
+            if obj is not None:
+                # remove the dummy that was used
+                obj = obj.subs(v, old_v)
+            # restore expr
+            expr = old_expr
+
+        if obj is None:
+            # we've already checked for quick-exit conditions
+            # that give 0 so the remaining variables
+            # are contained in the expression but the expression
+            # did not compute a derivative so we stop taking
+            # derivatives
+            unhandled = variable_count[i:]
+            break
+        expr = obj
+    # what we have so far can be made canonical
+    # Removed from original __new__
+#    expr = expr.replace(
+#        lambda x: isinstance(x, Derivative),
+#        lambda x: x.canonical)
+
+    if unhandled:
+        if isinstance(expr, Derivative):
+            unhandled = list(expr.variable_count) + unhandled
+            expr = expr.expr
+        expr = Expr.__new__(cls, expr, *unhandled)
+
+    # removed from original __new__
+ #   if (nderivs > 1) == True and kwargs.get('simplify', True):
+ #       from sympy.core.exprtools import factor_terms
+ #       from sympy.simplify.simplify import signsimp
+ #       expr = factor_terms(signsimp(expr))
+    return expr
+
+Derivative.__new__ = __new__
+
+
 
 try:
     __IPYTHON__
@@ -43,25 +314,26 @@ def compute_order(derivative, independent, comp_order):
     return [0] * len(independent)
 
 
-@dataclass
 class _Dterm:
-    coeff: int
-    derivative: int
-    context: Context
+    __slots__ = ["coeff", "derivative", "context", "function", "order", "comparison_vector"]
 
     @profile_if_enabled
-    def __post_init__(self):
-        object.__setattr__(self, 'coeff', self.coeff)
-        object.__setattr__(self, 'order', self._compute_order())
+    def __init__(self, coeff, derivative, context):
+        self.coeff = coeff
+        self.derivative = derivative
+        self.context = context
         if is_derivative(self.derivative):
-            object.__setattr__(self, 'function', self.derivative.args[0])
+            self.function = self.derivative.args[0]
         else:
-            object.__setattr__(self, 'function', self.derivative)
-        object.__setattr__(self, 'comparison_vector', self._compute_comparison_vector())
+            self.function = self.derivative
+
+        self.order = self._compute_order()
+        self.comparison_vector = self._compute_comparison_vector()
 
     @profile_if_enabled
     def expression(self):
         return self.coeff * self.derivative
+
     @profile_if_enabled
     def _compute_comparison_vector(self):
         """Concatenates order and comparison vector for input for ..."""
@@ -75,6 +347,7 @@ class _Dterm:
             result = f"({self.coeff}) * { self.derivative}"
         return result.replace("Derivative", "D")
 
+    @profile_if_enabled
     def term(self):
         return self.expression()
 
@@ -141,48 +414,6 @@ class _Dterm:
             return str(self)
         return self.latex()
 
-    def latex(self):
-        """Converts a _Dterm into Lie traditional form, latex style"""
-
-        def _latex_derivative(deriv):
-            if is_derivative(deriv):
-                func = deriv.args[0]
-                ps = deriv.args[1:]
-                inter = []
-                for entry in ps:
-                    if isinstance(entry, Tuple):  # sympy's tuple
-                        for i in range(entry[1]):
-                            inter.append(entry[0])
-                    else:
-                        inter.append(entry)
-                sub = ",".join(map(str, inter))
-
-                return f"{func.name}_{{{sub}}}"
-            if is_function(deriv):
-                return latex(deriv.func)
-            return latex(deriv)
-
-        def _latex_coeff(coeff):
-            if str(coeff) in ['1', '1.0']:
-                return ""
-            if str(coeff) in ['-1', '-1.0']:
-                return "-"
-            # ToDo: need to be more fine granular
-            if hasattr(coeff, "expand"):
-                c = latex(coeff.expand().simplify())
-            else:
-                c = latex(coeff)
-            if hasattr(coeff, "operator") and \
-                coeff.operator() != None and \
-                ((hasattr(coeff.operator(), "__name__") and coeff.operator().__name__ == "add_vararg") or is_function(coeff.operator())):
-                return rf"({c})"
-            return c
-        d = _latex_derivative(self.derivative)
-        c = _latex_coeff(self.coeff)
-        return f"{c} {d}"
-
-    _latex_ = latex
-
     from functools import cache
 
     @profile_if_enabled
@@ -190,7 +421,7 @@ class _Dterm:
         return _Dterm(coeff = self.coeff + c,
                       derivative = self.derivative,
                       context = self.context)
-    @cache
+    @profile_if_enabled
     def _coeff_diff(self, coeff, *variables):
         return coeff.diff(*variables)
 
@@ -385,11 +616,6 @@ class LHDP:
             res += f"[{self.multipliers}], [{self.nonmultipliers}]"
         return res
 
-    def latex(self):
-        return "+".join(_.latex() for _ in self.p).replace("(-", "(").replace("+-", "-")
-
-    _latex_ = latex
-
     @profile_if_enabled
     def diff(self, *args):
         new_dterms = {}
@@ -415,11 +641,13 @@ class LHDP:
     def __repr__(self):
         return str(self)
 
+    @profile_if_enabled
     def __hash__(self):
         if self.hash == 0:
             self.hash = hash("".join([str(hash(_)) for _ in self.p]))
         return self.hash
 
+    @profile_if_enabled
     def xreplace(self, d):
         return self.__class__(self.expression().xreplace(d), self.context)
 
@@ -922,13 +1150,7 @@ class Janet_Basis:
         diff(w(x, y), y) + (-1/y) * w(x, y)
         diff(w(x, y), x)
         """
-        global max_dterms
-        global number_of_polynomials
-        global max_complexity
 
-        max_dterms = 0
-        number_of_polynomials = 0
-        max_complexity = 0
         self.context = context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # XXX bad criterion
@@ -972,13 +1194,6 @@ class Janet_Basis:
 
     def show(self, rich=True, short=False):
         """Print the Janet basis with leading derivative first."""
-        global max_dterms
-        global number_of_polynomials
-        global max_complexity
-
-        #print(f"{max_dterms=}")
-        #print(f"{number_of_polynomials=}")
-        #print(f"{max_complexity=}")
         for _ in self.S:
             if rich:
                 if _in_ipython_session:
