@@ -5,13 +5,10 @@ Janet Basis
 import functools
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
-from dataclasses import dataclass
 from itertools import islice
 from operator import mul
 
-from IPython.display import Math
 from more_itertools import bucket, flatten, powerset
-from sympy import Derivative
 from sympy import Function, Dummy, Symbol, sympify, Basic, Tuple, Integer, Expr, Mul, Pow, Add, Rational, S
 
 from sympy.core.function import UndefinedFunction, AppliedUndef, _derivative_dispatch
@@ -19,275 +16,8 @@ from sympy.core.function import UndefinedFunction, AppliedUndef, _derivative_dis
 
 from delierium.helpers import (adiff, eq, expr_eq, expr_is_zero, is_derivative,
                                is_function, is_numeric, ltf,
-                               pairs_exclude_diagonal, profile_if_enabled)
+                               pairs_exclude_diagonal, profile_if_enabled, Derivative)
 from delierium.matrix_order import Context, Mgrevlex
-
-
-
-
-@profile_if_enabled
-def __new__(cls, expr, *variables, **kwargs):
-    """Tweak from original sympy.core.function.Derivatice.__new__
-
-    We removed some unnecessary steps to gain a lot of run timr improvement.
-    We (hopefully) don't need these checks as we use it only internally.
-
-    Fun fact: the most time consuming step is 'expr.free_symbols', which needs
-    80-90 % of the *whole* janet basis algorithm. If anyone has any idea hoe to get around
-    it, be welcome!
-    """
-    expr = sympify(expr)
-    if not isinstance(expr, Basic):
-        raise TypeError(f"Cannot represent derivative of {type(expr)}")
-
-#    Removed from original sympy.core.function.Derivative.__new__
-#    because this 'free_symbol' access eats all CPU, and we don't need it
-#    here, as we use it only internally
-#    symbols_or_none = getattr(expr, "free_symbols", None)
-#    has_symbol_set = isinstance(symbols_or_none, set)
-#
-#    if not has_symbol_set:
-#        raise ValueError(filldedent('''
-#            Since there are no variables in the expression %s,
-#            it cannot be differentiated.''' % expr))
-
-    # determine value for variables if it wasn't given
-#    Removed from original sympy.core.function.Derivative.__new__
-#    because we don't need it, as we use it only internally
-
-#    if not variables:
-#         variables = expr.free_symbols
-#         if len(variables) != 1:
-#             if expr.is_number:
-#                 return S.Zero
-#             if len(variables) == 0:
-#                 raise ValueError(filldedent('''
-#                     Since there are no variables in the expression,
-#                     the variable(s) of differentiation must be supplied
-#                     to differentiate %s''' % expr))
-#             else:
-#                 raise ValueError(filldedent('''
-#                     Since there is more than one variable in the
-#                     expression, the variable(s) of differentiation
-#                     must be supplied to differentiate %s''' % expr))
-
-    # Split the list of variables into a list of the variables we are diff
-    # wrt, where each element of the list has the form (s, count) where
-    # s is the entity to diff wrt and count is the order of the
-    # derivative.
-    variable_count = []
-    array_likes = (tuple, list, Tuple)
-
-    from sympy.tensor.array import Array, NDimArray
-
-    for i, v in enumerate(variables):
-        if isinstance(v, UndefinedFunction):
-            raise TypeError(
-                "cannot differentiate wrt "
-                "UndefinedFunction: %s" % v)
-
-        if isinstance(v, array_likes):
-            if len(v) == 0:
-                # Ignore empty tuples: Derivative(expr, ... , (), ... )
-                continue
-            if isinstance(v[0], array_likes):
-                # Derive by array: Derivative(expr, ... , [[x, y, z]], ... )
-                if len(v) == 1:
-                    v = Array(v[0])
-                    count = 1
-                else:
-                    v, count = v
-                    v = Array(v)
-            else:
-                v, count = v
-            if count == 0:
-                continue
-            variable_count.append(Tuple(v, count))
-            continue
-
-        v = sympify(v)
-        if isinstance(v, Integer):
-            if i == 0:
-                raise ValueError("First variable cannot be a number: %i" % v)
-            count = v
-            prev, prevcount = variable_count[-1]
-            if prevcount != 1:
-                raise TypeError("tuple {} followed by number {}".format((prev, prevcount), v))
-            if count == 0:
-                variable_count.pop()
-            else:
-                variable_count[-1] = Tuple(prev, count)
-        else:
-            count = 1
-            variable_count.append(Tuple(v, count))
-
-    # light evaluation of contiguous, identical
-    # items: (x, 1), (x, 1) -> (x, 2)
-    merged = []
-    for t in variable_count:
-        v, c = t
-        if c.is_negative:
-            raise ValueError(
-                'order of differentiation must be nonnegative')
-        if merged and merged[-1][0] == v:
-            c += merged[-1][1]
-            if not c:
-                merged.pop()
-            else:
-                merged[-1] = Tuple(v, c)
-        else:
-            merged.append(t)
-    variable_count = merged
-
-    # sanity check of variables of differentation; we waited
-    # until the counts were computed since some variables may
-    # have been removed because the count was 0
-    for v, c in variable_count:
-        # v must have _diff_wrt True
-        if not v._diff_wrt:
-            __ = ''  # filler to make error message neater
-            raise ValueError(filldedent('''
-                Can't calculate derivative wrt %s.%s''' % (v,
-                __)))
-
-    # We make a special case for 0th derivative, because there is no
-    # good way to unambiguously print this.
-    if len(variable_count) == 0:
-        return expr
-
-    evaluate = kwargs.get('evaluate', False)
-    if evaluate:
-        if isinstance(expr, Derivative):
-            expr = expr.canonical
-        variable_count = [
-            (v.canonical if isinstance(v, Derivative) else v, c)
-            for v, c in variable_count]
-
-        # Look for a quick exit if there are symbols that don't appear in
-        # expression at all. Note, this cannot check non-symbols like
-        # Derivatives as those can be created by intermediate
-        # derivtives.
-        zero = False
-        free = expr.free_symbols # XXX: 90 percent of the time goes here
-        from sympy.matrices.expressions.matexpr import MatrixExpr
-
-        for v, c in variable_count:
-            vfree = v.free_symbols
-            if c.is_positive and vfree:
-                if isinstance(v, AppliedUndef):
-                    # these match exactly since
-                    # x.diff(f(x)) == g(x).diff(f(x)) == 0
-                    # and are not created by differentiation
-                    D = Dummy()
-                    if not expr.xreplace({v: D}).has(D):
-                        zero = True
-                        break
-                elif isinstance(v, MatrixExpr):
-                    zero = False
-                    break
-                elif isinstance(v, Symbol) and v not in free:
-                    zero = True
-                    break
-                else:
-                    if not free & vfree:
-                        # e.g. v is IndexedBase or Matrix
-                        zero = True
-                        break
-        if zero:
-            return cls._get_zero_with_shape_like(expr)
-
-        # make the order of symbols canonical
-        #TODO: check if assumption of discontinuous derivatives exist
-        variable_count = cls._sort_variable_count(variable_count)
-
-    # denest
-    if isinstance(expr, Derivative):
-        variable_count = list(expr.variable_count) + variable_count
-        expr = expr.expr
-        return _derivative_dispatch(expr, *variable_count, **kwargs)
-
-    # we return here if evaluate is False or if there is no
-    # _eval_derivative method
-    if not evaluate or not hasattr(expr, '_eval_derivative'):
-        # return an unevaluated Derivative
-        if evaluate and variable_count == [(expr, 1)] and expr.is_scalar:
-            # special hack providing evaluation for classes
-            # that have defined is_scalar=True but have no
-            # _eval_derivative defined
-            return S.One
-        return Expr.__new__(cls, expr, *variable_count)
-
-    # evaluate the derivative by calling _eval_derivative method
-    # of expr for each variable
-    # -------------------------------------------------------------
-    nderivs = 0  # how many derivatives were performed
-    unhandled = []
-    from sympy.matrices.matrixbase import MatrixBase
-    for i, (v, count) in enumerate(variable_count):
-        old_expr = expr
-        old_v = None
-
-        is_symbol = v.is_symbol or isinstance(v,
-            (Iterable, Tuple, MatrixBase, NDimArray))
-        if not is_symbol:
-            old_v = v
-            v = Dummy('xi')
-            expr = expr.xreplace({old_v: v})
-            # Derivatives and UndefinedFunctions are independent
-            # of all others
-            clashing = not (isinstance(old_v, (Derivative, AppliedUndef)))
-            if v not in expr.free_symbols and not clashing:
-                return expr.diff(v)  # expr's version of 0
-            if not old_v.is_scalar and not hasattr(
-                    old_v, '_eval_derivative'):
-                # special hack providing evaluation for classes
-                # that have defined is_scalar=True but have no
-                # _eval_derivative defined
-                expr *= old_v.diff(old_v)
-
-        obj = cls._dispatch_eval_derivative_n_times(expr, v, count)
-        if obj is not None and obj.is_zero:
-            return obj
-
-        nderivs += count
-
-        if old_v is not None:
-            if obj is not None:
-                # remove the dummy that was used
-                obj = obj.subs(v, old_v)
-            # restore expr
-            expr = old_expr
-
-        if obj is None:
-            # we've already checked for quick-exit conditions
-            # that give 0 so the remaining variables
-            # are contained in the expression but the expression
-            # did not compute a derivative so we stop taking
-            # derivatives
-            unhandled = variable_count[i:]
-            break
-        expr = obj
-    # what we have so far can be made canonical
-    # Removed from original __new__
-#    expr = expr.replace(
-#        lambda x: isinstance(x, Derivative),
-#        lambda x: x.canonical)
-
-    if unhandled:
-        if isinstance(expr, Derivative):
-            unhandled = list(expr.variable_count) + unhandled
-            expr = expr.expr
-        expr = Expr.__new__(cls, expr, *unhandled)
-
-    # removed from original __new__
- #   if (nderivs > 1) == True and kwargs.get('simplify', True):
- #       from sympy.core.exprtools import factor_terms
- #       from sympy.simplify.simplify import signsimp
- #       expr = factor_terms(signsimp(expr))
-    return expr
-
-Derivative.__new__ = __new__
-
 
 
 try:
@@ -390,13 +120,16 @@ class _Dterm:
     @profile_if_enabled
     def __lt__(self, other):
         """
-        >>> x,y,z = symbols("x y z")
-        >>> g     = Function("g")(x,y,z)
-        >>> h     = Function("h")(x,y,z)
+        >>> from sympy import *
+        >>> from delierium.matrix_order import Mlex
+        >>> x,y,z = symbols("x, y, z")
+        >>> g = Function("g")(x,y,z)
+        >>> h = Function("h")(x,y,z)
+        >>> f = Function("f")(x,y,z)
         >>> ctx   = Context ((f,g,h),(x,y,z), Mlex)
-        >>> dterm1 = _Dterm(derivative=diff(f, x, y), coeff=x**2, context=ctx)
-        >>> dterm2 = _Dterm(derivative=diff(f, x, y, z), coeff=1 , context=ctx)
-        >>> print(bool(dterm1 < dterm2))
+        >>> dterm1 = _Dterm(derivative=Derivative(f, x, y), coeff=x**2, context=ctx)
+        >>> dterm2 = _Dterm(derivative=Derivative(f, x, y, z), coeff=1 , context=ctx)
+        >>> print(dterm1 < dterm2)
         True
         """
         # XXX context.gt still a bad place
@@ -413,8 +146,6 @@ class _Dterm:
         if not rich:
             return str(self)
         return self.latex()
-
-    from functools import cache
 
     @profile_if_enabled
     def add_coefficient(self, c):
@@ -649,6 +380,7 @@ class LHDP:
 
     @profile_if_enabled
     def xreplace(self, d):
+        import pdb; pdb.set_trace()
         return self.__class__(self.expression().xreplace(d), self.context)
 
     _cache_key = __hash__
@@ -672,7 +404,11 @@ def analyze_term(context, term):
         else:
             coeffs.append(operand)
     coeffs = functools.reduce(mul, coeffs, 1)
-    return str(d[0]), d[0], coeffs
+    try:
+        return str(d[0]), d[0], coeffs
+    except:
+        import pdb; pdb.set_trace()
+        pass
 
 @profile_if_enabled
 def split_into_operands(term):
@@ -723,11 +459,21 @@ def _order(der, context):
 
 @profile_if_enabled
 def _reduce_inner(e1, e2, context):
-    #print("===================")
-    #print(f"{e1=}")
-    #print(f"{e2=}")
-    ##set_trace()
-    #print(f"{e2=}")
+    """
+    Schwarz, Example 2.33, p. 48
+    >>> x = Symbol('x')
+    >>> y = Symbol('y')
+    >>> z = Function('z')(x, y)
+    >>> ctx = Context([z], [x,y])
+    >>> e1 = LHDP(Derivative(z, y) - ((x**2)/(y**2)) * Derivative(z, x) - z*(x-y)/y**2, ctx)
+    >>> e2 = LHDP(Derivative(z, x) + z/x, ctx)
+    >>> _reduce_inner(e1, e2, ctx).expression().simplify()
+    Derivative(z(x, y), y) + z(x, y)/y
+    >>> e1 = LHDP(Derivative(z, y) - ((x**2)/(y**2)) * Derivative(z, x) - z*(x-y)/y**2, ctx)
+    >>> e2 = LHDP(Derivative(z, y) + z/y, ctx)
+    >>> _reduce_inner(e1, e2, ctx).expression().simplify()
+    Derivative(z(x, y), x) + z(x, y)/x
+    """
     changed = OrderedDict([(_.comparison_vector, _) for _ in e1.p])
     for t in (_ for _ in e1.p if _.function == e2.function):
         dif = [a - b for a, b in zip(t.order, e2.order)]
@@ -967,10 +713,14 @@ def CompleteSystem(S, context):
     """
     Algorithm C1, p. 385
 
-    >>> tvars=var("x y z")
-    >>> w = function("w")(*tvars)
+    >>> from sympy import *
+    >>> from delierium.matrix_order import Mgrlex, Mlex
+
+    >>> x, y, z = symbols("x, y, z")
+    >>> tvars = (x, y, z)
+    >>> w = Function("w")(*tvars)
     >>> # these DPs are constructed from C1, pp 384
-    >>> h1=diff(w, x,x,x, y,y,z,z)
+    >>> h1=Derivative(w, x,x,x, y,y,z,z)
     >>> h2=diff(w, x,x,x,     z,z,z)
     >>> h3=diff(w, x,     y,  z,z,z)
     >>> h4=diff(w, x,     y)
@@ -979,25 +729,25 @@ def CompleteSystem(S, context):
     >>> cs = CompleteSystem(dps, ctx)
     >>> # things are sorted up
     >>> for _ in cs: print(_)
-    diff(w(x, y, z), x, y)
-    diff(w(x, y, z), x, y, z)
-    diff(w(x, y, z), x, x, y)
-    diff(w(x, y, z), x, y, z, z)
-    diff(w(x, y, z), x, x, y, z)
-    diff(w(x, y, z), x, x, x, y)
-    diff(w(x, y, z), x, y, z, z, z)
-    diff(w(x, y, z), x, x, y, z, z)
-    diff(w(x, y, z), x, x, x, y, z)
-    diff(w(x, y, z), x, x, x, y, y)
-    diff(w(x, y, z), x, x, y, z, z, z)
-    diff(w(x, y, z), x, x, x, z, z, z)
-    diff(w(x, y, z), x, x, x, y, z, z)
-    diff(w(x, y, z), x, x, x, y, y, z)
-    diff(w(x, y, z), x, x, x, y, z, z, z)
-    diff(w(x, y, z), x, x, x, y, y, z, z)
+    D(w(x, y, z), x, y)
+    D(w(x, y, z), x, y, z)
+    D(w(x, y, z), (x, 2), y)
+    D(w(x, y, z), x, y, (z, 2))
+    D(w(x, y, z), (x, 2), y, z)
+    D(w(x, y, z), (x, 3), y)
+    D(w(x, y, z), x, y, (z, 3))
+    D(w(x, y, z), (x, 2), y, (z, 2))
+    D(w(x, y, z), (x, 3), y, z)
+    D(w(x, y, z), (x, 3), (y, 2))
+    D(w(x, y, z), (x, 2), y, (z, 3))
+    D(w(x, y, z), (x, 3), (z, 3))
+    D(w(x, y, z), (x, 3), y, (z, 2))
+    D(w(x, y, z), (x, 3), (y, 2), z)
+    D(w(x, y, z), (x, 3), y, (z, 3))
+    D(w(x, y, z), (x, 3), (y, 2), (z, 2))
     >>> # example from Schwarz, pp 54
-    >>> w = function("w")(x,y)
-    >>> z = function("z")(x,y)
+    >>> w = Function("w")(x,y)
+    >>> z = Function("z")(x,y)
     >>> g1 = diff(z,y,y) + diff(z, y)/(2*y)
     >>> g5 = diff(z,x,x,x) + diff(w,y,y)*8*y**2 + diff(w,x,x)/y - diff(z,x,y)*4*y**2 - diff(z,x)*32*y-16*w
     >>> g6 = diff(z,x,x,y) - diff(z,y,y)*4*y**2 - diff(z,y)*8*y
@@ -1005,10 +755,10 @@ def CompleteSystem(S, context):
     >>> dps=[LHDP(_, ctx) for _ in [g1,g5,g6]]
     >>> cs = CompleteSystem(dps, ctx)
     >>> for _ in cs: print(_)
-    diff(z(x, y), y, y) + (1/2/y) * diff(z(x, y), y)
-    diff(z(x, y), x, y, y) + (1/2/y) * diff(z(x, y), x, y)
-    diff(z(x, y), x, x, y) + (-4*y^2) * diff(z(x, y), y, y) + (-8*y) * diff(z(x, y), y)
-    diff(z(x, y), x, x, x) + (1/y) * diff(w(x, y), x, x) + (8*y^2) * diff(w(x, y), y, y) + (-4*y^2) * diff(z(x, y), x, y) + (-32*y) * diff(z(x, y), x) + (-16) * w(x, y)
+    D(z(x, y), (y, 2)) + (1/(2*y)) * D(z(x, y), y)
+    D(z(x, y), x, (y, 2)) + (1/(2*y)) * D(z(x, y), x, y)
+    D(z(x, y), (x, 2), y) + (-4*y**2) * D(z(x, y), (y, 2)) + (-8*y) * D(z(x, y), y)
+    D(z(x, y), (x, 3)) + (1/y) * D(w(x, y), (x, 2)) + (8*y**2) * D(w(x, y), (y, 2)) + (-4*y**2) * D(z(x, y), x, y) + (-32*y) * D(z(x, y), x) + (-16) * w(x, y)
     """
     s = bucket(S, key=lambda d: d.Lfunc())
     res = flatten([complete(s[k], context) for k in s])
@@ -1017,7 +767,7 @@ def CompleteSystem(S, context):
 @profile_if_enabled
 def split_by_function(S, context):
     s = bucket(S, key=lambda d: d.Lfunc())
-    murksi=[FindIntegrableConditions(s[k], context) for k in s]
+    murksi = [FindIntegrableConditions(s[k], context) for k in s]
     return flatten(murksi)
 
 @profile_if_enabled
@@ -1091,66 +841,83 @@ class Janet_Basis:
             * List of variables
             * sort order, default is grevlex
 
-        >>> vars = var ("x y")
-        >>> z = function("z")(*vars)
-        >>> w = function("w")(*vars)
+        >>> from sympy import *
+        >>> from delierium.matrix_order import Mgrlex, Mlex
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> w = Function("w")(x, y)
         >>> f1 = diff(w, y) + x*diff(z,y)/(2*y*(x**2+y)) - w/y
         >>> f2 = diff(z,x,y) + y*diff(w,y)/x + 2*y*diff(z, x)/x
         >>> f3 = diff(w, x,y) - 2*x*diff(z, x,2)/y - x*diff(w,x)/y**2
         >>> f4 = diff(w, x,y) + diff(z, x,y) + diff(w, y)/(2*y) - diff(w,x)/y + x* diff(z, y)/y - w/(2*y**2)
         >>> f5 = diff(w,y,y) + diff(z,x,y) - diff(w, y)/y + w/(y**2)
         >>> system_2_24 = [f1,f2,f3,f4,f5]
-        >>> checkS=Janet_Basis(system_2_24, (w,z), vars)
-        >>> checkS.show()
-        diff(z(x, y), y)
-        diff(z(x, y), x) + (1/2/y) * w(x, y)
-        diff(w(x, y), y) + (-1/y) * w(x, y)
-        diff(w(x, y), x)
-        >>> vars = var ("x y")
-        >>> z = function("z")(*vars)
-        >>> w = function("w")(*vars)
+        >>> checkS=Janet_Basis(system_2_24, (w,z), (x, y))
+        >>> for _ in checkS.S: print(_)
+        D(z(x, y), y)
+        D(z(x, y), x) + (1/(2*y)) * w(x, y)
+        D(w(x, y), y) + (-1/y) * w(x, y)
+        D(w(x, y), x)
+        >>> x, y = symbols ("x y")
+        >>> z = Function("z")(x, y)
+        >>> w = Function("w")(x, y)
         >>> g1 = diff(z, y,y) + diff(z,y)/(2*y)
         >>> g2 = diff(w,x,x) + 4*diff(w,y)*y**2 - 8*(y**2) * diff(z,x) - 8*w*y
         >>> g3 = diff(w,x,y) - diff(z,x,x)/2 - diff(w,x)/(2*y) - 6* (y**2) * diff(z,y)
         >>> g4 = diff(w,y,y) - 2*diff(z,x,y) - diff(w,y)/(2*y) + w/(2*y**2)
         >>> system_2_25 = [g2,g3,g4,g1]
-        >>> checkS=Janet_Basis(system_2_25, (w,z), vars)
-        >>> checkS.show()
-        diff(z(x, y), y)
-        diff(z(x, y), x) + (1/2/y) * w(x, y)
-        diff(w(x, y), y) + (-1/y) * w(x, y)
-        diff(w(x, y), x)
-        >>> vars = var ("x y")
-        >>> z = function("z")(*vars)
-        >>> w = function("w")(*vars)
+        >>> checkS=Janet_Basis(system_2_25, (w,z), (x,y))
+        >>> for _ in checkS.S: print(_)
+        D(z(x, y), y)
+        D(z(x, y), x) + (1/(2*y)) * w(x, y)
+        D(w(x, y), y) + (-1/y) * w(x, y)
+        D(w(x, y), x)
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> w = Function("w")(x, y)
         >>> f1 = diff(w, y) + x*diff(z,y)/(2*y*(x**2+y)) - w/y
         >>> f2 = diff(z,x,y) + y*diff(w,y)/x + 2*y*diff(z, x)/x
         >>> f3 = diff(w, x,y) - 2*x*diff(z, x,2)/y - x*diff(w,x)/y**2
         >>> f4 = diff(w, x,y) + diff(z, x,y) + diff(w, y)/(2*y) - diff(w,x)/y + x* diff(z, y)/y - w/(2*y**2)
         >>> f5 = diff(w,y,y) + diff(z,x,y) - diff(w, y)/y + w/(y**2)
         >>> system_2_24 = [f1,f2,f3,f4,f5]
-        >>> checkS=Janet_Basis(system_2_24, (w,z), vars, Mgrlex)
-        >>> checkS.show()
-        diff(z(x, y), y)
-        diff(z(x, y), x) + (1/2/y) * w(x, y)
-        diff(w(x, y), y) + (-1/y) * w(x, y)
-        diff(w(x, y), x)
-        >>> vars = var ("x y")
-        >>> z = function("z")(*vars)
-        >>> w = function("w")(*vars)
+        >>> checkS=Janet_Basis(system_2_24, (w,z), (x, y), Mgrlex)
+        >>> for _ in checkS.S: print(_)
+        D(z(x, y), y)
+        D(z(x, y), x) + (1/(2*y)) * w(x, y)
+        D(w(x, y), y) + (-1/y) * w(x, y)
+        D(w(x, y), x)
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> w = Function("w")(x, y)
         >>> g1 = diff(z, y,y) + diff(z,y)/(2*y)
         >>> g2 = diff(w,x,x) + 4*diff(w,y)*y**2 - 8*(y**2) * diff(z,x) - 8*w*y
         >>> g3 = diff(w,x,y) - diff(z,x,x)/2 - diff(w,x)/(2*y) - 6* (y**2) * diff(z,y)
         >>> g4 = diff(w,y,y) - 2*diff(z,x,y) - diff(w,y)/(2*y) + w/(2*y**2)
         >>> system_2_25 = [g2,g3,g4,g1]
-        >>> checkS=Janet_Basis(system_2_25, (w,z), vars, Mgrlex)
-        >>> checkS.show()
-        diff(z(x, y), y)
-        diff(z(x, y), x) + (1/2/y) * w(x, y)
-        diff(w(x, y), y) + (-1/y) * w(x, y)
-        diff(w(x, y), x)
+        >>> checkS=Janet_Basis(system_2_25, (w,z), (x, y), Mgrlex)
+        >>> for _ in checkS.S: print(_)
+        D(z(x, y), y)
+        D(z(x, y), x) + (1/(2*y)) * w(x, y)
+        D(w(x, y), y) + (-1/y) * w(x, y)
+        D(w(x, y), x)
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> w = Function("w")(x, y)
+        >>> g1 = diff(z, y,y) + diff(z,y)/(2*y)
+        >>> g2 = diff(w,x,x) + 4*diff(w,y)*y**2 - 8*(y**2) * diff(z,x) - 8*w*y
+        >>> g3 = diff(w,x,y) - diff(z,x,x)/2 - diff(w,x)/(2*y) - 6* (y**2) * diff(z,y)
+        >>> g4 = diff(w,y,y) - 2*diff(z,x,y) - diff(w,y)/(2*y) + w/(2*y**2)
+        >>> system_2_25 = [g2,g3,g4,g1]
+        >>> checkS=Janet_Basis(system_2_25, (w,z), (x, y), Mlex)
+        >>> for _ in checkS.S: print(_)
+        D(z(x, y), y)
+        D(z(x, y), x, y)
+        D(z(x, y), (x, 2))
+        w(x, y) + (2*y) * D(z(x, y), x)
         """
-
+        from delierium.helpers import _free_symbols_cache
+        _free_symbols_cache = {}
         self.context = context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # XXX bad criterion
@@ -1164,24 +931,21 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
-            #print("This is where we start")
-            #self.show(rich=True, short=False)
+            self.show(rich=True, short=True, heading="This is where we start")
    #         import pdb; pdb.set_trace()
             self.S = Autoreduce(self.S, context)
-            #print("after autoreduce")
-            ##self.show(rich=True, short=False)
+            self.show(rich=True, short=True, heading="after autoreduce")
 #            import pdb; pdb.set_trace()
             self.S = CompleteSystem(self.S, context)
-            #print("after complete system")
-            #self.show(rich=True, short=False)
+            self.show(rich=True, short=True, heading="after complete system")
             conditions = list(split_by_function(self.S, context))
-         #   print("after conditions")
-          #  for _ in conditions:
-          #      print(_)
+            print("after conditions")
+#            for _ in conditions:
+#                ltf(_, self.context.dependent, self.context.independent)
             reduced = [reduceS(_m, self.S, context) for _m in conditions]
-          #  print("after reduced")
-         #   for _ in reduced:
-         #       print(_)
+#            print("after reduced")
+#            for _ in reduced:
+#                ltf(_, self.context.dependent, self.context.independent)
 #            print(reduced)
             reduced = [_ for _ in reduced if _]
 #            print("after reduced")
@@ -1192,8 +956,10 @@ class Janet_Basis:
             self.S += [_ for _ in reduced if not (_ in self.S)]
             self.S = Reorder(self.S, context, ascending=True)
 
-    def show(self, rich=True, short=False):
+    def show(self, rich=True, short=False, heading=""):
         """Print the Janet basis with leading derivative first."""
+        if heading:
+            print(heading)
         for _ in self.S:
             if rich:
                 if _in_ipython_session:

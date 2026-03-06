@@ -1,46 +1,27 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan  7 18:49:33 2022
+"""Infinitesimals."""
 
-@author: tapir
-"""
-
-import types, os
-
-import os
-
-from collections import namedtuple
-from itertools import product
-
-
-from collections import ChainMap
+from collections import ChainMap, OrderedDict
 from functools import reduce
 from itertools import combinations_with_replacement
 from typing import Any
-from sympy.simplify import collect
 
-from delierium.DerivativeOperators import FrechetD
+from sympy import (Symbol, Function, Derivative, Expr,
+                   init_printing, Dummy, diff, solve)
 from delierium.JanetBasis import Janet_Basis
-from delierium.helpers import finish_substitution, make_infinitesimal
+from delierium.helpers import finish_substitution, make_infinitesimal, func_diff
 from delierium.matrix_order import Mgrevlex
 
-from sympy import *
-from sympy.core.backend import *
-
-from more_itertools import bucket, flatten, powerset
-
-from IPython.core.debugger import set_trace
 init_printing()
 
 
-def variable_combinations(variables: list[Symbol], order:int) -> list(tuple[Symbol]):
+def variable_combinations(variables: list[Symbol], order: int) -> list[tuple[Symbol, ...]]:
     return reduce(
         lambda acc, i: acc + list(map(list, combinations_with_replacement(variables, i))),
         range(1, order + 1),
         [])
 
-def order(expr, dep, indep):
+
+def order(expr: Expr, dep: list[Function], indep: list[Symbol]) -> tuple[int, int]:
     max_order = 0
     max_deriv = set()
     k = expr.expand().atoms(Derivative)
@@ -55,14 +36,6 @@ def order(expr, dep, indep):
     # XXX: return coefficients, too. When some coefficients are -1, or 1, or numerical
     # return only those derivs
     return (max_order, max_deriv)
-
-def func_diff(fun:Function, var:Symbol | Function) -> Derivative:
-    if var.is_Function or var.is_Derivative:
-        d = Symbol('d')
-        r = fun.xreplace({var: d}).diff(d).xreplace({d: var}).doit()
-    else:
-        r = Derivative(fun, var).doit()
-    return r
 
 
 def compute_level(deriv_vars_order: list[Any], dep, indep, infinitesimals):
@@ -94,15 +67,16 @@ def compute_level(deriv_vars_order: list[Any], dep, indep, infinitesimals):
     funcs_next, etas_next = zip(*results)
     return list(funcs_next), list(etas_next)
 
+
 def prolongation(expr, n, infinitesimals, dep, indep, dummies):
     """
     Doctest stolen from Baumann pp.92/93
-    >>> x = symbols('x')
+    >>> x = Symbol('x')
     >>> u = Function('u')
     >>> u_x = u(x)
     >>> f = Function("f")
-    >>> fx = f(x, u(x), Derivative(u(x), x))
-    >>> ppp = prolongation([fx], [u], [x])
+    >>> fx = f(x, u_x, Derivative(u_x, x))
+    >>> ppp = prolongation(fx, [u_x], [x], [u_x], [x], dummies={})
     >>> print(ppp[0].expand())
     -D[2](f)(x, u(x), Derivative(u(x), x))*Derivative(u(x), x)^2*D[1](xi_1)(x, u(x)) + D[2](f)(x, u(x), Derivative(u(x), x))*D[1](phi_1)(x, u(x))*Derivative(u(x), x) - D[2](f)(x, u(x), Derivative(u(x), x))*Derivative(u(x), x)*D[0](xi_1)(x, u(x)) + xi_1(x, u(x))*D[0](f)(x, u(x), Derivative(u(x), x)) + phi_1(x, u(x))*D[1](f)(x, u(x), Derivative(u(x), x)) + D[2](f)(x, u(x), Derivative(u(x), x))*D[0](phi_1)(x, u(x))
     >>> # this one here is from Baumann, p.93
@@ -126,15 +100,13 @@ def prolongation(expr, n, infinitesimals, dep, indep, dummies):
 
     return acc
 
+
 def extract_coeffs(expr, dep, indep):
     def analyze_power(factor):
         base = factor.as_base_exp()[0]
         if base.is_Derivative:
             if base.args[0] in dep:
                 return factor
-        #if base.is_Function:
-        #    if base in dep:
-        #        return factor
         return 1
     args = expr.expand().args
     all_i_need = set()
@@ -148,8 +120,6 @@ def extract_coeffs(expr, dep, indep):
                 if factor.args[0] in dep:
                     f *= factor
             elif factor.is_Function:
-                #if factor in dep:
-                #    f *= factor
                 pass
             elif factor.is_number:
                 pass
@@ -159,6 +129,7 @@ def extract_coeffs(expr, dep, indep):
         if f != 1:
             all_i_need.add(f)
     return list(all_i_need)
+
 
 def get_coeff_order(expr):
     acc = 0
@@ -174,6 +145,7 @@ def get_coeff_order(expr):
         acc += 1
     return acc
 
+
 def compute_determining_equations(expr, coeffs):
     acc = []
     for coeff in coeffs:
@@ -185,9 +157,9 @@ def compute_determining_equations(expr, coeffs):
 
 
 def create_infinitesimals(dep, indep, inf=None):
-    infinitesimals = {}
+    infinitesimals = OrderedDict()
     if inf is None:
-        infinitesimals = {}
+        infinitesimals = OrderedDict()
         for d in dep + indep:
             infinitesimals[d] = make_infinitesimal(d, *(dep + indep), name=d.name.swapcase())
     else:
@@ -231,67 +203,71 @@ def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesima
     return compute_determining_equations(r, coeffs)
 
 
-term = namedtuple("term", ["power", "coeff"])
-
-"""
+def overdeterminedSystemODE(ode,
+                            dependent,
+                            independent,
+                            infinitesimals=None,
+                            *args, **kw):
+    """
     >>> # Arrigo Example 2.20
-    >>> x   = symbols('x')
-    >>> y   = Function('y')
-    >>> ode = diff(y(x), x, 3) + y(x) * diff(y(x), x, 2)
-    >>> X=Function('X')
-    >>> Y=Function('Y')
-    >>> inf = overdeterminedSystemODE(ode, y, x, infinitesimals=(X,Y))
-    >>> print(f"{inf=}")
-    >>> for _ in inf:
-    ...     print(_)
-    -3*D[0](X)(y(x), x)
-    -6*D[0, 0](X)(y(x), x)
-    y(x)*D[0](X)(y(x), x) - 9*D[0, 1](X)(y(x), x) + 3*D[0, 0](Y)(y(x), x)
-    y(x)*D[1](X)(y(x), x) + Y(y(x), x) - 3*D[1, 1](X)(y(x), x) + 3*D[0, 1](Y)(y(x), x)
-    -D[0, 0, 0](X)(y(x), x)
-    -y(x)*D[0, 0](X)(y(x), x) - 3*D[0, 0, 1](X)(y(x), x) + D[0, 0, 0](Y)(y(x), x)
-    -2*y(x)*D[0, 1](X)(y(x), x) + y(x)*D[0, 0](Y)(y(x), x) - 3*D[0, 1, 1](X)(y(x), x) + 3*D[0, 0, 1](Y)(y(x), x)
-    -y(x)*D[1, 1](X)(y(x), x) + 2*y(x)*D[0, 1](Y)(y(x), x) - D[1, 1, 1](X)(y(x), x) + 3*D[0, 1, 1](Y)(y(x), x)
-    y(x)*D[1, 1](Y)(y(x), x) + D[1, 1, 1](Y)(y(x), x)
-"""
+    >>> from delierium.helpers import ltf
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> ode = diff(y, x, 3) + y * diff(y, x, 2)
+    >>> infinitesimals = OrderedDict({x: make_infinitesimal(x, x, y, name='X'), y: make_infinitesimal(y, x, y, name='Y')})
+    >>> inf = overdeterminedSystemODE(ode, [y], [x], infinitesimals=infinitesimals)
+    >>> inf = [str(ltf(_, [infinitesimals[y]], [infinitesimals[x]], printer=False)) for _ in inf]
+    >>> for _ in sorted(inf):
+    ...    print(_)
+    -3*X_{xxy} - 2*X_{xy}*y + 3*Y_{xyy} + Y_{yy}*y
+    -3*X_{xx} + X_{x}*y + Y + 3*Y_{xy}
+    -3*X_{xyy} - X_{yy}*y + Y_{yyy}
+    -3*X_{y}
+    -6*X_{yy}
+    -9*X_{xy} + X_{y}*y + 3*Y_{yy}
+    -X_{xxx} - X_{xx}*y + 3*Y_{xxy} + 2*Y_{xy}*y
+    -X_{yyy}
+    Y_{xxx} + Y_{xx}*y
+    """
+    return compute_overdetermined_system_of_infinitesimals(ode,
+                                                           dependent,
+                                                           independent,
+                                                           infinitesimals=infinitesimals)
 
-def overdeterminedSystemODE (ode,
-                       dependent,
-                       independent,
-                       infinitesimals=None,
-                       *args, **kw):
-    return compute_overdetermined_system_of_infinitesimals(ode, dependent, independent, infinitesimals=infinitesimals)
 
-def Janet_Basis_from_ODE(ode, dependent, independent, sort_order = Mgrevlex, infinitesimals=None, *args, **kw):
-    infinitesimals = create_infinitesimals(dependent, independent, infinitesimals)
-    overdetermined_system = overdeterminedSystemODE(ode, dependent, independent, infinitesimals=infinitesimals)
+def Janet_Basis_from_ODE(ode: Expr,
+                         dependent: Symbol,
+                         independent: Symbol,
+                         sort_order=Mgrevlex,
+                         infinitesimals=None, *args, **kw):
+    infinitesimals = create_infinitesimals([dependent], [independent], infinitesimals)
+    overdetermined_system = overdeterminedSystemODE(ode, [dependent], [independent],
+                                                    infinitesimals=infinitesimals)
     Y = Dummy()
     Y = Symbol("H")
-    _dependent = dependent[0]
-    _independent = independent[0]
-    inf = [infinitesimals[_] for _ in [_dependent, _independent]]
+    inf = [infinitesimals[_] for _ in [dependent, independent]]
 
-    r1 =  [Y, _independent]
-    #ToDo: 2 way:
+    r1 = [Y, independent]
+    # ToDo: 2 way:
     #    * either as Janet_Basis
     #    * or try to solve the undetermined system
 
-    inf = [_.xreplace({_dependent: Y}) for _ in inf]
-    r1 = [_.xreplace({_dependent: Y}) for _ in r1]
+    inf = [_.xreplace({dependent: Y}) for _ in inf]
+    r1 = [_.xreplace({dependent: Y}) for _ in r1]
     intermediate_system = []
     for e in overdetermined_system:
-        e = e.replace(_dependent, Y)
-        mine = [_ for _ in e.atoms(Derivative) if _.args[0].func  == _dependent]
+        e = e.replace(dependent, Y)
+        mine = [_ for _ in e.atoms(Derivative) if _.args[0].func == dependent]
 
-        order= max((len(_.operator().parameter_set()) for _ in mine)) if mine else 0
+        order = max((len(_.operator().parameter_set()) for _ in mine)) if mine else 0
 
         for j in range(1, order+1):
-            d = diff(_dependent(_independent), _independent, j)
+            d = diff(dependent(independent), independent, j)
             e = e.subs({d: 0})
         intermediate_system.append(e)
 
-    janet = Janet_Basis(intermediate_system, inf, r1, sort_order=sort_order)
-    pols = [_.expression().xreplace({Y : _dependent}) for _ in janet.S]
+    janet = Janet_Basis(intermediate_system, reversed(inf), reversed(r1), sort_order=sort_order)
+    pols = [_.expression().xreplace({Y: dependent}) for _ in janet.S]
     return pols
 
 

@@ -5,14 +5,14 @@ jupyter-ai-magics
 langchain-openai
 langchain-anthropic
 mypy
-elpy	
+elpy
 
 
 line_profiler
 jupyter
 pylint
 mypy
+elpy
 
 jupyterlab
 jupyter_copilot
-
