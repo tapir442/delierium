@@ -3,8 +3,6 @@
 import itertools
 import os
 from typing import Iterable, Callable
-
-import more_itertools
 from IPython.core.debugger import set_trace  # type: ignore
 from line_profiler import profile
 from sympy import (Add, Basic, Derivative, Dummy, Expr, Function, Integer, Mul,
@@ -12,6 +10,11 @@ from sympy import (Add, Basic, Derivative, Dummy, Expr, Function, Integer, Mul,
 from sympy.core.function import (AppliedUndef, UndefinedFunction,
                                  _derivative_dispatch)
 from sympy.core.numbers import Half, Integer, NegativeOne, One, Rational, Zero
+
+from sympy.core.backend import *
+
+from functools import cache
+from collections import OrderedDict
 
 try:
     __IPYTHON__
@@ -49,22 +52,32 @@ def make_cached_property(original_property: Callable) -> Callable:
 
 ###############################################
 
-# Schnelle Lösung für Profiling:
+#fast solution für Profiling:
 def profile_if_enabled(func):
     if os.environ.get('JANET_PROFILE', 'false').lower() == 'true':
         return profile(func)
     return func
 
 @profile_if_enabled
+@cache
+def is_zero(obj):
+    return obj is not None and obj.is_zero
+
+@profile_if_enabled
 def __new__(cls, expr, *variables, **kwargs):
     """Tweak from original sympy.core.function.Derivatice.__new__
 
-    We removed some unnecessary steps to gain a lot of run timr improvement.
+    We removed some unnecessary steps to gain a lot of run time improvement.
     We (hopefully) don't need these checks as we use it only internally.
 
     Fun fact: the most time consuming step is 'expr.free_symbols', which needs
     80-90 % of the *whole* janet basis algorithm. If anyone has any idea hoe to get around
-    it, be welcome!
+    it, you're welcome!
+
+    PS:
+    I cached the property 'Basic.free_symbols' (see obove), with a huge time gain.
+    Now 80-90% of the whole runtime is in the line 'if obj is not None and not obj.is_zero'
+    I factored it out into a cached function 'is_zero', with very little gain(5-10%)
     """
     expr = sympify(expr)
     if not isinstance(expr, Basic):
@@ -275,7 +288,7 @@ def __new__(cls, expr, *variables, **kwargs):
                 expr *= old_v.diff(old_v)
 
         obj = cls._dispatch_eval_derivative_n_times(expr, v, count)
-        if obj is not None and obj.is_zero:
+        if is_zero(obj):
             return obj
 
         nderivs += count
@@ -315,10 +328,17 @@ def __new__(cls, expr, *variables, **kwargs):
     #    expr = factor_terms(signsimp(expr))
     return expr
 
+from sympy.core.cache import cacheit, __cacheit
+
 Derivative.__new__ = __new__
 
+def __mysetattr__(self, name, val):
+    self.__dict__[name] = val
+    self.__dict__.pop('value', None)
 
 
+#Basic.free_symbols = make_cached_property(Basic.free_symbols)
+#setattr(Basic, "__setattr__", __mysetattr__)
 
 @profile_if_enabled
 def eq(d1, d2):
@@ -376,7 +396,7 @@ def is_function(e) -> bool:
 def _adiff(f, *vars):
     return f.diff(*vars)
 
-
+@profile_if_enabled
 def func_diff(fun: Function, var: Symbol | Function) -> Derivative:
     if var.is_Function or var.is_Derivative:
         d = Symbol('d')
@@ -429,14 +449,8 @@ def ltf(expr, dep, indep, printer=True):
         functions = expr.atoms(Function)
     except AttributeError:
         functions = []
-    reps = {}
-    for fun in [_ for _ in functions if _ not in dep]:
-        # Consider the case that some functions won't have the name
-        # attribute e.g. Abs of an elementary function
-        try:
-            reps[fun] = Symbol(fun.name) # Otherwise functions with greek symbols aren't replaced
-        except AttributeError:
-            continue
+    coefficient_functions = isolate_cefficient_functions(functions, dep)
+#    set_trace()
     # first, resolve the dangling substitutions. Don't know why the
     # substitution is not done, but it seems that it has to do with
     # that a bound variable is within a function which is used as
@@ -471,7 +485,7 @@ def ltf(expr, dep, indep, printer=True):
 
     if len(indep) == 1:
         # the original dependent variables should be written with primes
-        dreps2 = dict([(deriv, (Symbol(deriv.output.subs(reps) +
+        dreps2 = dict([(deriv, (Symbol(deriv.output.subs(coefficient_functions) +
                                 ' '.join("'" * deriv.args[-1][1]))))  \
                  for deriv in output.atoms(Derivative) if deriv.args[0] in dep])
     else:
@@ -489,13 +503,25 @@ def ltf(expr, dep, indep, printer=True):
             dreps2[dev] = Symbol(f"{dev.args[0].name}_"  + "{" +f"{s}" + "}")
 
     fundic = dict([(_, Symbol(_.name)) for _ in dep])
-    output = output.xreplace(dreps2).xreplace(fundic).xreplace(reps)
+    output = output.xreplace(dreps2).xreplace(fundic).xreplace(coefficient_functions)
     if printer:
         if _in_ipython_session:
             display(output)
         else:
             print(output)
     return output
+
+@profile_if_enabled
+def isolate_cefficient_functions(functions, dep):
+    reps = OrderedDict()
+    for fun in [_ for _ in functions if _ not in dep]:
+        # Consider the case that some functions won't have the name
+        # attribute e.g. Abs of an elementary function
+        try:
+            reps[fun] = Symbol(fun.name) # Otherwise functions with greek symbols aren't replaced
+        except AttributeError:
+            continue
+    return reps
 
 @profile_if_enabled
 def make_infinitesimal(v, *variables, name=""):

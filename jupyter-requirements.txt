@@ -14,5 +14,8 @@ pylint
 mypy
 elpy
 
+
+pytest
+
 jupyterlab
 jupyter_copilot

@@ -11,6 +11,7 @@ from operator import mul
 from more_itertools import bucket, flatten, powerset
 from sympy import Function, Dummy, Symbol, sympify, Basic, Tuple, Integer, Expr, Mul, Pow, Add, Rational, S
 
+
 from sympy.core.function import UndefinedFunction, AppliedUndef, _derivative_dispatch
 
 
@@ -19,6 +20,10 @@ from delierium.helpers import (adiff, eq, expr_eq, expr_is_zero, is_derivative,
                                pairs_exclude_diagonal, profile_if_enabled, Derivative)
 from delierium.matrix_order import Context, Mgrevlex
 
+from sympy.core.backend import *
+
+from delierium.helpers import Basic
+#Basic.free_symbols.cache_clear()
 
 try:
     __IPYTHON__
@@ -145,7 +150,7 @@ class _Dterm:
     def show(self, rich=True) -> None:
         if not rich:
             return str(self)
-        return self.latex()
+        return ltf(self.expression(), self.context.dependent, self.context.independent, printer=False)
 
     @profile_if_enabled
     def add_coefficient(self, c):
@@ -206,7 +211,7 @@ class LHDP:
         if dterms:
             self.p = dterms[:]
         else:
-            self._init(e.expand())
+            self._init(e.simplify().expand())
 
         self.p.sort(reverse=True)
         self.normalize()
@@ -329,20 +334,7 @@ class LHDP:
         if not rich:
             return str(self)
         res = ""
-        for _ in self.p:
-            if short:
-                res += " " + str(_.derivative)
-            else:
-                s = _.show()
-                if not res:
-                    res = s
-                    continue
-                if s.startswith("-1 "):
-                    s = s.replace("-1 ", "-")
-                if s.startswith("-"):
-                    res += s
-                else:
-                    res += " + " + s
+        display([_.show() for _ in self.p])
         if self.multipliers or self.nonmultipliers:
             res += f"[{self.multipliers}], [{self.nonmultipliers}]"
         return res
@@ -380,7 +372,6 @@ class LHDP:
 
     @profile_if_enabled
     def xreplace(self, d):
-        import pdb; pdb.set_trace()
         return self.__class__(self.expression().xreplace(d), self.context)
 
     _cache_key = __hash__
@@ -407,7 +398,6 @@ def analyze_term(context, term):
     try:
         return str(d[0]), d[0], coeffs
     except:
-        import pdb; pdb.set_trace()
         pass
 
 @profile_if_enabled
@@ -434,7 +424,6 @@ def Reorder(S, context, ascending=False):
 def reduceS(e: LHDP, S: list, context: Context) -> LHDP | None:
     reducing = True
     gen = S[:]
-    from delierium.helpers import ltf
     while reducing:
         for dp in gen:
             enew = reduce(e, dp, context)
@@ -474,6 +463,8 @@ def _reduce_inner(e1, e2, context):
     >>> _reduce_inner(e1, e2, ctx).expression().simplify()
     Derivative(z(x, y), x) + z(x, y)/x
     """
+#    print(f"{e1=}")
+#    print(f"{e2=}")
     changed = OrderedDict([(_.comparison_vector, _) for _ in e1.p])
     for t in (_ for _ in e1.p if _.function == e2.function):
         dif = [a - b for a, b in zip(t.order, e2.order)]
@@ -931,21 +922,21 @@ class Janet_Basis:
                 # no change since last run
                 return
             old = self.S[:]
-            self.show(rich=True, short=True, heading="This is where we start")
+#            self.show(rich=True, short=False, heading="This is where we start")
    #         import pdb; pdb.set_trace()
             self.S = Autoreduce(self.S, context)
-            self.show(rich=True, short=True, heading="after autoreduce")
+#            self.show(rich=False, short=True, heading="after autoreduce")
 #            import pdb; pdb.set_trace()
             self.S = CompleteSystem(self.S, context)
-            self.show(rich=True, short=True, heading="after complete system")
+#            self.show(rich=False, short=True, heading="after complete system")
             conditions = list(split_by_function(self.S, context))
-            print("after conditions")
+#            print("after conditions")
 #            for _ in conditions:
-#                ltf(_, self.context.dependent, self.context.independent)
+#                print(_)
             reduced = [reduceS(_m, self.S, context) for _m in conditions]
 #            print("after reduced")
 #            for _ in reduced:
-#                ltf(_, self.context.dependent, self.context.independent)
+#                print(_)
 #            print(reduced)
             reduced = [_ for _ in reduced if _]
 #            print("after reduced")
@@ -961,16 +952,17 @@ class Janet_Basis:
         if heading:
             print(heading)
         for _ in self.S:
-            if rich:
-                if _in_ipython_session:
-                    display(_)
-                else:
-                    print([p.derivative for p in _.p])
-            else:
-                if not short:
-                    print(_)
-                else:
-                    print([p.derivative for p in _.p])
+            _.show()
+#            if rich:
+#                if _in_ipython_session:
+#                    display(_)
+#                else:
+ #                   print([p.derivative for p in _.p])
+  #          else:
+   #             if not short:
+    #                print(_)
+     #           else:
+      #              print([p.derivative for p in _.p])
 
 
     def rank(self):

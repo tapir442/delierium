@@ -1,9 +1,7 @@
 """Tests for delierium.helpers"""
 
-import sage.all
-from delierium.helpers import is_function, pairs_exclude_diagonal, compactify
-from sage.calculus.functional import diff
-from sage.calculus.var import function, var
+from delierium.helpers import is_function, pairs_exclude_diagonal
+from sympy import *
 
 
 def test_pairs_exclude_diagonal():
@@ -18,12 +16,11 @@ def test_pairs_exclude_diagonal_empty_output():
         assert False
 
 def test_is_function():
-    x = var('x')
-    f = function('f')(x)
+    x = Symbol('x')
+    f = Function('f')(x)
     assert is_function(f)
     assert not is_function(diff(f, x))
     assert not is_function(x*diff(f, x))
     assert not is_function(x*f)
-    g = function('g')
-    # XXX: this because g has no parameters
-    assert not is_function(g)
+    g = Function('g')
+    assert is_function(g)
