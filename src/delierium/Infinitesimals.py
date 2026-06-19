@@ -1,3 +1,4 @@
+
 """Infinitesimals."""
 
 from collections import ChainMap, OrderedDict
@@ -253,6 +254,57 @@ def overdeterminedSystemODE(ode,
                                                            dependent,
                                                            independent,
                                                            infinitesimals=infinitesimals)
+
+
+def overdeterminedSystemODEs(eqs,
+                             dependent,
+                             independent,
+                             infinitesimals=None,
+                             *args, **kw):
+    dep = convert_to_iterable(dependent)
+    indep = convert_to_iterable(independent)
+
+    infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
+    eq_order = 0
+    highest_term = []
+    for eq in eqs:
+        _eq_order, _highest_term = order(eq, dep, indep)
+        eq_order = max(eq_order, _eq_order)
+        highest_term.extend(_highest_term)
+    highest_term = list(highest_term)[0]
+
+    combos = variable_combinations(indep, eq_order)
+    dummies = OrderedDict()
+
+    for comb in combos:
+        funcs, etas = compute_level(comb, dep, indep, infinitesimals)
+        infinitesimals[funcs[0]] = etas[0]
+        dummies[funcs[0]] = Symbol(f"{dep[0].name}_{"".join([str(v) for v in comb])}")
+
+    vdummies = OrderedDict()
+    for i in dep + indep:
+        vdummies[i] = Symbol(i.name)
+
+    _dummies = ChainMap(dummies, vdummies)
+    prols = []
+    for eq in eqs:
+        r = prolongation(eq, eq_order, infinitesimals, dep, indep, _dummies).expand()
+        print(f"{r=}")
+        if not isinstance(r, Iterable):
+            r = [r]
+        prols.extend(r)
+
+    sol = solve(eq, highest_term)[0]
+    for r in prols:
+        r = r.xreplace(finish_substitution(r))
+        r = r.xreplace({highest_term: sol})
+    coeffs = sorted(
+        extract_coeffs(r, dep, indep),
+        key=get_coeff_order,
+        reverse=True,
+    )
+    return compute_determining_equations(r, coeffs)
+
 
 
 def overdeterminedSystemPDE(pde,

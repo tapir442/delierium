@@ -4,7 +4,7 @@
 from sympy.core.backend import Derivative, Symbol, Function
 
 from delierium.helpers import make_infinitesimal, finish_substitution
-from delierium.Infinitesimals import overdeterminedSystemODE
+from delierium.Infinitesimals import overdeterminedSystemODE, overdeterminedSystemODEs
 import os
 import sys
 import pathlib
@@ -122,6 +122,40 @@ def test_example_2_20():
         assert is_in(i, inf)
 
 
+def test_example_2_21():
+    t = Symbol('t')
+    x = Function('x')(t)
+    y = Function('y')(t)
+
+    independents = [t]
+    dependents = [x, y]
+
+    T = make_infinitesimal(t, t, x, y)
+    X = make_infinitesimal(x, t, x, y)
+    Y = make_infinitesimal(y, t, x, y)
+
+    odes = [D(x, t) - 2*x*y,
+            D(y, t) - x**2 - y**2]
+    inf = overdeterminedSystemODEs(odes, dependents, independents,
+                                   infinitesimals=OrderedDict({t: T, x: X, y: Y}))
+
+    expected = [D(X, t) + (D(X, x) - D(T, t)) * 2 * x * y + (x**2 + y**2) * D(X, y) -
+                (2*x*y)**2 * D(T, x) - 2*x*y*(x**2+y**2)*D(T, y) - 2*X*y+2*x*Y,
+                D(Y, t) + 2*x*y*D(Y, x) + (x**2+y**2)*(D(Y, y) - D(T, t))
+                - 2 * x * y * (x**2 + y*+2) * D(T, x) +
+                (x**2+y**2)**2*D(T, y) - 2*x*X + 2*y*Y
+                ]
+
+    expected = [_.xreplace(finish_substitution(_)).expand() for _ in expected]
+
+    assert len(inf) == len(expected)
+    for i in expected:
+        assert is_in(i, inf)
+
+
+
+
+
 def test_heat_equation():
     x = Symbol('x')
     t = Symbol('t')
@@ -132,24 +166,112 @@ def test_heat_equation():
 
     X = make_infinitesimal(x, x, t, u)
     T = make_infinitesimal(t, x, t, u)
-    U = make_infinitesimal(t, x, t, u)
+    U = make_infinitesimal(u, x, t, u)
 
     ode = D(u, t) - D(u, x, x)
     inf = overdeterminedSystemODE(ode, dependents, independents,
-                                  infinitesimals=OrderedDict({x: X, y: Y}))
+                                  infinitesimals=OrderedDict({x: X, t: T, u: U}))
 
-    expected = [3*D(Y, x, x, y) - D(X, x, 3) + y*(2*D(Y, x, y) - D(X, x, 2)), # (2.137a)
-                3*(D(Y, x, y, y) - D(X, x, x, y)) + y*(D(Y, y, 2) - 2*D(X, x, y)), # (2.137b)
-                D(Y, y, 3) - 3*D(X, x, y, y) - y*D(X, y, y), # (2.137c)
-                D(X, y, 3), # (2.137d)
-                3*(D(Y, x, y) - D(X, x, x)) + y*D(X, x) + Y, # (2.137e)
-                3*(D(Y, y, 2) - 3*D(X, y, x)) + y*D(X, y), # (2.137f)
-                6*D(X, y, y), # (2.137g)
-                3*D(X, y), # (2.137h)
-                D(Y, x, 3) + y*D(Y, x, 2)] # (2.137i)
+    expected = [D(U, t) - D(U, x, x), # 3.34a
+                -D(X, t) - 2*D(U, x, u) + D(X, x, x), #b
+                -D(U, u, u) + 2*D(X, u, x), #c
+                D(X, u, u), #d
+                -D(T, t) + D(T, x, x) +2*D(X, x), #e
+                2*D(X, u), + 2*D(T, x, u), #f
+                D(T, u, u), #g
+                2*D(T, x), #h
+                2*D(T, u)] #i
+
+
+    expected = [_.xreplace(finish_substitution(_)).expand() for _ in expected]
+
+    for i in inf:
+        print(f"{i=}")
+
+    print("IIIIIIIIIIIIIIIIIIIIII")
+#    assert len(inf) == len(expected)
+    for i in inf:
+        print(f"{i=}")
+        print(is_in(i, expected))
+
+    print("AAAAAAAAAAAAAAAAAAAA")
+    for i in expected:
+        print(f"{i=}")
+        print(is_in(i, inf))
+    assert False
+
+
+def test_example_2_22():
+    t = Symbol('t')
+    x = Function('x')(t)
+    y = Function('y')(t)
+
+    independents = [t]
+    dependents = [x, y]
+
+    T = make_infinitesimal(t, t, x, y)
+    X = make_infinitesimal(x, t, x, y)
+    Y = make_infinitesimal(y, t, x, y)
+
+    odes = [D(x, t, t) - x/((x**2 + y**2)**2),
+            D(y, t, t) - x/((x**2 + y**2)**2)]
+    inf = overdeterminedSystemODEs(odes, dependents, independents,
+                                   infinitesimals=OrderedDict({t: T, x: X, y: Y}))
+
+    expected = [D(X, t) + (D(X, x) - D(T, t)) * 2 * x * y + (x**2 + y**2) * D(X, y) -
+                (2*x*y)**2 * D(T, x) - 2*x*y*(x**2+y**2)*D(T, y) - 2*X*y+2*x*Y,
+                D(Y, t) + 2*x*y*D(Y, x) + (x**2+y**2)*(D(Y, y) - D(T, t))
+                - 2 * x * y * (x**2 + y*+2) * D(T, x) +
+                (x**2+y**2)**2*D(T, y) - 2*x*X + 2*y*Y
+                ]
 
     expected = [_.xreplace(finish_substitution(_)).expand() for _ in expected]
 
     assert len(inf) == len(expected)
     for i in expected:
         assert is_in(i, inf)
+
+
+def test_harry_dym_baumann_226():
+    x = Symbol('x')
+    t = Symbol('t')
+    u = Function('u')(x, t)
+    l = Symbol('lambda')
+    independents = [x, t]
+    dependents = [u]
+
+    X = make_infinitesimal(x, x, t, u)
+    T = make_infinitesimal(t, x, t, u)
+    U = make_infinitesimal(u, x, t, u)
+
+    ode = D(u, t) - l * D(u, x, x, x)*u**3
+    inf = overdeterminedSystemODE(ode, dependents, independents,
+                                  infinitesimals=OrderedDict({x: X, t: T, u: U}))
+
+    expected = [D(U, t) - D(u, x, x), # 3.34a
+                -D(X, t) - 2*D(U, x, u) + D(X, x, x), #b
+                -D(U, u, u) + 2*D(X, u, x), #c
+                D(X, u, u), #d
+                -D(T, t) + D(T, x, x) +2*D(X, x), #e
+                2*D(X, u), + 2*D(T, x, u), #f
+                D(T, u, u), #g
+                2*D(T, x), #h
+                2*D(T, u)] #i
+
+
+    expected = [_.xreplace(finish_substitution(_)).expand() for _ in expected]
+
+    for i in inf:
+        print(f"{i=}")
+
+    print("IIIIIIIIIIIIIIIIIIIIII")
+#    assert len(inf) == len(expected)
+    for i in inf:
+        print(f"{i=}")
+        print(is_in(i, expected))
+
+    print("AAAAAAAAAAAAAAAAAAAA")
+    for i in expected:
+        print(f"{i=}")
+        print(is_in(i, inf))
+    assert False
