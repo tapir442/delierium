@@ -11,3 +11,5 @@ numpy # for symengine
 #python3-pyslp-rope
 
 more-itertools
+
+pypro

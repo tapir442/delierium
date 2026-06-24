@@ -9,13 +9,14 @@ elpy
 
 
 line_profiler
-jupyter
+#jupyter
 pylint
 mypy
 elpy
 
+packaging
 
 pytest
 
-jupyterlab
+#jupyterlab
 jupyter_copilot

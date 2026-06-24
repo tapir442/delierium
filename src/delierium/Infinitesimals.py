@@ -1,4 +1,3 @@
-
 """Infinitesimals."""
 
 from collections import ChainMap, OrderedDict

@@ -19,7 +19,7 @@ def is_in(v, rlist):
 
 D = Derivative
 
-def test_example_2_17(infinitesimal_ODE_context):
+def test_example_2_17():
     x = Symbol('x')
     y = Function('y')(x)
 

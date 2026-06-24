@@ -348,7 +348,7 @@ class LHDP:
                 if new_dterm.comparison_vector in new_dterms:
                     new_dterms[new_dterm.comparison_vector].coeff += new_dterm.coeff
                 else:
-                    new_dterms[new_dterm.comparison_vector] = new_dterm
+                    New_dterms[new_dterm.comparison_vector] = new_dterm
         return self.__class__(e=0,
                               dterms=[_ for _ in new_dterms.values() if _.coeff != 0],
                               context=self.context)
