@@ -4,25 +4,29 @@ from collections import ChainMap, OrderedDict
 from collections.abc import Iterable
 from functools import reduce
 from itertools import combinations_with_replacement
-from typing import Any
+from typing import Any, List, Set
 
-from sympy import (Symbol, Function, Derivative, Expr,
-                   init_printing, Dummy, diff, solve)
-from delierium.JanetBasis import Janet_Basis, LHDP, Reorder, _Dterm
-from delierium.helpers import finish_substitution, make_infinitesimal, func_diff, _free_symbols_cache, profile_if_enabled
-from delierium.matrix_order import Mgrevlex, Context
-from sympy.core.backend import *
+from sympy import (Derivative, Dummy, Expr, Function, Symbol, diff,
+                   init_printing, solve)
+from sympy.core.backend import Derivative, Function, Symbol, diff  # pyflakes: F811
+
+from delierium.helpers import (finish_substitution, func_diff,
+                               make_infinitesimal, profile_if_enabled)
+from delierium.JanetBasis import LHDP, Janet_Basis, Reorder, _Dterm
+from delierium.matrix_order import Context, Mgrevlex
+
 init_printing()
-from delierium.helpers import Basic
+
 
 def variable_combinations(variables: list[Symbol], order: int) -> list[tuple[Symbol, ...]]:
     return reduce(
-        lambda acc, i: acc + list(map(list, combinations_with_replacement(variables, i))),
+        lambda acc, i: acc +
+        list(map(list, combinations_with_replacement(variables, i))),
         range(1, order + 1),
         [])
 
 
-def order(expr: Expr, dep: list[Function], indep: list[Symbol]) -> tuple[int, int]:
+def order(expr: Expr, dep: list[Function], indep: list[Symbol]) -> tuple[int, Set[Expr]]:
     max_order = 0
     max_deriv = set()
     # XXX: code duplication
@@ -37,9 +41,11 @@ def order(expr: Expr, dep: list[Function], indep: list[Symbol]) -> tuple[int, in
             elif max_order < _order:
                 max_deriv = set([atom])
                 max_order = _order
-    # XXX: return coefficients, too. When some coefficients are -1, or 1, or numerical
+    # XXX: return coefficients, too. When some coefficients are -1, or 1,
+    # or numerical
     # return only those derivs
     return (max_order, max_deriv)
+
 
 @profile_if_enabled
 def compute_level(deriv_vars_order: list[Any], dep, indep, infinitesimals):
@@ -56,20 +62,21 @@ def compute_level(deriv_vars_order: list[Any], dep, indep, infinitesimals):
         funcs, etas = compute_level(prev_order, dep, indep, infinitesimals)
     # Compute current derivatives and infinitesimals functionally
     results = [
-                (
-                    func_diff(func, v),
-                    reduce(
-                        lambda acc, var: acc - func_diff(func, var)
-                        * func_diff(infinitesimals[var], v),
-                        indep,
-                        func_diff(eta, v)
-                    )
-                )
-                for func, eta in zip(funcs, etas)
-            ]
+        (
+            func_diff(func, v),
+            reduce(
+                lambda acc, var: acc - func_diff(func, var)
+                * func_diff(infinitesimals[var], v),
+                indep,
+                func_diff(eta, v)
+            )
+        )
+        for func, eta in zip(funcs, etas)
+    ]
     # Split result into separate lists
     funcs_next, etas_next = zip(*results)
     return list(funcs_next), list(etas_next)
+
 
 @profile_if_enabled
 def prolongation(expr, n, infinitesimals, dep, indep, dummies):
@@ -103,9 +110,11 @@ def prolongation(expr, n, infinitesimals, dep, indep, dummies):
     for k, v in dummies.items():
         reverse_dummies[v] = k
     acc = sum(infinitesimals[_] *
-              func_diff(expr.xreplace(dummies), _.xreplace(dummies)).xreplace(reverse_dummies)
+              func_diff(expr.xreplace(dummies), _.xreplace(
+                  dummies)).xreplace(reverse_dummies)
               for _ in infinitesimals)
     return acc
+
 
 @profile_if_enabled
 def extract_coeffs(expr, dep, indep):
@@ -138,7 +147,7 @@ def extract_coeffs(expr, dep, indep):
     return list(all_i_need)
 
 
-def get_coeff_order(expr):
+def get_coeff_order(expr) -> Expr:
     acc = 0
     if expr.is_Pow:
         acc += expr.as_base_exp()[1]
@@ -156,12 +165,14 @@ def get_coeff_order(expr):
 def compute_determining_equations(expr, coeffs):
     acc = []
     for coeff in coeffs:
-        termsum = sum(term/coeff for term in expr.expand().args if term.has(coeff))
+        termsum = sum(
+            term/coeff for term in expr.expand().args if term.has(coeff))
         acc.append(termsum)
         expr -= termsum * coeff
     acc.append(expr.expand())
     acc = [_.xreplace(finish_substitution(_)) for _ in acc]
     return acc
+
 
 def convert_to_iterable(item):
     if not isinstance(item, Iterable):
@@ -176,17 +187,23 @@ def create_infinitesimals(dep, indep, inf=None):
     if inf is None:
         infinitesimals = OrderedDict()
         for d in dep + indep:
-            infinitesimals[d] = make_infinitesimal(d, *(dep + indep), name=d.name.swapcase())
+            infinitesimals[d] = make_infinitesimal(
+                d, *(dep + indep), name=d.name.swapcase())
     else:
         for v, i in inf.items():
             if isinstance(i, str):
-                infinitesimals[v] = make_infinitesimal(v, *(dep + indep), name=i)
+                infinitesimals[v] = make_infinitesimal(
+                    v, *(dep + indep), name=i)
             else:
                 infinitesimals[v] = i
     return infinitesimals
 
 
-def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesimals=None):
+def compute_overdetermined_system_of_infinitesimals(
+        eq: Expr,
+        dep: Symbol,
+        indep: Symbol,
+        infinitesimals=None):
     """
     infinitesimals : dict{Function/Symbol : new name}
     """
@@ -204,14 +221,16 @@ def compute_overdetermined_system_of_infinitesimals(eq, dep, indep, infinitesima
     for comb in combos:
         funcs, etas = compute_level(comb, dep, indep, infinitesimals)
         infinitesimals[funcs[0]] = etas[0]
-        dummies[funcs[0]] = Symbol(f"{dep[0].name}_{"".join([str(v) for v in comb])}")
+        dummies[funcs[0]] = Symbol(
+            f"{dep[0].name}_{"".join([str(v) for v in comb])}")
 
     vdummies = OrderedDict()
     for i in dep + indep:
         vdummies[i] = Symbol(i.name)
 
     _dummies = ChainMap(dummies, vdummies)
-    r = prolongation(eq, eq_order, infinitesimals, dep, indep, _dummies).expand()
+    r = prolongation(eq, eq_order, infinitesimals,
+                     dep, indep, _dummies).expand()
     sol = solve(eq, highest_term)[0]
     r = r.xreplace(finish_substitution(r))
     r = r.xreplace({highest_term: sol})
@@ -249,61 +268,67 @@ def overdeterminedSystemODE(ode,
     -X_{yyy}
     Y_{xxx} + Y_{xx}*y
     """  # noqa: ignore=E501
-    return compute_overdetermined_system_of_infinitesimals(ode,
-                                                           dependent,
-                                                           independent,
-                                                           infinitesimals=infinitesimals)
+    return compute_overdetermined_system_of_infinitesimals(
+        ode,
+        dependent,
+        independent,
+        infinitesimals=infinitesimals)
 
 
-def overdeterminedSystemODEs(eqs,
-                             dependent,
-                             independent,
+def overdeterminedSystemODEs(eqs: List[Expr],
+                             dependent: Symbol,
+                             independent: Symbol,
                              infinitesimals=None,
-                             *args, **kw):
+                             *args, **kw) -> List[Expr]:
     dep = convert_to_iterable(dependent)
     indep = convert_to_iterable(independent)
 
     infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
     eq_order = 0
-    highest_term = []
+    res = []
     for eq in eqs:
+        highest_term: List[Any] = []
         _eq_order, _highest_term = order(eq, dep, indep)
         eq_order = max(eq_order, _eq_order)
         highest_term.extend(_highest_term)
-    highest_term = list(highest_term)[0]
+        for highest_term in list(highest_term):
+            try:
+                combos = variable_combinations(indep, eq_order)
+                dummies = OrderedDict()
+                for comb in combos:
+                    funcs, etas = compute_level(
+                        comb, dep, indep, infinitesimals)
+                    infinitesimals[funcs[0]] = etas[0]
+                    dummies[funcs[0]] = Symbol(
+                        f"{dep[0].name}_{"".join([str(v) for v in comb])}")
 
-    combos = variable_combinations(indep, eq_order)
-    dummies = OrderedDict()
+                vdummies = OrderedDict()
+                for i in dep + indep:
+                    vdummies[i] = Symbol(i.name)
 
-    for comb in combos:
-        funcs, etas = compute_level(comb, dep, indep, infinitesimals)
-        infinitesimals[funcs[0]] = etas[0]
-        dummies[funcs[0]] = Symbol(f"{dep[0].name}_{"".join([str(v) for v in comb])}")
-
-    vdummies = OrderedDict()
-    for i in dep + indep:
-        vdummies[i] = Symbol(i.name)
-
-    _dummies = ChainMap(dummies, vdummies)
-    prols = []
-    for eq in eqs:
-        r = prolongation(eq, eq_order, infinitesimals, dep, indep, _dummies).expand()
-        print(f"{r=}")
-        if not isinstance(r, Iterable):
-            r = [r]
-        prols.extend(r)
-
-    sol = solve(eq, highest_term)[0]
-    for r in prols:
-        r = r.xreplace(finish_substitution(r))
-        r = r.xreplace({highest_term: sol})
-    coeffs = sorted(
-        extract_coeffs(r, dep, indep),
-        key=get_coeff_order,
-        reverse=True,
-    )
-    return compute_determining_equations(r, coeffs)
-
+                _dummies = ChainMap(dummies, vdummies)
+                prols = []
+                r = prolongation(eq, eq_order, infinitesimals,
+                                 dep, indep, _dummies).expand()
+                print(f"{eq=}, {r=}, {r.__class__=}")
+                if not isinstance(r, Iterable):
+                    r = [r]
+                    prols.extend(r)
+                print("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL")
+                print(prols)
+                sol = solve(eq, highest_term)[0]
+                for r in prols:
+                    r = r.xreplace(finish_substitution(r))
+                    r = r.xreplace({highest_term: sol})
+                coeffs = sorted(
+                    extract_coeffs(r, dep, indep),
+                    key=get_coeff_order,
+                    reverse=True,
+                )
+            except IndexError:
+                print(f"damned failed {highest_term=}")
+        res.append(compute_determining_equations(r, coeffs))
+    return res
 
 
 def overdeterminedSystemPDE(pde,
@@ -314,14 +339,15 @@ def overdeterminedSystemPDE(pde,
     pass
 
 
-def Janet_Basis_from_ODE(ode: Expr,
+def janet_basis_from_ODE(ode: Expr,
                          dependent: Symbol,
                          independent: Symbol,
                          sort_order=Mgrevlex,
                          infinitesimals=None, *args, **kw):
-    infinitesimals = create_infinitesimals([dependent], [independent], infinitesimals)
-    overdetermined_system = overdeterminedSystemODE(ode, [dependent], [independent],
-                                                    infinitesimals=infinitesimals)
+    infinitesimals = create_infinitesimals(
+        [dependent], [independent], infinitesimals)
+    overdetermined_system = overdeterminedSystemODE(
+        ode, [dependent], [independent], infinitesimals=infinitesimals)
     Y = Dummy()
     Y = Symbol("H")
     inf = [infinitesimals[_] for _ in [dependent, independent]]
@@ -338,24 +364,27 @@ def Janet_Basis_from_ODE(ode: Expr,
         e = e.replace(dependent, Y)
         mine = [_ for _ in e.atoms(Derivative) if _.args[0].func == dependent]
 
-        order = max((len(_.operator().parameter_set()) for _ in mine)) if mine else 0
+        order = max((len(_.operator().parameter_set())
+                    for _ in mine)) if mine else 0
 
         for j in range(1, order+1):
             d = diff(dependent(independent), independent, j)
             e = e.subs({d: 0})
         intermediate_system.append(e)
 
-    janet = Janet_Basis(intermediate_system, reversed(inf), reversed(r1), sort_order=sort_order)
+    janet = Janet_Basis(intermediate_system, reversed(inf),
+                        reversed(r1), sort_order=sort_order)
     res = []
-    backsubstition = lambda e: e.xreplace({Y: dependent})
+    def backsubstition(e): return e.xreplace({Y: dependent})
     for lhdp in janet.S:
         p = []
         for term in lhdp.p:
             coeff = backsubstition(term.coeff)
             d = backsubstition(term.derivative)
             ctx = Context(dependent=[backsubstition(_) for _ in term.context.dependent],
-                          independent=[backsubstition(_) for _ in term.context.independent],
-                          weight = sort_order)
+                          independent=[backsubstition(
+                              _) for _ in term.context.independent],
+                          weight=sort_order)
             p.append(_Dterm(derivative=d, coeff=coeff, context=ctx))
         res.append(LHDP(e=0, context=ctx, dterms=p))
     res = Reorder(res, context=ctx)

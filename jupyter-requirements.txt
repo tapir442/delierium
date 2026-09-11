@@ -6,7 +6,8 @@ langchain-openai
 langchain-anthropic
 mypy
 elpy
-
+flake8
+prospector
 
 line_profiler
 #jupyter

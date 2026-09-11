@@ -14,6 +14,8 @@ from collections import OrderedDict
 sys.path.insert(0, pathlib.Path("tests/Arrigo").absolute())
 
 def is_in(v, rlist):
+    print(f"{v=}")
+    print(f"{rlist=}")
     return any(v.simplify().expand() == _.simplify().expand() or v.simplify().expand() == - _.simplify().expand()
                    for _ in rlist)
 
@@ -136,6 +138,7 @@ def test_example_2_21():
 
     odes = [D(x, t) - 2*x*y,
             D(y, t) - x**2 - y**2]
+    breakpoint()
     inf = overdeterminedSystemODEs(odes, dependents, independents,
                                    infinitesimals=OrderedDict({t: T, x: X, y: Y}))
 
@@ -151,10 +154,6 @@ def test_example_2_21():
     assert len(inf) == len(expected)
     for i in expected:
         assert is_in(i, inf)
-
-
-
-
 
 def test_heat_equation():
     x = Symbol('x')
