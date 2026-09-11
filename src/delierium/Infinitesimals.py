@@ -328,7 +328,8 @@ def overdeterminedSystemODEs(eqs: List[Expr],
             except IndexError:
                 print(f"damned failed {highest_term=}")
         res.append(compute_determining_equations(r, coeffs))
-    return res
+    import more_itertools
+    return list(more_itertools.flatten(res))
 
 
 def overdeterminedSystemPDE(pde,

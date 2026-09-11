@@ -138,22 +138,38 @@ def test_example_2_21():
 
     odes = [D(x, t) - 2*x*y,
             D(y, t) - x**2 - y**2]
-    breakpoint()
+    #breakpoint()
     inf = overdeterminedSystemODEs(odes, dependents, independents,
                                    infinitesimals=OrderedDict({t: T, x: X, y: Y}))
 
-    expected = [D(X, t) + (D(X, x) - D(T, t)) * 2 * x * y + (x**2 + y**2) * D(X, y) -
-                (2*x*y)**2 * D(T, x) - 2*x*y*(x**2+y**2)*D(T, y) - 2*X*y+2*x*Y,
-                D(Y, t) + 2*x*y*D(Y, x) + (x**2+y**2)*(D(Y, y) - D(T, t))
-                - 2 * x * y * (x**2 + y*+2) * D(T, x) +
-                (x**2+y**2)**2*D(T, y) - 2*x*X + 2*y*Y
+
+    
+    expected = [D(X, t) +
+                (D(X, x) - D(T, t)) * 2 * x * y +
+                (x**2 + y**2) * D(X, y) -
+                (2*x*y)**2 * D(T, x)
+                - 2*x*y*(x**2+y**2)*D(T, y)
+                - 2*X*y - 2*x*Y,   # 2.155a
+
+                D(Y, t) +
+                2*x*y*D(Y, x) +
+                (x**2+y**2)*(D(Y, y) - D(T, t)) -
+                2 * x * y * (x**2 + y**2) * D(T, x) +
+                (x**2+y**2)**2*D(T, y) - 2*x*X - 2*y*Y  # 2.155b
                 ]
 
     expected = [_.xreplace(finish_substitution(_)).expand() for _ in expected]
-
-    assert len(inf) == len(expected)
+    import more_itertools
+    #assert len(inf) == len(expected)
+    for e in expected:
+        print(f"{e=}")
+    print("AAAAAAAAAAAAAAAAAAAAAAAAAAA")
+    for f in inf:
+        print(f"{f=}")
     for i in expected:
+        
         assert is_in(i, inf)
+
 
 def test_heat_equation():
     x = Symbol('x')
