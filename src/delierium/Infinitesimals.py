@@ -281,14 +281,10 @@ def overdeterminedSystemODEs(eqs: List[Expr],
                              independent: Symbol,
                              infinitesimals=None,
                              *args, **kw) -> List[Expr]:
-    from more_itertools import flatten
     res = []
     for _ in eqs:
-        gugu = overdeterminedSystemODE(_, dependent, independent, infinitesimals, *args, **kw)
-        print("===="*30)
-        print(f"{_=}")
-        print(f"{gugu=}")
-        res.extend(gugu)
+        osode = overdeterminedSystemODE(_, dependent, independent, infinitesimals=infinitesimals, *args, **kw)
+        res.extend(osode)
     return res
 
 
