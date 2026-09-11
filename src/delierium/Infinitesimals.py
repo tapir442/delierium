@@ -8,7 +8,8 @@ from typing import Any, List, Set
 
 from sympy import (Derivative, Dummy, Expr, Function, Symbol, diff,
                    init_printing, solve)
-from sympy.core.backend import Derivative, Function, Symbol, diff  # pyflakes: F811
+from sympy.core.backend import (Derivative, Function, Symbol,  # pyflakes: F811
+                                diff)
 
 from delierium.helpers import (finish_substitution, func_diff,
                                make_infinitesimal, profile_if_enabled)
@@ -280,56 +281,11 @@ def overdeterminedSystemODEs(eqs: List[Expr],
                              independent: Symbol,
                              infinitesimals=None,
                              *args, **kw) -> List[Expr]:
-    dep = convert_to_iterable(dependent)
-    indep = convert_to_iterable(independent)
-
-    infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
-    eq_order = 0
-    res = []
-    for eq in eqs:
-        highest_term: List[Any] = []
-        _eq_order, _highest_term = order(eq, dep, indep)
-        eq_order = max(eq_order, _eq_order)
-        highest_term.extend(_highest_term)
-        for highest_term in list(highest_term):
-            try:
-                combos = variable_combinations(indep, eq_order)
-                dummies = OrderedDict()
-                for comb in combos:
-                    funcs, etas = compute_level(
-                        comb, dep, indep, infinitesimals)
-                    infinitesimals[funcs[0]] = etas[0]
-                    dummies[funcs[0]] = Symbol(
-                        f"{dep[0].name}_{"".join([str(v) for v in comb])}")
-
-                vdummies = OrderedDict()
-                for i in dep + indep:
-                    vdummies[i] = Symbol(i.name)
-
-                _dummies = ChainMap(dummies, vdummies)
-                prols = []
-                r = prolongation(eq, eq_order, infinitesimals,
-                                 dep, indep, _dummies).expand()
-                print(f"{eq=}, {r=}, {r.__class__=}")
-                if not isinstance(r, Iterable):
-                    r = [r]
-                    prols.extend(r)
-                print("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL")
-                print(prols)
-                sol = solve(eq, highest_term)[0]
-                for r in prols:
-                    r = r.xreplace(finish_substitution(r))
-                    r = r.xreplace({highest_term: sol})
-                coeffs = sorted(
-                    extract_coeffs(r, dep, indep),
-                    key=get_coeff_order,
-                    reverse=True,
-                )
-            except IndexError:
-                print(f"damned failed {highest_term=}")
-        res.append(compute_determining_equations(r, coeffs))
-    import more_itertools
-    return list(more_itertools.flatten(res))
+    from more_itertools import flatten
+    
+    res = list(flatten([overdeterminedSystemODE(_, dependent, independent, infinitesimals, *args, **kw)
+           for _ in eqs]))
+    return res
 
 
 def overdeterminedSystemPDE(pde,

@@ -14,8 +14,6 @@ from collections import OrderedDict
 sys.path.insert(0, pathlib.Path("tests/Arrigo").absolute())
 
 def is_in(v, rlist):
-    print(f"{v=}")
-    print(f"{rlist=}")
     return any(v.simplify().expand() == _.simplify().expand() or v.simplify().expand() == - _.simplify().expand()
                    for _ in rlist)
 
@@ -147,9 +145,9 @@ def test_example_2_21():
     expected = [D(X, t) +
                 (D(X, x) - D(T, t)) * 2 * x * y +
                 (x**2 + y**2) * D(X, y) -
-                (2*x*y)**2 * D(T, x)
-                - 2*x*y*(x**2+y**2)*D(T, y)
-                - 2*X*y - 2*x*Y,   # 2.155a
+                (2*x*y)**2 * D(T, x) -
+                2*x*y*(x**2+y**2)*D(T, y) -
+                2*X*y - 2*x*Y,   # 2.155a
 
                 D(Y, t) +
                 2*x*y*D(Y, x) +
@@ -159,15 +157,13 @@ def test_example_2_21():
                 ]
 
     expected = [_.xreplace(finish_substitution(_)).expand() for _ in expected]
-    import more_itertools
-    #assert len(inf) == len(expected)
+    assert len(inf) == len(expected)
     for e in expected:
         print(f"{e=}")
     print("AAAAAAAAAAAAAAAAAAAAAAAAAAA")
     for f in inf:
         print(f"{f=}")
-    for i in expected:
-        
+    for i in expected:        
         assert is_in(i, inf)
 
 
