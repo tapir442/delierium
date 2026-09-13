@@ -283,7 +283,7 @@ def overdeterminedSystemODEs(eqs: List[Expr],
                              *args, **kw) -> List[Expr]:
     res = []
     for _ in eqs:
-        osode = overdeterminedSystemODE(_, dependent, independent, infinitesimals=infinitesimals, *args, **kw)
+        osode = overdeterminedSystemODE(_, dependent, independent, infinitesimals, *args, **kw)
         res.extend(osode)
     return res
 

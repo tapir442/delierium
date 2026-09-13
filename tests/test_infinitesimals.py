@@ -243,7 +243,7 @@ def _test_example_2_22():
         assert is_in(i, inf)
 
 
-def _test_harry_dym_baumann_226():
+def test_harry_dym_baumann_226():
     x = Symbol('x')
     t = Symbol('t')
     u = Function('u')(x, t)
@@ -256,6 +256,7 @@ def _test_harry_dym_baumann_226():
     U = make_infinitesimal(u, x, t, u)
 
     ode = D(u, t) - l * D(u, x, x, x)*u**3
+    ode = D(u, t) - D(u, x, x, x)*u**3    
     inf = overdeterminedSystemODE(ode, dependents, independents,
                                   infinitesimals=OrderedDict({x: X, t: T, u: U}))
 
@@ -272,16 +273,16 @@ def _test_harry_dym_baumann_226():
 
     expected = [_.xreplace(finish_substitution(_)).expand() for _ in expected]
 
+    print("=== computed ====")    
     for i in inf:
         print(f"{i=}")
 
-    print("IIIIIIIIIIIIIIIIIIIIII")
+
 #    assert len(inf) == len(expected)
     for i in inf:
-        print(f"{i=}")
-        print(is_in(i, expected))
+        is_in(i, expected)
 
-    print("AAAAAAAAAAAAAAAAAAAA")
+    print("=== expected ====")
     for i in expected:
         print(f"{i=}")
         print(is_in(i, inf))
