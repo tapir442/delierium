@@ -985,9 +985,9 @@ class JanetBasis:
         D(z(x, y), (x, 2))
         w(x, y) + (2*y) * D(z(x, y), x)
         """
-        from delierium.helpers import _free_symbols_cache
+        from delierium.helpers import clear_property_cache
 
-        _free_symbols_cache.clear()
+        clear_property_cache()
         self.context = context = Context(dependent, independent, sort_order)
         if not isinstance(S, Iterable):
             # XXX bad criterion

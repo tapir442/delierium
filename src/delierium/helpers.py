@@ -6,7 +6,6 @@ import itertools
 import os
 from collections import OrderedDict
 from collections.abc import Callable, Iterable
-from functools import cache
 
 import sympy as sp
 from sympy import (
@@ -25,25 +24,43 @@ from sympy.core.expr import Expr
 from sympy.core.function import AppliedUndef, UndefinedFunction, _derivative_dispatch
 from sympy.core.numbers import Half, Integer, NegativeOne, One, Rational, Zero
 from sympy.printing.latex import LatexPrinter
+from sympy.utilities.misc import filldedent
 
 _in_ipython_session = hasattr(builtins, "__IPYTHON__")
 
 
 #################################################################
 
-# Global cache for free_symbols
-_free_symbols_cache = {}
+
+# Cache for properties like free_symbols. The key is the expression itself,
+# not id(expr): an id is unique only while the object lives, and the cache
+# does not keep it alive, so after garbage collection another expression
+# could get the same id and the stale result. SymPy expressions are
+# immutable and hashable (the hash is cached), and equal expressions have
+# equal free symbols. Weak references are impossible (Basic has __slots__
+# without __weakref__), hence the bound on the size.
+@functools.lru_cache(maxsize=2**16)
+def _cached_property_value(expr, getter):
+    return getter(expr)
+
+
+def clear_property_cache():
+    _cached_property_value.cache_clear()
 
 
 def make_cached_property(original_property: Callable) -> Callable:
-    original_getter = original_property.fget
+    """A property that caches the value of original_property per expression.
 
-    @functools.wraps(original_getter)
+    >>> x, y = Symbol('x'), Symbol('y')
+    >>> free_symbols = make_cached_property(Basic.free_symbols)
+    >>> free_symbols.fget(x + y) == {x, y}
+    True
+    """
+    getter = original_property.fget
+
+    @functools.wraps(getter)
     def cached_getter(self):
-        obj_id = id(self)
-        if obj_id not in _free_symbols_cache:
-            _free_symbols_cache[obj_id] = original_getter(self)
-        return _free_symbols_cache[obj_id]
+        return _cached_property_value(self, getter)
 
     return property(cached_getter)
 
@@ -68,7 +85,7 @@ def profile_if_enabled(func):
 
 
 @profile_if_enabled
-@cache
+@functools.lru_cache(maxsize=2**16)  # bounded: it sees every derivative
 def is_zero(obj):
     return obj is not None and obj.is_zero
 
@@ -104,25 +121,32 @@ def _derivative_new(cls, expr, *variables, **kwargs):  # noqa: C901
     #            Since there are no variables in the expression %s,
     #            it cannot be differentiated.''' % expr))
 
-    # determine value for variables if it wasn't given
-    #    Removed from original sympy.core.function.Derivative.__new__
-    #    because we don't need it, as we use it only internally
-
-    #    if not variables:
-    #         variables = expr.free_symbols
-    #         if len(variables) != 1:
-    #             if expr.is_number:
-    #                 return S.Zero
-    #             if len(variables) == 0:
-    #                 raise ValueError(filldedent('''
-    #                     Since there are no variables in the expression,
-    #                     the variable(s) of differentiation must be supplied
-    #                     to differentiate %s''' % expr))
-    #             else:
-    #                 raise ValueError(filldedent('''
-    #                     Since there is more than one variable in the
-    #                     expression, the variable(s) of differentiation
-    #                     must be supplied to differentiate %s''' % expr))
+    # determine value for variables if it wasn't given. This patch replaces
+    # Derivative.__new__ for everyone in the process, so this has to stay:
+    # without it diff(x**2) returned x**2. It costs nothing internally,
+    # where the variables are always given.
+    if not variables:
+        variables = expr.free_symbols
+        if len(variables) != 1:
+            if expr.is_number:
+                return S.Zero
+            if len(variables) == 0:
+                raise ValueError(
+                    filldedent(
+                        f'''
+                    Since there are no variables in the expression,
+                    the variable(s) of differentiation must be supplied
+                    to differentiate {expr}'''
+                    )
+                )
+            raise ValueError(
+                filldedent(
+                    f'''
+                Since there is more than one variable in the
+                expression, the variable(s) of differentiation
+                must be supplied to differentiate {expr}'''
+                )
+            )
 
     # Split the list of variables into a list of the variables we are diff
     # wrt, where each element of the list has the form (s, count) where
