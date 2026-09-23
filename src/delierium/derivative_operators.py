@@ -5,16 +5,9 @@ Created on Tue Jan 18 13:45:11 2022
 @author: tapir (rewritten for SymPy by GitHub Copilot Chat Assistant)
 """
 
-from functools import reduce
-from operator import mul
+from collections.abc import Iterable
 
-from sympy import Function, S, diff, symbols
-from sympy.core.function import UndefinedFunction
-
-
-def is_function(expr):
-    # Equivalent of Sage's is_function: checks if expr is a function application
-    return expr.func.__class__ is UndefinedFunction or isinstance(expr, Function)
+from sympy import Derivative, Function, S, diff, symbols
 
 
 def is_op_du(expr, u):
@@ -66,58 +59,57 @@ def func_diff(L, u_in):
 
 
 def euler_operator(density, depend, independ):
-    r'''
+    r"""Euler operator (variational derivative) of density with respect to
+    each of the dependent variables:
+
+        E_u(L) = sum over alpha of (-D)^alpha dL/du_alpha,
+
+    where u_alpha runs over u and all its derivatives occurring in L, and D
+    is the total derivative. depend are the undefined functions (u, v, ...),
+    independ one independent variable or a sequence of them.
+
     >>> from sympy import symbols, Function, diff
     >>> t = symbols("t")
     >>> u = Function('u')
     >>> v = Function('v')
     >>> L = u(t) * v(t) + diff(u(t), t) ** 2 + diff(v(t), t) ** 2 - u(t) ** 2 - v(t) ** 2
     >>> euler_operator(L, (u, v), t)
-    [-2*u(t) + v(t) - 2*diff(u(t), t, t), u(t) - 2*v(t) - 2*diff(v(t), t, t)]
+    [-2*u(t) + v(t) - 2*Derivative(u(t), (t, 2)), u(t) - 2*v(t) - 2*Derivative(v(t), (t, 2))]
     >>> L2 = (
     ...     u(t) * v(t)
     ...     + diff(u(t), t) ** 2
     ...     + diff(v(t), t) ** 2
     ...     + 2 * diff(u(t), t) * diff(v(t), t)
     ... )
-    >>> euler_operator(L2, (u, v), t)
-    [v(t) - 2*diff(u(t), t, t) - 2*diff(v(t), t, t), u(t) - 2*diff(u(t), t, t) - 2*diff(v(t), t, t)]
-    '''
-    wtable = [Function(f"w_{i}") for i in range(len(depend))]
-    y = Function('y')
-    w = Function('w')
-    e = symbols('e')
+    >>> euler_operator(L2, (u, v), t)  # doctest: +NORMALIZE_WHITESPACE
+    [v(t) - 2*Derivative(u(t), (t, 2)) - 2*Derivative(v(t), (t, 2)),
+     u(t) - 2*Derivative(u(t), (t, 2)) - 2*Derivative(v(t), (t, 2))]
+
+    Several independent variables: the wave equation u_tt = u_xx from its
+    Lagrangian (u_t**2 - u_x**2)/2:
+
+    >>> x = symbols("x")
+    >>> euler_operator((diff(u(x, t), t) ** 2 - diff(u(x, t), x) ** 2) / 2, (u,), (x, t))
+    [-Derivative(u(x, t), (t, 2)) + Derivative(u(x, t), (x, 2))]
+    """
+    variables = tuple(independ) if isinstance(independ, Iterable) else (independ,)
     result = []
-    for j in range(len(depend)):
-        loc_result = 0
-
-        def f0(x):
-            return y(independ) + e * w(independ)
-
-        def dep(x):
-            return depend[j](independ)  # noqa: B023 -- called right away by replace()
-
-        fh = density.replace(depend[j], f0)
-        fh = fh.replace(y, dep)
-        fh = fh.replace(w, wtable[j])
-        fh = fh.diff(e).subs(e, 0).expand()
-        operands = fh.args if fh.is_Mul else (fh,)
-        for operand in operands:
-            d = None
-            coeff = []
-            for _ops in operand.args if hasattr(operand, 'args') else ():
-                if is_op_du(_ops, wtable[j](independ)):
-                    d = sum(1 for a in _ops.args[1:] if a == independ)
-                elif is_function(_ops) and _ops.func == wtable[j]:
-                    pass
-                else:
-                    coeff.append(_ops)
-            coeff = reduce(mul, coeff, 1) if coeff else 1
-            if d is not None:
-                coeff = ((-1) ** d) * diff(coeff, independ, d)
-            loc_result += coeff
-        result.append(loc_result)
+    for f in depend:
+        u = f(*variables)
+        jets = {u} | {d for d in density.atoms(Derivative) if d.expr == u}
+        result.append(
+            sum((-1) ** _order(jet) * _total_derivative(diff(density, jet), jet) for jet in jets)
+        )
     return result
+
+
+def _order(jet):
+    return jet.derivative_count if isinstance(jet, Derivative) else 0
+
+
+def _total_derivative(expr, jet):
+    """D^alpha expr, alpha the multi-index of the derivative jet."""
+    return diff(expr, *jet.variable_count) if isinstance(jet, Derivative) else expr
 
 
 def frechet_derivative(support, dependVar, independVar, testfunction):

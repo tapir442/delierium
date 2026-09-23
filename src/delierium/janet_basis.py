@@ -2,7 +2,6 @@
 Janet Basis
 """
 
-import builtins
 import functools
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
@@ -26,12 +25,11 @@ from delierium.helpers import (
     ltf,
     pairs_exclude_diagonal,
     profile_if_enabled,
+    show_output,
 )
 from delierium.matrix_order import Context, Mgrevlex
 
 # Basic.free_symbols.cache_clear()
-
-_in_ipython_session = hasattr(builtins, "__IPYTHON__")
 
 
 @profile_if_enabled
@@ -340,7 +338,7 @@ class LHDP:
         if not rich:
             return str(self)
         res = ""
-        display([_.show() for _ in self.p])
+        show_output([_.show() for _ in self.p])
         if self.multipliers or self.nonmultipliers:
             res += f"[{self.multipliers}], [{self.nonmultipliers}]"
         return res
@@ -996,17 +994,6 @@ class JanetBasis:
             print(heading)
         for _ in self.S:
             _.show()
-
-    #            if rich:
-    #                if _in_ipython_session:
-    #                    display(_)
-    #                else:
-    #                   print([p.derivative for p in _.p])
-    #          else:
-    #             if not short:
-    #                print(_)
-    #           else:
-    #              print([p.derivative for p in _.p])
 
     def rank(self):
         """Return the rank of the computed Janet basis."""

@@ -36,9 +36,17 @@ lex is dubious)
 # Release History
 ## Release 0.1.0
 
-offers two functions 'JanetBasis' and 'infinitesimalsODE' as described below. 
+offers
 
-Note that 'infinitesimalsODE' does only return the overdetermined system stemming from the prolongation of the original ODE. The real infinitesimal are part of the next release.
+* the determining equations of the Lie point symmetries of an ODE, a system of ODEs or a
+  scalar PDE: `overdetermined_system_ode`, `overdetermined_system_odes`,
+  `overdetermined_system_pde`,
+* Janet bases of linear systems of PDEs (`JanetBasis`), in particular of these determining
+  equations (`janet_basis_from_ode`, `janet_basis_from_odes`), and checks against published
+  bases (`is_janet_basis_of`, `is_janet_basis_of_ode`, `is_janet_basis_of_odes`).
+
+Solving the determining equations for the infinitesimals themselves is not part of this
+release.
 
 
 

@@ -88,12 +88,17 @@ source-exclude = [
 # --------------------------------------------------------------------------
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tests"]
+testpaths = ["tests", "README.md"]
 filterwarnings = [
     # `from sympy import *` drags sympy's `test` runner into test modules
     "ignore:cannot collect 'test' because it is not a function:pytest.PytestCollectionWarning",
 ]
-addopts = ["-ra", "--strict-markers", "--strict-config", "--import-mode=importlib"]
+addopts = [
+    "-ra", "--strict-markers", "--strict-config", "--import-mode=importlib",
+    "--doctest-glob=README.md",
+]
+# the README shortens long output with "..."
+doctest_optionflags = ["NORMALIZE_WHITESPACE", "ELLIPSIS"]
 xfail_strict = true
 
 [tool.coverage.run]

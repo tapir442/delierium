@@ -516,11 +516,18 @@ def ltf(expr, dep, indep, infinitesimals=None, printer=True):  # noqa: C901
     fundic = {_: Symbol(_.name) for _ in dep}
     output = output.xreplace(dreps2).xreplace(fundic).xreplace(coefficient_functions)
     if printer:
-        if _in_ipython_session:
-            display(output)
-        else:
-            print(output)
+        show_output(output)
     return output
+
+
+def show_output(obj):
+    """Rich display in IPython/Jupyter, print everywhere else."""
+    if _in_ipython_session:
+        from IPython.display import display
+
+        display(obj)
+    else:
+        print(obj)
 
 
 @profile_if_enabled

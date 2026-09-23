@@ -602,8 +602,9 @@ def _linear_system_ode(ode, dependent, independent, infinitesimals=None):
     """The determining equations of an ODE as a linear system for JanetBasis.
 
     Returns (system, dependents, independents, h_symbol): the dependent
-    variable y(x) is replaced by the symbol H and all derivatives of y are
-    set to zero, so the infinitesimals become functions of (H, x).
+    variable y(x) is replaced by the symbol H, so the infinitesimals become
+    functions of (H, x). (After splitting, the determining equations no
+    longer contain derivatives of y.)
     """
     infinitesimals = create_infinitesimals([dependent], [independent], infinitesimals)
     overdetermined_system = overdetermined_system_ode(
@@ -613,24 +614,9 @@ def _linear_system_ode(ode, dependent, independent, infinitesimals=None):
     inf = [infinitesimals[_] for _ in [dependent, independent]]
 
     r1 = [h_symbol, independent]
-    # ToDo: 2 way:
-    #    * either as JanetBasis
-    #    * or try to solve the undetermined system
-
     inf = [_.xreplace({dependent: h_symbol}) for _ in inf]
-    r1 = [_.xreplace({dependent: h_symbol}) for _ in r1]
-    intermediate_system = []
-    for e in overdetermined_system:
-        e = e.replace(dependent, h_symbol)
-        mine = [_ for _ in e.atoms(Derivative) if _.args[0].func == dependent]
-
-        max_deriv_order = max(len(_.operator().parameter_set()) for _ in mine) if mine else 0
-
-        for j in range(1, max_deriv_order + 1):
-            d = diff(dependent(independent), independent, j)
-            e = e.subs({d: 0})
-        intermediate_system.append(e)
-    return intermediate_system, list(reversed(inf)), list(reversed(r1)), h_symbol
+    system = [e.replace(dependent, h_symbol) for e in overdetermined_system]
+    return system, list(reversed(inf)), list(reversed(r1)), h_symbol
 
 
 def janet_basis_from_ode(
