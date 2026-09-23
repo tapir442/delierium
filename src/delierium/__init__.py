@@ -9,6 +9,7 @@ from .JanetBasis import (
     Reorder,
     _Dterm,
     complete,
+    is_janet_basis_of,
     vec_degree,
     vec_multipliers,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "Reorder",
     "_Dterm",
     "complete",
+    "is_janet_basis_of",
     "overdetermined_system_ode",
     "vec_degree",
     "vec_multipliers",

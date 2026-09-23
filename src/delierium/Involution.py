@@ -65,7 +65,7 @@ class Multipliers:
         >>> r = Multipliers(N[2], N, (1, 0))
         >>> print(r.multipliers, r.nonmultipliers)
         [0] [1]
-        >>> # next example form Gertd/Blinkov: Janet-like monomial divisiom, Table1
+        >>> # next example from Gerdt/Blinkov: Janet-like monomial division, Table 1
         >>> # x1 -> Index 2
         >>> # x2 -> Index 1 (this is easy)
         >>> # x3 -> Index 0
@@ -88,22 +88,32 @@ class Multipliers:
         >>> r = Multipliers(U[5], U, (2, 1, 0))
         >>> print(r.multipliers, r.nonmultipliers)
         [0] [1, 2]
+        >>> # the highest variable is compared with its own maximal degree
         >>> M = [(1, 0), (0, 3)]
         >>> r = Multipliers(M[0], M, (0, 1))
         >>> print(r.multipliers, r.nonmultipliers)
         [0, 1] []
+        >>> r = Multipliers(M[1], M, (0, 1))
         >>> print(r.multipliers, r.nonmultipliers)
-        [0, 1] []
-        >>> dp1 = (0, 0, 0, 1, 1)
-        >>> dp2 = (0, 0, 1, 0, 1)
-        >>> dp3 = (0, 1, 0, 0, 1)
-        >>> dp4 = (0, 0, 0, 2, 0)
-        >>> dp5 = (0, 0, 1, 1, 0)
-        >>> dp6 = (0, 0, 2, 0, 0)
-        >>> print("LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL")
-        >>> l = [dp1, dp2, dp3, dp4, dp5, dp6]
-        >>> r = Multipliers[dp1, l]
-        >>> print(r)
+        [1] [0]
+        >>> # Iohara/Malbos, Example 3.2.6: five variables, the last index is the highest
+        >>> l = [
+        ...     (0, 0, 0, 1, 1),
+        ...     (0, 0, 1, 0, 1),
+        ...     (0, 1, 0, 0, 1),
+        ...     (0, 0, 0, 2, 0),
+        ...     (0, 0, 1, 1, 0),
+        ...     (0, 0, 2, 0, 0),
+        ... ]
+        >>> for dp in l:
+        ...     r = Multipliers(dp, l, (4, 3, 2, 1, 0))
+        ...     print(dp, r.multipliers, r.nonmultipliers)
+        (0, 0, 0, 1, 1) [4, 3, 2, 1, 0] []
+        (0, 0, 1, 0, 1) [4, 2, 1, 0] [3]
+        (0, 1, 0, 0, 1) [4, 1, 0] [2, 3]
+        (0, 0, 0, 2, 0) [3, 2, 1, 0] [4]
+        (0, 0, 1, 1, 0) [2, 1, 0] [3, 4]
+        (0, 0, 2, 0, 0) [2, 1, 0] [3, 4]
         """
         # Janet: the highest variable is a multiplier if m has the maximal degree in it
         d = max((vec_degree(Vars[0], u) for u in M), default=0)

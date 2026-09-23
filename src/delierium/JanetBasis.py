@@ -12,6 +12,7 @@ from operator import mul
 from more_itertools import bucket, flatten, powerset
 from sympy import Add, Mul, Rational, S, Symbol, cancel
 from sympy.core.backend import *
+from sympy.core.function import AppliedUndef
 
 from delierium.helpers import (
     Derivative,
@@ -229,7 +230,7 @@ class LHDP:
 
     @profile_if_enabled
     def _init(self, e):
-        if isinstance(e, (Symbol, Derivative, Mul)):
+        if isinstance(e, (Symbol, Derivative, Mul, AppliedUndef)):
             operands = [e]
         elif isinstance(e, Symbol):
             raise ValueError(f"{e} is no term in a LHDP")
@@ -1012,6 +1013,55 @@ class Janet_Basis:
     def type(self):
         '''Computes the type of the Janet Basis, i.e. the leading derivatives'''
         self._type = [_.Lder() for _ in self.S]
+
+
+@profile_if_enabled
+def is_janet_basis_of(B, S, dependent, independent, sort_order=Mgrevlex):
+    """Check whether B is the Janet basis of the linear system S.
+
+    For a fixed ranking (sort order and order of the dependent and
+    independent variables) the fully reduced Janet basis with leading
+    coefficients 1 is unique, so B is compared with the Janet basis of S.
+    B is normalized first; scaling its elements does not matter.
+
+    Checking only that S reduces to zero modulo B is not enough: that
+    shows that S follows from B, but not that B follows from S.
+
+    >>> from sympy import *
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> w = Function("w")(x, y)
+    >>> # Schwarz, system (2.24)
+    >>> S = [
+    ...     diff(w, y) + x * diff(z, y) / (2 * y * (x**2 + y)) - w / y,
+    ...     diff(z, x, y) + y * diff(w, y) / x + 2 * y * diff(z, x) / x,
+    ...     diff(w, x, y) - 2 * x * diff(z, x, 2) / y - x * diff(w, x) / y**2,
+    ...     diff(w, x, y)
+    ...     + diff(z, x, y)
+    ...     + diff(w, y) / (2 * y)
+    ...     - diff(w, x) / y
+    ...     + x * diff(z, y) / y
+    ...     - w / (2 * y**2),
+    ...     diff(w, y, y) + diff(z, x, y) - diff(w, y) / y + w / y**2,
+    ... ]
+    >>> B = [diff(z, y), diff(z, x) + w / (2 * y), diff(w, y) - w / y, diff(w, x)]
+    >>> is_janet_basis_of(B, S, (w, z), (x, y))
+    True
+    >>> is_janet_basis_of([2 * b for b in B], S, (w, z), (x, y))
+    True
+    >>> is_janet_basis_of(B[:3], S, (w, z), (x, y))
+    False
+    >>> # wrong coefficient: w/y instead of w/(2*y)
+    >>> is_janet_basis_of([B[0], diff(z, x) + w / y, B[2], B[3]], S, (w, z), (x, y))
+    False
+    >>> # too strong: S still follows from B, but B has fewer solutions
+    >>> is_janet_basis_of([*B, z], S, (w, z), (x, y))
+    False
+    """
+    context = Context(dependent, independent, sort_order)
+    expected = Janet_Basis(S, dependent, independent, sort_order).S
+    candidate = [LHDP(b, context) for b in B]
+    return sorted(map(str, expected)) == sorted(map(str, candidate))
 
 
 if __name__ == "__main__":
