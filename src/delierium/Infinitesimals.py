@@ -642,9 +642,15 @@ def janet_basis_from_ode(
 ):
     system, inf, r1, h_symbol = _linear_system_ode(ode, dependent, independent, infinitesimals)
     janet = Janet_Basis(system, inf, r1, sort_order=sort_order)
+    return _back_substituted(janet, {h_symbol: dependent}, sort_order)
+
+
+def _back_substituted(janet, back, sort_order):
+    """The elements of a Janet basis as LHDPs, with the symbols standing for
+    the dependent variables replaced back by them (back: symbol -> function)."""
 
     def back_substitute(e):
-        return e.xreplace({h_symbol: dependent})
+        return e.xreplace(back)
 
     res = []
     for lhdp in janet.S:
@@ -659,8 +665,55 @@ def janet_basis_from_ode(
             )
             p.append(_Dterm(derivative=d, coeff=coeff, context=ctx))
         res.append(LHDP(e=0, context=ctx, dterms=p))
-    res = Reorder(res, context=ctx)
-    return res
+    return Reorder(res, context=ctx)
+
+
+def _linear_system_odes(eqs, dependent, independent, infinitesimals=None):
+    """The determining equations of a system of ODEs as a linear system for
+    Janet_Basis.
+
+    Returns (system, infinitesimals, variables, to_symbol): every dependent
+    variable x(t) is replaced by a symbol of the same name, so the
+    infinitesimals become functions of (t, x, y, ...). Infinitesimals and
+    variables are ordered as for a single ODE: the independent variable
+    first.
+    """
+    dep = convert_to_iterable(dependent)
+    indep = convert_to_iterable(independent)
+    infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
+    system = overdetermined_system_odes(eqs, dep, indep, infinitesimals=infinitesimals)
+    to_symbol = {d: Symbol(d.func.__name__) for d in dep}
+    inf = [infinitesimals[_].xreplace(to_symbol) for _ in indep + dep]
+    variables = indep + [to_symbol[_] for _ in dep]
+    return [e.xreplace(to_symbol) for e in system], inf, variables, to_symbol
+
+
+def janet_basis_from_odes(
+    eqs, dependent, independent, sort_order=Mgrevlex, infinitesimals=None, *args, **kw
+):
+    """Janet basis of the determining equations of a system of ODEs, see
+    overdetermined_system_odes.
+
+    Free particle in the plane, x'' = y'' = 0; its 15 point symmetries
+    (sl(4)) are the solutions of these 18 equations:
+
+    >>> t = Symbol('t')
+    >>> x, y = Function('x')(t), Function('y')(t)
+    >>> B = janet_basis_from_odes([diff(x, t, 2), diff(y, t, 2)], [x, y], [t])
+    >>> len(B)
+    18
+    >>> for _ in B[:4]:
+    ...     print(_)
+    D(Y(x(t), y(t), t), t, (y(t), 2))
+    D(Y(x(t), y(t), t), x(t), (y(t), 2))
+    D(Y(x(t), y(t), t), (y(t), 3))
+    D(T(x(t), y(t), t), (t, 2)) + (-2) * D(Y(x(t), y(t), t), t, y(t))
+    """
+    system, inf, variables, to_symbol = _linear_system_odes(
+        eqs, dependent, independent, infinitesimals
+    )
+    janet = Janet_Basis(system, inf, variables, sort_order=sort_order)
+    return _back_substituted(janet, {v: k for k, v in to_symbol.items()}, sort_order)
 
 
 def is_janet_basis_of_ode(

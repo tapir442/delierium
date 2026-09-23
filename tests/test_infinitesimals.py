@@ -3,14 +3,16 @@
 import pathlib
 import sys
 from collections import OrderedDict
+from itertools import product
 
-from sympy import Lambda, cancel, simplify
+from sympy import Lambda, Rational, cancel, simplify
 from sympy.core.backend import Derivative, Function, Symbol
 from sympy.core.function import AppliedUndef
 
 from delierium.helpers import finish_substitution, make_infinitesimal
 from delierium.Infinitesimals import (
     canonical_derivatives,
+    janet_basis_from_odes,
     overdetermined_system_ode,
     overdetermined_system_odes,
     overdetermined_system_pde,
@@ -374,3 +376,84 @@ def test_harry_dym_baumann_226():
     }
     for e in inf:
         assert simplify(e.xreplace({u: us}).subs(solution).doit()) == 0
+
+
+def parametric_dimension(B, variables, bound=6):
+    """Number of parametric derivatives of a Janet basis, i.e. the dimension
+    of its solution space; None if there are parametric derivatives of order
+    bound (then the space is taken as infinite-dimensional)."""
+
+    def leader(b):
+        d = b.p[0].derivative
+        if not isinstance(d, Derivative):
+            return d.func, (0,) * len(variables)
+        counts = dict(d.variable_count)
+        return d.expr.func, tuple(counts.get(v, 0) for v in variables)
+
+    leaders = [leader(b) for b in B]
+    functions = {f for f, _ in leaders}
+    count = 0
+    for n in range(bound + 1):
+        for f in functions:
+            for a in product(range(n + 1), repeat=len(variables)):
+                if sum(a) == n and not any(
+                    g == f and all(ai >= li for ai, li in zip(a, l, strict=True))
+                    for g, l in leaders
+                ):
+                    if n == bound:
+                        return None
+                    count += 1
+    return count
+
+
+def satisfies_janet_basis(B, generator, t, x, y):
+    ts, xs, ys = Symbol('t'), Symbol('x'), Symbol('y')
+    solution = {
+        Function(name): Lambda((xs, ys, ts), g) for name, g in zip('TXY', generator, strict=True)
+    }
+    return all(
+        simplify(b.expression().xreplace({x: xs, y: ys}).subs(solution).doit()) == 0 for b in B
+    )
+
+
+def test_janet_basis_free_particle_2d():
+    t = Symbol('t')
+    x = Function('x')(t)
+    y = Function('y')(t)
+    B = janet_basis_from_odes([D(x, t, t), D(y, t, t)], [x, y], [t])
+    assert parametric_dimension(B, [t, x, y]) == 15
+    ts, xs, ys = Symbol('t'), Symbol('x'), Symbol('y')
+    generators = [
+        (1, 0, 0),
+        (0, 1, 0),
+        (0, 0, 1),
+        (0, ts, 0),
+        (0, 0, ts),
+        (0, xs, 0),
+        (0, ys, 0),
+        (0, 0, xs),
+        (0, 0, ys),
+        (ts, 0, 0),
+        (xs, 0, 0),
+        (ys, 0, 0),
+        (ts**2, ts * xs, ts * ys),
+        (ts * xs, xs**2, xs * ys),
+        (ts * ys, xs * ys, ys**2),
+    ]
+    assert all(satisfies_janet_basis(B, g, t, x, y) for g in generators)
+    assert not satisfies_janet_basis(B, (0, 0, xs**2), t, x, y)
+
+
+def test_janet_basis_kepler():
+    # x'' = -x/r**3, y'' = -y/r**3: time translation, rotation, and the
+    # scaling of Kepler's third law
+    t = Symbol('t')
+    x = Function('x')(t)
+    y = Function('y')(t)
+    r3 = (x**2 + y**2) ** Rational(3, 2)
+    B = janet_basis_from_odes([D(x, t, t) + x / r3, D(y, t, t) + y / r3], [x, y], [t])
+    assert parametric_dimension(B, [t, x, y]) == 3
+    ts, xs, ys = Symbol('t'), Symbol('x'), Symbol('y')
+    for g in [(1, 0, 0), (0, -ys, xs), (3 * ts, 2 * xs, 2 * ys)]:
+        assert satisfies_janet_basis(B, g, t, x, y)
+    assert not satisfies_janet_basis(B, (0, xs, ys), t, x, y)
