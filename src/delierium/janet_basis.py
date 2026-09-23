@@ -5,17 +5,15 @@ Janet Basis
 import functools
 from collections import OrderedDict, namedtuple
 from collections.abc import Iterable
-from itertools import islice
 from operator import mul
 
-from more_itertools import bucket, flatten, powerset
+from more_itertools import bucket, flatten
 from sympy import Add, Mul, Rational, S, Symbol, cancel
 from sympy.core.backend import *
 from sympy.core.function import AppliedUndef
 
 from delierium.helpers import (
     Derivative,
-    adiff,
     eq,
     expr_eq,
     expr_is_zero,
@@ -177,6 +175,13 @@ class _Dterm:
 
     @profile_if_enabled
     def diff(self, *variables):
+        if len(variables) > 1:
+            # the product rule below holds for one variable only; for
+            # several, differentiate one after the other (Leibniz rule)
+            terms = [self]
+            for v in variables:
+                terms = [t for term in terms for t in term.diff(v)]
+            return terms
         f = self.coeff
         g = self.derivative
         if isinstance(f, Add):
@@ -806,7 +811,7 @@ def split_by_function(S, context):
 
 
 @profile_if_enabled
-def find_integrable_conditions(S, context):  # noqa: C901
+def find_integrable_conditions(S, context):
     result = list(S)
     if len(result) == 1:
         return []
@@ -839,31 +844,42 @@ def find_integrable_conditions(S, context):  # noqa: C901
     result = []
     for ei, ej in pairs_exclude_diagonal(multiplier_collection):
         for n in ei.nonmultipliers:
-            a1 = adiff(ei.dp.leading_derivative(), context, n)
-            for m in islice(powerset(ej.multipliers), 1, None):
-                a2 = adiff(ej.dp.leading_derivative(), context, *m)
-                if a1 == a2:
-                    # integrability condition
-                    # don't need leading coefficients because in DPs
-                    # it is always 1
-                    d1 = ei.dp.diff(n)
-                    d2 = ej.dp.diff(*m)
-                    new_terms = []
-                    terms_from_first = {_.comparison_vector: _ for _ in d1.p}
-                    # looks like overkill, but when coefficients get very
-                    # groebnerish it pays to keep coefficients small, at least
-                    # with maxima. Let's see how sympy behaves
-                    for s in d2.p:
-                        if s.comparison_vector in terms_from_first:
-                            terms_from_first[s.comparison_vector].coeff -= s.coeff
-                        else:
-                            new_terms.append(
-                                _Dterm(coeff=-s.coeff, derivative=s.derivative, context=context)
-                            )
-                    dterms = [_ for _ in [*new_terms, *terms_from_first.values()] if _]
-                    if dterms:
-                        result.append(LHDP(e=0, context=context, dterms=dterms))
+            m = _multiplicative_derivative(ei, n, ej, context)
+            if m is None:
+                continue
+            # leading coefficients are 1, so the leading derivatives cancel
+            condition = _difference(ei.dp.diff(n), ej.dp.diff(*m) if m else ej.dp, context)
+            if condition is not None:
+                result.append(condition)
     return result
+
+
+def _multiplicative_derivative(ei, n, ej, context):
+    """The variables (with repetitions) by which ej's leading derivative has to
+    be differentiated to become the derivative of ei's leading derivative by
+    its nonmultiplier n, using only ej's multipliers, each of them any number
+    of times; None if that is impossible."""
+    raised = list(ei.monom)
+    raised[context.independent.index(n)] += 1
+    difference = [a - b for a, b in zip(raised, ej.monom, strict=True)]
+    if any(d < 0 for d in difference) or any(
+        d and v not in ej.multipliers for v, d in zip(context.independent, difference, strict=True)
+    ):
+        return None
+    return [v for v, d in zip(context.independent, difference, strict=True) for _ in range(d)]
+
+
+def _difference(d1, d2, context):
+    """d1 - d2 as an LHDP, None if it vanishes; d1's terms are modified."""
+    new_terms = []
+    terms_from_first = {_.comparison_vector: _ for _ in d1.p}
+    for s in d2.p:
+        if s.comparison_vector in terms_from_first:
+            terms_from_first[s.comparison_vector].coeff -= s.coeff
+        else:
+            new_terms.append(_Dterm(coeff=-s.coeff, derivative=s.derivative, context=context))
+    dterms = [_ for _ in [*new_terms, *terms_from_first.values()] if _]
+    return LHDP(e=0, context=context, dterms=dterms) if dterms else None
 
 
 class JanetBasis:
