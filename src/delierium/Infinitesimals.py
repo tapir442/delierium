@@ -26,6 +26,7 @@ from sympy import (  # noqa: F401
     fraction,
     init_printing,
     numer,
+    prem,
     solve,
     together,
 )
@@ -373,6 +374,18 @@ def compute_overdetermined_system_of_infinitesimals(
 ):
     """
     infinitesimals : dict{Function/Symbol : new name}
+
+    An ODE that is not linear in its highest derivative, y''**2 = y',
+    with the symmetries d/dx, d/dy and x d/dx + 3 y d/dy:
+
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> for _ in janet_basis_from_ode(diff(y, x, 2)**2 - diff(y, x), y, x):
+    ...     print(_)
+    D(Y(y(x), x), (y(x), 2))
+    D(X(y(x), x), x) + (-1/3) * D(Y(y(x), x), y(x))
+    D(X(y(x), x), y(x))
+    D(Y(y(x), x), x)
     """
     dep = convert_to_iterable(dep)
     indep = convert_to_iterable(indep)
@@ -382,8 +395,18 @@ def compute_overdetermined_system_of_infinitesimals(
     highest_term = next(iter(highest_term))
 
     r = prolongation(eq, infinitesimals, dep, indep)
-    sol = solve(eq, highest_term)[0]
-    r = r.xreplace({highest_term: sol})
+    h = Dummy()
+    eq_h = numer(together(eq.xreplace({highest_term: h})))
+    if Poly(eq_h, h).degree() == 1:
+        sol = solve(eq, highest_term)[0]
+        r = r.xreplace({highest_term: sol})
+    else:
+        # eq is not linear in its highest derivative: solving for it would
+        # bring in roots of jet variables. pr X(eq) has to vanish on eq = 0,
+        # i.e. (eq being irreducible) eq has to divide it as a polynomial in
+        # the highest derivative, so its pseudo-remainder has to vanish
+        r_h = numer(together(r.xreplace({highest_term: h})))
+        r = prem(r_h, eq_h, h).xreplace({h: highest_term})
     return split_jet_coefficients(r, dep)
 
 
@@ -533,7 +556,14 @@ def janet_basis_from_ode(
 
 
 def is_janet_basis_of_ode(
-    B, ode, dependent, independent, sort_order=Mgrevlex, infinitesimals=None
+    B,
+    ode,
+    dependent,
+    independent,
+    sort_order=Mgrevlex,
+    infinitesimals=None,
+    dependent_order=None,
+    independent_order=None,
 ):
     """Check whether B is the Janet basis of the determining equations of ode.
 
@@ -542,6 +572,11 @@ def is_janet_basis_of_ode(
     (with y(x) in place of y, diff(Y, x) would be the total derivative).
     LHDPs as returned by janet_basis_from_ode are accepted as well, see
     is_janet_basis_of.
+
+    The ranking is given by sort_order and, highest first, by
+    dependent_order (the infinitesimals, e.g. [Y, X]) and independent_order
+    (e.g. [ys, x]); the default is the one of janet_basis_from_ode,
+    [X, Y] and [x, y]. Infinitesimals may be given by name as well.
 
     >>> x = Symbol('x')
     >>> y = Function('y')(x)
@@ -562,11 +597,46 @@ def is_janet_basis_of_ode(
     True
     >>> is_janet_basis_of_ode(B[1:], ode, y, x)
     False
+
+    With Y ranked above X and y above x, Y_y leads instead of X_x:
+
+    >>> B2 = [
+    ...     diff(X, x, 2) - 2 * diff(X, x) / x + 2 * X / x**2,
+    ...     diff(Y, ys) - 2 * diff(X, x) / 3 + 4 * X / (3 * x) - 2 * Y / ys,
+    ...     diff(X, ys),
+    ...     diff(Y, x),
+    ... ]
+    >>> is_janet_basis_of_ode(B2, ode, y, x)
+    False
+    >>> is_janet_basis_of_ode(B2, ode, y, x, dependent_order=[Y, X], independent_order=[ys, x])
+    True
+    >>> is_janet_basis_of_ode(B2, ode, y, x, dependent_order=["Y", "X"], independent_order=[y, x])
+    True
     """
     system, inf, r1, h_symbol = _linear_system_ode(ode, dependent, independent, infinitesimals)
     to_h = {dependent: h_symbol, Symbol(str(dependent.func)): h_symbol}
     B = [(b.expression() if isinstance(b, LHDP) else b).xreplace(to_h) for b in B]
-    return is_janet_basis_of(B, system, inf, r1, sort_order)
+    def dep_key(f):
+        return f if isinstance(f, str) else f.func.__name__
+
+    def ind_key(v):
+        # y, y(x) and "y" all stand for the dependent variable, i.e. H
+        return (Symbol(v) if isinstance(v, str) else v).xreplace(to_h)
+
+    dep = _ranked(dependent_order, inf, dep_key)
+    ind = _ranked(independent_order, r1, ind_key)
+    return is_janet_basis_of(B, system, dep, ind, sort_order)
+
+
+def _ranked(order, default, key):
+    """default, rearranged like order; the entries are matched by key."""
+    if order is None:
+        return default
+    by_key = {key(_): _ for _ in default}
+    ranked = [by_key.get(key(_)) for _ in order]
+    if None in ranked or len(set(ranked)) != len(default):
+        raise ValueError(f"{list(order)} is not an ordering of {default}")
+    return ranked
 
 
 if __name__ == "__main__":
