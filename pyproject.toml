@@ -1,0 +1,237 @@
+[project]
+name = "delierium"
+version = "0.1.0"
+description = "Symmetry Analysis for ODEs and PDEs using SymPy"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "tapir" }]
+requires-python = ">=3.12"
+keywords = ["ODE", "PDE", "Lie", "Symmetry", "Janet basis"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+    "more-itertools>=10",
+    "symengine>=0.13",
+    "sympy>=1.13",
+]
+
+[project.optional-dependencies]
+jupyter = ["ipython>=8"]
+profile = ["line-profiler>=4"]
+
+[project.urls]
+Source = "https://github.com/tapir442/delierium"
+Issues = "https://github.com/tapir442/delierium/issues"
+
+[dependency-groups]
+dev = [
+    { include-group = "lint" },
+    { include-group = "test" },
+]
+test = [
+    "pytest>=8",
+    "pytest-cov>=6",
+    "pytest-xdist>=3",
+]
+lint = [
+    "mypy>=1.15",
+    "pre-commit>=4",
+    "pylint>=3.3",
+    "ruff>=0.12",
+]
+notebooks = [
+    "ipython>=8",
+    "jupyterlab>=4",
+    "jupyter-ai",
+    "jupyter-ai-magics",
+    "jupyter-copilot",
+    "langchain-anthropic",
+    "langchain-openai",
+    "line-profiler>=4",
+]
+# editor / LSP tooling (emacs elpy, pylsp, pyright)
+editor = [
+    "elpy",
+    "flake8",
+    "prospector",
+    "pudb",
+    "pyright",
+    "python-lsp-server",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.uv.build-backend]
+source-exclude = [
+    ".\\#*",       # emacs lock files
+    "\\#*\\#",      # emacs autosave files
+    "*\\~",
+    ".ipynb_checkpoints",
+]
+
+# --------------------------------------------------------------------------
+# pytest
+# --------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+filterwarnings = [
+    # `from sympy import *` drags sympy's `test` runner into test modules
+    "ignore:cannot collect 'test' because it is not a function:pytest.PytestCollectionWarning",
+]
+addopts = ["-ra", "--strict-markers", "--strict-config", "--import-mode=importlib"]
+xfail_strict = true
+
+[tool.coverage.run]
+source = ["delierium"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = ["if __name__ == .__main__.:"]
+
+# --------------------------------------------------------------------------
+# ruff: linter + formatter (replaces flake8, pycodestyle, isort, yapf)
+# --------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+include = ["src/**/*.py", "tests/**/*.py", "pyproject.toml"]
+extend-exclude = [
+    "**/.ipynb_checkpoints",
+    "**/.#*",                                # emacs lock files
+]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "I",       # isort
+    "UP",      # pyupgrade
+    "B",       # bugbear
+    "C4",      # comprehensions
+    "C90",     # mccabe cyclomatic complexity
+    "SIM",     # simplify
+    "PIE",
+    "RUF",
+]
+ignore = [
+    "E741",    # ambiguous variable names (l, I, O) are common in the math
+    "RUF001", "RUF002", "RUF003",  # unicode in strings/comments/docstrings
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+# existing modules rely on `from sympy import *`; clean up gradually
+"src/delierium/*.py" = ["F403", "F405"]
+"tests/*" = ["F401", "F403", "F405", "B011"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+docstring-code-format = true
+
+# --------------------------------------------------------------------------
+# mypy
+# --------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+files = ["src"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+no_implicit_optional = true
+strict_equality = true
+check_untyped_defs = true
+# enable gradually once the code base is annotated
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = ["line_profiler.*", "IPython.*"]
+ignore_missing_imports = true
+
+# --------------------------------------------------------------------------
+# pylint: complements ruff with deeper semantic checks
+# --------------------------------------------------------------------------
+[tool.pylint.main]
+py-version = "3.12"
+jobs = 0
+recursive = true
+ignore-paths = [
+    "^notebooks/",
+    "^kamke_test_suite/",
+    "^hydon/",
+    ".*/\\.ipynb_checkpoints/",
+]
+ignore-patterns = ["^\\.#"]
+load-plugins = [
+    "pylint.extensions.docparams",
+    "pylint.extensions.mccabe",
+    "pylint.extensions.redefined_variable_type",
+]
+# sympy/symengine are C-heavy and dynamically populated
+extension-pkg-allow-list = ["symengine"]
+generated-members = ["sympy.*"]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.basic]
+# single letters and short math names are fine here
+good-names-rgxs = ["^[a-zA-Z]{1,3}\\d?_?$"]
+good-names = ["_", "__", "ex", "e1", "e2", "Run"]
+
+[tool.pylint.design]
+max-args = 8
+max-positional-arguments = 8
+max-locals = 25
+max-branches = 20
+max-statements = 60
+max-attributes = 10
+max-complexity = 10  # keep in sync with [tool.ruff.lint.mccabe]
+min-public-methods = 1
+
+[tool.pylint."messages control"]
+disable = [
+    # handled by ruff
+    "line-too-long",
+    "unused-import",
+    "wrong-import-order",
+    "wrong-import-position",
+    "ungrouped-imports",
+    "wildcard-import",
+    "unused-wildcard-import",
+    # style choices for this project
+    "invalid-name",                 # math notation (Janet_Basis, LHDP, ...)
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "fixme",
+]
+
+[tool.pylint.reports]
+output-format = "colorized"
+score = false
+
+[tool.pylint.similarities]
+min-similarity-lines = 8
+ignore-comments = true
+ignore-docstrings = true
+ignore-imports = true

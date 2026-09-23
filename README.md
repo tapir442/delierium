@@ -1,7 +1,7 @@
 # delierium
 <span style="font-size:30px;"><b>D</b>ifferential <b>E</b>quations' <b>LIE</b> symmetries <b>R</b>esearch <b>I</b>nstr<b>UM</b>ent</span>
 
-Searching for symmetries in ODEs using Python/SageMath/sympy
+Searching for symmetries in ODEs and PDEs using Python/SymPy
 
 # Status
 
@@ -46,75 +46,60 @@ Note that 'infinitesimalsODE' does only return the overdetermined system stemmin
 
 ## How to use
 
-### Get the determining equations for the symmetry of an third order ODE:
+### Get the determining equations for the symmetry of a third order ODE:
 
-    >>> from delierium.Infinitesimals import infinitesimalsODE
-    >>> from sage.calculus.var import var, function
-    >>> from sage.calculus.functional import diff
-    >>> x   = var('x')
-    >>> y   = function('y')
-    >>> ode = diff(y(x), x, 3) + y(x) * diff(y(x), x, 2)
-    >>> inf = infinitesimalsODE(ode, y, x)
-    >>> print("determining system:")
+    >>> from collections import OrderedDict
+    >>> from sympy import Symbol, Function, diff
+    >>> from delierium.Infinitesimals import overdetermined_system_ode
+    >>> from delierium.helpers import make_infinitesimal
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> ode = diff(y, x, 3) + y * diff(y, x, 2)
+    >>> infinitesimals = OrderedDict({x: make_infinitesimal(x, x, y, name='X'),
+    ...                               y: make_infinitesimal(y, x, y, name='Y')})
+    >>> inf = overdetermined_system_ode(ode, [y], [x], infinitesimals=infinitesimals)
     >>> for _ in inf:
-    >>>     print(_)
-    >>> -3*D[0](xi)(y(x), x)
-    >>> -6*D[0, 0](xi)(y(x), x)
-    >>> y(x)*D[0](xi)(y(x), x) + 3*D[0, 0](phi)(y(x), x) - 9*D[0, 1](xi)(y(x), x)
-    >>> y(x)*D[1](xi)(y(x), x) + phi(y(x), x) + 3*D[0, 1](phi)(y(x), x) - 3*D[1, 1](xi)(y(x), x)
-    >>> -D[0, 0, 0](xi)(y(x), x)
-    >>> -y(x)*D[0, 0](xi)(y(x), x) + D[0, 0, 0](phi)(y(x), x) - 3*D[0, 0, 1](xi)(y(x), x)
-    >>> y(x)*D[0, 0](phi)(y(x), x) - 2*y(x)*D[0, 1](xi)(y(x), x) + 3*D[0, 0, 1](phi)(y(x), x) - 3*D[0, 1, 1](xi)(y(x), x)
-    >>> 2*y(x)*D[0, 1](phi)(y(x), x) - y(x)*D[1, 1](xi)(y(x), x) + 3*D[0, 1, 1](phi)(y(x), x) - D[1, 1, 1](xi)(y(x), x)
-    >>> y(x)*D[1, 1](phi)(y(x), x) + D[1, 1, 1](phi)(y(x), x)    
-    
-If you are using JupyterLab, you can print the results in a more human readable way:
+    ...     print(_)
+    y(x)*Derivative(Y(x, y(x)), (x, 2)) + Derivative(Y(x, y(x)), (x, 3))
+    y(x)*Derivative(X(x, y(x)), y(x)) + 3*Derivative(Y(x, y(x)), (y(x), 2)) - 9*Derivative(X(x, y(x)), x, y(x))
+    ...
 
+The raw output is hard to read. `ltf` prints derivatives in index notation, so `d^2 X/dx dy` becomes `X_{xy}`:
 
-`from IPython.display import Math`
+    >>> from delierium.helpers import ltf
+    >>> for _ in inf:
+    ...     print(ltf(_, [infinitesimals[y]], [infinitesimals[x]], printer=False))
+    Y_{xxx} + Y_{xx}*y
+    -9*X_{xy} + X_{y}*y + 3*Y_{yy}
+    -3*X_{xyy} - X_{yy}*y + Y_{yyy}
+    -X_{xxx} - X_{xx}*y + 3*Y_{xxy} + 2*Y_{xy}*y
+    -3*X_{xxy} - 2*X_{xy}*y + 3*Y_{xyy} + Y_{yy}*y
+    -3*X_{xx} + X_{x}*y + Y + 3*Y_{xy}
+    -3*X_{y}
+    -6*X_{yy}
+    -X_{yyy}
 
-`from delierium.helpers import latexer`
+In JupyterLab, drop `printer=False` to render the result as LaTeX.
 
-`from delierium.helpers import latexer`
+For a scalar PDE use `overdetermined_system_pde` the same way. Its docstring has the heat equation as an example.
 
-`from delierium.helpers import latexer`
-
-`x   = var('x')`
-
-`y   = function('y')`
-
-`ode = diff(y(x), x, 3) + y(x) * diff(y(x), x, 2)`
-
-`display(Math(latexer(ode)))`
-
-`inf = infinitesimalsODE(ode, y, x)`
-
-`print("determining system:")`
-
-`for _ in inf:`
-
-`    display(Math(latexer(_)))`
-    
-In this mode a derivative like `d^2y/dx^2` is shown as `y_x`(superscript x)
-    
 ### Janet Basis
 
-    >>> import sage.all
+    >>> from sympy import symbols, Function, diff
     >>> from delierium.JanetBasis import Janet_Basis
-    >>> from sage.calculus.var import var, function
-    >>> from sage.calculus.functional import diff
-    >>> vars = var ("x y")
-    >>> z = function("z")(*vars)
-    >>> w = function("w")(*vars)
-    >>> f1 = diff(w, y) + x*diff(z,y)/(2*y*(x**2+y)) - w/y
-    >>> f2 = diff(z, x, y) + y*diff(w,y)/x + 2*y*diff(z, x)/x
-    >>> f3 = diff(w, x, y) - 2*x*diff(z, x, 2)/y - x*diff(w,x)/y**2
-    >>> f4 = diff(w, x, y) + diff(z, x, y) + diff(w, y)/(2*y) - diff(w,x)/y + x* diff(z, y)/y - w/(2*y**2)
-    >>> f5 = diff(w,y,y) + diff(z,x,y) - diff(w, y)/y + w/(y**2)
-    >>> system_2_24 = [f1,f2,f3,f4,f5]
-    >>> jb=Janet_Basis(system_2_24, (w,z), vars)
-    >>> jb.show()
-    >>> diff(z(x, y), y)
-    >>> diff(z(x, y), x) + (1/2/y) * w(x, y)
-    >>> diff(w(x, y), y) + (-1/y) * w(x, y)
-    >>> diff(w(x, y), x)
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> w = Function("w")(x, y)
+    >>> f1 = diff(w, y) + x*diff(z, y)/(2*y*(x**2+y)) - w/y
+    >>> f2 = diff(z, x, y) + y*diff(w, y)/x + 2*y*diff(z, x)/x
+    >>> f3 = diff(w, x, y) - 2*x*diff(z, x, 2)/y - x*diff(w, x)/y**2
+    >>> f4 = diff(w, x, y) + diff(z, x, y) + diff(w, y)/(2*y) - diff(w, x)/y + x*diff(z, y)/y - w/(2*y**2)
+    >>> f5 = diff(w, y, y) + diff(z, x, y) - diff(w, y)/y + w/(y**2)
+    >>> system_2_24 = [f1, f2, f3, f4, f5]
+    >>> jb = Janet_Basis(system_2_24, (w, z), (x, y))
+    >>> for _ in jb.S:
+    ...     print(_)
+    D(z(x, y), y)
+    D(z(x, y), x) + (1/(2*y)) * w(x, y)
+    D(w(x, y), y) + (-1/y) * w(x, y)
+    D(w(x, y), x)

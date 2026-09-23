@@ -1,4 +1,42 @@
 __pycache__
 .ipynb_checkpoints
+.eggs/
 *~
 .autoversion
+.cache
+.ropeproject
+.spyproject
+*.pdf
+
+
+# secrets
+github_token.txt
+*.token
+.env
+
+# python / uv
+.venv/
+build/
+dist/
+*.egg-info/
+*.so
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# profiling
+*.prof
+*.lprof
+
+# jupyter
+.jupyter/
+.jupyter_ystore*.db
+.virtual_documents/
+
+# editors
+\#*#
+.#*
+*.orig

@@ -1,0 +1,21 @@
+import pytest
+from sympy import Function, symbols
+
+from delierium.matrix_order import Context
+
+@pytest.fixture
+def context_x_y_w_z():
+    x, y = symbols("x y")
+    w = Function("w")(x, y)
+    z = Function("z")(x, y)
+    ctx = Context((w, z), (x, y))
+    return ctx
+
+@pytest.fixture
+def context_x_y_z_u_v_w():
+    x, y, z = symbols("x y z")
+    u = Function("u")(x, y, z)
+    v = Function("v")(x, y, z)
+    w = Function("w")(x, y, z)
+    ctx = Context((u, v, w), (x, y, z))
+    return ctx
