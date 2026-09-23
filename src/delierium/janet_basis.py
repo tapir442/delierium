@@ -589,6 +589,11 @@ def vec_multipliers(m, M, Vars):
               (0,1,2) means first index in m represents the highest variable
               (2,1,0) means last index in m represents the highest variable
 
+    Returns (multipliers, nonmultipliers), as lists of indices in m.
+
+    Follows the Maple procedure Janet in Amir Hashemi's invbasis,
+    https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt
+
     ......................................................
     The doctest example is from Schwarz, Example C.1, p. 384
     This example is in on variables x1,x2,x3, with x3 the highest rated variable.
@@ -651,6 +656,23 @@ def vec_multipliers(m, M, Vars):
     ([0, 1], [])
     >>> vec_multipliers(V[0], V[:1], (0, 1))
     ([0, 1], [])
+    >>> # Iohara/Malbos, Example 3.2.6: five variables, the last index is the highest
+    >>> W = [
+    ...     (0, 0, 0, 1, 1),
+    ...     (0, 0, 1, 0, 1),
+    ...     (0, 1, 0, 0, 1),
+    ...     (0, 0, 0, 2, 0),
+    ...     (0, 0, 1, 1, 0),
+    ...     (0, 0, 2, 0, 0),
+    ... ]
+    >>> for w in W:
+    ...     print(w, *vec_multipliers(w, W, (4, 3, 2, 1, 0)))
+    (0, 0, 0, 1, 1) [4, 3, 2, 1, 0] []
+    (0, 0, 1, 0, 1) [4, 2, 1, 0] [3]
+    (0, 1, 0, 0, 1) [4, 1, 0] [2, 3]
+    (0, 0, 0, 2, 0) [3, 2, 1, 0] [4]
+    (0, 0, 1, 1, 0) [2, 1, 0] [3, 4]
+    (0, 0, 2, 0, 0) [2, 1, 0] [3, 4]
     """
     # Janet: the highest variable is a multiplier if m has the maximal degree in it
     d = max((vec_degree(Vars[0], u) for u in M), default=0)
