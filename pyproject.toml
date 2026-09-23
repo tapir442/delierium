@@ -18,6 +18,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 dependencies = [
+    "gmpy2>=2.3.1",
     "more-itertools>=10",
     "symengine>=0.13",
     "sympy>=1.13",
