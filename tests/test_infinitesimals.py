@@ -10,8 +10,9 @@ from sympy.core.backend import Derivative, Function, Symbol
 from sympy.core.function import AppliedUndef
 
 from delierium.helpers import finish_substitution, make_infinitesimal
-from delierium.Infinitesimals import (
+from delierium.infinitesimals import (
     canonical_derivatives,
+    is_janet_basis_of_odes,
     janet_basis_from_odes,
     overdetermined_system_ode,
     overdetermined_system_odes,
@@ -457,3 +458,23 @@ def test_janet_basis_kepler():
     for g in [(1, 0, 0), (0, -ys, xs), (3 * ts, 2 * xs, 2 * ys)]:
         assert satisfies_janet_basis(B, g, t, x, y)
     assert not satisfies_janet_basis(B, (0, xs, ys), t, x, y)
+
+
+def test_is_janet_basis_of_odes_ranking():
+    t = Symbol('t')
+    x = Function('x')(t)
+    y = Function('y')(t)
+    free = [D(x, t, t), D(y, t, t)]
+    B = janet_basis_from_odes(free, [x, y], [t])
+    assert is_janet_basis_of_odes(B, free, [x, y], [t])
+    # e.g. T_tt - 2 Y_ty: which term leads depends on the ranking of T and Y
+    assert not is_janet_basis_of_odes(B, free, [x, y], [t], dependent_order=['Y', 'X', 'T'])
+    assert not is_janet_basis_of_odes(B[1:], free, [x, y], [t])
+
+    # all leaders of the Kepler basis are first derivatives, whatever the ranking
+    r3 = (x**2 + y**2) ** Rational(3, 2)
+    kepler = [D(x, t, t) + x / r3, D(y, t, t) + y / r3]
+    B = janet_basis_from_odes(kepler, [x, y], [t])
+    assert is_janet_basis_of_odes(
+        B, kepler, [x, y], [t], dependent_order=['Y', 'X', 'T'], independent_order=['y', 'x', t]
+    )

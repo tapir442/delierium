@@ -262,16 +262,16 @@ class LHDP:
     def show_derivatives(self):
         print(list(self.derivatives()))
 
-    def Lterm(self):
+    def leading_term(self):
         return self.p[0].term()
 
-    def Lder(self):
+    def leading_derivative(self):
         return self.p[0].derivative
 
-    def Lfunc(self):
+    def leading_function(self):
         return self.p[0].function
 
-    def Lcoeff(self):
+    def leading_coefficient(self):
         return self.p[0].coeff
 
     def terms(self):
@@ -281,10 +281,6 @@ class LHDP:
     def derivatives(self):
         for p in self.p:
             yield p.derivative
-
-    def Ldervec(self):
-        # implement asap
-        pass
 
     def coefficients(self):
         for p in self.p:
@@ -297,7 +293,7 @@ class LHDP:
             #                                   derivative=self.p[0].derivative,
             #                                   context=self.p[0].context)
             #                           ]
-            #            c = self.Lcoeff()
+            #            c = self.leading_coefficient()
             #            for _ in self.p[1:]:
             #                intermediate.append(_Dterm(coeff=_.coeff/c, # nsimplify done in LHDP
             #                                            derivative = _.derivative,
@@ -424,16 +420,16 @@ def split_into_operands(term):
     return operands
 
 
-# ToDo: Janet_Basis as class as this object has properties like rank, order ...
+# ToDo: JanetBasis as class as this object has properties like rank, order ...
 
 
 @profile_if_enabled
-def Reorder(S, context, ascending=False):
+def reorder(S, context, ascending=False):
     return sorted(S, reverse=not ascending)
 
 
 @profile_if_enabled
-def reduceS(e: LHDP, S: list, context: Context) -> LHDP | None:
+def reduce_by_system(e: LHDP, S: list, context: Context) -> LHDP | None:
     reducing = True
     gen = S[:]
     while reducing:
@@ -556,7 +552,7 @@ def reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
 
 
 @profile_if_enabled
-def Autoreduce(S, context):
+def autoreduce(S, context):
     dps = list(S)
     i = 0
     _p, r = dps[: i + 1], dps[i + 1 :]
@@ -564,14 +560,14 @@ def Autoreduce(S, context):
         newdps = []
         have_reduced = False
         for _r in r:
-            rnew = reduceS(_r, _p, context)
+            rnew = reduce_by_system(_r, _p, context)
             have_reduced = have_reduced or _r != rnew
             if rnew:
                 newdps.append(rnew)
         # print("NNNNNNNNNNNNNNNNNNNNNNNN")
         # for _ in newdps:
         #    print("===>", _)
-        dps = Reorder(_p + [_ for _ in newdps if _ not in _p], context, ascending=True)
+        dps = reorder(_p + [_ for _ in newdps if _ not in _p], context, ascending=True)
         if not have_reduced:
             i += 1
         else:
@@ -716,7 +712,7 @@ def complete(S, context):
 
 
 @profile_if_enabled
-def CompleteSystem(S, context):
+def complete_system(S, context):
     """
     Algorithm C1, p. 385
 
@@ -733,7 +729,7 @@ def CompleteSystem(S, context):
     >>> h4 = diff(w, x, y)
     >>> ctx = Context((w,), (x, y, z), Mgrlex)
     >>> dps = [LHDP(_, ctx) for _ in [h1, h2, h3, h4]]
-    >>> cs = CompleteSystem(dps, ctx)
+    >>> cs = complete_system(dps, ctx)
     >>> # things are sorted up
     >>> for _ in cs:
     ...     print(_)
@@ -768,7 +764,7 @@ def CompleteSystem(S, context):
     >>> g6 = diff(z, x, x, y) - diff(z, y, y) * 4 * y**2 - diff(z, y) * 8 * y
     >>> ctx = Context((w, z), (x, y), Mgrlex)
     >>> dps = [LHDP(_, ctx) for _ in [g1, g5, g6]]
-    >>> cs = CompleteSystem(dps, ctx)
+    >>> cs = complete_system(dps, ctx)
     >>> for _ in cs:  # doctest: +NORMALIZE_WHITESPACE
     ...     print(_)
     D(z(x, y), (y, 2)) + (1/(2*y)) * D(z(x, y), y)
@@ -777,20 +773,20 @@ def CompleteSystem(S, context):
     D(z(x, y), (x, 3)) + (1/y) * D(w(x, y), (x, 2)) + (8*y**2) * D(w(x, y), (y, 2)) + (-4*y**2) *
     D(z(x, y), x, y) + (-32*y) * D(z(x, y), x) + (-16) * w(x, y)
     """
-    s = bucket(S, key=lambda d: d.Lfunc())
+    s = bucket(S, key=lambda d: d.leading_function())
     res = flatten([complete(s[k], context) for k in s])
-    return Reorder(res, context, ascending=True)
+    return reorder(res, context, ascending=True)
 
 
 @profile_if_enabled
 def split_by_function(S, context):
-    s = bucket(S, key=lambda d: d.Lfunc())
-    murksi = [FindIntegrableConditions(s[k], context) for k in s]
+    s = bucket(S, key=lambda d: d.leading_function())
+    murksi = [find_integrable_conditions(s[k], context) for k in s]
     return flatten(murksi)
 
 
 @profile_if_enabled
-def FindIntegrableConditions(S, context):  # noqa: C901
+def find_integrable_conditions(S, context):  # noqa: C901
     result = list(S)
     if len(result) == 1:
         return []
@@ -823,9 +819,9 @@ def FindIntegrableConditions(S, context):  # noqa: C901
     result = []
     for ei, ej in pairs_exclude_diagonal(multiplier_collection):
         for n in ei.nonmultipliers:
-            a1 = adiff(ei.dp.Lder(), context, n)
+            a1 = adiff(ei.dp.leading_derivative(), context, n)
             for m in islice(powerset(ej.multipliers), 1, None):
-                a2 = adiff(ej.dp.Lder(), context, *m)
+                a2 = adiff(ej.dp.leading_derivative(), context, *m)
                 if a1 == a2:
                     # integrability condition
                     # don't need leading coefficients because in DPs
@@ -850,7 +846,7 @@ def FindIntegrableConditions(S, context):  # noqa: C901
     return result
 
 
-class Janet_Basis:
+class JanetBasis:
     def __init__(self, S, dependent, independent, sort_order=Mgrevlex):
         """
         Parameters:
@@ -877,7 +873,7 @@ class Janet_Basis:
         ... )
         >>> f5 = diff(w, y, y) + diff(z, x, y) - diff(w, y) / y + w / (y**2)
         >>> system_2_24 = [f1, f2, f3, f4, f5]
-        >>> checkS = Janet_Basis(system_2_24, (w, z), (x, y))
+        >>> checkS = JanetBasis(system_2_24, (w, z), (x, y))
         >>> for _ in checkS.S:
         ...     print(_)
         D(z(x, y), y)
@@ -892,7 +888,7 @@ class Janet_Basis:
         >>> g3 = diff(w, x, y) - diff(z, x, x) / 2 - diff(w, x) / (2 * y) - 6 * (y**2) * diff(z, y)
         >>> g4 = diff(w, y, y) - 2 * diff(z, x, y) - diff(w, y) / (2 * y) + w / (2 * y**2)
         >>> system_2_25 = [g2, g3, g4, g1]
-        >>> checkS = Janet_Basis(system_2_25, (w, z), (x, y))
+        >>> checkS = JanetBasis(system_2_25, (w, z), (x, y))
         >>> for _ in checkS.S:
         ...     print(_)
         D(z(x, y), y)
@@ -915,7 +911,7 @@ class Janet_Basis:
         ... )
         >>> f5 = diff(w, y, y) + diff(z, x, y) - diff(w, y) / y + w / (y**2)
         >>> system_2_24 = [f1, f2, f3, f4, f5]
-        >>> checkS = Janet_Basis(system_2_24, (w, z), (x, y), Mgrlex)
+        >>> checkS = JanetBasis(system_2_24, (w, z), (x, y), Mgrlex)
         >>> for _ in checkS.S:
         ...     print(_)
         D(z(x, y), y)
@@ -930,7 +926,7 @@ class Janet_Basis:
         >>> g3 = diff(w, x, y) - diff(z, x, x) / 2 - diff(w, x) / (2 * y) - 6 * (y**2) * diff(z, y)
         >>> g4 = diff(w, y, y) - 2 * diff(z, x, y) - diff(w, y) / (2 * y) + w / (2 * y**2)
         >>> system_2_25 = [g2, g3, g4, g1]
-        >>> checkS = Janet_Basis(system_2_25, (w, z), (x, y), Mgrlex)
+        >>> checkS = JanetBasis(system_2_25, (w, z), (x, y), Mgrlex)
         >>> for _ in checkS.S:
         ...     print(_)
         D(z(x, y), y)
@@ -945,7 +941,7 @@ class Janet_Basis:
         >>> g3 = diff(w, x, y) - diff(z, x, x) / 2 - diff(w, x) / (2 * y) - 6 * (y**2) * diff(z, y)
         >>> g4 = diff(w, y, y) - 2 * diff(z, x, y) - diff(w, y) / (2 * y) + w / (2 * y**2)
         >>> system_2_25 = [g2, g3, g4, g1]
-        >>> checkS = Janet_Basis(system_2_25, (w, z), (x, y), Mlex)
+        >>> checkS = JanetBasis(system_2_25, (w, z), (x, y), Mlex)
         >>> for _ in checkS.S:
         ...     print(_)
         D(z(x, y), y)
@@ -963,7 +959,7 @@ class Janet_Basis:
         else:
             self.S = S[:]
         old = []
-        self.S = Reorder([LHDP(s, context, dterms=[]) for s in self.S], context, ascending=True)
+        self.S = reorder([LHDP(s, context, dterms=[]) for s in self.S], context, ascending=True)
         while 1:
             if old == self.S:
                 # no change since last run
@@ -971,16 +967,16 @@ class Janet_Basis:
             old = self.S[:]
             #            self.show(rich=True, short=False, heading="This is where we start")
             #         import pdb; pdb.set_trace()
-            self.S = Autoreduce(self.S, context)
+            self.S = autoreduce(self.S, context)
             #            self.show(rich=False, short=True, heading="after autoreduce")
             #            import pdb; pdb.set_trace()
-            self.S = CompleteSystem(self.S, context)
+            self.S = complete_system(self.S, context)
             #            self.show(rich=False, short=True, heading="after complete system")
             conditions = list(split_by_function(self.S, context))
             #            print("after conditions")
             #            for _ in conditions:
             #                print(_)
-            reduced = [reduceS(_m, self.S, context) for _m in conditions]
+            reduced = [reduce_by_system(_m, self.S, context) for _m in conditions]
             #            print("after reduced")
             #            for _ in reduced:
             #                print(_)
@@ -988,11 +984,11 @@ class Janet_Basis:
             reduced = [_ for _ in reduced if _]
             #            print("after reduced")
             if not reduced:
-                self.S = Reorder(self.S, context, ascending=True)
+                self.S = reorder(self.S, context, ascending=True)
                 #                print("ÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖ")
                 return
             self.S += [_ for _ in reduced if _ not in self.S]
-            self.S = Reorder(self.S, context, ascending=True)
+            self.S = reorder(self.S, context, ascending=True)
 
     def show(self, rich=True, short=False, heading=""):
         """Print the Janet basis with leading derivative first."""
@@ -1024,7 +1020,7 @@ class Janet_Basis:
 
     def type(self):
         '''Computes the type of the Janet Basis, i.e. the leading derivatives'''
-        self._type = [_.Lder() for _ in self.S]
+        self._type = [_.leading_derivative() for _ in self.S]
 
 
 @profile_if_enabled
@@ -1069,12 +1065,12 @@ def is_janet_basis_of(B, S, dependent, independent, sort_order=Mgrevlex):
     >>> # too strong: S still follows from B, but B has fewer solutions
     >>> is_janet_basis_of([*B, z], S, (w, z), (x, y))
     False
-    >>> # B may also be given as LHDPs, e.g. the result of Janet_Basis
-    >>> is_janet_basis_of(Janet_Basis(S, (w, z), (x, y)).S, S, (w, z), (x, y))
+    >>> # B may also be given as LHDPs, e.g. the result of JanetBasis
+    >>> is_janet_basis_of(JanetBasis(S, (w, z), (x, y)).S, S, (w, z), (x, y))
     True
     """
     context = Context(dependent, independent, sort_order)
-    expected = Janet_Basis(S, dependent, independent, sort_order).S
+    expected = JanetBasis(S, dependent, independent, sort_order).S
     candidate = [LHDP(b.expression() if isinstance(b, LHDP) else b, context) for b in B]
     return sorted(map(str, expected)) == sorted(map(str, candidate))
 

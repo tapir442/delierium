@@ -36,7 +36,7 @@ lex is dubious)
 # Release History
 ## Release 0.1.0
 
-offers two functions 'Janet_Basis' and 'infinitesimalsODE' as described below. 
+offers two functions 'JanetBasis' and 'infinitesimalsODE' as described below. 
 
 Note that 'infinitesimalsODE' does only return the overdetermined system stemming from the prolongation of the original ODE. The real infinitesimal are part of the next release.
 
@@ -50,7 +50,7 @@ Note that 'infinitesimalsODE' does only return the overdetermined system stemmin
 
     >>> from collections import OrderedDict
     >>> from sympy import Symbol, Function, diff
-    >>> from delierium.Infinitesimals import overdetermined_system_ode
+    >>> from delierium.infinitesimals import overdetermined_system_ode
     >>> from delierium.helpers import make_infinitesimal
     >>> x = Symbol('x')
     >>> y = Function('y')(x)
@@ -86,7 +86,7 @@ For a scalar PDE use `overdetermined_system_pde` the same way. Its docstring has
 ### Janet Basis
 
     >>> from sympy import symbols, Function, diff
-    >>> from delierium.JanetBasis import Janet_Basis
+    >>> from delierium.janet_basis import JanetBasis
     >>> x, y = symbols("x y")
     >>> z = Function("z")(x, y)
     >>> w = Function("w")(x, y)
@@ -96,7 +96,7 @@ For a scalar PDE use `overdetermined_system_pde` the same way. Its docstring has
     >>> f4 = diff(w, x, y) + diff(z, x, y) + diff(w, y)/(2*y) - diff(w, x)/y + x*diff(z, y)/y - w/(2*y**2)
     >>> f5 = diff(w, y, y) + diff(z, x, y) - diff(w, y)/y + w/(y**2)
     >>> system_2_24 = [f1, f2, f3, f4, f5]
-    >>> jb = Janet_Basis(system_2_24, (w, z), (x, y))
+    >>> jb = JanetBasis(system_2_24, (w, z), (x, y))
     >>> for _ in jb.S:
     ...     print(_)
     D(z(x, y), y)

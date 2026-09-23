@@ -129,9 +129,11 @@ select = [
     "SIM",     # simplify
     "PIE",
     "RUF",
+    "N",       # pep8-naming
 ]
 ignore = [
     "E741",    # ambiguous variable names (l, I, O) are common in the math
+    "N803", "N806",  # math notation for arguments and variables (X, T, Y, S, B, ...)
     "RUF001", "RUF002", "RUF003",  # unicode in strings/comments/docstrings
 ]
 

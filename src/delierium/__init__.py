@@ -1,15 +1,15 @@
-from .DerivativeOperators import EulerD, FrechetD
+from .derivative_operators import euler_operator, frechet_derivative
 from .helpers import Basic
-from .Infinitesimals import overdetermined_system_ode
-from .JanetBasis import (
+from .infinitesimals import overdetermined_system_ode
+from .janet_basis import (
     LHDP,
-    Autoreduce,
-    CompleteSystem,
-    Janet_Basis,
-    Reorder,
+    JanetBasis,
     _Dterm,
+    autoreduce,
     complete,
+    complete_system,
     is_janet_basis_of,
+    reorder,
     vec_degree,
     vec_multipliers,
 )
@@ -17,21 +17,21 @@ from .matrix_order import Context, Mgrevlex, Mgrlex, Mlex
 
 __all__ = [
     "LHDP",
-    "Autoreduce",
     "Basic",
-    "CompleteSystem",
     "Context",
-    "EulerD",
-    "FrechetD",
-    "Janet_Basis",
+    "JanetBasis",
     "Mgrevlex",
     "Mgrlex",
     "Mlex",
-    "Reorder",
     "_Dterm",
+    "autoreduce",
     "complete",
+    "complete_system",
+    "euler_operator",
+    "frechet_derivative",
     "is_janet_basis_of",
     "overdetermined_system_ode",
+    "reorder",
     "vec_degree",
     "vec_multipliers",
 ]

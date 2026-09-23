@@ -18,7 +18,7 @@ def insert_row(mat, k, row):
     return Matrix([*mat.rows()[:k], row, *mat.rows()[k:]])
 
 
-def Mlex(funcs, variables):  # pylint: disable=C0103
+def Mlex(funcs, variables):  # noqa: N802  # pylint: disable=C0103 (name of the term order)
     '''Generates the "cotes" according to Riquier for the lex ordering
     INPUT : funcs: a tuple of functions (tuple for caching reasons)
             variables: a tuple of variables
@@ -51,7 +51,7 @@ def Mlex(funcs, variables):  # pylint: disable=C0103
     return i
 
 
-def Mgrlex(funcs, variables):  # pylint: disable=C0103
+def Mgrlex(funcs, variables):  # noqa: N802  # pylint: disable=C0103 (name of the term order)
     '''Generates the "cotes" according to Riquier for the grlex ordering
     >>> x,y,z = symbols("x y z")
     >>> f = Function("f")(x,y,z)
@@ -67,7 +67,7 @@ def Mgrlex(funcs, variables):  # pylint: disable=C0103
     return m
 
 
-def Mgrevlex(funcs, variables):  # pylint: disable=C0103
+def Mgrevlex(funcs, variables):  # noqa: N802  # pylint: disable=C0103 (name of the term order)
     '''Generates the "cotes" according to Riquier for the grevlex ordering
     >>> x, y, z = symbols("x y z")
     >>> f = Function("f")(x, y, z)

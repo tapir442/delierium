@@ -65,14 +65,14 @@ def func_diff(L, u_in):
     return result
 
 
-def EulerD(density, depend, independ):
+def euler_operator(density, depend, independ):
     r'''
     >>> from sympy import symbols, Function, diff
     >>> t = symbols("t")
     >>> u = Function('u')
     >>> v = Function('v')
     >>> L = u(t) * v(t) + diff(u(t), t) ** 2 + diff(v(t), t) ** 2 - u(t) ** 2 - v(t) ** 2
-    >>> EulerD(L, (u, v), t)
+    >>> euler_operator(L, (u, v), t)
     [-2*u(t) + v(t) - 2*diff(u(t), t, t), u(t) - 2*v(t) - 2*diff(v(t), t, t)]
     >>> L2 = (
     ...     u(t) * v(t)
@@ -80,7 +80,7 @@ def EulerD(density, depend, independ):
     ...     + diff(v(t), t) ** 2
     ...     + 2 * diff(u(t), t) * diff(v(t), t)
     ... )
-    >>> EulerD(L2, (u, v), t)
+    >>> euler_operator(L2, (u, v), t)
     [v(t) - 2*diff(u(t), t, t) - 2*diff(v(t), t, t), u(t) - 2*diff(u(t), t, t) - 2*diff(v(t), t, t)]
     '''
     wtable = [Function(f"w_{i}") for i in range(len(depend))]
@@ -120,7 +120,7 @@ def EulerD(density, depend, independ):
     return result
 
 
-def FrechetD(support, dependVar, independVar, testfunction):
+def frechet_derivative(support, dependVar, independVar, testfunction):
     """
     >>> from sympy import symbols, Function, diff, Matrix
     >>> x, t = symbols("x t")
@@ -129,7 +129,7 @@ def FrechetD(support, dependVar, independVar, testfunction):
     >>> w1 = Function("w1")
     >>> w2 = Function("w2")
     >>> eqsys = [diff(v(x, t), x) - u(x, t), diff(v(x, t), t) - diff(u(x, t), x) / (u(x, t) ** 2)]
-    >>> m = Matrix(FrechetD(eqsys, [u, v], [x, t], [w1, w2]))
+    >>> m = Matrix(frechet_derivative(eqsys, [u, v], [x, t], [w1, w2]))
     >>> m[0, 0]
     -w1(x, t)
     >>> m[0, 1]
@@ -154,9 +154,9 @@ def FrechetD(support, dependVar, independVar, testfunction):
     return frechet
 
 
-def AdjointFrechetD(support, dependVar, independVar, testfunction):
+def adjoint_frechet_derivative(support, dependVar, independVar, testfunction):
     # Placeholder: in SymPy, adjoint computation is not built-in
-    return FrechetD(support, dependVar, independVar, testfunction)
+    return frechet_derivative(support, dependVar, independVar, testfunction)
 
 
 if __name__ == "__main__":

@@ -74,7 +74,7 @@ def is_zero(obj):
 
 
 @profile_if_enabled
-def __new__(cls, expr, *variables, **kwargs):  # noqa: C901
+def _derivative_new(cls, expr, *variables, **kwargs):  # noqa: C901
     """Tweak from original sympy.core.function.Derivatice.__new__
 
     We removed some unnecessary steps to gain a lot of run time improvement.
@@ -339,16 +339,10 @@ def __new__(cls, expr, *variables, **kwargs):  # noqa: C901
     return expr
 
 
-Derivative.__new__ = __new__
-
-
-def __mysetattr__(self, name, val):
-    self.__dict__[name] = val
-    self.__dict__.pop('value', None)
+Derivative.__new__ = _derivative_new
 
 
 # Basic.free_symbols = make_cached_property(Basic.free_symbols)
-# setattr(Basic, "__setattr__", __mysetattr__)
 
 
 @profile_if_enabled
@@ -584,13 +578,13 @@ def lie_derivative_printer(  # noqa: C901
             self.infinitesimals = infinitesimals
             super().__init__()
 
-        def _print_Function(self, expr):
+        def _print_Function(self, expr):  # noqa: N802 - SymPy printer hook
             return expr.func.__name__
 
-        def _print_AppliedUndef(self, expr):
+        def _print_AppliedUndef(self, expr):  # noqa: N802 - SymPy printer hook
             return expr.func.__name__
 
-        def _print_Derivative(self, expr):
+        def _print_Derivative(self, expr):  # noqa: N802 - SymPy printer hook
             # Get the function being differentiated
             func = expr.expr
             if isinstance(func, (sp.Function, AppliedUndef)):
@@ -632,13 +626,13 @@ def lie_derivative_printer(  # noqa: C901
             self.infinitesimals = infinitesimals
             super().__init__()
 
-        def _print_Function(self, expr):
+        def _print_Function(self, expr):  # noqa: N802 - SymPy printer hook
             return expr.func.__name__
 
-        def _print_AppliedUndef(self, expr):
+        def _print_AppliedUndef(self, expr):  # noqa: N802 - SymPy printer hook
             return expr.func.__name__
 
-        def _print_Derivative(self, expr):
+        def _print_Derivative(self, expr):  # noqa: N802 - SymPy printer hook
 
             func = expr.expr
             if isinstance(func, (sp.Function, AppliedUndef)):

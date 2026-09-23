@@ -4,7 +4,7 @@ Created on Thu Nov 10 11:10:23 2021
 
 @author: tapir
 
-Factored out from JanetBasis.py, for ease of debugging and extending
+Factored out from janet_basis.py, for ease of debugging and extending
 
 Holds everything for monomial involution stuff,like multipliers, divisions, etc.
 """
@@ -144,7 +144,7 @@ class Multipliers:
 #        m0 = []
 #        # multiplier-collection is our M
 #        multiplier_collection = []
-#        division = My_Multiplier(monomials)
+#        division = IoharaMalbosMultipliers(monomials)
 #        multiplier_collection = [(v, all_vars - v, k) for k, v in division.mults.items()]
 #        for mult, nonmult, monom, in multiplier_collection:
 #            for n in nonmult:
@@ -208,7 +208,7 @@ def degree_of_set(j, U):
     return max(u[j] for u in U)
 
 
-class My_Multiplier:
+class IoharaMalbosMultipliers:
     def __init__(self, monoms):
         self.monoms = monoms
         # no of variables

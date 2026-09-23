@@ -1,4 +1,4 @@
-"""Tests for delierium.Infinitesimals.prolongation.
+"""Tests for delierium.infinitesimals.prolongation.
 
 The expected results are the extended infinitesimals and prolonged
 equations from D. J. Arrigo, "Symmetry Analysis of Differential
@@ -18,7 +18,7 @@ from sympy import expand
 from sympy.core.backend import Derivative, Function, Symbol
 
 from delierium.helpers import make_infinitesimal
-from delierium.Infinitesimals import prolongation
+from delierium.infinitesimals import prolongation
 
 D = Derivative
 

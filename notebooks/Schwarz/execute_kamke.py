@@ -3,7 +3,7 @@ sys.path.append("../../")
 from sympy import *
 from sympy.core.backend import *
 
-from delierium.Infinitesimals import overdetermined_system_ode, janet_basis_from_ode
+from delierium.infinitesimals import overdetermined_system_ode, janet_basis_from_ode
 from delierium.helpers import ltf
 from delierium.matrix_order import Mgrevlex, Mgrlex, Mlex
 
@@ -33,5 +33,5 @@ def execute_kamke(chapter, equation, path=pathlib.Path("/home/tapir/research-dis
     for _ in k:
         print(_.show())
     for _ in k: 
-        print(_.Lterm())
+        print(_.leading_term())
     return ode, k

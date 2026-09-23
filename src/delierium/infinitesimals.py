@@ -18,6 +18,7 @@ from sympy import (  # noqa: F401
     Function,
     Integer,
     Poly,
+    Rational,
     Symbol,
     cancel,
     default_sort_key,
@@ -31,9 +32,10 @@ from sympy import (  # noqa: F401
     together,
 )
 from sympy.core.backend import Derivative, Function, Symbol, diff  # noqa: F811
+from sympy.core.function import AppliedUndef
 
 from delierium.helpers import finish_substitution, func_diff, make_infinitesimal, profile_if_enabled
-from delierium.JanetBasis import LHDP, Janet_Basis, Reorder, _Dterm, is_janet_basis_of
+from delierium.janet_basis import LHDP, JanetBasis, _Dterm, is_janet_basis_of, reorder
 from delierium.matrix_order import Context, Mgrevlex
 
 init_printing()
@@ -597,7 +599,7 @@ def overdetermined_system_pde(pde, dependent, independent, infinitesimals=None, 
 
 
 def _linear_system_ode(ode, dependent, independent, infinitesimals=None):
-    """The determining equations of an ODE as a linear system for Janet_Basis.
+    """The determining equations of an ODE as a linear system for JanetBasis.
 
     Returns (system, dependents, independents, h_symbol): the dependent
     variable y(x) is replaced by the symbol H and all derivatives of y are
@@ -612,7 +614,7 @@ def _linear_system_ode(ode, dependent, independent, infinitesimals=None):
 
     r1 = [h_symbol, independent]
     # ToDo: 2 way:
-    #    * either as Janet_Basis
+    #    * either as JanetBasis
     #    * or try to solve the undetermined system
 
     inf = [_.xreplace({dependent: h_symbol}) for _ in inf]
@@ -641,7 +643,7 @@ def janet_basis_from_ode(
     **kw,
 ):
     system, inf, r1, h_symbol = _linear_system_ode(ode, dependent, independent, infinitesimals)
-    janet = Janet_Basis(system, inf, r1, sort_order=sort_order)
+    janet = JanetBasis(system, inf, r1, sort_order=sort_order)
     return _back_substituted(janet, {h_symbol: dependent}, sort_order)
 
 
@@ -665,12 +667,12 @@ def _back_substituted(janet, back, sort_order):
             )
             p.append(_Dterm(derivative=d, coeff=coeff, context=ctx))
         res.append(LHDP(e=0, context=ctx, dterms=p))
-    return Reorder(res, context=ctx)
+    return reorder(res, context=ctx)
 
 
 def _linear_system_odes(eqs, dependent, independent, infinitesimals=None):
     """The determining equations of a system of ODEs as a linear system for
-    Janet_Basis.
+    JanetBasis.
 
     Returns (system, infinitesimals, variables, to_symbol): every dependent
     variable x(t) is replaced by a symbol of the same name, so the
@@ -712,7 +714,7 @@ def janet_basis_from_odes(
     system, inf, variables, to_symbol = _linear_system_odes(
         eqs, dependent, independent, infinitesimals
     )
-    janet = Janet_Basis(system, inf, variables, sort_order=sort_order)
+    janet = JanetBasis(system, inf, variables, sort_order=sort_order)
     return _back_substituted(janet, {v: k for k, v in to_symbol.items()}, sort_order)
 
 
@@ -788,6 +790,85 @@ def is_janet_basis_of_ode(
     dep = _ranked(dependent_order, inf, dep_key)
     ind = _ranked(independent_order, r1, ind_key)
     return is_janet_basis_of(B, system, dep, ind, sort_order)
+
+
+def is_janet_basis_of_odes(
+    B,
+    eqs,
+    dependent,
+    independent,
+    sort_order=Mgrevlex,
+    infinitesimals=None,
+    dependent_order=None,
+    independent_order=None,
+):
+    """Check whether B is the Janet basis of the determining equations of
+    the system of ODEs eqs, see janet_basis_from_odes.
+
+    B is written in infinitesimals T, X, Y, ... of plain symbols named like
+    the variables, e.g. T(t, x, y); the order of their arguments does not
+    matter. LHDPs as returned by janet_basis_from_odes are accepted as well.
+
+    The ranking is given by sort_order and, highest first, by
+    dependent_order (the infinitesimals, e.g. [Y, X, T]) and
+    independent_order (e.g. [y, x, t]); the default is the one of
+    janet_basis_from_odes, [T, X, Y] and [t, x, y]. Infinitesimals may be
+    given by name as well.
+
+    Kepler problem in the plane, x'' = -x/r**3, y'' = -y/r**3; its three
+    point symmetries are time translation, rotation and the scaling of
+    Kepler's third law:
+
+    >>> t = Symbol('t')
+    >>> x, y = Function('x')(t), Function('y')(t)
+    >>> r3 = (x**2 + y**2) ** Rational(3, 2)
+    >>> odes = [diff(x, t, 2) + x / r3, diff(y, t, 2) + y / r3]
+    >>> xs, ys = Symbol('x'), Symbol('y')
+    >>> T, X, Y = [Function(_)(t, xs, ys) for _ in 'TXY']
+    >>> r2 = xs**2 + ys**2
+    >>> B = [
+    ...     diff(T, t) - 3 * (xs * X + ys * Y) / (2 * r2),
+    ...     diff(T, xs),
+    ...     diff(T, ys),
+    ...     diff(X, t),
+    ...     diff(X, xs) - (xs * X + ys * Y) / r2,
+    ...     diff(X, ys) - (ys * X - xs * Y) / r2,
+    ...     diff(Y, t),
+    ...     diff(Y, xs) + (ys * X - xs * Y) / r2,
+    ...     diff(Y, ys) - (xs * X + ys * Y) / r2,
+    ... ]
+    >>> is_janet_basis_of_odes(B, odes, [x, y], [t])
+    True
+    >>> is_janet_basis_of_odes(B[1:], odes, [x, y], [t])
+    False
+    >>> is_janet_basis_of_odes(janet_basis_from_odes(odes, [x, y], [t]), odes, [x, y], [t])
+    True
+    """
+    system, inf, variables, to_symbol = _linear_system_odes(
+        eqs, dependent, independent, infinitesimals
+    )
+    ours = {(f.func.__name__, frozenset(f.args)): f for f in inf}
+
+    def normalized(b):
+        b = (b.expression() if isinstance(b, LHDP) else b).xreplace(to_symbol)
+        return b.xreplace(
+            {
+                f: ours[key]
+                for f in b.atoms(AppliedUndef)
+                if (key := (f.func.__name__, frozenset(f.args))) in ours
+            }
+        )
+
+    def dep_key(f):
+        return f if isinstance(f, str) else f.func.__name__
+
+    def ind_key(v):
+        # x, x(t) and "x" all stand for the symbol x
+        return (Symbol(v) if isinstance(v, str) else v).xreplace(to_symbol)
+
+    dep = _ranked(dependent_order, inf, dep_key)
+    ind = _ranked(independent_order, variables, ind_key)
+    return is_janet_basis_of([normalized(b) for b in B], system, dep, ind, sort_order)
 
 
 def _ranked(order, default, key):
