@@ -34,3 +34,4 @@ def execute_kamke(chapter, equation, path=pathlib.Path("/home/tapir/research-dis
         print(_.show())
     for _ in k: 
         print(_.Lterm())
+    return ode, k
