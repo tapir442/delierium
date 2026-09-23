@@ -8,7 +8,7 @@ via prolongation of the vector field and extraction of coefficients.
 from collections import OrderedDict
 from collections.abc import Iterable
 from functools import reduce
-from itertools import combinations_with_replacement
+from itertools import combinations_with_replacement, permutations, product
 from typing import Any
 
 from sympy import (  # noqa: F401
@@ -214,9 +214,10 @@ def prolongation(expr, infinitesimals, dep, indep):
     dummies = OrderedDict()
     for combi in variable_combinations(indep, order(expr, dep, indep)[0]):
         funcs, etas = compute_level(combi, dep, indep, infinitesimals)
-        infinitesimals[funcs[0]] = etas[0]
         suffix = "".join(str(v) for v in combi)
-        dummies[funcs[0]] = Symbol(f"{dep[0].name}_{suffix}")
+        for d, func, eta in zip(dep, funcs, etas, strict=True):
+            infinitesimals[func] = eta
+            dummies[func] = Symbol(f"{d.name}_{suffix}")
     for v in dep + indep:
         dummies[v] = Symbol(v.name)
 
@@ -380,7 +381,7 @@ def compute_overdetermined_system_of_infinitesimals(
 
     >>> x = Symbol('x')
     >>> y = Function('y')(x)
-    >>> for _ in janet_basis_from_ode(diff(y, x, 2)**2 - diff(y, x), y, x):
+    >>> for _ in janet_basis_from_ode(diff(y, x, 2) ** 2 - diff(y, x), y, x):
     ...     print(_)
     D(Y(y(x), x), (y(x), 2))
     D(X(y(x), x), x) + (-1/3) * D(Y(y(x), x), y(x))
@@ -442,13 +443,120 @@ def overdetermined_system_ode(ode, dependent, independent, infinitesimals=None, 
 
 
 def overdetermined_system_odes(
-    eqs: list[Expr], dependent: Symbol, independent: Symbol, infinitesimals=None, *args, **kw
+    eqs: list[Expr], dependent, independent, infinitesimals=None, *args, **kw
 ) -> list[Expr]:
-    res = []
-    for _ in eqs:
-        osode = overdetermined_system_ode(_, dependent, independent, infinitesimals, *args, **kw)
-        res.extend(osode)
-    return res
+    """Determining equations for the Lie point symmetries of a system of
+    ODEs, one equation per dependent variable.
+
+    Every equation is solved for its leading derivative; the prolongation
+    of each equation is then taken on the solution manifold of the whole
+    system, i.e. all leading derivatives and their derivatives are
+    substituted before splitting on the remaining jet variables.
+
+    >>> # Arrigo, Example 2.21
+    >>> from delierium.helpers import ltf
+    >>> t = Symbol('t')
+    >>> x, y = Function('x')(t), Function('y')(t)
+    >>> infinitesimals = OrderedDict(
+    ...     (v, make_infinitesimal(v, t, x, y, name=n)) for v, n in [(t, 'T'), (x, 'X'), (y, 'Y')]
+    ... )
+    >>> odes = [diff(x, t) - 2 * x * y, diff(y, t) - x**2 - y**2]
+    >>> inf = overdetermined_system_odes(odes, [x, y], [t], infinitesimals=infinitesimals)
+    >>> for _ in inf:  # doctest: +NORMALIZE_WHITESPACE
+    ...     print(
+    ...         ltf(_, [infinitesimals[x], infinitesimals[y]], [infinitesimals[t]], printer=False)
+    ...     )
+    -2*T_{t}*x*y - 4*T_{x}*x**2*y**2 - 2*T_{y}*x**3*y - 2*T_{y}*x*y**3 - 2*X*y + X_{t} +
+    2*X_{x}*x*y + X_{y}*x**2 + X_{y}*y**2 - 2*Y*x
+    -T_{t}*x**2 - T_{t}*y**2 - 2*T_{x}*x**3*y - 2*T_{x}*x*y**3 - T_{y}*x**4 - 2*T_{y}*x**2*y**2 -
+    T_{y}*y**4 - 2*X*x - 2*Y*y + Y_{t} + 2*Y_{x}*x*y + Y_{y}*x**2 + Y_{y}*y**2
+    """
+    eqs = list(eqs)
+    dep = convert_to_iterable(dependent)
+    indep = convert_to_iterable(independent)
+    if len(eqs) == 1 and len(dep) == 1:
+        return overdetermined_system_ode(eqs[0], dep, indep, infinitesimals, *args, **kw)
+    if len(indep) != 1:
+        raise NotImplementedError("systems of ODEs only, i.e. one independent variable")
+    infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
+    reduce_on_system = _ode_system_reduction(eqs, dep, indep[0])
+    result = []
+    for eq in eqs:
+        r = reduce_on_system(prolongation(eq, infinitesimals, dep, indep))
+        for c in split_jet_coefficients(r, dep):
+            c = finish_substitution(c)
+            if not any((c - _).expand() == 0 for _ in result):
+                result.append(c)
+    return result
+
+
+def _ode_system_reduction(eqs, dep, t):
+    """Solve a system of ODEs for one leading derivative per equation and
+    return the function that replaces every leading derivative, and every
+    derivative of it, by its value on the solutions of the system.
+    """
+    rhs = _solved_form(eqs, dep, t)
+
+    def reducible(expr):
+        return [
+            d
+            for d in expr.atoms(Derivative)
+            if d.expr in rhs and d.derivative_count >= rhs[d.expr][0]
+        ]
+
+    _check_termination(rhs, reducible)
+
+    def reduce_on_system(expr):
+        while derivatives := reducible(expr):
+            replacements = {}
+            for d in derivatives:
+                n, value = rhs[d.expr]
+                replacements[d] = diff(value, t, d.derivative_count - n)
+            expr = expr.xreplace(replacements)
+        return expr
+
+    return reduce_on_system
+
+
+def _solved_form(eqs, dep, t):
+    """{dependent variable: (order of its leader, value of its leader)}.
+
+    The leading derivative of an equation is one of its highest
+    derivatives; different equations need leaders of different dependent
+    variables, and every equation has to be linear in its leader.
+    """
+    candidates = [sorted(order(eq, dep, [t])[1], key=default_sort_key) for eq in eqs]
+    for leaders in product(*candidates):
+        if len({_.expr for _ in leaders}) == len(leaders):
+            break
+    else:
+        raise NotImplementedError("no distinct leading derivatives for the equations")
+    rhs = {}
+    for eq, leader in zip(eqs, leaders, strict=True):
+        h = Dummy()
+        if Poly(numer(together(eq.xreplace({leader: h}))), h).degree() != 1:
+            raise NotImplementedError(f"{eq} is not linear in {leader}")
+        rhs[leader.expr] = (leader.derivative_count, solve(eq, leader)[0])
+    return rhs
+
+
+def _check_termination(rhs, reducible):
+    """For the reduction to terminate, there has to be an orderly ranking
+    (by order, then by the dependent variable) in which every reducible
+    derivative on the right-hand side of an equation is lower than its
+    leader: then every replacement brings in lower derivatives only, also
+    after differentiation."""
+
+    def is_orderly_ranking(variables):
+        rank = {f: i for i, f in enumerate(variables)}
+        return all(
+            (d.derivative_count, rank[d.expr]) < (n, rank[f])
+            for f, (n, value) in rhs.items()
+            for d in reducible(value)
+        )
+
+    if not any(is_orderly_ranking(_) for _ in permutations(rhs)):
+        raise NotImplementedError("the reduction of the system by its equations may not terminate")
 
 
 def overdetermined_system_pde(pde, dependent, independent, infinitesimals=None, *args, **kw):
@@ -582,7 +690,7 @@ def is_janet_basis_of_ode(
     >>> y = Function('y')(x)
     >>> # Schwarz, Example 5.17
     >>> d1, d2 = diff(y, x), diff(y, x, 2)
-    >>> ode = 8*x*d2*y**6 - 9*x**5*d1**4 - 16*x*d1**2*y**5 + 16*d1*y**6
+    >>> ode = 8 * x * d2 * y**6 - 9 * x**5 * d1**4 - 16 * x * d1**2 * y**5 + 16 * d1 * y**6
     >>> ys = Symbol('y')
     >>> X, Y = Function("X")(ys, x), Function("Y")(ys, x)
     >>> B = [
@@ -616,6 +724,7 @@ def is_janet_basis_of_ode(
     system, inf, r1, h_symbol = _linear_system_ode(ode, dependent, independent, infinitesimals)
     to_h = {dependent: h_symbol, Symbol(str(dependent.func)): h_symbol}
     B = [(b.expression() if isinstance(b, LHDP) else b).xreplace(to_h) for b in B]
+
     def dep_key(f):
         return f if isinstance(f, str) else f.func.__name__
 

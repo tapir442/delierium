@@ -167,7 +167,7 @@ def test_example_2_20():
     assert_same_system(inf, expected, dependents)
 
 
-def _test_example_2_21():
+def test_example_2_21():
     t = Symbol('t')
     x = Function('x')(t)
     y = Function('y')(t)
@@ -196,7 +196,9 @@ def _test_example_2_21():
         + 2 * x * y * D(Y, x)
         + (x**2 + y**2) * (D(Y, y) - D(T, t))
         - 2 * x * y * (x**2 + y**2) * D(T, x)
-        + (x**2 + y**2) ** 2 * D(T, y)
+        # the notebook had +(x**2 + y**2)**2 * T_y; the term comes from
+        # -y' * D_t(T) with y' = x**2 + y**2, so the sign is minus
+        - (x**2 + y**2) ** 2 * D(T, y)
         - 2 * x * X
         - 2 * y * Y,  # 2.155b
     ]
@@ -238,7 +240,53 @@ def test_heat_equation():
     assert_same_system(inf, expected, dependents)
 
 
+def test_free_particle_2d():
+    # x'' = 0, y'' = 0: the point symmetries are the 15-dimensional sl(4)
+    t = Symbol('t')
+    x = Function('x')(t)
+    y = Function('y')(t)
+    dependents = [x, y]
+
+    T = make_infinitesimal(t, t, x, y)
+    X = make_infinitesimal(x, t, x, y)
+    Y = make_infinitesimal(y, t, x, y)
+
+    inf = overdetermined_system_odes(
+        [D(x, t, t), D(y, t, t)], dependents, [t], infinitesimals=OrderedDict({t: T, x: X, y: Y})
+    )
+
+    ts, xs, ys = Symbol('t'), Symbol('x'), Symbol('y')
+
+    def is_symmetry(tau, xi, eta):
+        solution = {f.func: Lambda((ts, xs, ys), g) for f, g in [(T, tau), (X, xi), (Y, eta)]}
+        return all(simplify(e.xreplace({x: xs, y: ys}).subs(solution).doit()) == 0 for e in inf)
+
+    generators = [
+        (1, 0, 0),
+        (0, 1, 0),
+        (0, 0, 1),
+        (0, ts, 0),
+        (0, 0, ts),
+        (0, xs, 0),
+        (0, ys, 0),
+        (0, 0, xs),
+        (0, 0, ys),
+        (ts, 0, 0),
+        (xs, 0, 0),
+        (ys, 0, 0),
+        (ts**2, ts * xs, ts * ys),
+        (ts * xs, xs**2, xs * ys),
+        (ts * ys, xs * ys, ys**2),
+    ]
+    assert all(is_symmetry(*g) for g in generators)
+    assert not is_symmetry(0, 0, xs**2)
+    assert not is_symmetry(ts**2, 0, 0)
+
+
 def _test_example_2_22():
+    # disabled: the expected equations below are a copy of 2.155 (Example
+    # 2.21), not the ones for this second-order system; they have to be
+    # taken from Arrigo
     t = Symbol('t')
     x = Function('x')(t)
     y = Function('y')(t)
