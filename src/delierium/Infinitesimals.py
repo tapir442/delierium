@@ -1,8 +1,11 @@
 """Infinitesimals.
 
 Computes the overdetermined system of determining equations for the
-infinitesimal generators of the Lie point symmetry group of an ODE/PDE,
-via prolongation of the vector field and extraction of coefficients.
+infinitesimal generators of the Lie point symmetry group of an ODE/PDE.
+The system is taken from symlie where possible. Equations that are not
+linear in their highest derivative, or whose invariance condition is not
+polynomial in the jets (e.g. exp(y')), go through the prolongation of the
+vector field and extraction of coefficients here.
 """
 
 from collections import OrderedDict
@@ -11,6 +14,7 @@ from functools import reduce
 from itertools import combinations_with_replacement
 from typing import Any
 
+from symlie import determining_equations as symlie_determining_equations
 from sympy import (  # noqa: F401
     Derivative,
     Dummy,
@@ -31,6 +35,7 @@ from sympy import (  # noqa: F401
     together,
 )
 from sympy.core.backend import Derivative, Function, Symbol, diff  # noqa: F811
+from sympy.core.function import AppliedUndef
 
 from delierium.helpers import finish_substitution, func_diff, make_infinitesimal, profile_if_enabled
 from delierium.JanetBasis import LHDP, Janet_Basis, Reorder, _Dterm, is_janet_basis_of
@@ -380,7 +385,7 @@ def compute_overdetermined_system_of_infinitesimals(
 
     >>> x = Symbol('x')
     >>> y = Function('y')(x)
-    >>> for _ in janet_basis_from_ode(diff(y, x, 2)**2 - diff(y, x), y, x):
+    >>> for _ in janet_basis_from_ode(diff(y, x, 2) ** 2 - diff(y, x), y, x):
     ...     print(_)
     D(Y(y(x), x), (y(x), 2))
     D(X(y(x), x), x) + (-1/3) * D(Y(y(x), x), y(x))
@@ -393,21 +398,55 @@ def compute_overdetermined_system_of_infinitesimals(
     infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
     _, highest_term = order(eq, dep, indep)
     highest_term = next(iter(highest_term))
-
-    r = prolongation(eq, infinitesimals, dep, indep)
     h = Dummy()
     eq_h = numer(together(eq.xreplace({highest_term: h})))
-    if Poly(eq_h, h).degree() == 1:
+    linear = Poly(eq_h, h).degree() == 1
+    if linear:
+        try:
+            return _symlie_system(eq, dep, indep, infinitesimals)
+        except ValueError:
+            # symlie splits only polynomials in the jets, not e.g. exp(y')
+            pass
+    r = prolongation(eq, infinitesimals, dep, indep)
+    if linear:
         sol = solve(eq, highest_term)[0]
         r = r.xreplace({highest_term: sol})
     else:
         # eq is not linear in its highest derivative: solving for it would
-        # bring in roots of jet variables. pr X(eq) has to vanish on eq = 0,
-        # i.e. (eq being irreducible) eq has to divide it as a polynomial in
-        # the highest derivative, so its pseudo-remainder has to vanish
+        # bring in roots of jet variables (and symlie, which tries, may not
+        # return at all). pr X(eq) has to vanish on eq = 0, i.e. (eq being
+        # irreducible) eq has to divide it as a polynomial in the highest
+        # derivative, so its pseudo-remainder has to vanish
         r_h = numer(together(r.xreplace({highest_term: h})))
         r = prem(r_h, eq_h, h).xreplace({h: highest_term})
     return split_jet_coefficients(r, dep)
+
+
+def _symlie_system(eq, dep, indep, infinitesimals):
+    """The determining equations from symlie, written in our infinitesimals.
+
+    symlie names the infinitesimals xi1, ..., phi1, ... and uses dummy
+    symbols for the dependent variables; both are mapped back.
+    """
+    system = symlie_determining_equations(eq, dep, indep)
+    to_dummy = dict(zip(dep, system.dependent_symbols, strict=True))
+    from_dummy = dict(zip(system.dependent_symbols, dep, strict=True))
+    ours = {
+        theirs.func: infinitesimals[v].xreplace(to_dummy)
+        for theirs, v in zip(system.xi + system.phi, list(indep) + list(dep), strict=True)
+    }
+
+    def translate(e):
+        replacements = {}
+        for d in e.atoms(Derivative):
+            if d.expr.func in ours:
+                replacements[d] = diff(ours[d.expr.func], *d.variable_count)
+        for f in e.atoms(AppliedUndef):
+            if f.func in ours:
+                replacements[f] = ours[f.func]
+        return canonical_derivatives(e.xreplace(replacements).xreplace(from_dummy), dep)
+
+    return [translate(_.lhs) for _ in system.equations]
 
 
 def overdetermined_system_ode(ode, dependent, independent, infinitesimals=None, *args, **kw):
@@ -426,12 +465,12 @@ def overdetermined_system_ode(ode, dependent, independent, infinitesimals=None, 
     ...     print(_)
     -3*X_{xxy} - 2*X_{xy}*y + 3*Y_{xyy} + Y_{yy}*y
     -3*X_{xx} + X_{x}*y + Y + 3*Y_{xy}
-    -3*X_{xyy} - X_{yy}*y + Y_{yyy}
-    -3*X_{y}
-    -6*X_{yy}
     -9*X_{xy} + X_{y}*y + 3*Y_{yy}
-    -X_{xxx} - X_{xx}*y + 3*Y_{xxy} + 2*Y_{xy}*y
-    -X_{yyy}
+    3*X_{xyy} + X_{yy}*y - Y_{yyy}
+    X_{xxx} + X_{xx}*y - 3*Y_{xxy} - 2*Y_{xy}*y
+    X_{yyy}
+    X_{yy}
+    X_{y}
     Y_{xxx} + Y_{xx}*y
     """
     result = compute_overdetermined_system_of_infinitesimals(
@@ -470,14 +509,14 @@ def overdetermined_system_pde(pde, dependent, independent, infinitesimals=None, 
     ... ]
     >>> for _ in sorted(inf):
     ...     print(_)
-    -2*U_{ux} - X_{t} + X_{xx}
     -T_{t} + T_{xx} + 2*X_{x}
-    -U_{uu} + 2*X_{ux}
-    2*T_{ux} + 2*X_{u}
-    2*T_{u}
-    2*T_{x}
+    2*U_{ux} + X_{t} - X_{xx}
     T_{uu}
+    T_{ux} + X_{u}
+    T_{u}
+    T_{x}
     U_{t} - U_{xx}
+    U_{uu} - 2*X_{ux}
     X_{uu}
     """
     if len(convert_to_iterable(dependent)) != 1:
@@ -582,7 +621,7 @@ def is_janet_basis_of_ode(
     >>> y = Function('y')(x)
     >>> # Schwarz, Example 5.17
     >>> d1, d2 = diff(y, x), diff(y, x, 2)
-    >>> ode = 8*x*d2*y**6 - 9*x**5*d1**4 - 16*x*d1**2*y**5 + 16*d1*y**6
+    >>> ode = 8 * x * d2 * y**6 - 9 * x**5 * d1**4 - 16 * x * d1**2 * y**5 + 16 * d1 * y**6
     >>> ys = Symbol('y')
     >>> X, Y = Function("X")(ys, x), Function("Y")(ys, x)
     >>> B = [
@@ -616,6 +655,7 @@ def is_janet_basis_of_ode(
     system, inf, r1, h_symbol = _linear_system_ode(ode, dependent, independent, infinitesimals)
     to_h = {dependent: h_symbol, Symbol(str(dependent.func)): h_symbol}
     B = [(b.expression() if isinstance(b, LHDP) else b).xreplace(to_h) for b in B]
+
     def dep_key(f):
         return f if isinstance(f, str) else f.func.__name__
 

@@ -4,7 +4,7 @@ import pathlib
 import sys
 from collections import OrderedDict
 
-from sympy import Lambda, cancel, simplify
+from sympy import Lambda, Matrix, cancel, simplify
 from sympy.core.backend import Derivative, Function, Symbol
 from sympy.core.function import AppliedUndef
 
@@ -41,6 +41,28 @@ def assert_same_system(computed, expected, dependents):
     expected = [canonical_derivatives(finish_substitution(e), dependents) for e in expected]
     assert all(any(equivalent(c, e, dependents) for e in expected) for c in computed)
     assert all(any(equivalent(c, e, dependents) for c in computed) for e in expected)
+
+
+def assert_same_span(computed, expected, dependents):
+    """computed and expected generate the same linear system: both are
+    linear in the infinitesimals and their derivatives, with coefficients
+    in the dependent variables, and have the same span over those."""
+    expected = [canonical_derivatives(finish_substitution(e), dependents) for e in expected]
+    unknowns = sorted(
+        {a for e in computed + expected for a in e.atoms(Derivative, AppliedUndef)}
+        - set(dependents),
+        key=str,
+    )
+
+    def matrix(system):
+        rows = [[e.expand().coeff(a) for a in unknowns] for e in system]
+        for e, row in zip(system, rows, strict=True):
+            assert (e - sum(c * a for c, a in zip(row, unknowns, strict=True))).expand() == 0
+        return Matrix(rows)
+
+    rank = matrix(expected).rank(simplify=True)
+    assert matrix(computed).rank(simplify=True) == rank
+    assert matrix(computed + expected).rank(simplify=True) == rank
 
 
 def test_example_2_17():
@@ -313,7 +335,8 @@ def test_harry_dym_baumann_226():
         u**3 * D(X, x, x, x) - 3 * u**3 * D(U, u, x, x) - D(X, t),
         u**4 * D(T, x, x, x) - u * D(T, t) + 3 * u * D(X, x) - 3 * U,
     ]
-    assert_same_system(inf, expected, dependents)
+    # symlie returns a different generating set of the same system
+    assert_same_span(inf, expected, dependents)
 
     # general solution: the five-dimensional symmetry algebra
     # d_x, d_t, x d_x + u d_u, x^2 d_x + 2 x u d_u, 3 t d_t - u d_u

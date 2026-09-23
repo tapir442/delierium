@@ -1073,6 +1073,7 @@ source = { editable = "." }
 dependencies = [
     { name = "more-itertools" },
     { name = "symengine" },
+    { name = "symlie" },
     { name = "sympy" },
 ]
 
@@ -1131,6 +1132,7 @@ requires-dist = [
     { name = "line-profiler", marker = "extra == 'profile'", specifier = ">=4" },
     { name = "more-itertools", specifier = ">=10" },
     { name = "symengine", specifier = ">=0.13" },
+    { name = "symlie", git = "https://github.com/zhilongwei/symlie" },
     { name = "sympy", specifier = ">=1.13" },
 ]
 provides-extras = ["jupyter", "profile"]
@@ -5218,6 +5220,14 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/98/f0/f7d488b93081d25a47e974335808cbb6ece96aaaf15abbb72d5d35ee5eab/symengine-0.14.1-cp314-cp314t-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:9fd6465d3a797d44e5e4d3b540c4416f18ddccb77768267f0f1e783c44d97bbc", size = 94038098, upload-time = "2025-09-14T15:23:48.45Z" },
     { url = "https://files.pythonhosted.org/packages/22/45/45e84f7f3154d61df6de21b5e38912f9ce91bd7422072a575fe9a3b2ed43/symengine-0.14.1-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:9d1fe80abee5ad6f53bd64c38e25737bb526eff6d24d8428df0f92283e592799", size = 51127881, upload-time = "2025-09-14T15:23:52.894Z" },
     { url = "https://files.pythonhosted.org/packages/ce/30/6b63d1dc9047587cee5cb9d3a4d75041e8173d839eb4c962ad357730a928/symengine-0.14.1-cp314-cp314t-win_amd64.whl", hash = "sha256:faf659b9436dcc5ade7f6085d17d42181c18d78ddcaf91de16cd9a412fc77357", size = 18878832, upload-time = "2025-09-14T15:23:55.911Z" },
+]
+
+[[package]]
+name = "symlie"
+version = "0.1.0"
+source = { git = "https://github.com/zhilongwei/symlie#0d875c32fb31b12c357ad43b6c516964843c923b" }
+dependencies = [
+    { name = "sympy" },
 ]
 
 [[package]]
