@@ -209,8 +209,27 @@ def degree_of_set(j, U):
 
 
 class IoharaMalbosMultipliers:
+    """Janet multipliers of a set of monomials, following Iohara/Malbos.
+
+    The monomials are exponent vectors, the last index is the highest
+    variable. mults maps every monomial to the indices of its multipliers.
+
+    Schwarz, Example C.1, p. 384, variables x1, x2, x3 with x3 highest;
+    lists are accepted as well:
+
+    >>> r = IoharaMalbosMultipliers([[2, 2, 3], [3, 0, 3], [3, 1, 1], [0, 1, 1]])
+    >>> for monom, mults in r.mults.items():
+    ...     print(monom, sorted(mults))
+    (2, 2, 3) [0, 1, 2]
+    (3, 0, 3) [0, 2]
+    (3, 1, 1) [0, 1]
+    (0, 1, 1) [1]
+    """
+
     def __init__(self, monoms):
-        self.monoms = monoms
+        # the monomials are keys of self.mults and elements of sets, so they
+        # have to be hashable; lists are accepted as well
+        self.monoms = [tuple(_) for _ in monoms]
         # no of variables
         n = len(monoms[0])
         self.degrees = [0] * n
