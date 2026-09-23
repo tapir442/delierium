@@ -1057,10 +1057,13 @@ def is_janet_basis_of(B, S, dependent, independent, sort_order=Mgrevlex):
     >>> # too strong: S still follows from B, but B has fewer solutions
     >>> is_janet_basis_of([*B, z], S, (w, z), (x, y))
     False
+    >>> # B may also be given as LHDPs, e.g. the result of Janet_Basis
+    >>> is_janet_basis_of(Janet_Basis(S, (w, z), (x, y)).S, S, (w, z), (x, y))
+    True
     """
     context = Context(dependent, independent, sort_order)
     expected = Janet_Basis(S, dependent, independent, sort_order).S
-    candidate = [LHDP(b, context) for b in B]
+    candidate = [LHDP(b.expression() if isinstance(b, LHDP) else b, context) for b in B]
     return sorted(map(str, expected)) == sorted(map(str, candidate))
 
 
