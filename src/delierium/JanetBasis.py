@@ -501,23 +501,35 @@ def _subtract_derivative(e1, e2, factor, variables):
     """e1 - factor * ∂^variables(e2), or None if that is zero.
 
     With no variables this is step S2 of Algorithm 2.4, e1 - factor * e2.
+
+    Differentiating e2 w.r.t. H yields Y_H twice, from (-x/H) * Y_H and
+    from (-x/H**2) * Y; the two contributions cancel (Schwarz, Example 5.16):
+
+    >>> x, H = Symbol('x'), Symbol('H')
+    >>> X, Y = Function('X')(H, x), Function('Y')(H, x)
+    >>> ctx = Context([X, Y], [x, H])
+    >>> e1 = LHDP(diff(Y, H, x) + diff(Y, x) / H, ctx)
+    >>> e2 = LHDP(diff(Y, x) - x * diff(Y, H) / H - X / (2 * H * x) - x * Y / H**2, ctx)
+    >>> print(reduce(e1, e2, ctx))
+    D(Y(H, x), (H, 2)) + (1/(2*x**2)) * D(X(H, x), H) + (1/H) * D(Y(H, x), H) + (-1/H**2) * Y(H, x)
     """
     e2_terms = [dterm for p in e2.p for dterm in p.diff(*variables)] if variables else e2.p
-    # copies, because coefficients are updated in place below
+    # copies, because coefficients are updated in place below.
+    # Differentiating e2 may give several terms with the same derivative
+    # (product rule), so they must be added up, not kept side by side
     remaining = OrderedDict((_.comparison_vector, _.copy()) for _ in e1.p)
-    new_terms = []
     for dterm in e2_terms:
         product = dterm.coeff * factor
         hit = remaining.get(dterm.comparison_vector)
-        if not hit:
-            new_terms.append(
-                _Dterm(coeff=-product, derivative=dterm.derivative, context=dterm.context)
+        if hit is None:
+            remaining[dterm.comparison_vector] = _Dterm(
+                coeff=-product, derivative=dterm.derivative, context=dterm.context
             )
         elif expr_eq(hit.coeff, product):
             del remaining[dterm.comparison_vector]
         else:
             hit.coeff -= product
-    dterms = [_ for _ in [*remaining.values(), *new_terms] if _]
+    dterms = [_ for _ in remaining.values() if _]
     if not dterms:
         return None
     return LHDP(e=0, context=e2.context, dterms=dterms)

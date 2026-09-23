@@ -22,6 +22,7 @@ from sympy import (  # noqa: F401
     cancel,
     default_sort_key,
     diff,
+    exp,
     fraction,
     init_printing,
     numer,
@@ -31,7 +32,7 @@ from sympy import (  # noqa: F401
 from sympy.core.backend import Derivative, Function, Symbol, diff  # noqa: F811
 
 from delierium.helpers import finish_substitution, func_diff, make_infinitesimal, profile_if_enabled
-from delierium.JanetBasis import LHDP, Janet_Basis, Reorder, _Dterm
+from delierium.JanetBasis import LHDP, Janet_Basis, Reorder, _Dterm, is_janet_basis_of
 from delierium.matrix_order import Context, Mgrevlex
 
 init_printing()
@@ -73,7 +74,7 @@ def order(expr: Expr, dep: list[Function], indep: list[Symbol]) -> tuple[int, se
     dep_names = [_.name for _ in dep]
     for atom in expr.expand().atoms(Derivative):
         if atom.args[0].name in dep_names:
-            _order = sum(cnt[1] for cnt in atom.args[1:])
+            _order = len(atom.variables)
             if max_order == _order:
                 max_deriv |= {atom}
             elif max_order < _order:
@@ -252,6 +253,12 @@ def split_jet_coefficients(expr, dep) -> list[Expr]:
 
     >>> split_jet_coefficients(x * d2 - x / d1 + 1, [y])
     [1, -x, x]
+
+    Exponentials of jet variables are split off as well: p**k * exp(m*a*p)
+    are linearly independent functions of the jet variable p:
+
+    >>> split_jet_coefficients(x * d1 * exp(y * d1) + x**2 * exp(2 * y * d1) + d1 - 1, [y])
+    [-1, 1, x, x**2]
     """
     jet = {d: Dummy() for d in expr.atoms(Derivative) if d.expr in dep}
     expr = expr.xreplace(jet)
@@ -263,7 +270,8 @@ def split_jet_coefficients(expr, dep) -> list[Expr]:
     num, den = fraction(together(expr))
     other_den, _ = den.as_independent(*jet.values(), as_Add=False)
     expr = (num / other_den).expand()
-    coeffs = Poly(expr, *jet.values()).coeffs() if jet else [expr]
+    expr, exp_gens = _exp_generators(expr, list(jet.values()))
+    coeffs = Poly(expr, *jet.values(), *exp_gens).coeffs() if jet else [expr]
     back = {v: k for k, v in to_symbol.items()}
     result = set()
     for c in coeffs:
@@ -271,6 +279,27 @@ def split_jet_coefficients(expr, dep) -> list[Expr]:
         if c != 0:
             result.add(c)
     return sorted(result, key=default_sort_key)
+
+
+def _exp_generators(expr, jet):
+    """Replace the exponentials depending on the jet variables by powers of
+    new generators, one per family exp(k*a), k a positive integer."""
+    exps = sorted((e for e in expr.atoms(exp) if e.has(*jet)), key=default_sort_key)
+    bases = []  # (exponent, generator)
+    repl = {}
+    for e in exps:
+        for arg, gen in bases:
+            ratio = cancel(e.args[0] / arg)
+            if ratio.is_Rational:
+                if not (ratio.is_Integer and ratio > 0):
+                    raise NotImplementedError(f"{e} is exp({ratio}*({arg}))")
+                repl[e] = gen**ratio
+                break
+        else:
+            gen = Dummy()
+            bases.append((e.args[0], gen))
+            repl[e] = gen
+    return expr.xreplace(repl), [gen for _, gen in bases]
 
 
 def canonical_derivatives(expr, dep):
@@ -436,15 +465,13 @@ def overdetermined_system_pde(pde, dependent, independent, infinitesimals=None, 
     return [finish_substitution(_) for _ in result]
 
 
-def janet_basis_from_ode(
-    ode: Expr,
-    dependent: Symbol,
-    independent: Symbol,
-    sort_order=Mgrevlex,
-    infinitesimals=None,
-    *args,
-    **kw,
-):
+def _linear_system_ode(ode, dependent, independent, infinitesimals=None):
+    """The determining equations of an ODE as a linear system for Janet_Basis.
+
+    Returns (system, dependents, independents, h_symbol): the dependent
+    variable y(x) is replaced by the symbol H and all derivatives of y are
+    set to zero, so the infinitesimals become functions of (H, x).
+    """
     infinitesimals = create_infinitesimals([dependent], [independent], infinitesimals)
     overdetermined_system = overdetermined_system_ode(
         ode, [dependent], [independent], infinitesimals=infinitesimals
@@ -470,8 +497,20 @@ def janet_basis_from_ode(
             d = diff(dependent(independent), independent, j)
             e = e.subs({d: 0})
         intermediate_system.append(e)
+    return intermediate_system, list(reversed(inf)), list(reversed(r1)), h_symbol
 
-    janet = Janet_Basis(intermediate_system, reversed(inf), reversed(r1), sort_order=sort_order)
+
+def janet_basis_from_ode(
+    ode: Expr,
+    dependent: Symbol,
+    independent: Symbol,
+    sort_order=Mgrevlex,
+    infinitesimals=None,
+    *args,
+    **kw,
+):
+    system, inf, r1, h_symbol = _linear_system_ode(ode, dependent, independent, infinitesimals)
+    janet = Janet_Basis(system, inf, r1, sort_order=sort_order)
 
     def back_substitute(e):
         return e.xreplace({h_symbol: dependent})
@@ -491,6 +530,43 @@ def janet_basis_from_ode(
         res.append(LHDP(e=0, context=ctx, dterms=p))
     res = Reorder(res, context=ctx)
     return res
+
+
+def is_janet_basis_of_ode(
+    B, ode, dependent, independent, sort_order=Mgrevlex, infinitesimals=None
+):
+    """Check whether B is the Janet basis of the determining equations of ode.
+
+    B is written in the infinitesimals X(y, x), Y(y, x) of a plain symbol y
+    named like the dependent variable, so that diff gives partial derivatives
+    (with y(x) in place of y, diff(Y, x) would be the total derivative).
+    LHDPs as returned by janet_basis_from_ode are accepted as well, see
+    is_janet_basis_of.
+
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> # Schwarz, Example 5.17
+    >>> d1, d2 = diff(y, x), diff(y, x, 2)
+    >>> ode = 8*x*d2*y**6 - 9*x**5*d1**4 - 16*x*d1**2*y**5 + 16*d1*y**6
+    >>> ys = Symbol('y')
+    >>> X, Y = Function("X")(ys, x), Function("Y")(ys, x)
+    >>> B = [
+    ...     diff(Y, ys, 2) - 2 * diff(Y, ys) / ys + 2 * Y / ys**2,
+    ...     diff(X, x) - 3 * diff(Y, ys) / 2 - 2 * X / x + 3 * Y / ys,
+    ...     diff(X, ys),
+    ...     diff(Y, x),
+    ... ]
+    >>> is_janet_basis_of_ode(B, ode, y, x)
+    True
+    >>> is_janet_basis_of_ode(janet_basis_from_ode(ode, y, x), ode, y, x)
+    True
+    >>> is_janet_basis_of_ode(B[1:], ode, y, x)
+    False
+    """
+    system, inf, r1, h_symbol = _linear_system_ode(ode, dependent, independent, infinitesimals)
+    to_h = {dependent: h_symbol, Symbol(str(dependent.func)): h_symbol}
+    B = [(b.expression() if isinstance(b, LHDP) else b).xreplace(to_h) for b in B]
+    return is_janet_basis_of(B, system, inf, r1, sort_order)
 
 
 if __name__ == "__main__":
