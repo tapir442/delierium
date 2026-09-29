@@ -1,22 +1,18 @@
 import pytest
-import sys
-sys.path.insert (0, "../delierium")
-import delierium.MatrixOrder as M
-from sage.all import *
 
-@pytest.fixture
-def context_x_y_w_z ():
-    var ("x y")
-    w = function ("w")(x,y)
-    z = function ("z")(x,y)
-    ctx = M.Context ((w, z), (x,y))
-    return ctx
 
-@pytest.fixture
-def context_x_y_z_u_v_w ():
-    var ("x y z")
-    u = function ("u")(x,y,z)
-    v = function ("v")(x,y,z)
-    w = function ("w")(x,y,z)
-    ctx = M.Context ((u,v,w), (x,y,z))
-    return ctx
+def pytest_addoption(parser):
+    parser.addoption(
+        "--run-too-slow",
+        action="store_true",
+        help="run the tests marked too_slow (symbolic Janet bases that do not finish)",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--run-too-slow"):
+        return
+    skip = pytest.mark.skip(reason="too slow: run with --run-too-slow")
+    for item in items:
+        if "too_slow" in item.keywords:
+            item.add_marker(skip)

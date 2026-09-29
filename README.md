@@ -1,120 +1,224 @@
 # delierium
 <span style="font-size:30px;"><b>D</b>ifferential <b>E</b>quations' <b>LIE</b> symmetries <b>R</b>esearch <b>I</b>nstr<b>UM</b>ent</span>
 
-Searching for symmetries in ODEs using Python/SageMath/sympy
+Lie point symmetries of ordinary and partial differential equations with Python and SymPy,
+using Janet bases.
 
-# Status
+# Release 1.0.0
 
-* still playing around with Janet bases
-* Lie ouput form a alpha
+Had a hard time debugging and profiling (a Janet base is, after all, a Gröbner base, with all
+its implications during computation), and claude was of great help to find and fix all the
+next-to-last bugs.
 
-## Release 0.0.1.dev1
+delierium computes
 
-* Just constructing a Janet basis from a list of homogenuous linear PDEs (for grevlex and degrevlex order,
-lex is dubious)
+* the **determining equations** of the Lie point symmetries of an ODE, a system of ODEs or a
+  scalar PDE,
+* **Janet bases** of linear systems of PDEs, in particular of these determining equations,
+  fraction free, with the conditions they assume (factors assumed nonzero, special cases of
+  the parameters),
+* from a Janet basis its **rank** (the dimension of the solution space, for determining
+  equations the dimension of the Lie algebra of point symmetries), its **parametric** and
+  **principal derivatives** and its type,
+* **pictures**: the staircase of a Janet basis, symmetry generators as vector fields with
+  solution curves, their flows as animations.
 
+A catalogue of about 260 equations with known symmetries from the literature checks it
+(see *Tests*). Solving the determining equations for the infinitesimals themselves is not
+part of this release.
 
-# Literature (and inspiration):
-* Werner M. Seiler: Involution. The Formal Theory of Differential Equations and its Applications in Computer Algebra, Spinger Berlin 2010, ISBN 978-3-642-26135-0.
-* Gerd Baumann: Symmetry Analysis of Differential Equations with Mathematica, Springer New York Berlin Heidelberg 2000, ISBN 0-387-98552-2.
-* Fritz Schwarz: Algorithmic Lie Theory for Solving Ordinary Differential Equations, CRC Press 2008, ISBN 978-1-58488-889-5
-* Fritz Schwarz: Loewy Decomposition of Linear Differential Equations, Springer Wien 2012, ISBN 978-3-7091-1687-6
-* Daniel J. Arrigo: Symmetry Analysis of Differential Equations, Wiley Hoboken/New Jersey 2015, ISBN 978-1-118-72140-7
-* John Starrett: Solving differential equations by Symmetry Groups  (e.g https://www.researchgate.net/publication/233653257_Solving_Differential_Equations_by_Symmetry_Groups)
-* Alexey A. Kasatkin, Aliya A. Gainetdinova: Symbolic and Numerical Methods for Searching Symmetries of Ordinary Differential Equations with a Small Parameter and Reducing Its Order, https://link.springer.com/chapter/10.1007%2F978-3-030-26831-2_19 (if you are able and willing to pay the 27 bucks)
-* Vishwas Khare, M.G. Timol: New Algorithm In SageMath To Check Symmetry Of Ode Of First Order, https://www.researchgate.net/publication/338388495_New_Algorithm_In_SageMath_To_Check_Symmetry_Of_Ode_Of_First_Order
+# Installation
 
-# Goals:
+    pip install delierium            # the package, needs Python 3.12 or newer
+    pip install "delierium[plot]"    # with matplotlib, for delierium.visualization
 
-* Short term:
-    * All kinda stuff for symmetry analysis of ODE/PDE , doing is step by step, whatver comes to my mind
-* Mid term:
-    * Make it a valuable package
-* Long term:
-    * Maybe integration into SciPy|SymPy|SageMath
+delierium runs on Python 3.12, 3.13 and 3.14; the whole test suite passes on each of them.
+With uv, choose the version with `--python`, e.g. `uv sync --python 3.12` for the
+environment of the project, or, without touching it,
 
-# Release History
-## Release 0.1.0
+    uv run --isolated --python 3.13 --group test pytest
 
-offers two functions 'Janet_Basis' and 'infinitesimalsODE' as described below. 
+From the sources, with [uv](https://docs.astral.sh/uv/):
 
-Note that 'infinitesimalsODE' does only return the overdetermined system stemming from the prolongation of the original ODE. The real infinitesimal are part of the next release.
+    git clone https://github.com/tapir442/delierium.git
+    cd delierium
+    uv sync                          # the package and the development tools
+    uv sync --group notebooks        # also JupyterLab and matplotlib, for the notebooks
 
+# How to use
 
+### The determining equations of an ODE
 
-# Documentation(work in progress)
+The Blasius equation `y''' + y y'' = 0`. `lie_derivative_printer` writes them in the notation
+of Lie: `X_xy` is the second derivative of the infinitesimal `X` by `x` and `y`.
 
-## How to use
+    >>> from sympy import Function, Symbol, diff
+    >>> from delierium import lie_derivative_printer, overdetermined_system_ode
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
+    >>> ode = diff(y, x, 3) + y * diff(y, x, 2)
+    >>> determining = overdetermined_system_ode(ode, [y], [x])
+    >>> for e in lie_derivative_printer(determining, [y], [x], output="text"):
+    ...     print(e)
+    Y_xx*y + Y_xxx
+    -9*X_xy + X_y*y + 3*Y_yy
+    -3*X_xyy - X_yy*y + Y_yyy
+    -X_xx*y - X_xxx + 3*Y_xxy + 2*Y_xy*y
+    -3*X_xxy - 2*X_xy*y + 3*Y_xyy + Y_yy*y
+    X_x*y - 3*X_xx + Y + 3*Y_xy
+    X_y
+    X_yy
+    X_yyy
 
-### Get the determining equations for the symmetry of an third order ODE:
+In JupyterLab, `lie_derivative_printer` without `output` renders them as formulas, and `ltf`
+does so for a single expression. `overdetermined_system_odes` and `overdetermined_system_pde`
+work the same way for systems of ODEs and for scalar PDEs.
 
-    >>> from delierium.Infinitesimals import infinitesimalsODE
-    >>> from sage.calculus.var import var, function
-    >>> from sage.calculus.functional import diff
-    >>> x   = var('x')
-    >>> y   = function('y')
-    >>> ode = diff(y(x), x, 3) + y(x) * diff(y(x), x, 2)
-    >>> inf = infinitesimalsODE(ode, y, x)
-    >>> print("determining system:")
-    >>> for _ in inf:
-    >>>     print(_)
-    >>> -3*D[0](xi)(y(x), x)
-    >>> -6*D[0, 0](xi)(y(x), x)
-    >>> y(x)*D[0](xi)(y(x), x) + 3*D[0, 0](phi)(y(x), x) - 9*D[0, 1](xi)(y(x), x)
-    >>> y(x)*D[1](xi)(y(x), x) + phi(y(x), x) + 3*D[0, 1](phi)(y(x), x) - 3*D[1, 1](xi)(y(x), x)
-    >>> -D[0, 0, 0](xi)(y(x), x)
-    >>> -y(x)*D[0, 0](xi)(y(x), x) + D[0, 0, 0](phi)(y(x), x) - 3*D[0, 0, 1](xi)(y(x), x)
-    >>> y(x)*D[0, 0](phi)(y(x), x) - 2*y(x)*D[0, 1](xi)(y(x), x) + 3*D[0, 0, 1](phi)(y(x), x) - 3*D[0, 1, 1](xi)(y(x), x)
-    >>> 2*y(x)*D[0, 1](phi)(y(x), x) - y(x)*D[1, 1](xi)(y(x), x) + 3*D[0, 1, 1](phi)(y(x), x) - D[1, 1, 1](xi)(y(x), x)
-    >>> y(x)*D[1, 1](phi)(y(x), x) + D[1, 1, 1](phi)(y(x), x)    
-    
-If you are using JupyterLab, you can print the results in a more human readable way:
+### Their Janet basis
 
+    >>> from delierium import janet_basis_from_ode
+    >>> for e in janet_basis_from_ode(ode, y, x):
+    ...     print(e)
+    D(X(y(x), x), x) + (1/y(x)) * Y(y(x), x)
+    D(X(y(x), x), y(x))
+    D(Y(y(x), x), x)
+    D(Y(y(x), x), y(x)) + (-1/y(x)) * Y(y(x), x)
 
-`from IPython.display import Math`
+Every derivative of `X` and `Y` is determined by these four equations, only the values of
+`X` and `Y` themselves are free: the Blasius equation has a two-dimensional Lie algebra of
+point symmetries, `d/dx` and `x d/dx - y d/dy`.
 
-`from delierium.helpers import latexer`
+### Janet bases of linear systems
 
-`from delierium.helpers import latexer`
+`JanetBasis` takes a list of linear homogeneous PDEs, the unknown functions and the
+variables (highest first), and optionally a ranking (`Mgrevlex`, the default, `Mgrlex`,
+`Mlex`). Schwarz's system (2.25):
 
-`from delierium.helpers import latexer`
+    >>> from sympy import symbols
+    >>> from delierium import JanetBasis
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> w = Function("w")(x, y)
+    >>> g1 = diff(z, y, y) + diff(z, y) / (2 * y)
+    >>> g2 = diff(w, x, x) + 4 * diff(w, y) * y**2 - 8 * y**2 * diff(z, x) - 8 * w * y
+    >>> g3 = diff(w, x, y) - diff(z, x, x) / 2 - diff(w, x) / (2 * y) - 6 * y**2 * diff(z, y)
+    >>> g4 = diff(w, y, y) - 2 * diff(z, x, y) - diff(w, y) / (2 * y) + w / (2 * y**2)
+    >>> janet = JanetBasis([g2, g3, g4, g1], (w, z), (x, y))
+    >>> for e in janet.S:
+    ...     print(e)
+    D(z(x, y), y)
+    D(z(x, y), x) + (1/(2*y)) * w(x, y)
+    D(w(x, y), y) + (-1/y) * w(x, y)
+    D(w(x, y), x)
+    >>> janet.rank()
+    2
+    >>> print(janet.parametric_derivatives())
+    [w(x, y), z(x, y)]
+    >>> print(janet.principal_derivatives(1))
+    [Derivative(w(x, y), x), Derivative(w(x, y), y), Derivative(z(x, y), x), Derivative(z(x, y), y)]
 
-`x   = var('x')`
+`rank()` is `oo` if there are infinitely many parametric derivatives. `assumed_nonzero()`
+lists the factors the computation divided by: where one of them vanishes, for special
+values of parameters or on singular lines, the Janet basis may differ.
+`parameter_conditions()` gives these special cases of the parameters.
 
-`y   = function('y')`
+### Pictures
 
-`ode = diff(y(x), x, 3) + y(x) * diff(y(x), x, 2)`
+`delierium.visualization` needs matplotlib (`delierium[plot]`) and is not imported by
+`import delierium`:
 
-`display(Math(latexer(ode)))`
+    from delierium.visualization import staircase, vector_fields, ode_solutions, animate_flow
 
-`inf = infinitesimalsODE(ode, y, x)`
+    staircase(janet)                                  # leading, principal, parametric derivatives
+    curves = ode_solutions(ode, y)                    # solution curves of an ODE
+    vector_fields([("1", "0"), ("x", "-y")], symbols("x y"), curves)
+    animate_flow(("x", "-y"), symbols("x y"), curves) # in Jupyter: HTML(_.to_jshtml())
 
-`print("determining system:")`
+A generator is a tuple of its components, the independent variables first: `("x", "-y")` is
+`x d/dx - y d/dy`.
 
-`for _ in inf:`
+# The package
 
-`    display(Math(latexer(_)))`
-    
-In this mode a derivative like `d^2y/dx^2` is shown as `y_x`(superscript x)
-    
-### Janet Basis
+The public interface is what `delierium` exports; `help(delierium)` lists it:
 
-    >>> import sage.all
-    >>> from delierium.JanetBasis import Janet_Basis
-    >>> from sage.calculus.var import var, function
-    >>> from sage.calculus.functional import diff
-    >>> vars = var ("x y")
-    >>> z = function("z")(*vars)
-    >>> w = function("w")(*vars)
-    >>> f1 = diff(w, y) + x*diff(z,y)/(2*y*(x**2+y)) - w/y
-    >>> f2 = diff(z, x, y) + y*diff(w,y)/x + 2*y*diff(z, x)/x
-    >>> f3 = diff(w, x, y) - 2*x*diff(z, x, 2)/y - x*diff(w,x)/y**2
-    >>> f4 = diff(w, x, y) + diff(z, x, y) + diff(w, y)/(2*y) - diff(w,x)/y + x* diff(z, y)/y - w/(2*y**2)
-    >>> f5 = diff(w,y,y) + diff(z,x,y) - diff(w, y)/y + w/(y**2)
-    >>> system_2_24 = [f1,f2,f3,f4,f5]
-    >>> jb=Janet_Basis(system_2_24, (w,z), vars)
-    >>> jb.show()
-    >>> diff(z(x, y), y)
-    >>> diff(z(x, y), x) + (1/2/y) * w(x, y)
-    >>> diff(w(x, y), y) + (-1/y) * w(x, y)
-    >>> diff(w(x, y), x)
+* determining equations: `overdetermined_system_ode`, `overdetermined_system_odes`,
+  `overdetermined_system_pde`, `prolongation`, `make_infinitesimal`, `create_infinitesimals`
+* Janet bases: `JanetBasis` (with `rank`, `parametric_derivatives`, `principal_derivatives`,
+  `type`, `assumed_nonzero`, `parameter_conditions`, `representation`),
+  `janet_basis_from_ode`, `janet_basis_from_odes`, `integrability_conditions`, and checks
+  against published bases: `is_janet_basis_of`, `is_janet_basis_of_ode`,
+  `is_janet_basis_of_odes`
+* rankings: `Context`, `Mgrevlex`, `Mgrlex`, `Mlex`
+* the notation of Lie: `lie_form`, `ltf`, `lie_derivative_printer`
+* operators: `euler_operator`, `frechet_derivative`, `adjoint_frechet_derivative`,
+  `variational_derivative`
+* pictures: the module `delierium.visualization`
+
+### Tests and the symmetry catalogue
+
+`tests/symmetry_catalog.py` is a catalogue of about 260 ODEs, systems of ODEs and PDEs with
+their known symmetries: Kamke's collection (as classified in Schwarz's Appendix E), the
+examples and exercises of Arrigo, Schwarz, Hydon, Baumann and others, and classical
+equations. For each, the listed generators have to solve the determining equations and the
+rank of their Janet basis has to be the dimension of the symmetry algebra.
+`tests/test_schwarz_examples.py` checks the Janet bases printed in Schwarz's book, coefficients
+included.
+
+    uv run pytest                    # the fast tests, including the doctests of this README
+    uv run pytest -m slow -n auto    # the whole catalogue, about 15 s
+
+### Notebooks
+
+* `notebooks/Catalogue_template.ipynb`: pick an equation of the catalogue by name; its
+  Janet basis and pictures.
+* `notebooks/Arrigo`, `Baumann`, `Schwarz`, `Khare-Timol`: the examples of these books and
+  papers, in their order, built the same way.
+* `notebooks/Backlund`: Bäcklund transformations (sine-Gordon, Liouville, Burgers, KdV), and
+  the symmetries of their equations.
+
+# Open problems
+
+Equations delierium cannot handle yet are tests in `tests/test_open_problems.py`, each
+documented in its module docstring: what is asked, what delierium does, why it fails, what
+is known, and ways forward. They are skipped by default; run them with
+
+    uv run pytest -m too_slow --run-too-slow
+
+1. The symmetries of `2 (K(u) u')' + x u' = 0` for an arbitrary `K(u)` (the
+   Boltzmann-reduced nonlinear diffusion equation, a group classification problem): the
+   Janet basis does not finish, as every differentiation brings in the next derivative of
+   `K` as a new generator of the coefficients.
+2. The determining equation of the general second order ODE `u'' = F(x, u, u')` with an
+   arbitrary `F`: splitting the symmetry condition fails, as `F` is an arbitrary function of
+   the jet variable `u'`.
+3. Kamke 6.171 and 6.219 with symbolic parameters: the Janet basis does not finish in
+   reasonable time. The catalogue checks them at random parameter values, which give the
+   generic dimension.
+
+# Literature
+
+* Werner M. Seiler: Involution. The Formal Theory of Differential Equations and its
+  Applications in Computer Algebra, Springer Berlin 2010, ISBN 978-3-642-26135-0.
+* Fritz Schwarz: Algorithmic Lie Theory for Solving Ordinary Differential Equations, CRC
+  Press 2008, ISBN 978-1-58488-889-5.
+* Fritz Schwarz: Loewy Decomposition of Linear Differential Equations, Springer Wien 2012,
+  ISBN 978-3-7091-1687-6.
+* Daniel J. Arrigo: Symmetry Analysis of Differential Equations, Wiley Hoboken/New Jersey
+  2015, ISBN 978-1-118-72140-7.
+* Gerd Baumann: Symmetry Analysis of Differential Equations with Mathematica, Springer New
+  York Berlin Heidelberg 2000, ISBN 0-387-98552-2.
+* Peter E. Hydon: Symmetry Methods for Differential Equations, Cambridge University Press
+  2000.
+* Erich Kamke: Differentialgleichungen. Lösungsmethoden und Lösungen.
+* John Starrett: Solving Differential Equations by Symmetry Groups,
+  https://www.researchgate.net/publication/233653257_Solving_Differential_Equations_by_Symmetry_Groups
+* Alexey A. Kasatkin, Aliya A. Gainetdinova: Symbolic and Numerical Methods for Searching
+  Symmetries of Ordinary Differential Equations with a Small Parameter and Reducing Its
+  Order, https://link.springer.com/chapter/10.1007%2F978-3-030-26831-2_19
+* Vishwas Khare, M. G. Timol: New Algorithm In SageMath To Check Symmetry Of Ode Of First
+  Order,
+  https://www.researchgate.net/publication/338388495_New_Algorithm_In_SageMath_To_Check_Symmetry_Of_Ode_Of_First_Order
+
+# License
+
+MIT, see `LICENSE`.
