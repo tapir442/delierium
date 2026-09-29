@@ -1,7 +1,8 @@
-import numpy as np
 import pytest
 from sympy import Function, diff, symbols
 
+# optional dependencies (delierium[plot]): skip without them, as in CI's test group
+np = pytest.importorskip("numpy")
 matplotlib = pytest.importorskip("matplotlib")
 matplotlib.use("Agg")
 

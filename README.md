@@ -27,6 +27,23 @@ A catalogue of about 260 equations with known symmetries from the literature che
 (see *Tests*). Solving the determining equations for the infinitesimals themselves is not
 part of this release.
 
+# Release notes
+
+### 1.0.1
+
+* `import delierium` no longer replaces SymPy's `Derivative.__new__` with a trimmed copy.
+  The patch changed `diff` for all SymPy code in the process (no sign normalisation, no
+  canonical form) and depended on SymPy internals. delierium now differentiates with plain
+  SymPy, with `simplify=False` where it matters. Results are unchanged; the symmetry
+  catalogue runs about 10 % slower, mostly on PDEs.
+* New catalogue entry Kamke 1.535, `8 x y'^3 - 12 y y'^2 + 9 y = 0`: cubic in `y'`, so
+  unlike `y' = h(x, y)` it has a finite symmetry algebra, of dimension 3. Besides
+  `x d/dx + y d/dy` the generators are algebraic: with `u = 3 x ± sqrt(9 x^2 - 4 y^2)`,
+  `u^(2/3) d/dx + 3 y u^(-1/3) d/dy`, valid for `x > 0` between the singular solutions
+  `y = ±3 x/2`. The dimension was checked independently of the Janet basis.
+* `kamke.ipynb` removed from the top directory (#2): an early notebook, superseded by
+  `notebooks/Catalogue_template.ipynb`.
+
 # Installation
 
     pip install delierium            # the package, needs Python 3.12 or newer

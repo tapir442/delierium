@@ -294,7 +294,7 @@ def split_jet_coefficients(expr, dep) -> list[Expr]:
     jet = {d: Dummy() for d in expr.atoms(Derivative) if d.expr in dep}
     expr = expr.xreplace(jet)
     to_symbol = {d: Symbol(d.name) for d in dep}
-    expr = expr.xreplace(to_symbol).doit()
+    expr = expr.xreplace(to_symbol).doit(simplify=False)
     expr, pow_gens = _power_generators(expr, list(jet.values()))
     # after solving for the highest derivative, jet variables may occur
     # in denominators; multiply by the jet-dependent part of the
@@ -378,7 +378,7 @@ def canonical_derivatives(expr, dep):
     """
     to_symbol = {d: Symbol(d.name) for d in dep}
     back = {v: k for k, v in to_symbol.items()}
-    return expr.xreplace(to_symbol).doit().expand().xreplace(back)
+    return expr.xreplace(to_symbol).doit(simplify=False).expand().xreplace(back)
 
 
 def _canonical_derivatives_of(expr, dep):
@@ -402,7 +402,8 @@ def _canonical_derivatives_of(expr, dep):
     u(x, t)**2*Derivative(u(x, t), (x, 2)) + 2*u(x, t)*Derivative(u(x, t), x)**2
     """
     dep = convert_to_iterable(dep)
-    return expr.xreplace({d: d.doit() for d in expr.atoms(Derivative) if d.expr.has(*dep)})
+    derivatives = [d for d in expr.atoms(Derivative) if d.expr.has(*dep)]
+    return expr.xreplace({d: d.doit(simplify=False) for d in derivatives})
 
 
 def convert_to_iterable(item):
