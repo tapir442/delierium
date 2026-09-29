@@ -27,6 +27,16 @@ A catalogue of about 260 equations with known symmetries from the literature che
 (see *Tests*). Solving the determining equations for the infinitesimals themselves is not
 part of this release.
 
+# Release notes
+
+### 1.0.1
+
+* `import delierium` no longer replaces SymPy's `Derivative.__new__` with a trimmed copy.
+  The patch changed `diff` for all SymPy code in the process (no sign normalisation, no
+  canonical form) and depended on SymPy internals. delierium now differentiates with plain
+  SymPy, with `simplify=False` where it matters. Results are unchanged; the symmetry
+  catalogue runs about 10 % slower, mostly on PDEs.
+
 # Installation
 
     pip install delierium            # the package, needs Python 3.12 or newer
