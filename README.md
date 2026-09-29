@@ -41,6 +41,8 @@ part of this release.
   `x d/dx + y d/dy` the generators are algebraic: with `u = 3 x ± sqrt(9 x^2 - 4 y^2)`,
   `u^(2/3) d/dx + 3 y u^(-1/3) d/dy`, valid for `x > 0` between the singular solutions
   `y = ±3 x/2`. The dimension was checked independently of the Janet basis.
+* `kamke.ipynb` removed from the top directory (#2): an early notebook, superseded by
+  `notebooks/Catalogue_template.ipynb`.
 
 # Installation
 
