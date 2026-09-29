@@ -48,3 +48,20 @@ def test_growing_field_lifts_old_elements():
     assert (a * b) / b == a
     c = Coeff(x ** Rational(1, 3))  # replaces the generator x by a root of it
     assert c**3 * a == Coeff(x**2 / (x + 1))
+
+
+def test_janet_basis_has_a_field_of_its_own():
+    from sympy import diff
+
+    from delierium import coefficients
+    from delierium.janet_basis import JanetBasis
+
+    default = coefficients._state()
+    before = default.symbols
+    a = symbols("a")
+    u = Function("u")(x, y)
+    janet = JanetBasis([diff(u, x) - a * exp(x) * u, diff(u, y) - a * u], [u], [x, y])
+    assert coefficients._state() is default and default.symbols == before
+    # its coefficients still work together with those of the default field
+    c = janet.S[0].p[-1].coeff
+    assert c - c * Coeff(1) == 0

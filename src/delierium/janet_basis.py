@@ -15,7 +15,7 @@ from sympy.functions.elementary.exponential import ExpBase
 from sympy.polys.polyerrors import CoercionFailed, PolynomialError
 from sympy.polys.rings import sring
 
-from delierium.coefficients import ONE, Coeff, primitive
+from delierium.coefficients import ONE, Coeff, fresh_field, primitive
 from delierium.helpers import (
     Derivative,
     eq,
@@ -1010,6 +1010,10 @@ class JanetBasis:
         D(z(x, y), (x, 2))
         w(x, y) + (2*y) * D(z(x, y), x)
         """
+        with fresh_field():  # a field of its own, see coefficients.fresh_field
+            self._build(S, dependent, independent, sort_order, fraction_free)
+
+    def _build(self, S, dependent, independent, sort_order, fraction_free):
         self.context = context = Context(dependent, independent, sort_order)
         context.fraction_free = fraction_free
         if not isinstance(S, Iterable):

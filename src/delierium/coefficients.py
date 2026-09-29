@@ -19,8 +19,12 @@ containing an algebraic element the field cannot represent faithfully
 (``sqrt(2)``, ``I``, ``sqrt(x + 1)``) stays a canonical SymPy expression, as
 before.
 
-All coefficients share one field, which only grows: a new generator gives a
-new field, and older elements are lifted into it when they are used.
+Each computation has its own field (:func:`fresh_field`; a Janet basis
+opens one), which only grows while it runs: a new generator gives a new
+field, and older elements are lifted into it when they are used. Outside
+such a computation a default field is used. A coefficient that meets one of
+another field is converted into the current one, so mixing them is correct,
+only slower.
 
 >>> from sympy import symbols, exp, sqrt
 >>> x, y, n = symbols("x y n")
@@ -41,6 +45,8 @@ False
 x/10 + 1/4
 """
 
+from contextlib import contextmanager
+from contextvars import ContextVar
 from math import lcm
 
 from sympy import (
@@ -63,6 +69,7 @@ from delierium.helpers import profile_if_enabled
 
 __all__ = [
     "Coeff",
+    "fresh_field",
 ]
 
 
@@ -71,7 +78,7 @@ class _UnsupportedError(Exception):
 
 
 class _FieldState:
-    """The shared field and the generators it is built from.
+    """A field and the generators it is built from.
 
     A generator stands for all powers b**(c*rest) with rational c of a base b
     and a symbolic part rest of the exponent (rest = 1 for a plain atom): the
@@ -116,7 +123,40 @@ class _FieldState:
         return changed
 
 
-_state = _FieldState()
+# the field outside of any fresh_field(), shared by all threads
+_default = _FieldState()
+_current: ContextVar[_FieldState | None] = ContextVar("delierium_coefficient_field", default=None)
+
+
+def _state():
+    """The field of the running computation."""
+    return _current.get() or _default
+
+
+@contextmanager
+def fresh_field():
+    """Run a computation in a field of its own.
+
+    Without it, all computations of a process would share one field that
+    only grows: arithmetic gets slower with every generator another
+    computation added (the catalogue: 90 s shared, 70 s with a field per
+    Janet basis), and the order of the generators depends on the history.
+    Nested uses and threads each get their own field.
+
+    >>> from sympy import symbols, exp
+    >>> x = symbols("x")
+    >>> with fresh_field():
+    ...     c = Coeff(exp(x))
+    ...     print(c.f.field.symbols)
+    (exp(x),)
+    >>> c * Coeff(x) == Coeff(x * exp(x))  # used outside its field
+    True
+    """
+    token = _current.set(_FieldState())
+    try:
+        yield
+    finally:
+        _current.reset(token)
 
 
 def _is_transcendental_atom(e):
@@ -196,7 +236,7 @@ def _convert(e, field):
         for a in factors:
             result *= _convert(a, field)
         return result
-    return _state.element_of(*_atom_key(e))
+    return _state().element_of(*_atom_key(e))
 
 
 def _prepare(e):
@@ -217,13 +257,14 @@ def _to_field(e):
     """e (prepared) as an element of the current field, or _UnsupportedError."""
     atoms = set()
     _collect_atoms(e, atoms)
-    _state.extend(atoms)
-    return _convert(e, _state.field)
+    state = _state()
+    state.extend(atoms)
+    return _convert(e, state.field)
 
 
 def _lift(f):
     """f as an element of the current field."""
-    field = _state.field
+    field = _state().field
     if f.field is field:
         return f
     old = f.field.symbols
@@ -236,12 +277,12 @@ def _lift(f):
             return ring.from_dict({m + pad: c for m, c in p.items()})
 
         return field.raw_new(padded(f.numer), padded(f.denom))
-    # a generator has been replaced by a root of it
+    # a generator has been replaced by a root of it, or f is of another field
     return _to_field(_prepare(f.as_expr()))
 
 
 class Coeff:
-    """A coefficient: an element of the shared rational function field, or,
+    """A coefficient: an element of the current rational function field, or,
     if the field cannot represent it, a SymPy expression. As before this
     module, such an expression is brought into canonical form (``cancel``)
     only when needed: for the zero test, a comparison, and by canonical()."""
@@ -371,6 +412,7 @@ class Coeff:
         f = self._field_element()
         # the derivatives of the generators depending on v; computing them
         # may add generators, so f is lifted afterwards
+        state = _state()
         dgens = []
         occurring = [
             g
@@ -381,9 +423,9 @@ class Coeff:
             if g == v:
                 dgens.append((g, None))
             elif not g.is_Symbol and v in g.free_symbols:
-                d = _state.dgen.get((g, v))
+                d = state.dgen.get((g, v))
                 if d is None:
-                    d = _state.dgen[(g, v)] = Coeff(g.diff(v))
+                    d = state.dgen[(g, v)] = Coeff(g.diff(v))
                 if d.f is None:
                     return Coeff._new(expr=self.as_expr().diff(v))
                 dgens.append((g, d))
@@ -391,7 +433,7 @@ class Coeff:
         field = f.field
         result = field.zero
         for g, d in dgens:
-            partial = f.diff(field.gens[_state.index[g]])
+            partial = f.diff(field.gens[state.index[g]])
             result += partial if d is None else partial * d._field_element()
         return Coeff._new(f=result)
 
@@ -412,7 +454,7 @@ def primitive(coeffs):
     if any(c.f is None for c in coeffs):
         return None
     fs = [c._field_element() for c in coeffs]
-    field = _state.field
+    field = _state().field
     fs = [_lift(f) for f in fs]  # a later lift may have grown the field
     ring = field.ring
     den = ring.one
