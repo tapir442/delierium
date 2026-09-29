@@ -425,6 +425,22 @@ FIRST_ORDER_ODES = [
         "assumes differential polynomials in F nonzero (F F'' - 2 F'**2, 2 F F'' - 3 F'**2, "
         "...); where one vanishes there may be more, e.g. F = 1: 2, F = x: 1",
     ),
+    ode(
+        "Kamke 1.535",
+        "8*x*Derivative(y(x), x)**3 - 12*y(x)*Derivative(y(x), x)**2 + 9*y(x)",
+        3,
+        [
+            ("x", "y"),
+            ("(3*x + sqrt(9*x**2 - 4*y**2))**(2/3)", "3*y/(3*x + sqrt(9*x**2 - 4*y**2))**(1/3)"),
+            ("(3*x - sqrt(9*x**2 - 4*y**2))**(2/3)", "3*y/(3*x - sqrt(9*x**2 - 4*y**2))**(1/3)"),
+        ],
+        "Kamke, equation 1.535, from the SymPy Kamke test suite",
+        note="cubic in y': three solution curves through each point, so unlike y' = h(x, y) a "
+        "finite algebra. Dimension and generators are delierium's (the book gives neither), "
+        "checked independently: power series solutions of the determining equations, and the "
+        "invariance condition on F = 0. The generators hold for x > 0 between the singular "
+        "solutions y = +-3*x/2; general solution (x + 9*C)**3 = 27*C*y**2",
+    ),
 ]
 
 ODE_SYSTEMS = [

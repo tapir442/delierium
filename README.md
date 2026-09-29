@@ -36,6 +36,11 @@ part of this release.
   canonical form) and depended on SymPy internals. delierium now differentiates with plain
   SymPy, with `simplify=False` where it matters. Results are unchanged; the symmetry
   catalogue runs about 10 % slower, mostly on PDEs.
+* New catalogue entry Kamke 1.535, `8 x y'^3 - 12 y y'^2 + 9 y = 0`: cubic in `y'`, so
+  unlike `y' = h(x, y)` it has a finite symmetry algebra, of dimension 3. Besides
+  `x d/dx + y d/dy` the generators are algebraic: with `u = 3 x ± sqrt(9 x^2 - 4 y^2)`,
+  `u^(2/3) d/dx + 3 y u^(-1/3) d/dy`, valid for `x > 0` between the singular solutions
+  `y = ±3 x/2`. The dimension was checked independently of the Janet basis.
 
 # Installation
 
