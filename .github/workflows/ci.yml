@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+    # a version tag (1.0.2) publishes the release, see the job publish
+    tags: ["[0-9]*"]
   pull_request:
 
 jobs:
@@ -28,14 +30,13 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - run: uv sync --locked
+      # the extras: pylint and mypy check the lazy imports of the optional
+      # dependencies (IPython, matplotlib, numpy, line_profiler) as well
+      - run: uv sync --locked --all-extras
       - run: uv run ruff check --output-format=github
       - run: uv run ruff format --check
-      # informational until the existing findings are cleaned up
       - run: uv run pylint src/delierium
-        continue-on-error: true
       - run: uv run mypy
-        continue-on-error: true
 
   build:
     runs-on: ubuntu-latest
@@ -47,3 +48,27 @@ jobs:
         with:
           name: dist
           path: dist/
+
+  # PyPI trusted publishing, no API token: on pypi.org the project has this
+  # repository, the workflow ci.yml and the environment pypi as its trusted
+  # publisher
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [test, lint, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/delierium/${{ github.ref_name }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: The tag is the version of the package
+        run: |
+          ls dist/
+          test -f "dist/delierium-${GITHUB_REF_NAME}.tar.gz"
+          test -f "dist/delierium-${GITHUB_REF_NAME}-py3-none-any.whl"
+      - uses: pypa/gh-action-pypi-publish@release/v1

@@ -5,9 +5,10 @@ Created on Tue Jan 18 13:45:11 2022
 @author: tapir (rewritten for SymPy by GitHub Copilot Chat Assistant)
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator, Sequence
 
-from sympy import Derivative, Function, S, diff, symbols
+from sympy import Basic, Derivative, Expr, Function, Integer, S, diff, symbols
+from sympy.core.function import UndefinedFunction
 
 __all__ = [
     "adjoint_frechet_derivative",
@@ -17,14 +18,14 @@ __all__ = [
 ]
 
 
-def is_op_du(expr, u):
+def is_op_du(expr: Basic, u: Expr) -> bool:
     """
     Check if expr is a derivative of u.
     """
     return isinstance(expr, Derivative) and expr.expr.func == u.func
 
 
-def iter_du_orders(expr, u):
+def iter_du_orders(expr: Basic, u: Expr) -> Iterator[int]:
     """
     Yield all derivative orders of u appearing in expr.
     """
@@ -32,13 +33,13 @@ def iter_du_orders(expr, u):
         for sub_expr in expr.args:
             if sub_expr == []:
                 continue
-            elif is_op_du(sub_expr, u):
+            if is_op_du(sub_expr, u):
                 yield sub_expr.derivative_count
             else:
                 yield from iter_du_orders(sub_expr, u)
 
 
-def variational_derivative(L, u_in):
+def variational_derivative(L: Expr, u_in: Expr) -> Expr:
     """The variational derivative (Euler-Lagrange operator) of L with respect
     to u(x), a function of one variable.
 
@@ -51,7 +52,7 @@ def variational_derivative(L, u_in):
     """
     if len(u_in.free_symbols) == 1:
         x = next(iter(u_in.free_symbols))
-        u = Function(u_in.func.__name__)(x)
+        u = Function(u_in.func.__name__)(x)  # pylint: disable=not-callable
     else:
         raise TypeError("Input function must have exactly one variable.")
     t = symbols('tapir')  # dummy variable
@@ -66,7 +67,9 @@ def variational_derivative(L, u_in):
     return result
 
 
-def euler_operator(density, depend, independ):
+def euler_operator(
+    density: Expr, depend: Iterable[UndefinedFunction], independ: Basic | Iterable[Basic]
+) -> list[Expr]:
     r"""Euler operator (variational derivative) of density with respect to
     each of the dependent variables:
 
@@ -111,16 +114,21 @@ def euler_operator(density, depend, independ):
     return result
 
 
-def _order(jet):
+def _order(jet: Expr) -> Integer | int:
     return jet.derivative_count if isinstance(jet, Derivative) else 0
 
 
-def _total_derivative(expr, jet):
+def _total_derivative(expr: Expr, jet: Expr) -> Expr:
     """D^alpha expr, alpha the multi-index of the derivative jet."""
     return diff(expr, *jet.variable_count) if isinstance(jet, Derivative) else expr
 
 
-def frechet_derivative(support, dependVar, independVar, testfunction):
+def frechet_derivative(
+    support: Sequence[Expr],
+    dependVar: Sequence[UndefinedFunction],
+    independVar: Sequence[Basic],
+    testfunction: Sequence[UndefinedFunction],
+) -> list[list[Expr]]:
     """
     >>> from sympy import symbols, Function, diff, Matrix
     >>> x, t = symbols("x t")
@@ -141,20 +149,22 @@ def frechet_derivative(support, dependVar, independVar, testfunction):
     """
     frechet = []
     eps = symbols("eps")
-    for j in range(len(support)):
+    for eq in support:
         deriv = []
         for i in range(len(support)):
-
-            def r0(*args):
-                return dependVar[i](*independVar) + testfunction[i](*independVar) * eps  # noqa: B023 -- called right away by replace()
-
-            s = support[j].replace(dependVar[i], r0)
+            perturbed = dependVar[i](*independVar) + testfunction[i](*independVar) * eps
+            s = eq.replace(dependVar[i], lambda *_, p=perturbed: p)
             deriv.append(diff(s, eps).subs({eps: 0}))
         frechet.append(deriv)
     return frechet
 
 
-def adjoint_frechet_derivative(support, dependVar, independVar, testfunction):
+def adjoint_frechet_derivative(
+    support: Sequence[Expr],
+    dependVar: Sequence[UndefinedFunction],
+    independVar: Sequence[Basic],
+    testfunction: Sequence[UndefinedFunction],
+) -> list[list[Expr]]:
     # Placeholder: in SymPy, adjoint computation is not built-in
     return frechet_derivative(support, dependVar, independVar, testfunction)
 

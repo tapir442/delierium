@@ -4,18 +4,20 @@ Janet Basis
 
 import functools
 from collections import OrderedDict, namedtuple
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from itertools import product
 from operator import mul
+from typing import Any
 
+import sympy as sp
 from more_itertools import bucket, flatten
-from sympy import Add, Mul, S, Symbol, default_sort_key, numer, oo, together
+from sympy import Add, Basic, Expr, Mul, Symbol, default_sort_key, numer, oo, together
 from sympy.core.function import AppliedUndef
 from sympy.functions.elementary.exponential import ExpBase
 from sympy.polys.polyerrors import CoercionFailed, PolynomialError
 from sympy.polys.rings import sring
 
-from delierium.coefficients import ONE, Coeff, primitive
+from delierium.coefficients import ONE, Coeff, CoeffLike, fresh_field, primitive
 from delierium.helpers import (
     Derivative,
     eq,
@@ -26,7 +28,7 @@ from delierium.helpers import (
     profile_if_enabled,
     show_output,
 )
-from delierium.matrix_order import Context, Mgrevlex, Mgrlex
+from delierium.matrix_order import Context, Mgrevlex, Mgrlex, WeightFunction
 
 __all__ = [
     "LHDP",
@@ -49,9 +51,16 @@ __all__ = [
 
 # Basic.free_symbols.cache_clear()
 
+# the orders of a derivative by each independent variable
+Order = list[int]
+# a term's order followed by its function's position among the dependent ones
+ComparisonVector = tuple[int, ...]
+# JanetBasis._assumptions: (number of divisors, the factors, split_assumptions of them)
+_AssumptionCache = tuple[int, list[Expr], tuple[list[list[Expr]], list[Expr]]]
+
 
 @profile_if_enabled
-def compute_comparison_vector(dependent, func, ctxcheck):
+def compute_comparison_vector(dependent: Sequence[Basic], func: Basic) -> list[int]:
     iv = [0] * len(dependent)
     if func in dependent:
         iv[dependent.index(func)] = 1
@@ -59,7 +68,9 @@ def compute_comparison_vector(dependent, func, ctxcheck):
 
 
 @profile_if_enabled
-def compute_order(derivative, independent, comp_order):
+def compute_order(
+    derivative: Basic, independent: Sequence[Basic], comp_order: Callable[[Basic], Order]
+) -> Order:
     """Computes the monomial tuple from the derivative part."""
     if is_derivative(derivative):
         return comp_order(derivative)
@@ -69,9 +80,15 @@ def compute_order(derivative, independent, comp_order):
 
 class _Dterm:
     __slots__ = ["coeff", "comparison_vector", "context", "derivative", "function", "order"]
+    coeff: Coeff
+    comparison_vector: ComparisonVector
+    context: Context
+    derivative: Expr
+    function: Expr
+    order: Order
 
     @profile_if_enabled
-    def __init__(self, coeff, derivative, context):
+    def __init__(self, coeff: CoeffLike, derivative: Expr, context: Context) -> None:
         self.coeff = coeff if isinstance(coeff, Coeff) else Coeff(coeff)
         self.derivative = derivative
         self.context = context
@@ -83,7 +100,7 @@ class _Dterm:
         self.order = self._compute_order()
         self.comparison_vector = self._compute_comparison_vector()
 
-    def copy(self):
+    def copy(self) -> "_Dterm":
         """Shallow copy; coefficients are changed in place elsewhere, so
         a _Dterm must not be shared between differential polynomials."""
         new = object.__new__(_Dterm)
@@ -92,34 +109,32 @@ class _Dterm:
         return new
 
     @profile_if_enabled
-    def expression(self):
+    def expression(self) -> Expr:
         return self.coeff.as_expr() * self.derivative
 
     @profile_if_enabled
-    def _compute_comparison_vector(self):
+    def _compute_comparison_vector(self) -> ComparisonVector:
         """Concatenates order and comparison vector for input for ..."""
-        iv = compute_comparison_vector(
-            self.context.dependent, self.function, self.context.is_ctxfunc
-        )
+        iv = compute_comparison_vector(self.context.dependent, self.function)
         return tuple(self.order + iv)
 
-    def __str__(self):
+    def __str__(self) -> str:
         result = f"{self.derivative}" if self.coeff == 1 else f"({self.coeff}) * {self.derivative}"
         return result.replace("Derivative", "D")
 
     @profile_if_enabled
-    def term(self):
+    def term(self) -> Expr:
         return self.expression()
 
     @profile_if_enabled
-    def _compute_order(self):
+    def _compute_order(self) -> Order:
         """computes the monomial tuple from the derivative part"""
         return compute_order(
             self.derivative, self.context.independent, self.context.order_of_derivative
         )
 
     @profile_if_enabled
-    def __sub__(self, other):
+    def __sub__(self, other: "_Dterm") -> "_Dterm":
         if self.comparison_vector != other.comparison_vector:
             raise ValueError
         return self.__class__(
@@ -127,7 +142,7 @@ class _Dterm:
         )
 
     @profile_if_enabled
-    def __add__(self, other):
+    def __add__(self, other: "_Dterm") -> "_Dterm":
         if self.comparison_vector != other.comparison_vector:
             raise ValueError
         return self.__class__(
@@ -135,12 +150,12 @@ class _Dterm:
         )
 
     @profile_if_enabled
-    def is_coefficient(self):
+    def is_coefficient(self) -> bool:
         # XXX nonsense
         return self.derivative == 1
 
     @profile_if_enabled
-    def __lt__(self, other):
+    def __lt__(self, other: "_Dterm") -> bool:
         """
         >>> from sympy import *
         >>> from delierium.matrix_order import Mlex
@@ -160,12 +175,14 @@ class _Dterm:
         )
 
     @profile_if_enabled
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, _Dterm):
+            return NotImplemented
         return self is other or (
             self.comparison_vector == other.comparison_vector and self.coeff == other.coeff
         )
 
-    def show(self, rich=True) -> None:
+    def show(self, rich: bool = True) -> str | Basic:
         if not rich:
             return str(self)
         return ltf(
@@ -173,11 +190,11 @@ class _Dterm:
         )
 
     @profile_if_enabled
-    def add_coefficient(self, c):
+    def add_coefficient(self, c: CoeffLike) -> "_Dterm":
         return _Dterm(coeff=self.coeff + c, derivative=self.derivative, context=self.context)
 
     @profile_if_enabled
-    def diff(self, *variables):
+    def diff(self, *variables: Basic) -> list["_Dterm"]:
         if len(variables) > 1:
             # the product rule below holds for one variable only; for
             # several, differentiate one after the other (Leibniz rule)
@@ -188,7 +205,7 @@ class _Dterm:
         f = self.coeff
         g = self.derivative
         fprime = f.diff(*variables)
-        result = []
+        result: list[_Dterm] = []
         if fprime:
             result = [_Dterm(coeff=fprime, derivative=g, context=self.context)]
         gprime = g.diff(*variables)
@@ -198,7 +215,7 @@ class _Dterm:
         return result
 
     @profile_if_enabled
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(str(self.coeff) + str(self.derivative))
 
     _cache_key = __hash__
@@ -207,16 +224,24 @@ class _Dterm:
 class LHDP:
     """Linear Homogenious Differential Polynomial."""
 
+    # those of the leading term, set by normalize
+    order: Order
+    function: Expr
+    comparison_vector: ComparisonVector
+
     @profile_if_enabled
-    def __init__(self, e, context, dterms=()):
+    def __init__(self, e: Basic | int, context: Context, dterms: Iterable[_Dterm] = ()) -> None:
         self.context = context
-        self.p = []
-        self.multipliers = []
-        self.nonmultipliers = []
+        self.p: list[_Dterm] = []
+        self.multipliers: list[int] = []
+        self.nonmultipliers: list[int] = []
         self.hash = 0
         if dterms:
             self.p = [_.copy() for _ in dterms]
         else:
+            # e is only a placeholder (0) when the terms come as dterms
+            if isinstance(e, int):
+                raise TypeError(f"LHDP({e}, ...) without dterms: e must be an expression")
             self._init(e.simplify().expand())
         # coefficients are in canonical form (coefficients.Coeff), so a
         # vanishing one is recognized
@@ -226,7 +251,7 @@ class LHDP:
         self.normalize()
 
     @profile_if_enabled
-    def _init(self, e):
+    def _init(self, e: Basic) -> None:
         if isinstance(e, (Symbol, Derivative, Mul, AppliedUndef)):
             operands = [e]
         elif isinstance(e, Symbol):
@@ -235,55 +260,56 @@ class LHDP:
             assert isinstance(e, Add)
             operands = e.args
         r = [analyze_term(self.context, o) for o in operands]
-        dterms = {}
+        dterms: dict[str, list[tuple[Expr, Expr]]] = {}
         for _r in r:
+            assert _r is not None
             dterms.setdefault(_r[0], []).append((_r[1], _r[2]))
         self.p = []
         for v in dterms.values():
             # v is a list of tuples
-            c = 0
+            c: Any = 0
             for tup in v:
                 c += tup[1]
             self.p.append(_Dterm(derivative=v[0][0], coeff=c, context=self.context))
 
-    def expression(self):
+    def expression(self) -> Expr:
         return sum(_.expression() for _ in self.p)
 
-    def _collect_terms(self, e):
+    def _collect_terms(self, e: Basic) -> None:
         pass
 
-    def atoms(self, e):
+    def atoms(self, e: type) -> set[Basic]:
         # needed for ltf
         return self.expression().atoms(e)
 
-    def show_derivatives(self):
+    def show_derivatives(self) -> None:
         print(list(self.derivatives()))
 
-    def leading_term(self):
+    def leading_term(self) -> Expr:
         return self.p[0].term()
 
-    def leading_derivative(self):
+    def leading_derivative(self) -> Expr:
         return self.p[0].derivative
 
-    def leading_function(self):
+    def leading_function(self) -> Expr:
         return self.p[0].function
 
-    def leading_coefficient(self):
+    def leading_coefficient(self) -> Coeff:
         return self.p[0].coeff
 
-    def terms(self):
+    def terms(self) -> Iterator[Expr]:
         for p in self.p:
             yield p.term()
 
-    def derivatives(self):
+    def derivatives(self) -> Iterator[Expr]:
         for p in self.p:
             yield p.derivative
 
-    def coefficients(self):
+    def coefficients(self) -> Iterator[Coeff]:
         for p in self.p:
             yield p.coeff
 
-    def make_monic(self):
+    def make_monic(self) -> None:
         """Divide by the leading coefficient."""
         coeff = self.p[0].coeff
         self.p[0].coeff = ONE
@@ -293,7 +319,7 @@ class LHDP:
                 _.coeff = (_.coeff / coeff).canonical()
 
     @profile_if_enabled
-    def normalize(self):
+    def normalize(self) -> None:
         if self.p:
             #            intermediate = [_Dterm(coeff=Rational(1, 1),
             #                                   derivative=self.p[0].derivative,
@@ -324,12 +350,12 @@ class LHDP:
             self.function = self.p[0].function
             self.comparison_vector = self.p[0].comparison_vector
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return len(self.p) > 0
 
     @profile_if_enabled
     #    @cache
-    def __lt__(self, other):
+    def __lt__(self, other: "LHDP") -> bool:
         for _ in zip(self.p, other.p, strict=False):
             if eq(_[0], _[1]):
                 continue
@@ -337,12 +363,12 @@ class LHDP:
         return False
 
     @profile_if_enabled
-    def __le__(self, other):
+    def __le__(self, other: "LHDP") -> bool:
         return eq(self, other) or self < other
 
     @profile_if_enabled
-    def __eq__(self, other):
-        if other is None:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, LHDP):
             return False
         if self is other:
             return True
@@ -350,7 +376,7 @@ class LHDP:
             return False
         return all(_[0] == _[1] for _ in zip(self.p, other.p, strict=True))
 
-    def show(self, rich=True, short=False):
+    def show(self, rich: bool = True, short: bool = False) -> str:  # pylint: disable=unused-argument
         if not rich:
             return str(self)
         res = ""
@@ -360,8 +386,8 @@ class LHDP:
         return res
 
     @profile_if_enabled
-    def diff(self, *args):
-        new_dterms = {}
+    def diff(self, *args: Basic) -> "LHDP":
+        new_dterms: dict[ComparisonVector, _Dterm] = {}
         for dterm in self.p:
             _dterms = dterm.diff(*args)
             for new_dterm in _dterms:
@@ -373,7 +399,7 @@ class LHDP:
             e=0, dterms=[_ for _ in new_dterms.values() if _.coeff], context=self.context
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         m = [self.context.independent[_] for _ in self.multipliers]
         n = [self.context.independent[_] for _ in self.nonmultipliers]
         result = " + ".join([str(_) for _ in self.p])
@@ -381,27 +407,27 @@ class LHDP:
             result += f", {m}, {n}"
         return result
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
     @profile_if_enabled
-    def __hash__(self):
+    def __hash__(self) -> int:
         if self.hash == 0:
             self.hash = hash("".join([str(hash(_)) for _ in self.p]))
         return self.hash
 
     @profile_if_enabled
-    def xreplace(self, d):
+    def xreplace(self, d: dict) -> "LHDP":
         return self.__class__(self.expression().xreplace(d), self.context)
 
     _cache_key = __hash__
 
 
 @profile_if_enabled
-def analyze_term(context, term):
+def analyze_term(context: Context, term: Expr) -> tuple[str, Expr, Expr] | None:
     operands = split_into_operands(term)
-    coeffs = []
-    d = []
+    coeffs: list[Expr] = []
+    d: list[Expr] = []
     for operand in operands:
         if is_function(operand):
             if context.is_ctxfunc(operand):
@@ -415,26 +441,28 @@ def analyze_term(context, term):
                 coeffs.append(operand)
         else:
             coeffs.append(operand)
-    coeffs = functools.reduce(mul, coeffs, S.One)
+    coefficient = functools.reduce(mul, coeffs, sp.S.One)
     if not d:
         return None
-    return str(d[0]), d[0], coeffs
+    return str(d[0]), d[0], coefficient
 
 
 @profile_if_enabled
-def split_into_operands(term):
+def split_into_operands(term: Expr) -> list[Expr]:
     if is_derivative(term) or is_function(term):
         return [term]
     return term.as_ordered_factors()
 
 
 @profile_if_enabled
-def reorder(S, context, ascending=False):
+def reorder(  # pylint: disable=unused-argument
+    S: Iterable[LHDP], context: Context, ascending: bool = False
+) -> list[LHDP]:
     return sorted(S, reverse=not ascending)
 
 
 @profile_if_enabled
-def reduce_by_system(e: LHDP, S: list, context: Context) -> LHDP | None:
+def reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP | None:
     reducing = True
     gen = S[:]
     while reducing:
@@ -442,7 +470,7 @@ def reduce_by_system(e: LHDP, S: list, context: Context) -> LHDP | None:
             enew = _reduce(e, dp, context)
             if enew is None:
                 return None
-            elif e == enew:
+            if e == enew:
                 reducing = False
             else:
                 e = enew
@@ -452,7 +480,7 @@ def reduce_by_system(e: LHDP, S: list, context: Context) -> LHDP | None:
 
 
 @profile_if_enabled
-def _reduce_inner(e1, e2, context):
+def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
     """One reduction step of e1 modulo e2 (Schwarz, Algorithm 2.4).
 
     Finds the first term of e1 that is a derivative ∂^dif of e2's leading
@@ -490,7 +518,9 @@ def _reduce_inner(e1, e2, context):
 
 
 @profile_if_enabled
-def _subtract_derivative(e1, e2, factor, variables):
+def _subtract_derivative(
+    e1: LHDP, e2: LHDP, factor: Coeff, variables: Sequence[Basic]
+) -> LHDP | None:
     """lc * e1 - factor * ∂^variables(e2), or None if that is zero; lc is
     e2's leading coefficient, 1 unless the context is fraction free.
 
@@ -519,19 +549,19 @@ def _subtract_derivative(e1, e2, factor, variables):
     if lc != ONE:
         # e1 is multiplied by lc: the result is equivalent where lc != 0
         e2.context.divisors.append(lc)
-        for hit in remaining.values():
-            hit.coeff *= lc
+        for t in remaining.values():
+            t.coeff *= lc
     for dterm in e2_terms:
-        product = dterm.coeff * factor
+        subtrahend = dterm.coeff * factor
         hit = remaining.get(dterm.comparison_vector)
         if hit is None:
             remaining[dterm.comparison_vector] = _Dterm(
-                coeff=-product, derivative=dterm.derivative, context=dterm.context
+                coeff=-subtrahend, derivative=dterm.derivative, context=dterm.context
             )
-        elif hit.coeff == product:
+        elif hit.coeff == subtrahend:
             del remaining[dterm.comparison_vector]
         else:
-            hit.coeff -= product
+            hit.coeff -= subtrahend
     dterms = [_ for _ in remaining.values() if _.coeff]
     if not dterms:
         return None
@@ -539,11 +569,11 @@ def _subtract_derivative(e1, e2, factor, variables):
 
 
 @profile_if_enabled
-def get_diff_vars(context, dif):
-    variables = []
-    for i in range(len(context.independent)):
-        if dif[i] != 0:
-            variables.extend([context.independent[i]] * abs(dif[i]))
+def get_diff_vars(context: Context, dif: Sequence[int]) -> list[Basic]:
+    variables: list[Basic] = []
+    for v, d in zip(context.independent, dif, strict=False):
+        if d != 0:
+            variables.extend([v] * abs(d))
     return variables
 
 
@@ -559,7 +589,7 @@ def _reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
 
 
 @profile_if_enabled
-def autoreduce(S, context):
+def autoreduce(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     dps = list(S)
     i = 0
     _p, r = dps[: i + 1], dps[i + 1 :]
@@ -583,12 +613,14 @@ def autoreduce(S, context):
     return dps
 
 
-def vec_degree(v, m):
+def vec_degree(v: int, m: Sequence[int]) -> int:
     return m[v]
 
 
 @profile_if_enabled
-def vec_multipliers(m, M, Vars):
+def vec_multipliers(
+    m: Sequence[int], M: Iterable[Sequence[int]], Vars: Sequence[int]
+) -> tuple[list[int], list[int]]:
     """multipliers and nonmultipliers for differential vectors aka tuples
 
     m   : a tuple representing a differential vector
@@ -703,7 +735,12 @@ def vec_multipliers(m, M, Vars):
 coll = namedtuple('coll', ['monom', 'dp', 'multipliers', 'nonmultipliers'])
 
 
-def _in_janet_class(monom, base, multipliers, nonmultipliers):
+def _in_janet_class(
+    monom: Sequence[int],
+    base: Sequence[int],
+    multipliers: Iterable[int],
+    nonmultipliers: Iterable[int],
+) -> bool:
     """monom lies in the Janet class of base: it is base multiplied by
     multiplier variables only (Schwarz, p. 383)."""
     return all(monom[i] >= base[i] for i in multipliers) and all(
@@ -712,7 +749,7 @@ def _in_janet_class(monom, base, multipliers, nonmultipliers):
 
 
 @profile_if_enabled
-def complete(S, context):
+def complete(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     """Janet-complete S, polynomials with the same leading function.
 
     Schwarz, Algorithm C1, p. 385: for every element and each of its
@@ -741,7 +778,7 @@ def complete(S, context):
 
 
 @profile_if_enabled
-def complete_system(S, context):
+def complete_system(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     """
     Algorithm C1, p. 385
 
@@ -808,14 +845,16 @@ def complete_system(S, context):
 
 
 @profile_if_enabled
-def split_by_function(S, context):
+def split_by_function(S: Iterable[LHDP], context: Context) -> Iterator[LHDP]:
     s = bucket(S, key=lambda d: d.leading_function())
     murksi = [find_integrable_conditions(s[k], context) for k in s]
     return flatten(murksi)
 
 
 @profile_if_enabled
-def _integrability_pairs(S, context):
+def _integrability_pairs(
+    S: Iterable[LHDP], context: Context
+) -> Iterator[tuple[LHDP, Basic, LHDP, list[Basic]]]:
     """(ei, n, ej, m): the derivative of ei by its nonmultiplier n and the
     derivative of ej by the variables m (ej's multipliers only) have the
     same leading derivative."""
@@ -823,22 +862,22 @@ def _integrability_pairs(S, context):
     if len(result) == 1:
         return
 
-    vars = list(range(len(context.independent)))
+    indices = list(range(len(context.independent)))
 
     # reverse order as in context the highest independent is first,
     # but for multiplier computation it is last
     monomials = [(_, list(_.order)) for _ in result]
 
-    ms = tuple([_[1] for _ in monomials])
+    ms = tuple(_[1] for _ in monomials)
 
-    def map_old_to_new(i):
+    def map_old_to_new(i: int) -> Basic:
         return context.independent[i]
 
     # multiplier-collection is our M
     multiplier_collection = []
     for dp, monom in monomials:
         # S1
-        _multipliers, _nonmultipliers = vec_multipliers(monom, ms, vars)
+        _multipliers, _nonmultipliers = vec_multipliers(monom, ms, indices)
         multiplier_collection.append(
             coll(
                 monom,
@@ -856,7 +895,7 @@ def _integrability_pairs(S, context):
 
 
 @profile_if_enabled
-def find_integrable_conditions(S, context):
+def find_integrable_conditions(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     result = []
     for ei, n, ej, m in _integrability_pairs(S, context):
         condition = _difference(ei.diff(n), ej.diff(*m) if m else ej, context)
@@ -865,7 +904,7 @@ def find_integrable_conditions(S, context):
     return result
 
 
-def _multiplicative_derivative(ei, n, ej, context):
+def _multiplicative_derivative(ei: Any, n: Basic, ej: Any, context: Context) -> list[Basic] | None:
     """The variables (with repetitions) by which ej's leading derivative has to
     be differentiated to become the derivative of ei's leading derivative by
     its nonmultiplier n, using only ej's multipliers, each of them any number
@@ -880,7 +919,7 @@ def _multiplicative_derivative(ei, n, ej, context):
     return [v for v, d in zip(context.independent, difference, strict=True) for _ in range(d)]
 
 
-def _difference(d1, d2, context):
+def _difference(d1: LHDP, d2: LHDP, context: Context) -> LHDP | None:
     """lc2 * d1 - lc1 * d2 as an LHDP, lc1 and lc2 their leading coefficients
     (1 unless the context is fraction free), so that the leading derivatives
     cancel; None if it vanishes. d1's terms are modified."""
@@ -904,7 +943,14 @@ def _difference(d1, d2, context):
 
 
 class JanetBasis:
-    def __init__(self, S, dependent, independent, sort_order=Mgrevlex, fraction_free=True):
+    def __init__(
+        self,
+        S: Basic | Iterable[Basic],
+        dependent: Iterable[Basic],
+        independent: Iterable[Basic],
+        sort_order: WeightFunction = Mgrevlex,
+        fraction_free: bool = True,
+    ) -> None:
         """
         Parameters:
             * List of homogenous PDE's
@@ -1010,14 +1056,24 @@ class JanetBasis:
         D(z(x, y), (x, 2))
         w(x, y) + (2*y) * D(z(x, y), x)
         """
+        self.S: list[LHDP] = []
+        self._assumed: _AssumptionCache | None = None  # cache of assumed_nonzero
+        with fresh_field():  # a field of its own, see coefficients.fresh_field
+            self._build(S, dependent, independent, sort_order, fraction_free)
+
+    def _build(
+        self,
+        S: Basic | Iterable[Basic],
+        dependent: Iterable[Basic],
+        independent: Iterable[Basic],
+        sort_order: WeightFunction,
+        fraction_free: bool,
+    ) -> None:
         self.context = context = Context(dependent, independent, sort_order)
         context.fraction_free = fraction_free
-        if not isinstance(S, Iterable):
-            # XXX bad criterion
-            self.S = [S]
-        else:
-            self.S = S[:]
-        self.S = reorder([LHDP(s, context, dterms=[]) for s in self.S], context, ascending=True)
+        # XXX bad criterion
+        equations = list(S) if isinstance(S, Iterable) else [S]
+        self.S = reorder([LHDP(s, context, dterms=[]) for s in equations], context, ascending=True)
         self._complete(context)
         if fraction_free:
             context.fraction_free = False
@@ -1025,8 +1081,8 @@ class JanetBasis:
                 e.make_monic()
             self.S = reorder(self.S, context, ascending=True)
 
-    def _complete(self, context):
-        old = []
+    def _complete(self, context: Context) -> None:
+        old: list[LHDP] = []
         while 1:
             if old == self.S:
                 # no change since last run
@@ -1043,12 +1099,12 @@ class JanetBasis:
             #            print("after conditions")
             #            for _ in conditions:
             #                print(_)
-            reduced = [reduce_by_system(_m, self.S, context) for _m in conditions]
+            candidates = [reduce_by_system(_m, self.S, context) for _m in conditions]
             #            print("after reduced")
             #            for _ in reduced:
             #                print(_)
             #            print(reduced)
-            reduced = [_ for _ in reduced if _]
+            reduced = [_ for _ in candidates if _]
             #            print("after reduced")
             if not reduced:
                 self.S = reorder(self.S, context, ascending=True)
@@ -1057,7 +1113,7 @@ class JanetBasis:
             self.S += [_ for _ in reduced if _ not in self.S]
             self.S = reorder(self.S, context, ascending=True)
 
-    def representation(self, e):
+    def representation(self, e: Expr) -> tuple[list[tuple[Expr, tuple[Basic, ...], int]], Expr]:
         """e as a combination of the basis elements and their derivatives.
 
         Returns (terms, remainder): e = self.combination(terms) + remainder,
@@ -1101,9 +1157,9 @@ class JanetBasis:
         """
         terms, remaining = _reduce_with_cofactors(e, self.S, self.context)
         result = [(c.as_expr(), v, j) for (v, j), c in terms.items() if c]
-        return result, sum((t.expression() for t in remaining.values()), S.Zero)
+        return result, sum((t.expression() for t in remaining.values()), sp.S.Zero)
 
-    def assumed_nonzero(self):
+    def assumed_nonzero(self) -> list[Expr]:
         """The factors assumed nonzero in computing the Janet basis.
 
         Whenever an equation is brought into normal form, it is divided by its
@@ -1131,8 +1187,13 @@ class JanetBasis:
         an intermediate equation of the (fraction free) completion; it
         depends on x, so it excludes no special value of a.
         """
+        return self._assumptions()[1]
+
+    def _assumptions(self) -> _AssumptionCache:
+        """(number of divisors, assumed_nonzero, split_assumptions of it),
+        cached until the divisors change."""
         divisors = self.context.divisors
-        cached = getattr(self, "_assumed", None)
+        cached = self._assumed
         if cached is None or cached[0] != len(divisors):
             factors = nonzero_factors(divisors)
             self._assumed = cached = (
@@ -1140,9 +1201,9 @@ class JanetBasis:
                 factors,
                 split_assumptions(factors, self.context.independent),
             )
-        return cached[1]
+        return cached
 
-    def parameter_conditions(self):
+    def parameter_conditions(self) -> list[list[Expr]]:
         """The special cases of the parameters that the Janet basis excludes.
 
         Each entry is a list of expressions in the parameters (the symbols
@@ -1163,39 +1224,39 @@ class JanetBasis:
         >>> janet.singular_loci()
         [x]
         """
-        self.assumed_nonzero()
-        return self._assumed[2][0]
+        return self._assumptions()[2][0]
 
-    def singular_loci(self):
+    def singular_loci(self) -> list[Expr]:
         """The factors of assumed_nonzero that vanish only on points, curves,
         ... of the independent variables, never identically: the Janet basis
         does not hold there, but everywhere else."""
-        self.assumed_nonzero()
-        return self._assumed[2][1]
+        return self._assumptions()[2][1]
 
-    def type(self):
+    def type(self) -> "JanetType":
         """The type of the Janet basis: leading derivatives, parametric
         derivatives, dimension of the solution space and, where Schwarz
         tabulates it, his name of the type, see janet_type."""
         return janet_type(self.S, self.context)
 
-    def combination(self, terms):
+    def combination(self, terms: Iterable[tuple[Expr, Sequence[Basic], int]]) -> Expr:
         """sum of c * (j-th basis element differentiated by variables) for
         the terms (c, variables, j) of representation."""
-        result = S.Zero
+        result = sp.S.Zero
         for c, variables, j in terms:
             b = self.S[j].expression()
             result += c * (b.diff(*variables) if variables else b)
         return result
 
-    def show(self, rich=True, short=False, heading=""):
+    def show(  # pylint: disable=unused-argument
+        self, rich: bool = True, short: bool = False, heading: str = ""
+    ) -> None:
         """Print the Janet basis with leading derivative first."""
         if heading:
             print(heading)
         for _ in self.S:
             _.show()
 
-    def rank(self):
+    def rank(self) -> Any:
         """The rank of the Janet basis: the dimension of the solution space
         of the system, i.e. the number of parametric derivatives (oo if
         there are infinitely many), type().dimension. For the determining
@@ -1222,11 +1283,11 @@ class JanetBasis:
         """
         return self.type().dimension
 
-    def order(self):
+    def order(self) -> Any:
         """The order of the Janet basis, Schwarz's name for its rank."""
         return self.rank()
 
-    def parametric_derivatives(self, max_order=None):
+    def parametric_derivatives(self, max_order: int | None = None) -> list[Expr] | None:
         """The parametric derivatives: those that are no derivative of a
         leading derivative, whose values at a point can be chosen freely;
         their number is the rank. None if there are infinitely many, unless
@@ -1254,7 +1315,7 @@ class JanetBasis:
             return self.type().parametric
         return [d for d, principal in self._classified_derivatives(max_order) if not principal]
 
-    def principal_derivatives(self, max_order):
+    def principal_derivatives(self, max_order: int) -> list[Expr]:
         """The principal derivatives of total order up to max_order: the
         derivatives of the leading derivatives, which the Janet basis
         determines from the parametric ones. There are always infinitely
@@ -1268,12 +1329,12 @@ class JanetBasis:
         """
         return [d for d, principal in self._classified_derivatives(max_order) if principal]
 
-    def _classified_derivatives(self, max_order):
+    def _classified_derivatives(self, max_order: int) -> list[tuple[Expr, bool]]:
         """(derivative, is principal) for every derivative of every unknown
         function of total order up to max_order, highest ranked first."""
         context = self.context
         lead = [(b.function, tuple(b.order)) for b in self.S]
-        terms = []
+        terms: list[tuple[_Dterm, bool]] = []
         for f in context.dependent:
             orders = [o for g, o in lead if g == f]
             for o in product(range(max_order + 1), repeat=len(context.independent)):
@@ -1289,10 +1350,10 @@ class JanetBasis:
         return [(t.derivative, principal) for t, principal in terms]
 
 
-def nonzero_factors(coefficients):
+def nonzero_factors(coefficients: Iterable[Coeff | Expr]) -> list[Expr]:
     """The irreducible nonconstant factors of the numerators of coefficients
     (Coeff or expressions), each once, up to sign, sorted."""
-    result = set()
+    result: set[Expr] = set()
     for c in coefficients:
         if isinstance(c, Coeff) and c.is_field:
             num = c.f.numer.as_expr()
@@ -1314,7 +1375,9 @@ def nonzero_factors(coefficients):
     return sorted(result, key=default_sort_key)
 
 
-def split_assumptions(factors, variables):
+def split_assumptions(
+    factors: Iterable[Expr], variables: Sequence[Basic]
+) -> tuple[list[list[Expr]], list[Expr]]:
     """Split factors assumed nonzero into parameter conditions and singular
     loci.
 
@@ -1331,12 +1394,13 @@ def split_assumptions(factors, variables):
     >>> split_assumptions([y**n, y, exp(x)], [x, y])
     ([], [y])
     """
-    conditions, loci = [], []
+    conditions: list[list[Expr]] = []
+    loci: list[Expr] = []
     for f in factors:
-        groups = {}
+        groups: dict[Expr, Expr] = {}
         for term in Add.make_args(f.expand()):
             independent, dependent = term.as_independent(*variables, as_Add=False)
-            groups[dependent] = groups.get(dependent, S.Zero) + independent
+            groups[dependent] = groups.get(dependent, sp.S.Zero) + independent
         coefficients = [c for c in groups.values() if c != 0]
         if any(c.is_number for c in coefficients):
             # b**e vanishes where b does; exp(...) nowhere
@@ -1354,34 +1418,40 @@ def split_assumptions(factors, variables):
     return conditions, loci
 
 
-class LHDPList(list):
+# assumed_nonzero, parameter_conditions and singular_loci
+Assumptions = tuple[list[Expr], list[list[Expr]], list[Expr]]
+
+
+class LHDPList(list[LHDP]):
     """A list of LHDPs, e.g. a Janet basis, with the factors assumed nonzero
     in computing it (JanetBasis.assumed_nonzero), split into
     parameter_conditions and singular_loci. They are computed by assumptions,
     a function returning the three, when first used."""
 
-    def __init__(self, items=(), assumptions=None):
+    def __init__(
+        self, items: Iterable[LHDP] = (), assumptions: Callable[[], Assumptions] | None = None
+    ) -> None:
         super().__init__(items)
         self._assumptions = assumptions
 
     @functools.cached_property
-    def _computed(self):
+    def _computed(self) -> Assumptions:
         return self._assumptions() if self._assumptions else ([], [], [])
 
     @property
-    def assumed_nonzero(self):
+    def assumed_nonzero(self) -> list[Expr]:
         return self._computed[0]
 
     @property
-    def parameter_conditions(self):
+    def parameter_conditions(self) -> list[list[Expr]]:
         return self._computed[1]
 
     @property
-    def singular_loci(self):
+    def singular_loci(self) -> list[Expr]:
         return self._computed[2]
 
 
-def _divisor(t, S):
+def _divisor(t: _Dterm, S: Sequence[LHDP]) -> int | None:
     """Index of an element of S whose leading derivative t's derivative is a
     derivative of, or None."""
     for j, b in enumerate(S):
@@ -1390,7 +1460,9 @@ def _divisor(t, S):
     return None
 
 
-def _reduce_with_cofactors(e, S, context):
+def _reduce_with_cofactors(
+    e: Expr, S: Sequence[LHDP], context: Context
+) -> tuple[OrderedDict[tuple[tuple[Basic, ...], int], Coeff], dict[ComparisonVector, _Dterm]]:
     """Reduce e (an expression) modulo the normalized LHDPs S, eliminating
     the highest reducible term first. Returns (terms, remaining):
     terms[(variables, j)] is the coefficient (a Coeff) of S[j] differentiated
@@ -1402,9 +1474,9 @@ def _reduce_with_cofactors(e, S, context):
         return OrderedDict(), {}
     lhdp = LHDP.__new__(LHDP)
     lhdp.context = context
-    lhdp._init(e)
+    lhdp._init(e)  # pylint: disable=protected-access
     remaining = {t.comparison_vector: t for t in lhdp.p if t.coeff}
-    terms = OrderedDict()
+    terms: OrderedDict[tuple[tuple[Basic, ...], int], Coeff] = OrderedDict()
     while True:
         for t in sorted(remaining.values(), reverse=True):
             j = _divisor(t, S)
@@ -1421,21 +1493,21 @@ def _reduce_with_cofactors(e, S, context):
         terms[key] = terms[key] + factor if key in terms else factor
         for dterm in (b.diff(*variables) if variables else b).p:
             hit = remaining.get(dterm.comparison_vector)
-            product = dterm.coeff * factor
+            subtrahend = dterm.coeff * factor
             if hit is None:
                 remaining[dterm.comparison_vector] = _Dterm(
-                    coeff=-product, derivative=dterm.derivative, context=context
+                    coeff=-subtrahend, derivative=dterm.derivative, context=context
                 )
             else:
                 hit = hit.copy()
-                hit.coeff = hit.coeff - product
+                hit.coeff = hit.coeff - subtrahend
                 if hit.coeff:
                     remaining[dterm.comparison_vector] = hit
                 else:
                     del remaining[dterm.comparison_vector]
 
 
-def _leader_set(*leaders):
+def _leader_set(*leaders: str) -> frozenset[tuple[int, tuple[int, int]]]:
     """{(function, (x-order, y-order))} from names like "2yy" (z2_yy) or "1"."""
     return frozenset((int(name[0]), (name.count("x"), name.count("y"))) for name in leaders)
 
@@ -1477,7 +1549,7 @@ SCHWARZ_TYPES = {
 JanetType = namedtuple("JanetType", ["leaders", "parametric", "dimension", "name"])
 
 
-def janet_type(S, context):
+def janet_type(S: Iterable[LHDP], context: Context) -> JanetType:
     """The type of the Janet basis S (LHDPs in context).
 
     Returns a JanetType: the leading derivatives of S; the parametric
@@ -1517,17 +1589,18 @@ def janet_type(S, context):
     """
     leaders = sorted(S, reverse=True)
     lead = [(b.function, tuple(b.order)) for b in leaders]
-    parametric = []
+    parametric: list[tuple[Expr, tuple[int, ...]]] = []
     for f in context.dependent:
         orders = [o for g, o in lead if g == f]
         # finitely many parametric derivatives iff there is a leader that is a
         # pure derivative by each variable (or f itself is a leader)
-        bounds = []
-        for i in range(len(context.independent)):
-            pure = [o[i] for o in orders if all(k == 0 for j, k in enumerate(o) if j != i)]
-            bounds.append(min(pure) if pure else None)
-        if None in bounds:
+        pures = [
+            [o[i] for o in orders if all(k == 0 for j, k in enumerate(o) if j != i)]
+            for i in range(len(context.independent))
+        ]
+        if not all(pures):
             return JanetType([b.leading_derivative() for b in leaders], None, oo, None)
+        bounds = [min(pure) for pure in pures]
         for o in product(*(range(n) for n in bounds)):
             if not any(all(a >= b for a, b in zip(o, lo, strict=True)) for lo in orders):
                 parametric.append((f, o))
@@ -1565,13 +1638,18 @@ def janet_type(S, context):
     )
 
 
-def _derivative(f, orders, context):
+def _derivative(f: Expr, orders: Sequence[int], context: Context) -> Expr:
     variables = [(v, k) for v, k in zip(context.independent, orders, strict=True) if k]
     return Derivative(f, *variables) if variables else f
 
 
 @profile_if_enabled
-def integrability_conditions(S, dependent, independent, sort_order=Mgrevlex):
+def integrability_conditions(
+    S: Iterable[Expr],
+    dependent: Iterable[Basic],
+    independent: Iterable[Basic],
+    sort_order: WeightFunction = Mgrevlex,
+) -> list[Expr]:
     """The conditions on the coefficients of S for S to be a Janet basis.
 
     S is a system whose leading derivatives form a Janet basis type, with
@@ -1596,7 +1674,7 @@ def integrability_conditions(S, dependent, independent, sort_order=Mgrevlex):
     # are taken in the other order), so the system may first have to be
     # completed by derivatives of its elements; this keeps the type
     system = reorder(complete_system(system, context), context, ascending=True)
-    result = set()
+    result: set[Expr] = set()
     for ei, n, ej, m in _integrability_pairs(system, context):
         condition = ei.expression().diff(n) - (ej.expression().diff(*m) if m else ej.expression())
         _, remaining = _reduce_with_cofactors(condition, system, context)
@@ -1608,7 +1686,13 @@ def integrability_conditions(S, dependent, independent, sort_order=Mgrevlex):
 
 
 @profile_if_enabled
-def is_janet_basis_of(B, S, dependent, independent, sort_order=Mgrevlex):
+def is_janet_basis_of(
+    B: Iterable[Expr | LHDP],
+    S: Iterable[Basic],
+    dependent: Iterable[Basic],
+    independent: Iterable[Basic],
+    sort_order: WeightFunction = Mgrevlex,
+) -> bool:
     """Check whether B is the Janet basis of the linear system S.
 
     For a fixed ranking (sort order and order of the dependent and

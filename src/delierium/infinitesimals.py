@@ -6,12 +6,13 @@ via prolongation of the vector field and extraction of coefficients.
 """
 
 from collections import OrderedDict
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from functools import reduce
 from itertools import combinations_with_replacement, permutations, product
-from typing import Any
+from typing import Any, cast
 
 from sympy import (  # noqa: F401
+    Basic,
     Derivative,
     Dummy,
     Expr,
@@ -44,7 +45,7 @@ from delierium.janet_basis import (
     nonzero_factors,
     reorder,
 )
-from delierium.matrix_order import Context, Mgrevlex
+from delierium.matrix_order import Context, Mgrevlex, WeightFunction
 
 __all__ = [
     "create_infinitesimals",
@@ -59,6 +60,13 @@ __all__ = [
 ]
 
 init_printing()
+
+# the infinitesimal of each variable: {x: X(x, y), y(x): Y(x, y), ...}
+type Infinitesimals = dict[Basic, Expr]
+# a variable or a sequence of them, see convert_to_iterable
+type Variables = Basic | Iterable[Basic]
+# infinitesimals to create, see create_infinitesimals
+type InfinitesimalNames = Mapping[Basic, str | Expr] | None
 
 
 def variable_combinations(variables: list[Symbol], max_order: int) -> list[list[Symbol]]:
@@ -86,14 +94,16 @@ def variable_combinations(variables: list[Symbol], max_order: int) -> list[list[
     ]
 
 
-def order(expr: Expr, dep: list[Function], indep: list[Symbol]) -> tuple[int, set[Expr]]:
+def order(  # pylint: disable=unused-argument
+    expr: Expr, dep: list[Function], indep: list[Symbol]
+) -> tuple[int, set[Expr]]:
     """Highest derivative order of a dependent variable occurring in expr,
     and the set of derivatives attaining that order.
 
     `dep` and `indep` must already be lists (see convert_to_iterable).
     """
     max_order = 0
-    max_deriv = set()
+    max_deriv: set[Expr] = set()
     dep_names = [_.name for _ in dep]
     for atom in expr.expand().atoms(Derivative):
         if atom.args[0].name in dep_names:
@@ -107,7 +117,12 @@ def order(expr: Expr, dep: list[Function], indep: list[Symbol]) -> tuple[int, se
 
 
 @profile_if_enabled
-def compute_level(deriv_vars_order: list[Any], dep, indep, infinitesimals):
+def compute_level(
+    deriv_vars_order: list[Any],
+    dep: list[Expr],
+    indep: list[Symbol],
+    infinitesimals: Mapping[Basic, Expr],
+) -> tuple[list[Expr], list[Expr]]:
     """Compute all derivatives and infinitesimals for a given derivative order.
     Extended Gamma operator (Arrigo, eq 2.85, or Schwarz, eq. 5.10)
 
@@ -165,7 +180,8 @@ def compute_level(deriv_vars_order: list[Any], dep, indep, infinitesimals):
         (
             func_diff(func, v),
             reduce(
-                lambda acc, var: acc - func_diff(func, var) * func_diff(infinitesimals[var], v),
+                # reduce() calls the lambda right away, while func is current
+                lambda acc, var: acc - func_diff(func, var) * func_diff(infinitesimals[var], v),  # pylint: disable=cell-var-from-loop
                 indep,
                 func_diff(eta, v),
             ),
@@ -177,7 +193,9 @@ def compute_level(deriv_vars_order: list[Any], dep, indep, infinitesimals):
 
 
 @profile_if_enabled
-def prolongation(expr, infinitesimals, dep, indep):
+def prolongation(
+    expr: Expr, infinitesimals: Mapping[Basic, Expr], dep: list[Expr], indep: list[Symbol]
+) -> Expr:
     """Apply the prolonged vector field Gamma to expr.
 
     Gamma = sum_w infinitesimals[w] * d/dw, where w runs over the
@@ -233,7 +251,7 @@ def prolongation(expr, infinitesimals, dep, indep):
     -T_t*u_t - T_u*u_t**2 + U_t + U_u*u_t - X_t*u_x - X_u*u_t*u_x
     """
     infinitesimals = OrderedDict((k, finish_substitution(v)) for k, v in infinitesimals.items())
-    dummies = OrderedDict()
+    dummies: OrderedDict[Basic, Symbol] = OrderedDict()
     for combi in variable_combinations(indep, order(expr, dep, indep)[0]):
         funcs, etas = compute_level(combi, dep, indep, infinitesimals)
         suffix = "".join(str(v) for v in combi)
@@ -252,7 +270,7 @@ def prolongation(expr, infinitesimals, dep, indep):
     return finish_substitution(acc)
 
 
-def split_jet_coefficients(expr, dep) -> list[Expr]:
+def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     """Split expr into determining equations: the coefficients of expr
     as a polynomial in the jet variables, i.e. in all derivatives of the
     dependent variables occurring in it. Denominators are cleared, zero
@@ -317,7 +335,7 @@ def split_jet_coefficients(expr, dep) -> list[Expr]:
     return sorted(result, key=default_sort_key)
 
 
-def _power_generators(expr, jet):
+def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]]:
     """Replace the powers b**e of jet-dependent b with a non-numeric
     exponent by new generators: b**(k*s + n) becomes G**k * b**n, one G per
     family (b, s), k a positive integer. For a generic exponent G is
@@ -327,7 +345,7 @@ def _power_generators(expr, jet):
         (p for p in expr.atoms(Pow) if p.base.has(*jet) and not p.exp.is_number),
         key=default_sort_key,
     )
-    families = []  # (base, symbolic part of the exponent, generator)
+    families: list = []  # (base, symbolic part of the exponent, generator)
     repl = {}
     for p in pows:
         n, s = p.exp.as_coeff_Add()
@@ -344,11 +362,11 @@ def _power_generators(expr, jet):
     return expr.xreplace(repl), [gen for _, _, gen in families]
 
 
-def _exp_generators(expr, jet):
+def _exp_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]]:
     """Replace the exponentials depending on the jet variables by powers of
     new generators, one per family exp(k*a), k a positive integer."""
     exps = sorted((e for e in expr.atoms(exp) if e.has(*jet)), key=default_sort_key)
-    bases = []  # (exponent, generator)
+    bases: list = []  # (exponent, generator)
     repl = {}
     for e in exps:
         for arg, gen in bases:
@@ -365,7 +383,7 @@ def _exp_generators(expr, jet):
     return expr.xreplace(repl), [gen for _, gen in bases]
 
 
-def canonical_derivatives(expr, dep):
+def canonical_derivatives(expr: Expr, dep: Iterable[Expr]) -> Expr:
     """Bring the variables of every derivative of an infinitesimal into
     sympy's canonical order, so that e.g. X_{x y} and X_{y x} compare
     equal. Derivatives w.r.t. y(x) are not reordered by sympy itself.
@@ -381,7 +399,7 @@ def canonical_derivatives(expr, dep):
     return expr.xreplace(to_symbol).doit(simplify=False).expand().xreplace(back)
 
 
-def _canonical_derivatives_of(expr, dep):
+def _canonical_derivatives_of(expr: Expr, dep: Variables) -> Expr:
     """expr with the derivatives of the dependent variables in SymPy's
     canonical order of the variables. An unevaluated Derivative(u, x, t) is
     not the same as Derivative(u, t, x), the form diff gives and the
@@ -406,13 +424,14 @@ def _canonical_derivatives_of(expr, dep):
     return expr.xreplace({d: d.doit(simplify=False) for d in derivatives})
 
 
-def convert_to_iterable(item):
-    if not isinstance(item, Iterable):
-        item = [item]
-    return item
+def convert_to_iterable(item: Variables) -> list[Any]:
+    """item as a list: a single variable becomes [item]."""
+    return list(item) if isinstance(item, Iterable) else [item]
 
 
-def create_infinitesimals(dep, indep, inf=None):
+def create_infinitesimals(
+    dep: Basic | Iterable[Basic], indep: Basic | Iterable[Basic], inf: InfinitesimalNames = None
+) -> Infinitesimals:
     """Build the dict of infinitesimal generator functions, one per
     dependent/independent variable, each depending on all of dep+indep.
 
@@ -443,7 +462,7 @@ def create_infinitesimals(dep, indep, inf=None):
     """
     dep = convert_to_iterable(dep)
     indep = convert_to_iterable(indep)
-    infinitesimals = OrderedDict()
+    infinitesimals: Infinitesimals = OrderedDict()
     if inf is None:
         for d in dep + indep:
             infinitesimals[d] = make_infinitesimal(d, *(dep + indep), name=d.name.swapcase())
@@ -457,8 +476,11 @@ def create_infinitesimals(dep, indep, inf=None):
 
 
 def compute_overdetermined_system_of_infinitesimals(
-    eq: Expr, dep: Symbol | list[Symbol], indep: Symbol | list[Symbol], infinitesimals=None
-):
+    eq: Expr,
+    dep: Variables,
+    indep: Variables,
+    infinitesimals: InfinitesimalNames = None,
+) -> list[Expr]:
     """
     infinitesimals : dict{Function/Symbol : new name}
 
@@ -498,7 +520,14 @@ def compute_overdetermined_system_of_infinitesimals(
     return split_jet_coefficients(r, dep)
 
 
-def overdetermined_system_ode(ode, dependent, independent, infinitesimals=None, *args, **kw):
+def overdetermined_system_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument
+    ode: Expr,
+    dependent: Variables,
+    independent: Variables,
+    infinitesimals: InfinitesimalNames = None,
+    *args: object,
+    **kw: object,
+) -> list[Expr]:
     """
     >>> # Arrigo Example 2.20
     >>> from delierium.helpers import ltf
@@ -529,8 +558,13 @@ def overdetermined_system_ode(ode, dependent, independent, infinitesimals=None, 
     return result
 
 
-def overdetermined_system_odes(
-    eqs: list[Expr], dependent, independent, infinitesimals=None, *args, **kw
+def overdetermined_system_odes(  # pylint: disable=keyword-arg-before-vararg
+    eqs: list[Expr],
+    dependent: Variables,
+    independent: Variables,
+    infinitesimals: InfinitesimalNames = None,
+    *args: Any,
+    **kw: Any,
 ) -> list[Expr]:
     """Determining equations for the Lie point symmetries of a system of
     ODEs, one equation per dependent variable.
@@ -567,7 +601,7 @@ def overdetermined_system_odes(
         raise NotImplementedError("systems of ODEs only, i.e. one independent variable")
     infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
     reduce_on_system = _ode_system_reduction(eqs, dep, indep[0])
-    result = []
+    result: list[Expr] = []
     for eq in eqs:
         r = reduce_on_system(prolongation(eq, infinitesimals, dep, indep))
         for c in split_jet_coefficients(r, dep):
@@ -577,14 +611,16 @@ def overdetermined_system_odes(
     return result
 
 
-def _ode_system_reduction(eqs, dep, t):
+def _ode_system_reduction(
+    eqs: Sequence[Expr], dep: list[Expr], t: Symbol
+) -> Callable[[Expr], Expr]:
     """Solve a system of ODEs for one leading derivative per equation and
     return the function that replaces every leading derivative, and every
     derivative of it, by its value on the solutions of the system.
     """
     rhs = _solved_form(eqs, dep, t)
 
-    def reducible(expr):
+    def reducible(expr: Expr) -> list[Derivative]:
         return [
             d
             for d in expr.atoms(Derivative)
@@ -593,7 +629,7 @@ def _ode_system_reduction(eqs, dep, t):
 
     _check_termination(rhs, reducible)
 
-    def reduce_on_system(expr):
+    def reduce_on_system(expr: Expr) -> Expr:
         while derivatives := reducible(expr):
             replacements = {}
             for d in derivatives:
@@ -605,7 +641,9 @@ def _ode_system_reduction(eqs, dep, t):
     return reduce_on_system
 
 
-def _solved_form(eqs, dep, t):
+def _solved_form(
+    eqs: Sequence[Expr], dep: list[Expr], t: Symbol
+) -> dict[Expr, tuple[Integer, Expr]]:
     """{dependent variable: (order of its leader, value of its leader)}.
 
     The leading derivative of an equation is one of its highest
@@ -627,14 +665,16 @@ def _solved_form(eqs, dep, t):
     return rhs
 
 
-def _check_termination(rhs, reducible):
+def _check_termination(
+    rhs: dict[Expr, tuple[Integer, Expr]], reducible: Callable[[Expr], list[Derivative]]
+) -> None:
     """For the reduction to terminate, there has to be an orderly ranking
     (by order, then by the dependent variable) in which every reducible
     derivative on the right-hand side of an equation is lower than its
     leader: then every replacement brings in lower derivatives only, also
     after differentiation."""
 
-    def is_orderly_ranking(variables):
+    def is_orderly_ranking(variables: Sequence[Expr]) -> bool:
         rank = {f: i for i, f in enumerate(variables)}
         return all(
             (d.derivative_count, rank[d.expr]) < (n, rank[f])
@@ -646,7 +686,14 @@ def _check_termination(rhs, reducible):
         raise NotImplementedError("the reduction of the system by its equations may not terminate")
 
 
-def overdetermined_system_pde(pde, dependent, independent, infinitesimals=None, *args, **kw):
+def overdetermined_system_pde(  # pylint: disable=keyword-arg-before-vararg,unused-argument
+    pde: Expr,
+    dependent: Variables,
+    independent: Variables,
+    infinitesimals: InfinitesimalNames = None,
+    *args: object,
+    **kw: object,
+) -> list[Expr]:
     """Determining equations for the Lie point symmetries of a scalar PDE
     (one dependent variable, any number of independent ones).
 
@@ -683,7 +730,9 @@ def overdetermined_system_pde(pde, dependent, independent, infinitesimals=None, 
     return [finish_substitution(_) for _ in result]
 
 
-def _linear_system_ode(ode, dependent, independent, infinitesimals=None):
+def _linear_system_ode(
+    ode: Expr, dependent: Expr, independent: Symbol, infinitesimals: InfinitesimalNames = None
+) -> tuple[list[Expr], list[Expr], list[Symbol], Symbol]:
     """The determining equations of an ODE as a linear system for JanetBasis.
 
     Returns (system, dependents, independents, h_symbol): the dependent
@@ -704,25 +753,27 @@ def _linear_system_ode(ode, dependent, independent, infinitesimals=None):
     return system, list(reversed(inf)), list(reversed(r1)), h_symbol
 
 
-def janet_basis_from_ode(
+def janet_basis_from_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument
     ode: Expr,
-    dependent: Symbol,
+    dependent: Expr,
     independent: Symbol,
-    sort_order=Mgrevlex,
-    infinitesimals=None,
-    *args,
-    **kw,
-):
+    sort_order: WeightFunction = Mgrevlex,
+    infinitesimals: InfinitesimalNames = None,
+    *args: object,
+    **kw: object,
+) -> LHDPList:
     system, inf, r1, h_symbol = _linear_system_ode(ode, dependent, independent, infinitesimals)
     janet = JanetBasis(system, inf, r1, sort_order=sort_order)
     return _back_substituted(janet, {h_symbol: dependent}, sort_order)
 
 
-def _back_substituted(janet, back, sort_order):
+def _back_substituted(
+    janet: JanetBasis, back: Mapping[Basic, Basic], sort_order: WeightFunction
+) -> LHDPList:
     """The elements of a Janet basis as LHDPs, with the symbols standing for
     the dependent variables replaced back by them (back: symbol -> function)."""
 
-    def back_substitute(e):
+    def back_substitute(e: Expr) -> Expr:
         return e.xreplace(back)
 
     res = []
@@ -739,7 +790,7 @@ def _back_substituted(janet, back, sort_order):
             p.append(_Dterm(derivative=d, coeff=coeff, context=ctx))
         res.append(LHDP(e=0, context=ctx, dterms=p))
 
-    def assumptions():
+    def assumptions() -> tuple[list[Expr], list[list[Expr]], list[Expr]]:
         return (
             nonzero_factors([back_substitute(f) for f in janet.assumed_nonzero()]),
             janet.parameter_conditions(),
@@ -749,7 +800,12 @@ def _back_substituted(janet, back, sort_order):
     return LHDPList(reorder(res, context=ctx), assumptions)
 
 
-def _linear_system_odes(eqs, dependent, independent, infinitesimals=None):
+def _linear_system_odes(
+    eqs: list[Expr],
+    dependent: Variables,
+    independent: Variables,
+    infinitesimals: InfinitesimalNames = None,
+) -> tuple[list[Expr], list[Expr], list[Basic], dict[Expr, Symbol]]:
     """The determining equations of a system of ODEs as a linear system for
     JanetBasis.
 
@@ -769,9 +825,15 @@ def _linear_system_odes(eqs, dependent, independent, infinitesimals=None):
     return [e.xreplace(to_symbol) for e in system], inf, variables, to_symbol
 
 
-def janet_basis_from_odes(
-    eqs, dependent, independent, sort_order=Mgrevlex, infinitesimals=None, *args, **kw
-):
+def janet_basis_from_odes(  # pylint: disable=keyword-arg-before-vararg,unused-argument
+    eqs: list[Expr],
+    dependent: Variables,
+    independent: Variables,
+    sort_order: WeightFunction = Mgrevlex,
+    infinitesimals: InfinitesimalNames = None,
+    *args: object,
+    **kw: object,
+) -> LHDPList:
     """Janet basis of the determining equations of a system of ODEs, see
     overdetermined_system_odes.
 
@@ -798,15 +860,15 @@ def janet_basis_from_odes(
 
 
 def is_janet_basis_of_ode(
-    B,
-    ode,
-    dependent,
-    independent,
-    sort_order=Mgrevlex,
-    infinitesimals=None,
-    dependent_order=None,
-    independent_order=None,
-):
+    B: Iterable[Expr | LHDP],
+    ode: Expr,
+    dependent: Expr,
+    independent: Symbol,
+    sort_order: WeightFunction = Mgrevlex,
+    infinitesimals: InfinitesimalNames = None,
+    dependent_order: Sequence[Expr | str] | None = None,
+    independent_order: Sequence[Basic | str] | None = None,
+) -> bool:
     """Check whether B is the Janet basis of the determining equations of ode.
 
     B is written in the infinitesimals X(y, x), Y(y, x) of a plain symbol y
@@ -859,10 +921,10 @@ def is_janet_basis_of_ode(
     to_h = {dependent: h_symbol, Symbol(str(dependent.func)): h_symbol}
     B = [(b.expression() if isinstance(b, LHDP) else b).xreplace(to_h) for b in B]
 
-    def dep_key(f):
+    def dep_key(f: Expr | str) -> str:
         return f if isinstance(f, str) else f.func.__name__
 
-    def ind_key(v):
+    def ind_key(v: Basic | str) -> Basic:
         # y, y(x) and "y" all stand for the dependent variable, i.e. H
         return (Symbol(v) if isinstance(v, str) else v).xreplace(to_h)
 
@@ -872,15 +934,15 @@ def is_janet_basis_of_ode(
 
 
 def is_janet_basis_of_odes(
-    B,
-    eqs,
-    dependent,
-    independent,
-    sort_order=Mgrevlex,
-    infinitesimals=None,
-    dependent_order=None,
-    independent_order=None,
-):
+    B: Iterable[Expr | LHDP],
+    eqs: list[Expr],
+    dependent: Variables,
+    independent: Variables,
+    sort_order: WeightFunction = Mgrevlex,
+    infinitesimals: InfinitesimalNames = None,
+    dependent_order: Sequence[Expr | str] | None = None,
+    independent_order: Sequence[Basic | str] | None = None,
+) -> bool:
     """Check whether B is the Janet basis of the determining equations of
     the system of ODEs eqs, see janet_basis_from_odes.
 
@@ -928,7 +990,7 @@ def is_janet_basis_of_odes(
     )
     ours = {(f.func.__name__, frozenset(f.args)): f for f in inf}
 
-    def normalized(b):
+    def normalized(b: Expr | LHDP) -> Expr:
         b = (b.expression() if isinstance(b, LHDP) else b).xreplace(to_symbol)
         return b.xreplace(
             {
@@ -938,10 +1000,10 @@ def is_janet_basis_of_odes(
             }
         )
 
-    def dep_key(f):
+    def dep_key(f: Expr | str) -> str:
         return f if isinstance(f, str) else f.func.__name__
 
-    def ind_key(v):
+    def ind_key(v: Basic | str) -> Basic:
         # x, x(t) and "x" all stand for the symbol x
         return (Symbol(v) if isinstance(v, str) else v).xreplace(to_symbol)
 
@@ -950,15 +1012,17 @@ def is_janet_basis_of_odes(
     return is_janet_basis_of([normalized(b) for b in B], system, dep, ind, sort_order)
 
 
-def _ranked(order, default, key):
-    """default, rearranged like order; the entries are matched by key."""
-    if order is None:
+def _ranked[T](
+    ordering: Iterable[Any] | None, default: list[T], key: Callable[[Any], Any]
+) -> list[T]:
+    """default, rearranged like ordering; the entries are matched by key."""
+    if ordering is None:
         return default
     by_key = {key(_): _ for _ in default}
-    ranked = [by_key.get(key(_)) for _ in order]
+    ranked = [by_key.get(key(_)) for _ in ordering]
     if None in ranked or len(set(ranked)) != len(default):
-        raise ValueError(f"{list(order)} is not an ordering of {default}")
-    return ranked
+        raise ValueError(f"{list(ordering)} is not an ordering of {default}")
+    return cast(list[T], ranked)
 
 
 if __name__ == "__main__":

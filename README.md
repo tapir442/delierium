@@ -29,6 +29,21 @@ part of this release.
 
 # Release notes
 
+### 1.0.2
+
+* Every Janet basis computes in a coefficient field of its own (`coefficients.fresh_field`)
+  instead of one field shared by the whole process, which grew with every computation
+  (#30). The symmetry catalogue runs about 20 % faster (90 s to 70 s in one process),
+  results are unchanged.
+* Internal change: the code is clean under pylint and mypy, which are now blocking in CI
+  (#8). No change in behaviour.
+* Internal change: every function has type hints, and mypy requires them for new code.
+* Internal change: a version tag publishes the release to PyPI from GitHub Actions, by
+  trusted publishing instead of an API token (#7).
+* `delierium.higher_infinitesimals` (and its command line tool) removed: a second, limited
+  implementation (one function of x and t, order up to 3) of what `overdetermined_system_pde`
+  does for any scalar PDE.
+
 ### 1.0.1
 
 * `import delierium` no longer replaces SymPy's `Derivative.__new__` with a trimmed copy.

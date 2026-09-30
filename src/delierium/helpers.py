@@ -3,11 +3,14 @@
 import builtins
 import itertools
 import os
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from typing import Any, cast
 
 import sympy as sp
 from sympy import (
     Basic,
     Derivative,
+    Expr,
     Function,
     Subs,
     Symbol,
@@ -26,30 +29,30 @@ _in_ipython_session = hasattr(builtins, "__IPYTHON__")
 
 
 # fast solution für Profiling:
-def profile_if_enabled(func):
+def profile_if_enabled[F: Callable[..., Any]](func: F) -> F:
     if os.environ.get('JANET_PROFILE', 'false').lower() == 'true':
         from line_profiler import profile
 
-        return profile(func)
+        return cast(F, profile(func))
     return func
 
 
 @profile_if_enabled
-def eq(d1, d2):
+def eq(d1: Any, d2: Any) -> bool:
     if d1.__class__ != d2.__class__:
         return False
     return d1 == d2
 
 
 @profile_if_enabled
-def pairs_exclude_diagonal(it):
+def pairs_exclude_diagonal[T](it: Iterable[T]) -> Iterator[tuple[T, T]]:
     for x, y in itertools.product(it, repeat=2):
         if x != y:
             yield (x, y)
 
 
 @profile_if_enabled
-def is_derivative(e):
+def is_derivative(e: Basic) -> bool:
     """checks whether an expression 'e' is a pure derivative
     >>> from sympy import diff
     >>> x = Symbol('x')
@@ -65,7 +68,7 @@ def is_derivative(e):
 
 
 @profile_if_enabled
-def is_function(e) -> bool:
+def is_function(e: Basic) -> bool:
     """checks whether an expression 'e' is a pure function without any
     derivative as a factor
     """
@@ -73,7 +76,7 @@ def is_function(e) -> bool:
 
 
 @profile_if_enabled
-def func_diff(fun: Function, var: Symbol | Function) -> Derivative:
+def func_diff(fun: Expr, var: Symbol | Function) -> Expr:
     # simplify=False: SymPy's factor_terms(signsimp(...)) after every higher
     # derivative costs time and is of no use here
     if var.is_Function or var.is_Derivative:
@@ -86,7 +89,7 @@ def func_diff(fun: Function, var: Symbol | Function) -> Derivative:
 
 
 @profile_if_enabled
-def finish_substitution(expr):
+def finish_substitution(expr: Basic) -> Basic:
     subs = set(expr.atoms(Subs))
     subs_dic = {}
     for s0 in subs:
@@ -97,7 +100,13 @@ def finish_substitution(expr):
     return expr.xreplace(subs_dic)
 
 
-def ltf(expr, dep, indep, infinitesimals=None, printer=True):
+def ltf(  # pylint: disable=unused-argument
+    expr: Basic,
+    dep: Sequence[Basic],
+    indep: Sequence[Basic],
+    infinitesimals: object = None,
+    printer: bool = True,
+) -> Basic:
     """Lie Traditional Form: expr in the notation of Lie, see lie_form.
 
     Shows the result (as a formula in Jupyter, as text elsewhere) unless
@@ -116,7 +125,7 @@ def ltf(expr, dep, indep, infinitesimals=None, printer=True):
     return output
 
 
-def show_output(obj):
+def show_output(obj: object) -> None:
     """Rich display in IPython/Jupyter, print everywhere else."""
     if _in_ipython_session:
         from IPython.display import display
@@ -127,7 +136,7 @@ def show_output(obj):
 
 
 @profile_if_enabled
-def make_infinitesimal(v, *variables, name=""):
+def make_infinitesimal(v: Basic, *variables: Basic, name: str = "") -> Expr:
     """
     >>> x = Symbol('x')
     >>> f = Function('f')(x)
@@ -135,7 +144,7 @@ def make_infinitesimal(v, *variables, name=""):
     >>> i
     phi(f(x), x)
     """
-    return Function(f'{name if name else v.name.swapcase()}')(*variables)
+    return Function(f'{name if name else v.name.swapcase()}')(*variables)  # pylint: disable=not-callable
 
 
 def is_jupyter_lab() -> bool:
@@ -149,14 +158,18 @@ def is_jupyter_lab() -> bool:
     return shell is not None and type(shell).__name__ == "ZMQInteractiveShell"
 
 
-def _function_name(f):
+def _function_name(f: Basic) -> str:
     """y for y(x) or the symbol y: the name of a function or symbol."""
     if isinstance(f, AppliedUndef):
         return f.func.__name__
     return str(f)
 
 
-def lie_form(expr, dependent_vars=(), independent_vars=()):
+def lie_form(
+    expr: Basic | str,
+    dependent_vars: Iterable[Basic] = (),
+    independent_vars: Iterable[Basic] = (),
+) -> Basic:
     """expr in the notation of Lie: derivatives as subscripts, arguments of
     functions omitted.
 
@@ -187,7 +200,7 @@ def lie_form(expr, dependent_vars=(), independent_vars=()):
     dependent_vars = list(dependent_vars)
     order = [_function_name(v) for v in (*independent_vars, *dependent_vars)]
 
-    def position(name):
+    def position(name: str) -> tuple[int, str]:
         return (order.index(name), "") if name in order else (len(order), name)
 
     replacements = {}
@@ -206,15 +219,15 @@ def lie_form(expr, dependent_vars=(), independent_vars=()):
     return expr.xreplace({f: Symbol(f.func.__name__) for f in expr.atoms(AppliedUndef)})
 
 
-def lie_derivative_printer(
-    expressions,
-    dependent_vars=(),
-    independent_vars=(),
-    infinitesimals=None,
-    *args,
-    output=None,
-    **kwargs,
-):
+def lie_derivative_printer(  # pylint: disable=keyword-arg-before-vararg,unused-argument
+    expressions: Basic | Iterable[Basic],
+    dependent_vars: Iterable[Basic] = (),
+    independent_vars: Iterable[Basic] = (),
+    infinitesimals: object = None,
+    *args: object,
+    output: str | None = None,
+    **kwargs: object,
+) -> list[str] | None:
     """Print expressions in the notation of Lie, see lie_form.
 
     output=None prints: in a Jupyter notebook as formulas, in a terminal as
