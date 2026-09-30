@@ -45,9 +45,13 @@ False
 x/10 + 1/4
 """
 
+# Coeff's private helpers are applied to other Coeff instances as well
+# pylint: disable=protected-access
+
 from contextlib import contextmanager
 from contextvars import ContextVar
 from math import lcm
+from typing import Any
 
 from sympy import (
     Derivative,
@@ -88,7 +92,7 @@ class _FieldState:
 
     def __init__(self):
         self.keys = {}  # (b, rest) -> L
-        self.symbols = ()  # the generators as expressions, in field order
+        self.symbols: tuple = ()  # the generators as expressions, in field order
         self.field = FracField((Symbol("_delierium_dummy"),), ZZ)
         self.index = {}  # generator expression -> index
         self.dgen = {}  # (generator expression, variable) -> Coeff
@@ -213,7 +217,7 @@ def _collect_atoms(e, atoms):
         atoms.add(_atom_key(e))
 
 
-def _convert(e, field):
+def _convert(e, field):  # pylint: disable=too-many-return-statements
     if e.is_Integer:
         return field(int(e))
     if e.is_Rational:
@@ -255,7 +259,7 @@ def _prepare(e):
 @profile_if_enabled
 def _to_field(e):
     """e (prepared) as an element of the current field, or _UnsupportedError."""
-    atoms = set()
+    atoms: set = set()
     _collect_atoms(e, atoms)
     state = _state()
     state.extend(atoms)
@@ -288,6 +292,9 @@ class Coeff:
     only when needed: for the zero test, a comparison, and by canonical()."""
 
     __slots__ = ("_canonical", "_expr", "f")
+    f: Any  # the field element, or None
+    _expr: Any  # the SymPy expression if f is None
+    _canonical: bool
 
     def __init__(self, e=0):
         if isinstance(e, Coeff):
@@ -389,7 +396,7 @@ class Coeff:
             if a.field is not b.field:  # lifting b has grown the field
                 a = self._field_element()
             return a == b
-        return not (self - other)
+        return not self - other
 
     def __hash__(self):
         return hash(self.canonical().as_expr())

@@ -28,14 +28,13 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - run: uv sync --locked
+      # the extras: pylint and mypy check the lazy imports of the optional
+      # dependencies (IPython, matplotlib, numpy, line_profiler) as well
+      - run: uv sync --locked --all-extras
       - run: uv run ruff check --output-format=github
       - run: uv run ruff format --check
-      # informational until the existing findings are cleaned up
       - run: uv run pylint src/delierium
-        continue-on-error: true
       - run: uv run mypy
-        continue-on-error: true
 
   build:
     runs-on: ubuntu-latest

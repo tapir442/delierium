@@ -3,6 +3,8 @@
 import builtins
 import itertools
 import os
+from collections.abc import Callable
+from typing import Any, cast
 
 import sympy as sp
 from sympy import (
@@ -26,11 +28,11 @@ _in_ipython_session = hasattr(builtins, "__IPYTHON__")
 
 
 # fast solution für Profiling:
-def profile_if_enabled(func):
+def profile_if_enabled[F: Callable[..., Any]](func: F) -> F:
     if os.environ.get('JANET_PROFILE', 'false').lower() == 'true':
         from line_profiler import profile
 
-        return profile(func)
+        return cast(F, profile(func))
     return func
 
 
@@ -65,7 +67,7 @@ def is_derivative(e):
 
 
 @profile_if_enabled
-def is_function(e) -> bool:
+def is_function(e):
     """checks whether an expression 'e' is a pure function without any
     derivative as a factor
     """
@@ -97,7 +99,7 @@ def finish_substitution(expr):
     return expr.xreplace(subs_dic)
 
 
-def ltf(expr, dep, indep, infinitesimals=None, printer=True):
+def ltf(expr, dep, indep, infinitesimals=None, printer=True):  # pylint: disable=unused-argument
     """Lie Traditional Form: expr in the notation of Lie, see lie_form.
 
     Shows the result (as a formula in Jupyter, as text elsewhere) unless
@@ -135,7 +137,7 @@ def make_infinitesimal(v, *variables, name=""):
     >>> i
     phi(f(x), x)
     """
-    return Function(f'{name if name else v.name.swapcase()}')(*variables)
+    return Function(f'{name if name else v.name.swapcase()}')(*variables)  # pylint: disable=not-callable
 
 
 def is_jupyter_lab() -> bool:
@@ -206,7 +208,7 @@ def lie_form(expr, dependent_vars=(), independent_vars=()):
     return expr.xreplace({f: Symbol(f.func.__name__) for f in expr.atoms(AppliedUndef)})
 
 
-def lie_derivative_printer(
+def lie_derivative_printer(  # pylint: disable=keyword-arg-before-vararg,unused-argument
     expressions,
     dependent_vars=(),
     independent_vars=(),

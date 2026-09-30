@@ -35,6 +35,8 @@ part of this release.
   instead of one field shared by the whole process, which grew with every computation
   (#30). The symmetry catalogue runs about 20 % faster (90 s to 70 s in one process),
   results are unchanged.
+* Internal change: the code is clean under pylint and mypy, which are now blocking in CI
+  (#8). No change in behaviour.
 
 ### 1.0.1
 

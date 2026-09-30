@@ -24,7 +24,7 @@ def insert_row(mat, k, row):
     return Matrix([*mat.rows()[:k], row, *mat.rows()[k:]])
 
 
-def Mlex(funcs, variables):  # noqa: N802  # pylint: disable=C0103 (name of the term order)
+def Mlex(funcs, variables):  # noqa: N802  # pylint: disable=invalid-name
     '''Generates the "cotes" according to Riquier for the lex ordering
     INPUT : funcs: a tuple of functions (tuple for caching reasons)
             variables: a tuple of variables
@@ -58,7 +58,7 @@ def Mlex(funcs, variables):  # noqa: N802  # pylint: disable=C0103 (name of the 
     return i
 
 
-def Mgrlex(funcs, variables):  # noqa: N802  # pylint: disable=C0103 (name of the term order)
+def Mgrlex(funcs, variables):  # noqa: N802  # pylint: disable=invalid-name
     '''Generates the "cotes" according to Riquier for the grlex ordering
     >>> from sympy import Function, symbols
     >>> x,y,z = symbols("x y z")
@@ -75,7 +75,7 @@ def Mgrlex(funcs, variables):  # noqa: N802  # pylint: disable=C0103 (name of th
     return m
 
 
-def Mgrevlex(funcs, variables):  # noqa: N802  # pylint: disable=C0103 (name of the term order)
+def Mgrevlex(funcs, variables):  # noqa: N802  # pylint: disable=invalid-name
     '''Generates the "cotes" according to Riquier for the grevlex ordering
     >>> from sympy import Function, symbols
     >>> x, y, z = symbols("x y z")
@@ -100,7 +100,7 @@ def Mgrevlex(funcs, variables):  # noqa: N802  # pylint: disable=C0103 (name of 
     return l
 
 
-class Context:
+class Context:  # pylint: disable=too-few-public-methods  # the public API are the cached callables
     """Define the context for comparisons, orders, etc."""
 
     def __init__(self, dependent, independent, weight=Mgrevlex):
@@ -124,7 +124,7 @@ class Context:
         self.is_ctxfunc = cache(self._is_ctxfunc)
         self.order_of_derivative = cache(self._order_of_derivative)
 
-    def _gt(self, v1, v2) -> int:
+    def _gt(self, v1, v2) -> bool:
         """Computes the weighted difference vector of v1 and v2
         and returns 'True' if the first nonzero entry is > 0
         """
@@ -133,7 +133,7 @@ class Context:
         for entry in r:
             if entry == 0:
                 continue
-            return entry > 0
+            return bool(entry > 0)
         return False
 
     def _lt(self, v1, v2):

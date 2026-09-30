@@ -86,7 +86,9 @@ def variable_combinations(variables: list[Symbol], max_order: int) -> list[list[
     ]
 
 
-def order(expr: Expr, dep: list[Function], indep: list[Symbol]) -> tuple[int, set[Expr]]:
+def order(  # pylint: disable=unused-argument
+    expr: Expr, dep: list[Function], indep: list[Symbol]
+) -> tuple[int, set[Expr]]:
     """Highest derivative order of a dependent variable occurring in expr,
     and the set of derivatives attaining that order.
 
@@ -165,7 +167,8 @@ def compute_level(deriv_vars_order: list[Any], dep, indep, infinitesimals):
         (
             func_diff(func, v),
             reduce(
-                lambda acc, var: acc - func_diff(func, var) * func_diff(infinitesimals[var], v),
+                # reduce() calls the lambda right away, while func is current
+                lambda acc, var: acc - func_diff(func, var) * func_diff(infinitesimals[var], v),  # pylint: disable=cell-var-from-loop
                 indep,
                 func_diff(eta, v),
             ),
@@ -327,7 +330,7 @@ def _power_generators(expr, jet):
         (p for p in expr.atoms(Pow) if p.base.has(*jet) and not p.exp.is_number),
         key=default_sort_key,
     )
-    families = []  # (base, symbolic part of the exponent, generator)
+    families: list = []  # (base, symbolic part of the exponent, generator)
     repl = {}
     for p in pows:
         n, s = p.exp.as_coeff_Add()
@@ -348,7 +351,7 @@ def _exp_generators(expr, jet):
     """Replace the exponentials depending on the jet variables by powers of
     new generators, one per family exp(k*a), k a positive integer."""
     exps = sorted((e for e in expr.atoms(exp) if e.has(*jet)), key=default_sort_key)
-    bases = []  # (exponent, generator)
+    bases: list = []  # (exponent, generator)
     repl = {}
     for e in exps:
         for arg, gen in bases:
@@ -498,7 +501,9 @@ def compute_overdetermined_system_of_infinitesimals(
     return split_jet_coefficients(r, dep)
 
 
-def overdetermined_system_ode(ode, dependent, independent, infinitesimals=None, *args, **kw):
+def overdetermined_system_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument
+    ode, dependent, independent, infinitesimals=None, *args, **kw
+) -> list[Expr]:
     """
     >>> # Arrigo Example 2.20
     >>> from delierium.helpers import ltf
@@ -529,7 +534,7 @@ def overdetermined_system_ode(ode, dependent, independent, infinitesimals=None, 
     return result
 
 
-def overdetermined_system_odes(
+def overdetermined_system_odes(  # pylint: disable=keyword-arg-before-vararg
     eqs: list[Expr], dependent, independent, infinitesimals=None, *args, **kw
 ) -> list[Expr]:
     """Determining equations for the Lie point symmetries of a system of
@@ -567,7 +572,7 @@ def overdetermined_system_odes(
         raise NotImplementedError("systems of ODEs only, i.e. one independent variable")
     infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
     reduce_on_system = _ode_system_reduction(eqs, dep, indep[0])
-    result = []
+    result: list[Expr] = []
     for eq in eqs:
         r = reduce_on_system(prolongation(eq, infinitesimals, dep, indep))
         for c in split_jet_coefficients(r, dep):
@@ -646,7 +651,9 @@ def _check_termination(rhs, reducible):
         raise NotImplementedError("the reduction of the system by its equations may not terminate")
 
 
-def overdetermined_system_pde(pde, dependent, independent, infinitesimals=None, *args, **kw):
+def overdetermined_system_pde(  # pylint: disable=keyword-arg-before-vararg,unused-argument
+    pde, dependent, independent, infinitesimals=None, *args, **kw
+):
     """Determining equations for the Lie point symmetries of a scalar PDE
     (one dependent variable, any number of independent ones).
 
@@ -704,7 +711,7 @@ def _linear_system_ode(ode, dependent, independent, infinitesimals=None):
     return system, list(reversed(inf)), list(reversed(r1)), h_symbol
 
 
-def janet_basis_from_ode(
+def janet_basis_from_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument
     ode: Expr,
     dependent: Symbol,
     independent: Symbol,
@@ -769,7 +776,7 @@ def _linear_system_odes(eqs, dependent, independent, infinitesimals=None):
     return [e.xreplace(to_symbol) for e in system], inf, variables, to_symbol
 
 
-def janet_basis_from_odes(
+def janet_basis_from_odes(  # pylint: disable=keyword-arg-before-vararg,unused-argument
     eqs, dependent, independent, sort_order=Mgrevlex, infinitesimals=None, *args, **kw
 ):
     """Janet basis of the determining equations of a system of ODEs, see
@@ -950,14 +957,14 @@ def is_janet_basis_of_odes(
     return is_janet_basis_of([normalized(b) for b in B], system, dep, ind, sort_order)
 
 
-def _ranked(order, default, key):
-    """default, rearranged like order; the entries are matched by key."""
-    if order is None:
+def _ranked(ordering, default, key):
+    """default, rearranged like ordering; the entries are matched by key."""
+    if ordering is None:
         return default
     by_key = {key(_): _ for _ in default}
-    ranked = [by_key.get(key(_)) for _ in order]
+    ranked = [by_key.get(key(_)) for _ in ordering]
     if None in ranked or len(set(ranked)) != len(default):
-        raise ValueError(f"{list(order)} is not an ordering of {default}")
+        raise ValueError(f"{list(ordering)} is not an ordering of {default}")
     return ranked
 
 

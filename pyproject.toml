@@ -180,7 +180,8 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [[tool.mypy.overrides]]
-module = ["line_profiler.*", "IPython.*"]
+# sympy has no type annotations (no py.typed marker)
+module = ["line_profiler.*", "IPython.*", "sympy.*"]
 ignore_missing_imports = true
 
 # --------------------------------------------------------------------------
@@ -206,6 +207,7 @@ generated-members = ["sympy.*"]
 
 [tool.pylint.format]
 max-line-length = 100
+max-module-lines = 2000
 
 [tool.pylint.basic]
 # single letters and short math names are fine here
@@ -238,6 +240,8 @@ disable = [
     "missing-class-docstring",
     "missing-function-docstring",
     "fixme",
+    # the optional dependencies (IPython, line_profiler) are imported lazily
+    "import-outside-toplevel",
 ]
 
 [tool.pylint.reports]

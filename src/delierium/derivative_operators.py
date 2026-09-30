@@ -32,7 +32,7 @@ def iter_du_orders(expr, u):
         for sub_expr in expr.args:
             if sub_expr == []:
                 continue
-            elif is_op_du(sub_expr, u):
+            if is_op_du(sub_expr, u):
                 yield sub_expr.derivative_count
             else:
                 yield from iter_du_orders(sub_expr, u)
@@ -51,7 +51,7 @@ def variational_derivative(L, u_in):
     """
     if len(u_in.free_symbols) == 1:
         x = next(iter(u_in.free_symbols))
-        u = Function(u_in.func.__name__)(x)
+        u = Function(u_in.func.__name__)(x)  # pylint: disable=not-callable
     else:
         raise TypeError("Input function must have exactly one variable.")
     t = symbols('tapir')  # dummy variable
@@ -141,14 +141,11 @@ def frechet_derivative(support, dependVar, independVar, testfunction):
     """
     frechet = []
     eps = symbols("eps")
-    for j in range(len(support)):
+    for eq in support:
         deriv = []
         for i in range(len(support)):
-
-            def r0(*args):
-                return dependVar[i](*independVar) + testfunction[i](*independVar) * eps  # noqa: B023 -- called right away by replace()
-
-            s = support[j].replace(dependVar[i], r0)
+            perturbed = dependVar[i](*independVar) + testfunction[i](*independVar) * eps
+            s = eq.replace(dependVar[i], lambda *_, p=perturbed: p)
             deriv.append(diff(s, eps).subs({eps: 0}))
         frechet.append(deriv)
     return frechet

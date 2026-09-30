@@ -94,14 +94,15 @@ def field_functions(generator, coordinates, axes=(0, 1), fixed=1.0, values=None)
     functions of these two coordinates; the other coordinates are fixed."""
     a, b = (coordinates[i] for i in axes)
     rest = {c: fixed for i, c in enumerate(coordinates) if i not in axes}
-    functions = []
-    for i in axes:
+
+    def component(i):
         f = lambdify((a, b), _numbers(sympify(generator[i]).subs(rest), (a, b), values), "numpy")
-        functions.append(lambda X, Y, f=f: np.broadcast_to(f(X, Y), np.shape(X)).astype(float))
-    return functions
+        return lambda X, Y: np.broadcast_to(f(X, Y), np.shape(X)).astype(float)
+
+    return [component(i) for i in axes]
 
 
-def draw_field(
+def draw_field(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     ax, generator, coordinates, box=BOX, axes=(0, 1), fixed=1.0, values=None, n=40, title=None
 ):
     """Draw the generator, projected onto the coordinates axes, as streamlines
@@ -193,7 +194,7 @@ def vector_fields(
     return fig
 
 
-def animate_flow(
+def animate_flow(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     generator, coordinates, curves, box=BOX, axes=(0, 1), fixed=1.0, values=None,
     eps=0.5, frames=21,
 ):  # fmt: skip
