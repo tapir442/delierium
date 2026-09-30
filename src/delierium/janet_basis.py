@@ -230,7 +230,7 @@ class LHDP:
     comparison_vector: ComparisonVector
 
     @profile_if_enabled
-    def __init__(self, e: Basic, context: Context, dterms: Iterable[_Dterm] = ()) -> None:
+    def __init__(self, e: Basic | int, context: Context, dterms: Iterable[_Dterm] = ()) -> None:
         self.context = context
         self.p: list[_Dterm] = []
         self.multipliers: list[int] = []
@@ -239,6 +239,9 @@ class LHDP:
         if dterms:
             self.p = [_.copy() for _ in dterms]
         else:
+            # e is only a placeholder (0) when the terms come as dterms
+            if isinstance(e, int):
+                raise TypeError(f"LHDP({e}, ...) without dterms: e must be an expression")
             self._init(e.simplify().expand())
         # coefficients are in canonical form (coefficients.Coeff), so a
         # vanishing one is recognized

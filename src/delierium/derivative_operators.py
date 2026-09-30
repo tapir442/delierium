@@ -7,7 +7,8 @@ Created on Tue Jan 18 13:45:11 2022
 
 from collections.abc import Iterable, Iterator, Sequence
 
-from sympy import Basic, Derivative, Expr, Function, S, diff, symbols
+from sympy import Basic, Derivative, Expr, Function, Integer, S, diff, symbols
+from sympy.core.function import UndefinedFunction
 
 __all__ = [
     "adjoint_frechet_derivative",
@@ -67,7 +68,7 @@ def variational_derivative(L: Expr, u_in: Expr) -> Expr:
 
 
 def euler_operator(
-    density: Expr, depend: Iterable[Function], independ: Basic | Iterable[Basic]
+    density: Expr, depend: Iterable[UndefinedFunction], independ: Basic | Iterable[Basic]
 ) -> list[Expr]:
     r"""Euler operator (variational derivative) of density with respect to
     each of the dependent variables:
@@ -113,7 +114,7 @@ def euler_operator(
     return result
 
 
-def _order(jet: Expr) -> int:
+def _order(jet: Expr) -> Integer | int:
     return jet.derivative_count if isinstance(jet, Derivative) else 0
 
 
@@ -124,9 +125,9 @@ def _total_derivative(expr: Expr, jet: Expr) -> Expr:
 
 def frechet_derivative(
     support: Sequence[Expr],
-    dependVar: Sequence[Function],
+    dependVar: Sequence[UndefinedFunction],
     independVar: Sequence[Basic],
-    testfunction: Sequence[Function],
+    testfunction: Sequence[UndefinedFunction],
 ) -> list[list[Expr]]:
     """
     >>> from sympy import symbols, Function, diff, Matrix
@@ -160,9 +161,9 @@ def frechet_derivative(
 
 def adjoint_frechet_derivative(
     support: Sequence[Expr],
-    dependVar: Sequence[Function],
+    dependVar: Sequence[UndefinedFunction],
     independVar: Sequence[Basic],
-    testfunction: Sequence[Function],
+    testfunction: Sequence[UndefinedFunction],
 ) -> list[list[Expr]]:
     # Placeholder: in SymPy, adjoint computation is not built-in
     return frechet_derivative(support, dependVar, independVar, testfunction)

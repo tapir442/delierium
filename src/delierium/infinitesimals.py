@@ -641,7 +641,9 @@ def _ode_system_reduction(
     return reduce_on_system
 
 
-def _solved_form(eqs: Sequence[Expr], dep: list[Expr], t: Symbol) -> dict[Expr, tuple[int, Expr]]:
+def _solved_form(
+    eqs: Sequence[Expr], dep: list[Expr], t: Symbol
+) -> dict[Expr, tuple[Integer, Expr]]:
     """{dependent variable: (order of its leader, value of its leader)}.
 
     The leading derivative of an equation is one of its highest
@@ -664,7 +666,7 @@ def _solved_form(eqs: Sequence[Expr], dep: list[Expr], t: Symbol) -> dict[Expr, 
 
 
 def _check_termination(
-    rhs: dict[Expr, tuple[int, Expr]], reducible: Callable[[Expr], list[Derivative]]
+    rhs: dict[Expr, tuple[Integer, Expr]], reducible: Callable[[Expr], list[Derivative]]
 ) -> None:
     """For the reduction to terminate, there has to be an orderly ranking
     (by order, then by the dependent variable) in which every reducible
@@ -753,7 +755,7 @@ def _linear_system_ode(
 
 def janet_basis_from_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument
     ode: Expr,
-    dependent: Symbol,
+    dependent: Expr,
     independent: Symbol,
     sort_order: WeightFunction = Mgrevlex,
     infinitesimals: InfinitesimalNames = None,
