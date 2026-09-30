@@ -48,13 +48,16 @@ x/10 + 1/4
 # Coeff's private helpers are applied to other Coeff instances as well
 # pylint: disable=protected-access
 
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
 from math import lcm
 from typing import Any
 
 from sympy import (
+    Basic,
     Derivative,
+    Expr,
     Float,
     Pow,
     Rational,
@@ -67,7 +70,7 @@ from sympy import (
 from sympy.core.function import AppliedUndef, Function
 from sympy.functions.elementary.exponential import ExpBase
 from sympy.polys.domains import ZZ
-from sympy.polys.fields import FracField
+from sympy.polys.fields import FracElement, FracField
 
 from delierium.helpers import profile_if_enabled
 
@@ -75,6 +78,11 @@ __all__ = [
     "Coeff",
     "fresh_field",
 ]
+
+# (b, rest): the base and the symbolic part of the exponent of an atom
+AtomKey = tuple[Basic, Basic]
+# what a Coeff is made from and combined with
+type CoeffLike = Coeff | Basic | int
 
 
 class _UnsupportedError(Exception):
@@ -90,25 +98,26 @@ class _FieldState:
     and b**(c*rest) is its (c*L)-th power.
     """
 
-    def __init__(self):
-        self.keys = {}  # (b, rest) -> L
+    def __init__(self) -> None:
+        self.keys: dict[AtomKey, int] = {}  # (b, rest) -> L
         self.symbols: tuple = ()  # the generators as expressions, in field order
         self.field = FracField((Symbol("_delierium_dummy"),), ZZ)
-        self.index = {}  # generator expression -> index
-        self.dgen = {}  # (generator expression, variable) -> Coeff
+        self.index: dict[Basic, int] = {}  # generator expression -> index
+        # (generator expression, variable) -> Coeff
+        self.dgen: dict[tuple[Basic, Basic], Coeff] = {}
 
     @staticmethod
-    def generator(key, L):
+    def generator(key: AtomKey, L: int) -> Expr:
         base, rest = key
         return Pow(base, rest / L)
 
-    def element_of(self, key, c):
+    def element_of(self, key: AtomKey, c: Rational) -> FracElement:
         """The atom b**(c*rest) as an element of the current field."""
         L = self.keys[key]
         g = self.field.gens[self.index[self.generator(key, L)]]
         return g ** int(c * L)
 
-    def extend(self, atoms):
+    def extend(self, atoms: Iterable[tuple[AtomKey, Rational]]) -> bool:
         """Make every (key, c) in atoms representable; True if the field changed."""
         changed = False
         for key, c in atoms:
@@ -132,13 +141,13 @@ _default = _FieldState()
 _current: ContextVar[_FieldState | None] = ContextVar("delierium_coefficient_field", default=None)
 
 
-def _state():
+def _state() -> _FieldState:
     """The field of the running computation."""
     return _current.get() or _default
 
 
 @contextmanager
-def fresh_field():
+def fresh_field() -> Iterator[None]:
     """Run a computation in a field of its own.
 
     Without it, all computations of a process would share one field that
@@ -163,7 +172,7 @@ def fresh_field():
         _current.reset(token)
 
 
-def _is_transcendental_atom(e):
+def _is_transcendental_atom(e: Basic) -> bool:
     """Symbols, E, pi and applied functions: no algebraic relation with
     anything else the field contains."""
     return (
@@ -174,7 +183,7 @@ def _is_transcendental_atom(e):
     )
 
 
-def _atom_key(e):
+def _atom_key(e: Basic) -> tuple[AtomKey, Rational]:
     """(key, c) with e == b**(c*rest) for key == (b, rest), or _UnsupportedError."""
     if isinstance(e, (Pow, ExpBase)):
         base, exp = e.as_base_exp()
@@ -191,7 +200,7 @@ def _atom_key(e):
     raise _UnsupportedError(e)
 
 
-def _split_exponent(e):
+def _split_exponent(e: Basic) -> list[Expr] | None:
     """b**(e1 + e2 + ...) as the factors b**e1, b**e2, ..., or None."""
     if isinstance(e, (Pow, ExpBase)):
         base, exp = e.as_base_exp()
@@ -200,7 +209,7 @@ def _split_exponent(e):
     return None
 
 
-def _collect_atoms(e, atoms):
+def _collect_atoms(e: Basic, atoms: set[tuple[AtomKey, Rational]]) -> None:
     if e.is_Rational:
         return
     factors = _split_exponent(e)
@@ -217,7 +226,7 @@ def _collect_atoms(e, atoms):
         atoms.add(_atom_key(e))
 
 
-def _convert(e, field):  # pylint: disable=too-many-return-statements
+def _convert(e: Basic, field: FracField) -> FracElement:  # pylint: disable=too-many-return-statements
     if e.is_Integer:
         return field(int(e))
     if e.is_Rational:
@@ -243,7 +252,7 @@ def _convert(e, field):  # pylint: disable=too-many-return-statements
     return _state().element_of(*_atom_key(e))
 
 
-def _prepare(e):
+def _prepare(e: Any) -> Expr:
     # b**(n - 1) -> b**n/b, exp(x + 1) -> E*exp(x), so that the field sees
     # the same generators whatever form the powers come in
     e = sympify(e)
@@ -257,16 +266,16 @@ def _prepare(e):
 
 
 @profile_if_enabled
-def _to_field(e):
+def _to_field(e: Expr) -> FracElement:
     """e (prepared) as an element of the current field, or _UnsupportedError."""
-    atoms: set = set()
+    atoms: set[tuple[AtomKey, Rational]] = set()
     _collect_atoms(e, atoms)
     state = _state()
     state.extend(atoms)
     return _convert(e, state.field)
 
 
-def _lift(f):
+def _lift(f: FracElement) -> FracElement:
     """f as an element of the current field."""
     field = _state().field
     if f.field is field:
@@ -277,7 +286,7 @@ def _lift(f):
         ring = field.ring
         pad = (0,) * (ring.ngens - len(old))
 
-        def padded(p):
+        def padded(p: Any) -> Any:
             return ring.from_dict({m + pad: c for m, c in p.items()})
 
         return field.raw_new(padded(f.numer), padded(f.denom))
@@ -296,7 +305,7 @@ class Coeff:
     _expr: Any  # the SymPy expression if f is None
     _canonical: bool
 
-    def __init__(self, e=0):
+    def __init__(self, e: "Coeff | Basic | int" = 0) -> None:
         if isinstance(e, Coeff):
             self.f, self._expr, self._canonical = e.f, e._expr, e._canonical
             return
@@ -310,14 +319,14 @@ class Coeff:
         self._canonical = self.f is not None
 
     @classmethod
-    def _new(cls, f=None, expr=None):
+    def _new(cls, f: FracElement | None = None, expr: Expr | None = None) -> "Coeff":
         new = object.__new__(cls)
         new.f = f
         new._expr = expr
         new._canonical = f is not None
         return new
 
-    def canonical(self):
+    def canonical(self) -> "Coeff":
         """self, with an expression brought into canonical form."""
         if not self._canonical:
             self._expr = cancel(self._expr)
@@ -325,19 +334,19 @@ class Coeff:
         return self
 
     @property
-    def is_field(self):
+    def is_field(self) -> bool:
         return self.f is not None
 
-    def as_expr(self):
+    def as_expr(self) -> Expr:
         if self._expr is None:
             self._expr = self.f.as_expr()
         return self._expr
 
-    def _field_element(self):
+    def _field_element(self) -> FracElement:
         f = self.f = _lift(self.f)
         return f
 
-    def _binary(self, other, op):
+    def _binary(self, other: CoeffLike, op: Callable[[Any, Any], Any]) -> "Coeff":
         if not isinstance(other, Coeff):
             other = Coeff(other)
         if self.f is not None and other.f is not None:
@@ -348,41 +357,41 @@ class Coeff:
             return Coeff._new(f=op(a, b))
         return Coeff._new(expr=op(self.as_expr(), other.as_expr()))
 
-    def __add__(self, other):
+    def __add__(self, other: CoeffLike) -> "Coeff":
         return self._binary(other, lambda a, b: a + b)
 
     __radd__ = __add__
 
-    def __sub__(self, other):
+    def __sub__(self, other: CoeffLike) -> "Coeff":
         return self._binary(other, lambda a, b: a - b)
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: CoeffLike) -> "Coeff":
         return self._binary(other, lambda a, b: b - a)
 
-    def __mul__(self, other):
+    def __mul__(self, other: CoeffLike) -> "Coeff":
         return self._binary(other, lambda a, b: a * b)
 
     __rmul__ = __mul__
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: CoeffLike) -> "Coeff":
         return self._binary(other, lambda a, b: a / b)
 
-    def __pow__(self, n):
+    def __pow__(self, n: int) -> "Coeff":
         if self.f is not None:
             return Coeff._new(f=self._field_element() ** n)
         return Coeff._new(expr=self._expr**n)
 
-    def __neg__(self):
+    def __neg__(self) -> "Coeff":
         if self.f is not None:
             return Coeff._new(f=-self.f)
         return Coeff._new(expr=-self._expr)
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         if self.f is not None:
             return bool(self.f.numer)
         return self.canonical()._expr != 0
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Coeff):
             if isinstance(other, int) and self.f is not None:
                 f = self.f
@@ -398,29 +407,29 @@ class Coeff:
             return a == b
         return not self - other
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.canonical().as_expr())
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.as_expr())
 
     __repr__ = __str__
 
     @profile_if_enabled
-    def diff(self, *variables):
+    def diff(self, *variables: Basic) -> "Coeff":
         result = self
         for v in variables:
             result = result._diff(v)
         return result
 
-    def _diff(self, v):
+    def _diff(self, v: Basic) -> "Coeff":
         if self.f is None:
             return Coeff._new(expr=self._expr.diff(v))
         f = self._field_element()
         # the derivatives of the generators depending on v; computing them
         # may add generators, so f is lifted afterwards
         state = _state()
-        dgens = []
+        dgens: list[tuple[Basic, Coeff | None]] = []
         occurring = [
             g
             for g, dn, dd in zip(f.field.symbols, f.numer.degrees(), f.denom.degrees(), strict=True)
@@ -444,11 +453,11 @@ class Coeff:
             result += partial if d is None else partial * d._field_element()
         return Coeff._new(f=result)
 
-    def xreplace(self, rule):
+    def xreplace(self, rule: dict) -> Expr:
         return self.as_expr().xreplace(rule)
 
 
-def primitive(coeffs):
+def primitive(coeffs: Sequence[Coeff]) -> list[Coeff] | None:
     """coeffs times a common factor: coprime polynomials, the first one with
     a positive leading coefficient, so that proportional lists give the same
     result. None unless all of them are field elements.

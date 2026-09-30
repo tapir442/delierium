@@ -5,9 +5,9 @@ Created on Tue Jan 18 13:45:11 2022
 @author: tapir (rewritten for SymPy by GitHub Copilot Chat Assistant)
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator, Sequence
 
-from sympy import Derivative, Function, S, diff, symbols
+from sympy import Basic, Derivative, Expr, Function, S, diff, symbols
 
 __all__ = [
     "adjoint_frechet_derivative",
@@ -17,14 +17,14 @@ __all__ = [
 ]
 
 
-def is_op_du(expr, u):
+def is_op_du(expr: Basic, u: Expr) -> bool:
     """
     Check if expr is a derivative of u.
     """
     return isinstance(expr, Derivative) and expr.expr.func == u.func
 
 
-def iter_du_orders(expr, u):
+def iter_du_orders(expr: Basic, u: Expr) -> Iterator[int]:
     """
     Yield all derivative orders of u appearing in expr.
     """
@@ -38,7 +38,7 @@ def iter_du_orders(expr, u):
                 yield from iter_du_orders(sub_expr, u)
 
 
-def variational_derivative(L, u_in):
+def variational_derivative(L: Expr, u_in: Expr) -> Expr:
     """The variational derivative (Euler-Lagrange operator) of L with respect
     to u(x), a function of one variable.
 
@@ -66,7 +66,9 @@ def variational_derivative(L, u_in):
     return result
 
 
-def euler_operator(density, depend, independ):
+def euler_operator(
+    density: Expr, depend: Iterable[Function], independ: Basic | Iterable[Basic]
+) -> list[Expr]:
     r"""Euler operator (variational derivative) of density with respect to
     each of the dependent variables:
 
@@ -111,16 +113,21 @@ def euler_operator(density, depend, independ):
     return result
 
 
-def _order(jet):
+def _order(jet: Expr) -> int:
     return jet.derivative_count if isinstance(jet, Derivative) else 0
 
 
-def _total_derivative(expr, jet):
+def _total_derivative(expr: Expr, jet: Expr) -> Expr:
     """D^alpha expr, alpha the multi-index of the derivative jet."""
     return diff(expr, *jet.variable_count) if isinstance(jet, Derivative) else expr
 
 
-def frechet_derivative(support, dependVar, independVar, testfunction):
+def frechet_derivative(
+    support: Sequence[Expr],
+    dependVar: Sequence[Function],
+    independVar: Sequence[Basic],
+    testfunction: Sequence[Function],
+) -> list[list[Expr]]:
     """
     >>> from sympy import symbols, Function, diff, Matrix
     >>> x, t = symbols("x t")
@@ -151,7 +158,12 @@ def frechet_derivative(support, dependVar, independVar, testfunction):
     return frechet
 
 
-def adjoint_frechet_derivative(support, dependVar, independVar, testfunction):
+def adjoint_frechet_derivative(
+    support: Sequence[Expr],
+    dependVar: Sequence[Function],
+    independVar: Sequence[Basic],
+    testfunction: Sequence[Function],
+) -> list[list[Expr]]:
     # Placeholder: in SymPy, adjoint computation is not built-in
     return frechet_derivative(support, dependVar, independVar, testfunction)
 

@@ -16,10 +16,18 @@ x d/dx - y d/dy. Parameters get their numbers from ``values`` (a dict, keys
 names or symbols); a parameter that is not in it is 1.
 """
 
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
-from sympy import Derivative, Symbol, lambdify, latex, oo, solve, sympify
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
+from sympy import Basic, Derivative, Expr, Symbol, lambdify, latex, oo, solve, sympify
+
+if TYPE_CHECKING:
+    from delierium.janet_basis import JanetBasis
 
 __all__ = [
     "animate_flow",
@@ -35,8 +43,16 @@ __all__ = [
 
 BOX = (-3, 3, -3, 3)
 
+# a vector field: one component (a string or an expression) per coordinate
+Generator = Sequence[str | Expr]
+# numbers for the parameters, keyed by name or symbol
+Values = Mapping[str | Basic, Any] | None
+Box = tuple[float, float, float, float]
+Axes2 = tuple[int, int]
+FieldFunction = Callable[[np.ndarray, np.ndarray], np.ndarray]
 
-def generator_latex(generator, coordinates):
+
+def generator_latex(generator: Generator, coordinates: Sequence[Basic]) -> str:
     """The vector field sum c_i d/dv_i in LaTeX.
 
     >>> from sympy import symbols
@@ -63,7 +79,9 @@ def generator_latex(generator, coordinates):
     return (text[2:] if text.startswith("+ ") else text) or "0"
 
 
-def rk4(f, state, t_end, steps=400):
+def rk4(
+    f: Callable[[np.ndarray], np.ndarray], state: np.ndarray, t_end: float, steps: int = 400
+) -> np.ndarray:
     """Integrate state' = f(state) from 0 to t_end with the classical
     Runge-Kutta method; state may have columns (several solutions at once).
     Returns the states at all steps.
@@ -83,19 +101,25 @@ def rk4(f, state, t_end, steps=400):
     return np.array(path)
 
 
-def _numbers(expr, keep, values):
+def _numbers(expr: Expr | str, keep: Iterable[Basic], values: Values) -> Expr:
     """expr with the values substituted and every other symbol not in keep 1."""
     expr = sympify(expr).subs({sympify(k): sympify(v) for k, v in (values or {}).items()})
     return expr.subs(dict.fromkeys(expr.free_symbols - set(keep), 1))
 
 
-def field_functions(generator, coordinates, axes=(0, 1), fixed=1.0, values=None):
+def field_functions(
+    generator: Generator,
+    coordinates: Sequence[Basic],
+    axes: Axes2 = (0, 1),
+    fixed: float = 1.0,
+    values: Values = None,
+) -> list[FieldFunction]:
     """The components of the generator along the coordinates axes, as numpy
     functions of these two coordinates; the other coordinates are fixed."""
     a, b = (coordinates[i] for i in axes)
     rest = {c: fixed for i, c in enumerate(coordinates) if i not in axes}
 
-    def component(i):
+    def component(i: int) -> FieldFunction:
         f = lambdify((a, b), _numbers(sympify(generator[i]).subs(rest), (a, b), values), "numpy")
         return lambda X, Y: np.broadcast_to(f(X, Y), np.shape(X)).astype(float)
 
@@ -103,8 +127,16 @@ def field_functions(generator, coordinates, axes=(0, 1), fixed=1.0, values=None)
 
 
 def draw_field(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-    ax, generator, coordinates, box=BOX, axes=(0, 1), fixed=1.0, values=None, n=40, title=None
-):
+    ax: Axes,
+    generator: Generator,
+    coordinates: Sequence[Basic],
+    box: Box = BOX,
+    axes: Axes2 = (0, 1),
+    fixed: float = 1.0,
+    values: Values = None,
+    n: int = 40,
+    title: str | None = None,
+) -> None:
     """Draw the generator, projected onto the coordinates axes, as streamlines
     colored by its length."""
     fx, fy = field_functions(generator, coordinates, axes, fixed, values)
@@ -131,7 +163,16 @@ def draw_field(  # pylint: disable=too-many-arguments,too-many-positional-argume
     ax.set_title(title, fontsize=9)
 
 
-def flow(generator, coordinates, points, eps, axes=(0, 1), fixed=1.0, values=None, steps=60):
+def flow(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    generator: Generator,
+    coordinates: Sequence[Basic],
+    points: np.ndarray,
+    eps: float,
+    axes: Axes2 = (0, 1),
+    fixed: float = 1.0,
+    values: Values = None,
+    steps: int = 60,
+) -> np.ndarray:
     """The points (2 x N, in the coordinates axes) moved by eps along the flow
     of the generator, computed numerically from its vector field."""
     if eps == 0:
@@ -141,7 +182,15 @@ def flow(generator, coordinates, points, eps, axes=(0, 1), fixed=1.0, values=Non
         return rk4(lambda s: np.array([fx(s[0], s[1]), fy(s[0], s[1])]), points, eps, steps)[-1]
 
 
-def ode_solutions(ode, y, box=BOX, count=8, values=None, seed=1, steps=300):
+def ode_solutions(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    ode: Expr,
+    y: Expr,
+    box: Box = BOX,
+    count: int = 8,
+    values: Values = None,
+    seed: int = 1,
+    steps: int = 300,
+) -> list[np.ndarray]:
     """Solution curves (2 x N arrays of x and y) of the scalar ODE ode = 0 for
     y = y(x), through random points of the box, with random values of the
     higher derivatives there; [] if it cannot be solved for its highest
@@ -158,7 +207,7 @@ def ode_solutions(ode, y, box=BOX, count=8, values=None, seed=1, steps=300):
         return []
     F = lambdify((x, *jets[:n]), roots[0], "numpy")
 
-    def f(s):
+    def f(s: np.ndarray) -> np.ndarray:
         return np.array([np.ones_like(s[0]), *s[2:], F(*s)])
 
     rng = np.random.default_rng(seed)
@@ -178,8 +227,15 @@ def ode_solutions(ode, y, box=BOX, count=8, values=None, seed=1, steps=300):
 
 
 def vector_fields(
-    generators, coordinates, curves=(), box=BOX, axes=(0, 1), fixed=1.0, values=None, columns=4
-):
+    generators: Sequence[Generator],
+    coordinates: Sequence[Basic],
+    curves: Iterable[np.ndarray] = (),
+    box: Box = BOX,
+    axes: Axes2 = (0, 1),
+    fixed: float = 1.0,
+    values: Values = None,
+    columns: int = 4,
+) -> Figure:
     """A figure with one panel per generator, with the curves (red) on top."""
     columns = min(len(generators), columns)
     rows = -(-len(generators) // columns)
@@ -195,9 +251,16 @@ def vector_fields(
 
 
 def animate_flow(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-    generator, coordinates, curves, box=BOX, axes=(0, 1), fixed=1.0, values=None,
-    eps=0.5, frames=21,
-):  # fmt: skip
+    generator: Generator,
+    coordinates: Sequence[Basic],
+    curves: Sequence[np.ndarray],
+    box: Box = BOX,
+    axes: Axes2 = (0, 1),
+    fixed: float = 1.0,
+    values: Values = None,
+    eps: float = 0.5,
+    frames: int = 21,
+) -> FuncAnimation:
     """An animation of the curves moved by the flow of the generator, for
     eps from -eps to eps; show it in Jupyter with
     HTML(animation.to_jshtml())."""
@@ -207,7 +270,7 @@ def animate_flow(  # pylint: disable=too-many-arguments,too-many-positional-argu
     label = ax.text(0.02, 0.96, "", transform=ax.transAxes, fontsize=11,
                     bbox={"facecolor": "white", "alpha": 0.8, "lw": 0})  # fmt: skip
 
-    def frame(e):
+    def frame(e: float) -> list[Any]:
         for line, c in zip(drawn, curves, strict=True):
             p = flow(generator, coordinates, c, e, axes, fixed, values)
             line.set_data(*np.where(np.abs(p) > 50, np.nan, p))
@@ -221,7 +284,9 @@ def animate_flow(  # pylint: disable=too-many-arguments,too-many-positional-argu
     return animation
 
 
-def _orders(janet, derivatives):
+def _orders(
+    janet: "JanetBasis", derivatives: Iterable[Basic]
+) -> set[tuple[Basic, tuple[int, ...]]]:
     """The derivatives as (function, orders by the context's variables)."""
     context = janet.context
     return {
@@ -232,7 +297,9 @@ def _orders(janet, derivatives):
     }
 
 
-def staircase(janet, names=None, title=""):
+def staircase(
+    janet: "JanetBasis", names: Mapping[Any, Any] | None = None, title: str = ""
+) -> Figure:
     """The staircase of a Janet basis: for each unknown function a grid of
     its derivatives, (i, j) meaning i times by the first and j times by the
     second variable. Red squares are the leading derivatives, grey points
@@ -252,7 +319,8 @@ def staircase(janet, names=None, title=""):
     # the largest total order a grid point has
     highest = 2 * top + (max(slices) if rest >= 0 else 0)
     principal = _orders(janet, janet.principal_derivatives(highest))
-    parametric = _orders(janet, janet.parametric_derivatives(highest))
+    # never None: max_order is given
+    parametric = _orders(janet, janet.parametric_derivatives(highest) or [])
 
     fig, panels = plt.subplots(
         len(slices), len(unknowns), squeeze=False,

@@ -37,6 +37,10 @@ part of this release.
   results are unchanged.
 * Internal change: the code is clean under pylint and mypy, which are now blocking in CI
   (#8). No change in behaviour.
+* Internal change: every function has type hints, and mypy requires them for new code.
+* `delierium.higher_infinitesimals` (and its command line tool) removed: a second, limited
+  implementation (one function of x and t, order up to 3) of what `overdetermined_system_pde`
+  does for any scalar PDE.
 
 ### 1.0.1
 

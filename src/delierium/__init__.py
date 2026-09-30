@@ -18,10 +18,8 @@ The public interface is what this package exports (``from delierium import
   (``pip install delierium[plot]``) and is not imported by ``import delierium``
 
 The modules' ``__all__`` list in addition building blocks of the algorithms
-(e.g. delierium.janet_basis.complete_system, vec_multipliers) and the jet
-space implementation delierium.higher_infinitesimals (also a command line
-tool: ``python -m delierium.higher_infinitesimals``); they may change. Every
-other name is internal.
+(e.g. delierium.janet_basis.complete_system, vec_multipliers); they may
+change. Every other name is internal.
 """
 
 from .derivative_operators import (

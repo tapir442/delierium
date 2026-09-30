@@ -1,8 +1,10 @@
 """Matrix_Order"""
 
+from collections.abc import Callable, Iterable, Sequence
 from functools import cache
+from typing import Any
 
-from sympy import Matrix, eye
+from sympy import Basic, Matrix, eye
 
 from delierium.helpers import is_derivative
 
@@ -13,18 +15,21 @@ __all__ = [
     "Mlex",
 ]
 
+# a term order: the weight matrix for the dependent and independent variables
+WeightFunction = Callable[[Sequence[Basic], Sequence[Basic]], Matrix]
+
 #
 # standard weight matrices for lex, grlex and grevlex order
 # according to 'Term orders and Rankings' Schwarz, pp 43.
 #
 
 
-def insert_row(mat, k, row):
+def insert_row(mat: Matrix, k: int, row: Any) -> Matrix:
     """Use this as insert_row is only defined for integer matrices :("""
     return Matrix([*mat.rows()[:k], row, *mat.rows()[k:]])
 
 
-def Mlex(funcs, variables):  # noqa: N802  # pylint: disable=invalid-name
+def Mlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
     '''Generates the "cotes" according to Riquier for the lex ordering
     INPUT : funcs: a tuple of functions (tuple for caching reasons)
             variables: a tuple of variables
@@ -58,7 +63,7 @@ def Mlex(funcs, variables):  # noqa: N802  # pylint: disable=invalid-name
     return i
 
 
-def Mgrlex(funcs, variables):  # noqa: N802  # pylint: disable=invalid-name
+def Mgrlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
     '''Generates the "cotes" according to Riquier for the grlex ordering
     >>> from sympy import Function, symbols
     >>> x,y,z = symbols("x y z")
@@ -75,7 +80,7 @@ def Mgrlex(funcs, variables):  # noqa: N802  # pylint: disable=invalid-name
     return m
 
 
-def Mgrevlex(funcs, variables):  # noqa: N802  # pylint: disable=invalid-name
+def Mgrevlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
     '''Generates the "cotes" according to Riquier for the grevlex ordering
     >>> from sympy import Function, symbols
     >>> x, y, z = symbols("x y z")
@@ -103,7 +108,12 @@ def Mgrevlex(funcs, variables):  # noqa: N802  # pylint: disable=invalid-name
 class Context:  # pylint: disable=too-few-public-methods  # the public API are the cached callables
     """Define the context for comparisons, orders, etc."""
 
-    def __init__(self, dependent, independent, weight=Mgrevlex):
+    def __init__(
+        self,
+        dependent: Iterable[Basic],
+        independent: Iterable[Basic],
+        weight: WeightFunction = Mgrevlex,
+    ) -> None:
         """sorting : (in)dependent [i] > (in)dependent [i+i]
         which means: descending
         """
@@ -112,7 +122,7 @@ class Context:  # pylint: disable=too-few-public-methods  # the public API are t
         self.sort_order = weight
         # leading coefficients divided by in LHDP.normalize: the results hold
         # where they do not vanish (see janet_basis.nonzero_factors)
-        self.divisors = []
+        self.divisors: list[Basic] = []
         # LHDP.normalize makes the coefficients coprime polynomials instead
         # of dividing by the leading coefficient (see JanetBasis)
         self.fraction_free = False
@@ -124,7 +134,7 @@ class Context:  # pylint: disable=too-few-public-methods  # the public API are t
         self.is_ctxfunc = cache(self._is_ctxfunc)
         self.order_of_derivative = cache(self._order_of_derivative)
 
-    def _gt(self, v1, v2) -> bool:
+    def _gt(self, v1: Sequence[int], v2: Sequence[int]) -> bool:
         """Computes the weighted difference vector of v1 and v2
         and returns 'True' if the first nonzero entry is > 0
         """
@@ -136,15 +146,15 @@ class Context:  # pylint: disable=too-few-public-methods  # the public API are t
             return bool(entry > 0)
         return False
 
-    def _lt(self, v1, v2):
+    def _lt(self, v1: Sequence[int], v2: Sequence[int]) -> bool:
         """Checks if v1 < v2."""
         return v1 != v2 and not self.gt(v1, v2)
 
-    def _is_ctxfunc(self, f):
+    def _is_ctxfunc(self, f: Basic) -> bool:
         """Check if 'f' is in the list of dependent variables."""
         return f in self.dependent
 
-    def _order_of_derivative(self, e):
+    def _order_of_derivative(self, e: Basic) -> list[int]:
         """Returns the vector of the orders of a derivative respect to its variables
 
         >>> from sympy import Function, diff, symbols

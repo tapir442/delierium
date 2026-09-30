@@ -171,13 +171,13 @@ files = ["src"]
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
-warn_return_any = true
+# off: sympy is untyped, so every SymPy value is Any to mypy
+warn_return_any = false
 no_implicit_optional = true
 strict_equality = true
 check_untyped_defs = true
-# enable gradually once the code base is annotated
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 
 [[tool.mypy.overrides]]
 # sympy has no type annotations (no py.typed marker)
