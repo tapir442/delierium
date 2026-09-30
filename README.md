@@ -38,6 +38,8 @@ part of this release.
 * Internal change: the code is clean under pylint and mypy, which are now blocking in CI
   (#8). No change in behaviour.
 * Internal change: every function has type hints, and mypy requires them for new code.
+* Internal change: a version tag publishes the release to PyPI from GitHub Actions, by
+  trusted publishing instead of an API token (#7).
 * `delierium.higher_infinitesimals` (and its command line tool) removed: a second, limited
   implementation (one function of x and t, order up to 3) of what `overdetermined_system_pde`
   does for any scalar PDE.
