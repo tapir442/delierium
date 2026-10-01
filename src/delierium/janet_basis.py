@@ -252,6 +252,10 @@ class LHDP:
 
     @profile_if_enabled
     def _init(self, e: Basic) -> None:
+        if e == 0:
+            # an equation that vanishes only after simplify() (#38): no terms
+            self.p = []
+            return
         if isinstance(e, (Symbol, Derivative, Mul, AppliedUndef)):
             operands = [e]
         elif isinstance(e, Symbol):
@@ -1073,7 +1077,9 @@ class JanetBasis:
         context.fraction_free = fraction_free
         # XXX bad criterion
         equations = list(S) if isinstance(S, Iterable) else [S]
-        self.S = reorder([LHDP(s, context, dterms=[]) for s in equations], context, ascending=True)
+        # equations that vanish after simplify() give empty LHDPs (#38)
+        nonzero = [e for e in (LHDP(s, context, dterms=[]) for s in equations) if e.p]
+        self.S = reorder(nonzero, context, ascending=True)
         self._complete(context)
         if fraction_free:
             context.fraction_free = False
@@ -1669,7 +1675,7 @@ def integrability_conditions(
     [Derivative(a(x, y), y) - Derivative(b(x, y), x)]
     """
     context = Context(dependent, independent, sort_order)
-    system = reorder([LHDP(s, context) for s in S], context, ascending=True)
+    system = reorder([e for e in (LHDP(s, context) for s in S) if e.p], context, ascending=True)
     # delierium's Janet multipliers may differ from Schwarz's (the variables
     # are taken in the other order), so the system may first have to be
     # completed by derivatives of its elements; this keeps the type
@@ -1740,6 +1746,7 @@ def is_janet_basis_of(
     context = Context(dependent, independent, sort_order)
     expected = JanetBasis(S, dependent, independent, sort_order).S
     candidate = [LHDP(b.expression() if isinstance(b, LHDP) else b, context) for b in B]
+    candidate = [e for e in candidate if e.p]
     return sorted(map(str, expected)) == sorted(map(str, candidate))
 
 

@@ -27,13 +27,16 @@ from sympy import (  # noqa: F401
     diff,
     exp,
     fraction,
+    ilcm,
     init_printing,
     numer,
     prem,
     solve,
+    symbols,
     together,
 )
 from sympy.core.function import AppliedUndef
+from sympy.polys.polyerrors import PolynomialError
 
 from delierium.helpers import finish_substitution, func_diff, make_infinitesimal, profile_if_enabled
 from delierium.janet_basis import (
@@ -338,28 +341,48 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
 def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]]:
     """Replace the powers b**e of jet-dependent b with a non-numeric
     exponent by new generators: b**(k*s + n) becomes G**k * b**n, one G per
-    family (b, s), k a positive integer. For a generic exponent G is
-    transcendental over the rational functions of the jet variables, so
-    its powers split like independent variables."""
+    family (b, s), k an integer of either sign, n a number. For a generic
+    exponent G = b**s is transcendental over the rational functions of the
+    jet variables, so its powers split like independent variables.
+
+    The powers of one base whose symbolic parts are rational multiples of
+    each other form one family: b**n and b**(-n) after solving for a
+    derivative are G and 1/G (#39), b**(n/2) and b**n are G and G**2.
+
+    >>> p, n = Symbol('p'), Symbol('n')
+    >>> e, (g,) = _power_generators(p**n * p + p ** (-n) + p ** (n / 2), [p])
+    >>> e == g**2 * p + g**-2 + g
+    True
+    """
     pows = sorted(
         (p for p in expr.atoms(Pow) if p.base.has(*jet) and not p.exp.is_number),
         key=default_sort_key,
     )
-    families: list = []  # (base, symbolic part of the exponent, generator)
-    repl = {}
+    # group the symbolic parts of the exponents by base, rational multiples
+    # of one another in one group
+    groups: list[tuple[Expr, Expr, list[Expr]]] = []  # (base, reference part, members)
     for p in pows:
-        n, s = p.exp.as_coeff_Add()
-        for base, s0, gen in families:
-            if base == p.base:
-                k = cancel(s / s0)
-                if k.is_Integer and k > 0:
-                    repl[p] = gen**k * base**n
-                    break
+        _, s = p.exp.as_coeff_Add()
+        for base, s0, members in groups:
+            if base == p.base and cancel(s / s0).is_Rational:
+                members.append(p)
+                break
         else:
-            gen = Dummy()
-            families.append((p.base, s, gen))
-            repl[p] = gen * p.base**n
-    return expr.xreplace(repl), [gen for _, _, gen in families]
+            groups.append((p.base, s, [p]))
+    repl = {}
+    gens = []
+    for base, s0, members in groups:
+        # the unit s0/L makes every symbolic part an integer multiple of it
+        ratios = [cancel(p.exp.as_coeff_Add()[1] / s0) for p in members]
+        unit = s0 / reduce(ilcm, (r.q for r in ratios), 1)
+        if unit.could_extract_minus_sign():  # G = b**(n/2), not b**(-n/2)
+            unit = -unit
+        gen = Dummy()
+        gens.append(gen)
+        for p in members:
+            n, s = p.exp.as_coeff_Add()
+            repl[p] = gen ** cancel(s / unit) * base**n
+    return expr.xreplace(repl), gens
 
 
 def _exp_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]]:
@@ -475,6 +498,36 @@ def create_infinitesimals(
     return infinitesimals
 
 
+def _leading_derivative(eq: Expr, candidates: set[Expr], dep: list[Function]) -> Expr:
+    """The highest derivative to solve eq for, independent of the hash seed.
+
+    Preferred is a derivative in which eq is linear with a coefficient free of
+    the dependent variables and their derivatives (solving for it divides by
+    no jet variable), then one in which eq is linear at all; ties are broken by
+    the canonical order of SymPy expressions.
+
+    >>> x, t, tau0, k0, n = symbols('x t tau0 k0 n')
+    >>> u = Function('u')(x, t)
+    >>> eq = tau0 * u.diff(t, 2) + u.diff(t) - k0 * u.diff(x) ** n * u.diff(x, 2)
+    >>> _leading_derivative(eq, {u.diff(t, 2), u.diff(x, 2)}, [u])
+    Derivative(u(x, t), (t, 2))
+    """
+    dep_names = {_.name for _ in dep}
+    h = Dummy()
+
+    def rank(d: Expr) -> int:
+        try:
+            p = Poly(numer(together(eq.xreplace({d: h}))), h)
+        except PolynomialError:
+            return 2
+        if p.degree() != 1:
+            return 2
+        jet_free = not any(a.func.__name__ in dep_names for a in p.LC().atoms(AppliedUndef))
+        return 0 if jet_free else 1
+
+    return min(candidates, key=lambda d: (rank(d), default_sort_key(d)))
+
+
 def compute_overdetermined_system_of_infinitesimals(
     eq: Expr,
     dep: Variables,
@@ -501,8 +554,8 @@ def compute_overdetermined_system_of_infinitesimals(
     eq = _canonical_derivatives_of(eq, dep)
 
     infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
-    _, highest_term = order(eq, dep, indep)
-    highest_term = next(iter(highest_term))
+    _, highest_terms = order(eq, dep, indep)
+    highest_term = _leading_derivative(eq, highest_terms, dep)
 
     r = prolongation(eq, infinitesimals, dep, indep)
     h = Dummy()
