@@ -23,7 +23,7 @@ delierium computes
 * **pictures**: the staircase of a Janet basis, symmetry generators as vector fields with
   solution curves, their flows as animations.
 
-A catalogue of about 565 equations with known symmetries from the literature checks it
+A catalogue of about 580 equations with known symmetries from the literature checks it
 (see *Tests*). Solving the determining equations for the infinitesimals themselves is not
 part of this release.
 
@@ -31,6 +31,13 @@ part of this release.
 
 ### Not released yet
 
+* Symbolic powers of derivatives give the right determining equations (#39): powers of one
+  jet variable whose symbolic exponents are rational multiples of each other, such as
+  u_x**n and u_x**(-n) after solving for a derivative, are split as powers of one
+  generator. The filtration equation v_t = v_x**n v_xx has its 5 symmetries now.
+* Catalogue: 13 equations with symbolic powers of derivatives from the group
+  classifications of Cherniha, King, Kovalenko (2015), AIMS Mathematics (2026) and
+  Anco et al. (2016), all with the published dimensions and generators.
 * Determining equations that vanish only after `simplify()` no longer stop the Janet
   basis (#38): `LHDP` accepts them as empty, and `JanetBasis`, `integrability_conditions`
   and `is_janet_basis_of` drop them. Twelve catalogue entries with symbolic powers
@@ -47,7 +54,7 @@ part of this release.
 * Catalogue: 73 equations from the group classifications of the CRC Handbook, Vol. 1,
   chapters 10, 11 and 12.1-12.4 (diffusion, filtration, anisotropic and hyperbolic heat
   equations, transfer, Hopf and KdV-Burgers type equations, linear and nonlinear wave
-  equations). 68 pass completely; the others show #5 and #39. Eight generators
+  equations). 70 pass completely; the others show #5. Eight generators
   are misprinted in the book and corrected in the entries.
 * Catalogue: the scalar equations of the PDEBench datasets (advection, Fisher-KPP,
   diffusion-sorption); the systems among them need #21.

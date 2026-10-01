@@ -48,15 +48,8 @@ XFAIL: dict[str, str] = {
     "CRC 1, 10.4: potential filtration equation w_t = exp(w_xx)": (
         "#5: log of a derivative (PolynomialError)"
     ),
-    "CRC 1, 10.3: nonlinear filtration equation v_t = v_x**n v_xx": (
-        "#39: the symbolic exponent of v_x gives a wrong determining equation: the generators "
-        "(x, 2t, v) and (0, n t, -v) leave residue 1, dimension 4 instead of 5"
-    ),
     "CRC 1, 10.10: potential hyperbolic heat equation tau0 u_tt + u_t = k(u_x) u_xx": (
         "#5: an arbitrary function of a derivative (PolynomialError)"
-    ),
-    "CRC 1, 10.10: potential hyperbolic heat equation tau0 u_x**l u_tt + u_t = k0 u_x**n u_xx": (
-        "#39: symbolic powers of u_x, dimension 3 instead of 4"
     ),
     "CRC 1, 12.4: v_tt = phi(v_x) v_xx": (
         "#5: an arbitrary function of a derivative (PolynomialError)"

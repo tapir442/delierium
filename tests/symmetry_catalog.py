@@ -59,6 +59,18 @@ KHARE_TIMOL = (
     "Khare, Timol, Determining equations for infinitesimal transformation of second and "
     "third-order ODE using algorithm in open-source SageMath"
 )
+CKK_SOURCE = (
+    "Cherniha, King, Kovalenko, Lie symmetry properties of nonlinear reaction-diffusion "
+    "equations with gradient-dependent diffusivity, arXiv:1507.01893 (2015)"
+)
+AIMS_SOURCE = (
+    "Lie group classification of u_t = (Phi(u) (u_x)**n)_x + F(u), AIMS Mathematics 11(9) "
+    "(2026) 28009-28054, doi:10.3934/math.20261118"
+)
+ANCO_SOURCE = (
+    "Anco et al., Conservation laws and symmetries of radial generalized nonlinear "
+    "p-Laplacian evolution equations, arXiv:1609.07652 (2016)"
+)
 THE_WELL_SOURCE = (
     "Ohana et al., The Well: a Large-Scale Collection of Diverse Physics Simulations for "
     "Machine Learning, NeurIPS 2024, arXiv:2412.00568; github.com/PolymathicAI/the_well"
@@ -4741,6 +4753,128 @@ THE_WELL = [
     ),
 ]
 
+# Equations with symbolic powers of derivatives from the group classifications
+# of gradient-dependent diffusion (#39): Cherniha, King, Kovalenko (2015),
+# AIMS Mathematics (2026), Anco et al. (2016). Dimensions and generators as
+# given there ("base" d/dt, d/dx); the e_i stand for the signs +-1.
+SYMBOLIC_POWERS = [
+    pde(
+        "Cherniha, King, Kovalenko 3: u_t = u_x**k u_xx + e1 exp(-u)",
+        "Derivative(u(x, t), t) - Derivative(u(x, t), x)**k*Derivative(u(x, t), (x, 2)) - e1*exp(-u(x, t))",
+        ("x", "t"),
+        3,
+        [("1", "0", "0"), ("0", "1", "0"), ("x", "(k + 2)*t", "k + 2")],
+        f"{CKK_SOURCE}, table 1, case 3",
+    ),
+    pde(
+        "Cherniha, King, Kovalenko 4: u_t = u_x**k u_xx + e1 u**m",
+        "Derivative(u(x, t), t) - Derivative(u(x, t), x)**k*Derivative(u(x, t), (x, 2)) - e1*u(x, t)**m",
+        ("x", "t"),
+        3,
+        [("1", "0", "0"), ("0", "1", "0"), ("(k + 1 - m)*x/(k + 2)", "(1 - m)*t", "u")],
+        f"{CKK_SOURCE}, table 1, case 4; m != 1, 2",
+    ),
+    pde(
+        "Cherniha, King, Kovalenko 5: u_t = u_x**k u_xx + e1 u**(k + 1) + e2 u",
+        "Derivative(u(x, t), t) - Derivative(u(x, t), x)**k*Derivative(u(x, t), (x, 2)) - e1*u(x, t)**(k + 1) - e2*u(x, t)",
+        ("x", "t"),
+        3,
+        [("1", "0", "0"), ("0", "1", "0"), ("0", "exp(-k*e2*t)", "e2*exp(-k*e2*t)*u")],
+        f"{CKK_SOURCE}, table 1, case 5; k != 1, -1",
+    ),
+    pde(
+        "Cherniha, King, Kovalenko 10: u_t = u_x**k u_xx + e2 u",
+        "Derivative(u(x, t), t) - Derivative(u(x, t), x)**k*Derivative(u(x, t), (x, 2)) - e2*u(x, t)",
+        ("x", "t"),
+        5,
+        [
+            ("1", "0", "0"),
+            ("0", "1", "0"),
+            ("x", "0", "(1 + 2/k)*u"),
+            ("0", "exp(-k*e2*t)", "e2*exp(-k*e2*t)*u"),
+            ("0", "0", "exp(e2*t)"),
+        ],
+        f"{CKK_SOURCE}, table 1, case 10",
+    ),
+    pde(
+        "AIMS 2026 I-(1): u_t = (u**m u_x**n)_x + e u**r",
+        "Derivative(u(x, t), t) - Derivative(u(x, t)**m*Derivative(u(x, t), x)**n, x) - (e*u(x, t)**r)",
+        ("x", "t"),
+        3,
+        [("1", "0", "0"), ("0", "1", "0"), ("(m + n - r)*x", "(1 - r)*(n + 1)*t", "(n + 1)*u")],
+        f"{AIMS_SOURCE}, Theorem 1, case I-(1); r != 0, 1",
+    ),
+    pde(
+        "AIMS 2026 I-(2): u_t = (u**m u_x**n)_x + e2 u**(m + n) - e3 u/(m + n - 1)",
+        "Derivative(u(x, t), t) - Derivative(u(x, t)**m*Derivative(u(x, t), x)**n, x) - (e2*u(x, t)**(m + n) - e3*u(x, t)/(m + n - 1))",
+        ("x", "t"),
+        3,
+        [("1", "0", "0"), ("0", "1", "0"), ("0", "exp(e3*t)", "-e3*exp(e3*t)*u/(m + n - 1)")],
+        f"{AIMS_SOURCE}, Theorem 1, case I-(2)",
+    ),
+    pde(
+        "AIMS 2026 I-(3): u_t = (u**(1 - n) u_x**n)_x + e2 u log(u)",
+        "Derivative(u(x, t), t) - Derivative(u(x, t)**(1 - n)*Derivative(u(x, t), x)**n, x) - (e2*u(x, t)*log(u(x, t)))",
+        ("x", "t"),
+        3,
+        [("1", "0", "0"), ("0", "1", "0"), ("0", "0", "exp(e2*t)*u")],
+        f"{AIMS_SOURCE}, Theorem 1, case I-(3), m = 1 - n",
+    ),
+    pde(
+        "AIMS 2026 I-(4): u_t = (u**m u_x**n)_x + e2 u",
+        "Derivative(u(x, t), t) - Derivative(u(x, t)**m*Derivative(u(x, t), x)**n, x) - (e2*u(x, t))",
+        ("x", "t"),
+        4,
+        [
+            ("1", "0", "0"),
+            ("0", "1", "0"),
+            ("(m + n - 1)*x/(n + 1)", "0", "u"),
+            ("0", "exp(e2*(1 - m - n)*t)", "e2*exp(e2*(1 - m - n)*t)*u"),
+        ],
+        f"{AIMS_SOURCE}, Theorem 1, case I-(4); m + n != 1",
+    ),
+    pde(
+        "AIMS 2026 I-(5): u_t = (u**(1 - n) u_x**n)_x + e2 u",
+        "Derivative(u(x, t), t) - Derivative(u(x, t)**(1 - n)*Derivative(u(x, t), x)**n, x) - (e2*u(x, t))",
+        ("x", "t"),
+        4,
+        [("1", "0", "0"), ("0", "1", "0"), ("0", "0", "u"), ("x", "(n + 1)*t", "e2*(n + 1)*t*u")],
+        f"{AIMS_SOURCE}, Theorem 1, case I-(5), m = 1 - n",
+    ),
+    pde(
+        "AIMS 2026 II-(1): u_t = (exp(u) u_x**n)_x + e2 exp(q u)",
+        "Derivative(u(x, t), t) - Derivative(exp(u(x, t))*Derivative(u(x, t), x)**n, x) - (e2*exp(q*u(x, t)))",
+        ("x", "t"),
+        3,
+        [("1", "0", "0"), ("0", "1", "0"), ("(1 - q)*x/(n + 1)", "-q*t", "1")],
+        f"{AIMS_SOURCE}, Theorem 1, case II-(1)",
+    ),
+    pde(
+        "AIMS 2026 II-(2): u_t = (exp(u) u_x**n)_x + e2 exp(u) - e3",
+        "Derivative(u(x, t), t) - Derivative(exp(u(x, t))*Derivative(u(x, t), x)**n, x) - (e2*exp(u(x, t)) - e3)",
+        ("x", "t"),
+        3,
+        [("1", "0", "0"), ("0", "1", "0"), ("0", "exp(e3*t)", "-e3*exp(e3*t)")],
+        f"{AIMS_SOURCE}, Theorem 1, case II-(2)",
+    ),
+    pde(
+        "Anco et al.: u_t = -kappa p u_x**(p - 1) u_xx + c (a + u)**q",
+        "Derivative(u(x, t), t) + kappa*p*Derivative(u(x, t), x)**(p - 1)*Derivative(u(x, t), (x, 2)) - c*(a + u(x, t))**q",
+        ("x", "t"),
+        3,
+        [("1", "0", "0"), ("0", "1", "0"), ("(p - q)*x", "(p + 1)*(1 - q)*t", "(p + 1)*(a + u)")],
+        f"{ANCO_SOURCE}, table 2, h = -kappa u_r**p, m = 0",
+    ),
+    pde(
+        "Anco et al.: u_t = -kappa p u_x**(p - 1) u_xx + c exp(q u)",
+        "Derivative(u(x, t), t) + kappa*p*Derivative(u(x, t), x)**(p - 1)*Derivative(u(x, t), (x, 2)) - c*exp(q*u(x, t))",
+        ("x", "t"),
+        3,
+        [("1", "0", "0"), ("0", "1", "0"), ("q*x", "(p + 1)*q*t", "-(p + 1)")],
+        f"{ANCO_SOURCE}, table 2, h = -kappa u_r**p, m = 0",
+    ),
+]
+
 # Kamke's equations with their symmetry class from Schwarz, Appendix E;
 # generated from the SymPy Kamke test suite, see the module docstring.
 KAMKE = [
@@ -5579,5 +5713,6 @@ CATALOG = (
     + PDEFIND
     + SYMMETRY_INFORMED
     + THE_WELL
+    + SYMBOLIC_POWERS
     + KAMKE
 )

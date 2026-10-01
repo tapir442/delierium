@@ -459,3 +459,28 @@ def test_is_janet_basis_of_odes_ranking():
     assert is_janet_basis_of_odes(
         B, kepler, [x, y], [t], dependent_order=['Y', 'X', 'T'], independent_order=['y', 'x', t]
     )
+
+
+def test_symbolic_power_of_a_derivative():
+    # #39: v_t = v_x**n v_xx is solved for v_xx = v_t v_x**(-n); v_x**n and
+    # v_x**(-n) are one family (G and 1/G), not two independent generators.
+    # The scalings (x, 2t, v) and (0, n t, -v) are symmetries (CRC Handbook,
+    # Vol. 1, 10.3)
+    x, t, n, V = Symbol('x'), Symbol('t'), Symbol('n'), Symbol('v')
+    v = Function('v')(x, t)
+    infinitesimals = OrderedDict({v: make_infinitesimal(v, v, x, t, name='V')})
+    for s, name in ((x, 'X'), (t, 'T')):
+        infinitesimals[s] = make_infinitesimal(s, v, x, t, name=name)
+    det = overdetermined_system_pde(
+        Derivative(v, t) - Derivative(v, x) ** n * Derivative(v, x, 2),
+        [v],
+        [x, t],
+        infinitesimals=infinitesimals,
+    )
+    plain = {v: V}
+    args = infinitesimals[x].xreplace(plain).args
+    for generator in ({x: x, t: 2 * t, v: V}, {x: 0, t: n * t, v: -V}):
+        solution = {
+            infinitesimals[s].xreplace(plain).func: Lambda(args, generator[s]) for s in (x, t, v)
+        }
+        assert all(simplify(e.xreplace(plain).subs(solution).doit()) == 0 for e in det)
