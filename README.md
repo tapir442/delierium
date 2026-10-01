@@ -29,6 +29,14 @@ part of this release.
 
 # Release notes
 
+### Not released yet
+
+* Janet bases are the minimal reduced ones: distinct leading derivatives, no redundant
+  element, reduced tails (#54). `reduce_by_system` stopped too early (it did not try the
+  earlier elements again after a reduction), so integrability conditions that reduce to
+  zero could be kept; the results were correct but not minimal. Checked against CoCoA 5's
+  `JanetBasis` on 207 systems with constant coefficients: all equal.
+
 ### 1.1.1
 
 * `delierium.__version__`, read from the package metadata: the version is written only in

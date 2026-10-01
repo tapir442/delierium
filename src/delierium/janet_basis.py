@@ -487,20 +487,23 @@ def reorder(  # pylint: disable=unused-argument
 
 @profile_if_enabled
 def reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP | None:
-    reducing = True
-    gen = S[:]
-    while reducing:
-        for dp in gen:
+    """e reduced by S as far as possible: no term of the result is a
+    derivative of a leading derivative in S; None if e reduces to zero.
+
+    After each reduction all of S is tried again: a term may become
+    reducible by an element tried before (#54)."""
+    changed = True
+    while changed:
+        changed = False
+        for dp in S:
             enew = _reduce(e, dp, context)
             if enew is None:
                 return None
-            if e == enew:
-                reducing = False
-            else:
+            if enew is not e:
                 e = enew
-                gen = [_ for _ in S if _]
-                reducing = True
-    return enew
+                changed = True
+                break
+    return e
 
 
 @profile_if_enabled
@@ -787,18 +790,115 @@ def complete(S: Iterable[LHDP], context: Context) -> list[LHDP]:
         orders = [dp.order for dp in result]
         classes = [(dp, *vec_multipliers(dp.order, orders, variables)) for dp in result]
         missing = []
+        added = set()  # two elements may give the same derivative in one pass (#54)
         for dp, _, nonmultipliers in classes:
             for n in nonmultipliers:
                 raised = list(dp.order)
                 raised[n] += 1
-                if not any(
+                if tuple(raised) not in added and not any(
                     _in_janet_class(raised, other.order, mult, nonmult)
                     for other, mult, nonmult in classes
                 ):
+                    added.add(tuple(raised))
                     missing.append(dp.diff(context.independent[n]))
         if not missing:
             return list(result)
         result.update(missing)
+
+
+def _janet_completion(monomials: Iterable[Sequence[int]], n: int) -> set[tuple[int, ...]]:
+    """The minimal Janet completion of a set of monomials (exponent vectors).
+
+    Unlike complete(), which adds all missing prolongations of a pass at
+    once, only the lowest one (by degree) is added before the Janet classes
+    are computed again; so no element is added that a lower prolongation
+    would already cover (Gerdt, Blinkov, minimal involutive bases).
+
+    >>> sorted(_janet_completion([(0, 1, 1), (1, 1, 0)], 3))
+    [(0, 1, 1), (1, 1, 0)]
+    >>> sorted(_janet_completion([(0, 0, 2), (1, 1, 0)], 3))
+    [(0, 0, 2), (1, 0, 2), (1, 1, 0)]
+    >>> sorted(_janet_completion([(0, 1, 1), (1, 0, 2), (1, 2, 0), (2, 0, 1), (2, 1, 0)], 3))
+    [(0, 1, 1), (1, 0, 2), (1, 1, 1), (1, 2, 0), (2, 0, 1), (2, 1, 0)]
+    """
+    result = {tuple(m) for m in monomials}
+    while True:
+        orders = list(result)
+        classes = [(m, *vec_multipliers(m, orders, range(n))) for m in orders]
+        missing = set()
+        for m, _, nonmultipliers in classes:
+            for k in nonmultipliers:
+                raised = list(m)
+                raised[k] += 1
+                if not any(_in_janet_class(raised, o, mult, non) for o, mult, non in classes):
+                    missing.add(tuple(raised))
+        if not missing:
+            return result
+        result.add(min(missing, key=lambda m: (sum(m), tuple(reversed(m)))))
+
+
+def minimize(S: list[LHDP], context: Context) -> list[LHDP]:
+    """The minimal reduced Janet basis from a Janet basis S (#54).
+
+    For each leading function: the leading derivatives of the minimal Janet
+    basis are the Janet completion of the minimal generators of S's leading
+    derivatives; one element of S for each is kept. Every element dropped
+    reduces to zero by the kept ones, so they generate the same system, and
+    their leading derivatives generate the same monomials: they are a Janet
+    basis. Then every tail is reduced by the basis (not in a fraction free
+    context, where reductions multiply by leading coefficients). If S lacks
+    one of the leading derivatives, S is returned unchanged.
+    """
+    n = len(context.independent)
+    kept: list[LHDP] = []
+    for function in {e.leading_function() for e in S}:
+        by_order: dict[tuple[int, ...], LHDP] = {}
+        for e in S:
+            if e.leading_function() == function:
+                by_order.setdefault(tuple(e.order), e)
+        orders = list(by_order)
+        generators = [
+            m
+            for m in orders
+            if not any(o != m and all(a >= b for a, b in zip(m, o, strict=True)) for o in orders)
+        ]
+        wanted = _janet_completion(generators, n)
+        if not wanted <= set(orders):
+            return S
+        kept += [by_order[m] for m in wanted]
+    if len(kept) < len(S) and any(
+        reduce_by_system(e, kept, context) is not None for e in S if e not in kept
+    ):
+        return S
+    if context.fraction_free:
+        return reorder(kept, context, ascending=True)
+    return reorder([_reduce_tail(e, kept, context) for e in kept], context, ascending=True)
+
+
+def _reduce_tail(e: LHDP, basis: list[LHDP], context: Context) -> LHDP:
+    """e with every term but the leading one reduced by the basis (monic).
+
+    The terms are lower than e's leading derivative, so e itself never
+    reduces them and the leading term stays; e is not rescaled."""
+    while True:
+        for term in e.p[1:]:
+            g = next(
+                (
+                    g
+                    for g in basis
+                    if g.function == term.function
+                    and all(a >= b for a, b in zip(term.order, g.order, strict=True))
+                ),
+                None,
+            )
+            if g is not None:
+                break
+        else:
+            return e
+        dif = [a - b for a, b in zip(term.order, g.order, strict=True)]
+        reduced = _subtract_derivative(e, g, term.coeff, get_diff_vars(context, dif))
+        assert reduced is not None  # the leading term stays
+        e = reduced
 
 
 @profile_if_enabled
@@ -1106,6 +1206,7 @@ class JanetBasis:
             for e in self.S:
                 e.make_monic()
             self.S = reorder(self.S, context, ascending=True)
+        self.S = minimize(self.S, context)
 
     def _complete(self, context: Context) -> None:
         old: list[LHDP] = []

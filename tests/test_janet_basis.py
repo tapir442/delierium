@@ -4,8 +4,11 @@ from itertools import product
 
 import pytest
 from sympy import (
+    Add,
     Derivative,
     Function,
+    Mul,
+    Poly,
     Rational,
     Symbol,
     diff,
@@ -17,6 +20,7 @@ from sympy import (
     sinh,
     solve,
     symbols,
+    sympify,
 )
 
 from delierium.infinitesimals import (
@@ -29,9 +33,11 @@ from delierium.infinitesimals import (
 from delierium.janet_basis import (
     LHDP,
     JanetBasis,
+    _janet_completion,
     integrability_conditions,
     is_janet_basis_of,
     janet_type,
+    reduce_by_system,
 )
 from delierium.matrix_order import Context, Mgrevlex, Mgrlex, Mlex
 
@@ -570,3 +576,102 @@ def test_hyperbolic_coefficients():
     functions = [infinitesimals[v].xreplace(plain) for v in (x, t, w)]
     janet = JanetBasis([e.xreplace(plain) for e in det], functions, [x, t, Symbol("w")])
     assert janet.rank() == 3
+
+
+def _polynomials(janet, f, variables):
+    """The Janet basis of a system with constant coefficients as polynomials
+    (d/dx -> x)."""
+    result = set()
+    for e in janet.S:
+        expr = e.expression().replace(
+            lambda a: isinstance(a, Derivative),
+            lambda a: Mul(*(v**k for v, k in a.variable_count)),
+        )
+        result.add(expand(expr.xreplace({f: 1})))
+    return result
+
+
+def _operator(polynomial, f, variables):
+    terms = Poly(polynomial, *variables).terms()
+    return Add(
+        *(
+            c
+            * (
+                Derivative(f, *[(v, k) for v, k in zip(variables, m, strict=True) if k])
+                if any(m)
+                else f
+            )
+            for m, c in terms
+        )
+    )
+
+
+# Janet bases of constant coefficient systems, as computed by CoCoA 5
+# (JanetBasis, degrevlex): the minimal reduced Janet basis is unique (#54)
+COCOA_JANET_BASES = [
+    (
+        "CoCoA manual",
+        "x y z",
+        ["x - y", "x**2 - z + 1", "x**3 - y**2"],
+        ["x - y", "z**2 - 3*z + 2", "y*z - y - z + 1", "y**2 - z + 1"],
+    ),
+    (
+        "Janet's example: tails reduced",
+        "x y z",
+        ["z**2 - y**2", "x*z - y*z"],
+        ["y**2 - z**2", "x*z - y*z", "x*y*z - z**3", "x*y**2 - y*z**2"],
+    ),
+    (
+        "same leading derivative twice before #54",
+        "x y z w",
+        ["-y*z**2/2", "w**2 - x*z**2 - y**2/2"],
+        None,
+    ),
+    (
+        "random 98: incomplete reduction before #54",
+        "x y z w",
+        ["-x**2*y", "3*w*y**2", "w**2*x + w*y + 3*x*z**2 - 3*z**2"],
+        None,
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "name, variables, system, expected", COCOA_JANET_BASES, ids=[c[0] for c in COCOA_JANET_BASES]
+)
+def test_minimal_reduced_janet_basis(name, variables, system, expected):
+    """Distinct leading derivatives, Janet complete with no redundant element,
+    reduced tails; equal to CoCoA's where given."""
+    variables = symbols(variables)
+    f = Function("f")(*variables)
+    janet = JanetBasis([_operator(sympify(p), f, variables) for p in system], (f,), variables)
+    leading = [tuple(e.order) for e in janet.S]
+    assert len(leading) == len(set(leading))
+    generators = [
+        m
+        for m in leading
+        if not any(o != m and all(a >= b for a, b in zip(m, o, strict=True)) for o in leading)
+    ]
+    assert _janet_completion(generators, len(variables)) == set(leading)
+    for e in janet.S:
+        for term in e.p[1:]:
+            assert not any(
+                all(a >= b for a, b in zip(term.order, g.order, strict=True)) for g in janet.S
+            ), (e, term)
+    if expected is not None:
+        assert _polynomials(janet, f, variables) == {expand(sympify(p)) for p in expected}
+
+
+def test_reduce_by_system_reduces_fully():
+    """After a reduction by a later element, earlier ones are tried again
+    (#54): D(x,y,z**4) of random 98 reduced to D(w**3, y**2), which D(w, y**2)
+    reduces further."""
+    x, y, z, w = symbols("x y z w")
+    f = Function("f")(x, y, z, w)
+    context = Context((f,), (x, y, z, w), Mgrevlex)
+    S = [
+        LHDP(f.diff(w, y, y), context),
+        LHDP(f.diff(x, y, z, 4) - f.diff(w, 3, y, y), context),
+        LHDP(f.diff(x, 5), context),  # last: reduces nothing
+    ]
+    assert reduce_by_system(LHDP(f.diff(x, y, z, 4), context), S, context) is None
