@@ -5,11 +5,27 @@ import sys
 from collections import OrderedDict
 from itertools import product
 
-from sympy import Derivative, Function, Lambda, Rational, Symbol, cancel, simplify
+from sympy import (
+    Abs,
+    Derivative,
+    Float,
+    Function,
+    Lambda,
+    Rational,
+    Symbol,
+    cancel,
+    im,
+    oo,
+    re,
+    sign,
+    simplify,
+    sin,
+)
 from sympy.core.function import AppliedUndef
 
 from delierium.helpers import finish_substitution, make_infinitesimal
 from delierium.infinitesimals import (
+    _linear_system_odes,
     canonical_derivatives,
     is_janet_basis_of_odes,
     janet_basis_from_odes,
@@ -17,6 +33,7 @@ from delierium.infinitesimals import (
     overdetermined_system_odes,
     overdetermined_system_pde,
 )
+from delierium.janet_basis import JanetBasis
 
 sys.path.insert(0, pathlib.Path("tests/Arrigo").absolute())
 
@@ -484,3 +501,35 @@ def test_symbolic_power_of_a_derivative():
             infinitesimals[s].xreplace(plain).func: Lambda(args, generator[s]) for s in (x, t, v)
         }
         assert all(simplify(e.xreplace(plain).subs(solution).doit()) == 0 for e in det)
+
+
+def test_float_in_the_equation():
+    # #37: Kamke 1.641 has the float 0.5; solve() used to turn the whole
+    # equation into floats, so the determining equation carried
+    # sqrt(4*x**2*y + 1) and sqrt(4.0*x**2*y + 1.0) as different roots, and
+    # the symmetry (1/x**2, 1/(2*x**5)) left a residue zero only numerically
+    x, Y = Symbol('x'), Symbol('y')
+    y = Function('y')(x)
+    infinitesimals = OrderedDict(
+        {x: make_infinitesimal(x, y, x, name='X'), y: make_infinitesimal(y, y, x, name='Y')}
+    )
+    ode = Derivative(y, x) - (x**4 * (4 * x**2 * y + 1) ** Rational(1, 2) + 0.5) / x**3
+    det = overdetermined_system_ode(ode, [y], [x], infinitesimals=infinitesimals)
+    assert not any(e.atoms(Float) for e in det)
+    plain = {y: Y}
+    X_, Y_ = (infinitesimals[v].xreplace(plain) for v in (x, y))
+    solution = {X_.func: Lambda(X_.args, 1 / x**2), Y_.func: Lambda(Y_.args, 1 / (2 * x**5))}
+    assert all(simplify(e.xreplace(plain).subs(solution).doit()) == 0 for e in det)
+
+
+def test_absolute_value_of_a_dependent_variable():
+    # #51: x1' = c - sin(x0) - x1 |x1| (ODEBench 44, pendulum with quadratic
+    # damping). Abs(x1) used to become re, im and sign, and the Janet basis
+    # stopped at an assertion; |x1| is now s*x1 with a constant sign s
+    t, c = Symbol('t'), Symbol('c')
+    x0, x1 = Function('x0')(t), Function('x1')(t)
+    system = [Derivative(x0, t) - x1, Derivative(x1, t) - c + sin(x0) + x1 * Abs(x1)]
+    det = overdetermined_system_odes(system, [x0, x1], [t])
+    assert not any(e.has(re, im, Abs, sign) for e in det)
+    equations, functions, variables, _ = _linear_system_odes(system, [x0, x1], [t])
+    assert JanetBasis(equations, functions, variables).rank() == oo

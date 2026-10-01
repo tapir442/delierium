@@ -29,6 +29,21 @@ part of this release.
 
 # Release notes
 
+### Not released yet
+
+* Floats in an equation are taken for the decimals they print as (0.5 -> 1/2) before the
+  determining equations are computed; `solve()` had turned all numbers into floats, so one
+  root appeared in two forms (#37).
+* An arbitrary function of an expression, e.g. y' = x F(y/x) + y/x, no longer fails in
+  `finish_substitution`: the derivative F'(y/x) stays a `Subs` (#36).
+* `Abs(e)` and `sign(e)` are replaced by s*e and s with a constant sign s (symmetries are
+  local); SymPy had differentiated Abs of a complex symbol into re, im and sign (#51).
+* `LHDP` simplifies with the derivatives replaced by symbols: SymPy's `simplify()` failed
+  on hyperbolic functions next to mixed derivatives ("Improve MV Derivative support in
+  collect", sinh-Gordon) (#52).
+* Catalogue: Baumann's KdV with slowly varying coefficients, ODEBench 44 and EqWorld's
+  sinh-Gordon equation pass now.
+
 ### 1.1.0
 
 * Symbolic powers of derivatives give the right determining equations (#39): powers of one

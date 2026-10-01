@@ -12,10 +12,12 @@ from itertools import combinations_with_replacement, permutations, product
 from typing import Any, cast
 
 from sympy import (  # noqa: F401
+    Abs,
     Basic,
     Derivative,
     Dummy,
     Expr,
+    Float,
     Function,
     Integer,
     Poly,
@@ -31,6 +33,7 @@ from sympy import (  # noqa: F401
     init_printing,
     numer,
     prem,
+    sign,
     solve,
     symbols,
     together,
@@ -447,6 +450,50 @@ def _canonical_derivatives_of(expr: Expr, dep: Variables) -> Expr:
     return expr.xreplace({d: d.doit(simplify=False) for d in derivatives})
 
 
+def _exact_numbers(expr: Expr) -> Expr:
+    """expr with every float taken for the decimal it prints as (0.5 -> 1/2),
+    as the coefficient field does (coefficients._prepare). With a float in
+    the equation, solve() turns all its numbers into floats (4 -> 4.0), and
+    the determining equations carried sqrt(4*x**2*y + 1) and
+    sqrt(4.0*x**2*y + 1.0) as two different quantities (#37).
+
+    >>> x = Symbol('x')
+    >>> _exact_numbers(0.5 * x + 1.25)
+    x/2 + 5/4
+    """
+    floats = expr.atoms(Float)
+    return expr.xreplace({f: Rational(str(f)) for f in floats}) if floats else expr
+
+
+def _local_signs(expr: Expr) -> Expr:
+    """expr with every Abs(e) replaced by s*e and every sign(e) by s, s a new
+    constant for the sign of e (one per e). Lie point symmetries are local:
+    where e does not vanish its sign is constant. SymPy differentiates Abs of
+    a complex symbol into re, im and sign, which the determining equations
+    and the Janet basis cannot use.
+
+    >>> t = Symbol('t')
+    >>> v = Function('v')(t)
+    >>> e = _local_signs(v.diff(t) + v * Abs(v))
+    >>> sorted(e.free_symbols - {t}, key=str)
+    [_sign]
+    >>> e.subs(next(iter(e.free_symbols - {t})), 1)
+    v(t)**2 + Derivative(v(t), t)
+    """
+    signs: dict[Expr, Dummy] = {}
+
+    def sign_of(e: Expr) -> Dummy:
+        return signs.setdefault(e, Dummy("sign"))
+
+    expr = expr.replace(
+        lambda a: isinstance(a, Abs) and not a.args[0].is_number,
+        lambda a: sign_of(a.args[0]) * a.args[0],
+    )
+    return expr.replace(
+        lambda a: isinstance(a, sign) and not a.args[0].is_number, lambda a: sign_of(a.args[0])
+    )
+
+
 def convert_to_iterable(item: Variables) -> list[Any]:
     """item as a list: a single variable becomes [item]."""
     return list(item) if isinstance(item, Iterable) else [item]
@@ -551,7 +598,7 @@ def compute_overdetermined_system_of_infinitesimals(
     """
     dep = convert_to_iterable(dep)
     indep = convert_to_iterable(indep)
-    eq = _canonical_derivatives_of(eq, dep)
+    eq = _local_signs(_exact_numbers(_canonical_derivatives_of(eq, dep)))
 
     infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
     _, highest_terms = order(eq, dep, indep)
@@ -645,7 +692,7 @@ def overdetermined_system_odes(  # pylint: disable=keyword-arg-before-vararg
     -T_t*x**2 - T_t*y**2 - 2*T_x*x**3*y - 2*T_x*x*y**3 - T_y*x**4 - 2*T_y*x**2*y**2 - T_y*y**4 -
     2*X*x - 2*Y*y + Y_t + 2*Y_x*x*y + Y_y*x**2 + Y_y*y**2
     """
-    eqs = [_canonical_derivatives_of(eq, dependent) for eq in eqs]
+    eqs = [_local_signs(_exact_numbers(_canonical_derivatives_of(eq, dependent))) for eq in eqs]
     dep = convert_to_iterable(dependent)
     indep = convert_to_iterable(independent)
     if len(eqs) == 1 and len(dep) == 1:

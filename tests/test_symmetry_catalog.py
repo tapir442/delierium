@@ -36,9 +36,6 @@ XFAIL: dict[str, str] = {
     "Baumann p. 203: Kamke 7.13 u'' u''' - a sqrt(1 + b**2 u''**2) = 0": (
         "#5: not polynomial in the derivatives (PolynomialError)"
     ),
-    "Baumann p. 298: KdV with slowly varying coefficients": (
-        "#36: arbitrary functions of an expression, A(e*t)"
-    ),
     "CRC 1, 10.3: nonlinear filtration equation v_t = k(v_x) v_xx": (
         "#5: an arbitrary function of a derivative (PolynomialError)"
     ),
@@ -62,17 +59,7 @@ XFAIL: dict[str, str] = {
     "Gabel et al. 7: u_t = atan(u_xx)": "#5: atan of a derivative (PolynomialError)",
 }
 # Known problems of the dimension check only (the generators are confirmed)
-XFAIL_DIMENSION: dict[str, str] = {
-    "ODEBench 44: Driven pendulum with quadratic damping (dimensionless)": (
-        "Abs of a dependent variable: SymPy differentiates Abs(x1) of a complex x1 into re, im "
-        "and sign, simplify() makes a Piecewise of the determining equation, and LHDP._init "
-        "asserts an Add"
-    ),
-    "EqWorld 2.1.5: w_tt = a w_xx + b sinh(lam w). Sinh-Gordon equation": (
-        "SymPy's collect() raises NotImplementedError ('Improve MV Derivative support in "
-        "collect') on the determining equations of sinh(lam w)"
-    ),
-}
+XFAIL_DIMENSION: dict[str, str] = {}
 # Dimension checks too slow for the catalogue run (minutes to half an hour even
 # with random parameters); the dimension was computed once.
 SLOW_DIMENSION: dict[str, str] = {

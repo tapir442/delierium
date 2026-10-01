@@ -90,13 +90,27 @@ def func_diff(fun: Expr, var: Symbol | Function) -> Expr:
 
 @profile_if_enabled
 def finish_substitution(expr: Basic) -> Basic:
+    """Put the points of the Subs in expr back in: Subs(Derivative(X(xi), xi),
+    xi, y(x)) becomes Derivative(X(y(x)), y(x)). A Subs whose point is an
+    expression, e.g. the derivative of F(y/x), stays: SymPy cannot build a
+    derivative with respect to y/x, and differentiates the Subs correctly
+    (#36).
+
+    >>> x, xi = Symbol('x'), Symbol('xi')
+    >>> y, F = Function('y')(x), Function('F')
+    >>> finish_substitution(Subs(Derivative(F(xi), xi), xi, y))
+    Derivative(F(y(x)), y(x))
+    >>> finish_substitution(Subs(Derivative(F(xi), xi), xi, y / x))
+    Subs(Derivative(F(xi), xi), xi, y(x)/x)
+    """
     subs = set(expr.atoms(Subs))
     subs_dic = {}
     for s0 in subs:
         bound = s0.bound_symbols
         der = s0.args[0]
         var = s0.args[2]
-        subs_dic[s0] = der.xreplace(dict(zip(bound, var, strict=True)))
+        if all(v.is_Symbol or isinstance(v, AppliedUndef) for v in var):
+            subs_dic[s0] = der.xreplace(dict(zip(bound, var, strict=True)))
     return expr.xreplace(subs_dic)
 
 
