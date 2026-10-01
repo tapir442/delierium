@@ -23,11 +23,63 @@ delierium computes
 * **pictures**: the staircase of a Janet basis, symmetry generators as vector fields with
   solution curves, their flows as animations.
 
-A catalogue of about 260 equations with known symmetries from the literature checks it
+A catalogue of about 565 equations with known symmetries from the literature checks it
 (see *Tests*). Solving the determining equations for the infinitesimals themselves is not
 part of this release.
 
 # Release notes
+
+### Not released yet
+
+* Determining equations that vanish only after `simplify()` no longer stop the Janet
+  basis (#38): `LHDP` accepts them as empty, and `JanetBasis`, `integrability_conditions`
+  and `is_janet_basis_of` drop them. Twelve catalogue entries with symbolic powers
+  (CRC Vol. 1, 10.2-11.6; EqWorld 1.2.1-1.2.6) get their dimension now.
+* The determining equations no longer depend on Python's hash seed (#40): of several
+  highest derivatives, the equation is solved for one it is linear in with a coefficient
+  free of jet variables, ties broken by SymPy's canonical order. Four CRC entries that
+  failed for some seeds pass now.
+* Catalogue: 29 worked examples of Baumann (#27), from section 4.4 (ODEs of order 1 to 4)
+  and the scalar PDEs of 5.6 (flux line, KdV family, Kadomtsev-Petviashvili, Stokes flow,
+  Fokker-Planck, molecular beam epitaxy). delierium reproduces the dimension and all
+  generators of 27 of them; Kamke 7.13 needs #5, the KdV with slowly varying coefficients
+  #36.
+* Catalogue: 73 equations from the group classifications of the CRC Handbook, Vol. 1,
+  chapters 10, 11 and 12.1-12.4 (diffusion, filtration, anisotropic and hyperbolic heat
+  equations, transfer, Hopf and KdV-Burgers type equations, linear and nonlinear wave
+  equations). 68 pass completely; the others show #5 and #39. Eight generators
+  are misprinted in the book and corrected in the entries.
+* Catalogue: the scalar equations of the PDEBench datasets (advection, Fisher-KPP,
+  diffusion-sorption); the systems among them need #21.
+* Catalogue: the scalar physical scenarios of APEBench with their default
+  coefficients, 27 equations in 1D and 2D (linear, Burgers, KdV and Kuramoto-Sivashinsky
+  variants, Fisher-KPP, Swift-Hohenberg, anisotropic and mixed diffusion and
+  dispersion). They replace the book versions of the heat, Burgers and Fisher equations
+  (Arrigo; CRC Handbook, Vol. 1, 10.1).
+* Catalogue: 24 evolution equations of Gabel, Quax, Gavves (2024), the training set of a
+  neural symmetry detector. Three of their generators are misprinted and corrected; three
+  equations replace the CRC Handbook's entries (Vol. 1, 10.2, 10.3, 11.6).
+* Catalogue: the 63 autonomous systems of ODEBench (ODEFormer, ICLR 2024), 58 entries with
+  symbolic constants, with their affine symmetries; the driven pendulum with quadratic
+  damping (Abs) fails the dimension check.
+* Catalogue: the PDEs of Ko, Kim, Lee (2024) with their full algebras: KdV (replaces
+  Arrigo's entry), Burgers with viscosity nu, KdV after a nonlinear time change (a
+  misprinted generator corrected) and the cylindrical KdV shifted to t + 1.
+* Catalogue: 56 nonlinear PDEs of EqWorld (heat, Klein-Gordon, wave, elliptic,
+  transonic flow, Monge-Ampere, KdV and boundary layer equations) with their dimensions
+  and generators; the Boussinesq equation replaces Arrigo's. Sinh-Gordon fails in SymPy's
+  collect().
+* Catalogue: the 12 ODE systems of Kahlmeyer, Merk, Giesen (AAAI 2025) with the
+  generators found by their symbolic regression.
+* Catalogue: the 12 scalar problems of PINNacle (NeurIPS 2024) with their default
+  coefficients (Burgers, Poisson and Helmholtz with sources, heat and wave equations, also
+  in 5D, Kuramoto-Sivashinsky); Poisson2D_Classic replaces Arrigo's Laplace equation.
+* Catalogue: the scalar real PDEs of PDE-FIND (Rudy et al. 2017): KdV, Burgers and the
+  diffusion equation of a random walk.
+* Catalogue: the ODE systems of Yang et al., Symmetry-Informed Governing Equation Discovery
+  (NeurIPS 2024), with the symmetries the paper uses.
+* Catalogue: the scalar equations of The Well (NeurIPS 2024), the Helmholtz and wave
+  equations of the Helmholtz staircase; its other 15 data sets are systems (#21).
 
 ### 1.0.2
 

@@ -31,9 +31,11 @@ from sympy import (  # noqa: F401
     numer,
     prem,
     solve,
+    symbols,
     together,
 )
 from sympy.core.function import AppliedUndef
+from sympy.polys.polyerrors import PolynomialError
 
 from delierium.helpers import finish_substitution, func_diff, make_infinitesimal, profile_if_enabled
 from delierium.janet_basis import (
@@ -475,6 +477,36 @@ def create_infinitesimals(
     return infinitesimals
 
 
+def _leading_derivative(eq: Expr, candidates: set[Expr], dep: list[Function]) -> Expr:
+    """The highest derivative to solve eq for, independent of the hash seed.
+
+    Preferred is a derivative in which eq is linear with a coefficient free of
+    the dependent variables and their derivatives (solving for it divides by
+    no jet variable), then one in which eq is linear at all; ties are broken by
+    the canonical order of SymPy expressions.
+
+    >>> x, t, tau0, k0, n = symbols('x t tau0 k0 n')
+    >>> u = Function('u')(x, t)
+    >>> eq = tau0 * u.diff(t, 2) + u.diff(t) - k0 * u.diff(x) ** n * u.diff(x, 2)
+    >>> _leading_derivative(eq, {u.diff(t, 2), u.diff(x, 2)}, [u])
+    Derivative(u(x, t), (t, 2))
+    """
+    dep_names = {_.name for _ in dep}
+    h = Dummy()
+
+    def rank(d: Expr) -> int:
+        try:
+            p = Poly(numer(together(eq.xreplace({d: h}))), h)
+        except PolynomialError:
+            return 2
+        if p.degree() != 1:
+            return 2
+        jet_free = not any(a.func.__name__ in dep_names for a in p.LC().atoms(AppliedUndef))
+        return 0 if jet_free else 1
+
+    return min(candidates, key=lambda d: (rank(d), default_sort_key(d)))
+
+
 def compute_overdetermined_system_of_infinitesimals(
     eq: Expr,
     dep: Variables,
@@ -501,8 +533,8 @@ def compute_overdetermined_system_of_infinitesimals(
     eq = _canonical_derivatives_of(eq, dep)
 
     infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
-    _, highest_term = order(eq, dep, indep)
-    highest_term = next(iter(highest_term))
+    _, highest_terms = order(eq, dep, indep)
+    highest_term = _leading_derivative(eq, highest_terms, dep)
 
     r = prolongation(eq, infinitesimals, dep, indep)
     h = Dummy()

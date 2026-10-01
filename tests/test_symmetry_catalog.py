@@ -14,7 +14,7 @@ import dataclasses
 import random
 
 import pytest
-from sympy import Lambda, Symbol, oo, simplify
+from sympy import Dummy, Lambda, Pow, Symbol, expand, numer, oo, simplify, together
 
 from delierium.infinitesimals import (
     _linear_system_ode,
@@ -32,18 +32,81 @@ pytestmark = pytest.mark.slow
 
 # Known problems, by entry name. An xfail that starts passing fails the run
 # (xfail_strict), so remove the entry here when the problem is fixed.
-XFAIL: dict[str, str] = {}
+XFAIL: dict[str, str] = {
+    "Baumann p. 203: Kamke 7.13 u'' u''' - a sqrt(1 + b**2 u''**2) = 0": (
+        "#5: not polynomial in the derivatives (PolynomialError)"
+    ),
+    "Baumann p. 298: KdV with slowly varying coefficients": (
+        "#36: arbitrary functions of an expression, A(e*t)"
+    ),
+    "CRC 1, 10.3: nonlinear filtration equation v_t = k(v_x) v_xx": (
+        "#5: an arbitrary function of a derivative (PolynomialError)"
+    ),
+    "CRC 1, 10.4: potential filtration equation w_t = K(w_xx)": (
+        "#5: an arbitrary function of a derivative (PolynomialError)"
+    ),
+    "CRC 1, 10.4: potential filtration equation w_t = exp(w_xx)": (
+        "#5: log of a derivative (PolynomialError)"
+    ),
+    "CRC 1, 10.3: nonlinear filtration equation v_t = v_x**n v_xx": (
+        "#39: the symbolic exponent of v_x gives a wrong determining equation: the generators "
+        "(x, 2t, v) and (0, n t, -v) leave residue 1, dimension 4 instead of 5"
+    ),
+    "CRC 1, 10.10: potential hyperbolic heat equation tau0 u_tt + u_t = k(u_x) u_xx": (
+        "#5: an arbitrary function of a derivative (PolynomialError)"
+    ),
+    "CRC 1, 10.10: potential hyperbolic heat equation tau0 u_x**l u_tt + u_t = k0 u_x**n u_xx": (
+        "#39: symbolic powers of u_x, dimension 3 instead of 4"
+    ),
+    "CRC 1, 12.4: v_tt = phi(v_x) v_xx": (
+        "#5: an arbitrary function of a derivative (PolynomialError)"
+    ),
+    "CRC 1, 12.4: w_tt = F(w_xx)": "#5: an arbitrary function of a derivative (PolynomialError)",
+    "CRC 1, 12.4: w_tt = k w_xx**(-1/3)": (
+        "#5: a fractional power of a derivative (PolynomialError)"
+    ),
+    "CRC 1, 12.4: w_tt = k log(w_xx)": "#5: log of a derivative (PolynomialError)",
+    "Gabel et al. 7: u_t = atan(u_xx)": "#5: atan of a derivative (PolynomialError)",
+}
+# Known problems of the dimension check only (the generators are confirmed)
+XFAIL_DIMENSION: dict[str, str] = {
+    "ODEBench 44: Driven pendulum with quadratic damping (dimensionless)": (
+        "Abs of a dependent variable: SymPy differentiates Abs(x1) of a complex x1 into re, im "
+        "and sign, simplify() makes a Piecewise of the determining equation, and LHDP._init "
+        "asserts an Add"
+    ),
+    "EqWorld 2.1.5: w_tt = a w_xx + b sinh(lam w). Sinh-Gordon equation": (
+        "SymPy's collect() raises NotImplementedError ('Improve MV Derivative support in "
+        "collect') on the determining equations of sinh(lam w)"
+    ),
+}
+# Dimension checks too slow for the catalogue run (minutes to half an hour even
+# with random parameters); the dimension was computed once.
+SLOW_DIMENSION: dict[str, str] = {
+    "EqWorld 2.2.5: w_tt = [a (x + b)**n w_x]_x + f(w)": (
+        "the Janet basis does not finish in 3 min, at random parameters took 25 min "
+        "(dimension 1 at other random values)"
+    ),
+}
 # The symbolic Janet basis does not finish in reasonable time (still running
 # after 16 min), so the dimension is checked at random values of the
 # parameters. It can only rise at special values, so random ones give the
 # generic dimension (almost surely); the seed is the entry's name.
-RANDOM_PARAMETERS = {"Kamke 6.171", "Kamke 6.219"}
+RANDOM_PARAMETERS = {
+    "Kamke 6.171",
+    "Kamke 6.219",
+    "EqWorld 2.2.5: w_tt = [a (x + b)**n w_x]_x + f(w)",
+}
 
 
 def entry_param(entry, check):
     marks = []
     if entry.name in XFAIL:
         marks.append(pytest.mark.xfail(reason=XFAIL[entry.name]))
+    elif check == "dimension" and entry.name in XFAIL_DIMENSION:
+        marks.append(pytest.mark.xfail(reason=XFAIL_DIMENSION[entry.name]))
+    elif check == "dimension" and entry.name in SLOW_DIMENSION:
+        marks.append(pytest.mark.skip(reason=SLOW_DIMENSION[entry.name]))
     elif check == "dimension" and entry.dimension is None:
         marks.append(pytest.mark.skip(reason="the sources disagree on the dimension"))
     return pytest.param(entry, marks=marks, id=entry.name)
@@ -75,6 +138,23 @@ def janet_basis(entry):
     return JanetBasis(system, functions, variables)
 
 
+def vanishes(residue):
+    """residue is zero: simplify(), or else with every power b**(s + n), s
+    symbolic and n a number, written as G*b**n, G a new symbol for b**s. simplify
+    misses (u + mu)**2*(u + mu)**(nu - 1) - (u + mu)**(nu + 1); an identity in
+    the symbols G holds for their values too."""
+    residue = simplify(residue)
+    if residue == 0:
+        return True
+    generators = {}
+    powers = {}
+    for p in residue.atoms(Pow):
+        if not p.exp.is_number:
+            n, s = p.exp.as_coeff_Add()
+            powers[p] = generators.setdefault((p.base, s), Dummy()) * p.base**n
+    return expand(numer(together(residue.xreplace(powers)))) == 0
+
+
 @pytest.mark.parametrize("entry", [entry_param(e, "generators") for e in CATALOG if e.generators])
 def test_generators(entry):
     """Every listed generator solves the determining equations."""
@@ -88,8 +168,8 @@ def test_generators(entry):
             f.func: Lambda(tuple(a.xreplace(plain) for a in f.args), values[str(v.xreplace(plain))])
             for v, f in infinitesimals.items()
         }
-        residues = [simplify(e.xreplace(plain).subs(solution).doit()) for e in system]
-        assert all(r == 0 for r in residues), (generator, residues)
+        residues = [e.xreplace(plain).subs(solution).doit() for e in system]
+        assert all(vanishes(r) for r in residues), (generator, residues)
 
 
 def with_random_parameters(entry):

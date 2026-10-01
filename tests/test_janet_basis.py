@@ -525,3 +525,28 @@ def test_janet_basis_lex_system_of_two_functions():
     ]
     expected = [diff(w, x, 2), diff(w, y), 2 * y * diff(w, x) + z]
     assert is_janet_basis_of(expected, system, (z, w), (y, x), Mlex)
+
+
+def test_equation_zero_after_simplify():
+    # #38: for u_t = (u**sigma u_x)_x one determining equation is zero only
+    # after simplify() (sigma u**(sigma - 1) - sigma u**sigma/u); JanetBasis
+    # used to stop at an assertion in LHDP._init. Dimension 4 (CRC Handbook,
+    # Vol. 1, 10.2): translations, x d/dx + 2t d/dt, sigma x d/dx + 2u d/du
+    x, t, sigma = symbols("x t sigma")
+    u = Function("u")(x, t)
+    infinitesimals = create_infinitesimals([u], [x, t])
+    det = overdetermined_system_pde(
+        diff(u, t) - diff(u**sigma * diff(u, x), x), [u], [x, t], infinitesimals=infinitesimals
+    )
+    assert any(simplify(e) == 0 and e != 0 for e in det)
+    plain = {u: Symbol("u")}
+    functions = [infinitesimals[v].xreplace(plain) for v in (x, t, u)]
+    janet = JanetBasis([e.xreplace(plain) for e in det], functions, [x, t, Symbol("u")])
+    assert janet.rank() == 4
+    assert (
+        LHDP(
+            sigma * Symbol("u") ** (sigma - 1) - sigma * Symbol("u") ** sigma / Symbol("u"),
+            janet.context,
+        ).p
+        == []
+    )
