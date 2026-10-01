@@ -31,6 +31,8 @@ part of this release.
 
 ### 1.1.1
 
+* `delierium.__version__`, read from the package metadata: the version is written only in
+  `pyproject.toml` (`uv version --bump patch` updates it and `uv.lock` together).
 * Floats in an equation are taken for the decimals they print as (0.5 -> 1/2) before the
   determining equations are computed; `solve()` had turned all numbers into floats, so one
   root appeared in two forms (#37).

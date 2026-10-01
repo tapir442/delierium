@@ -93,3 +93,15 @@ def test_arbitrary_function_of_an_expression():
 
     assert all(r == 0 for r in residues(1, Y / x))
     assert any(r != 0 for r in residues(0, 1))
+
+
+def test_version():
+    # the version is written only in pyproject.toml; the package reads it
+    # from its metadata
+    import tomllib
+    from pathlib import Path
+
+    import delierium
+
+    pyproject = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
+    assert delierium.__version__ == pyproject["project"]["version"]
