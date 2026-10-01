@@ -54,7 +54,7 @@ part of this release.
 * Catalogue: 73 equations from the group classifications of the CRC Handbook, Vol. 1,
   chapters 10, 11 and 12.1-12.4 (diffusion, filtration, anisotropic and hyperbolic heat
   equations, transfer, Hopf and KdV-Burgers type equations, linear and nonlinear wave
-  equations). 70 pass completely; the others show #5. Eight generators
+  equations). 65 pass completely; the other 8 need #5. Eight generators
   are misprinted in the book and corrected in the entries.
 * Catalogue: the scalar equations of the PDEBench datasets (advection, Fisher-KPP,
   diffusion-sorption); the systems among them need #21.
