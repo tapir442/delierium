@@ -3,6 +3,7 @@
 from sympy import *
 
 from delierium.helpers import is_function, pairs_exclude_diagonal
+from delierium.infinitesimals import create_infinitesimals, overdetermined_system_ode
 
 
 def test_pairs_exclude_diagonal():
@@ -72,3 +73,35 @@ def test_lie_derivative_printer_notation_and_outputs(capsys):
     assert lie_derivative_printer([e], [y], [x], {x: "X", y: "Y"}, output="text") == [
         "-9*X_xy + Y_y/x"
     ]
+
+
+def test_arbitrary_function_of_an_expression():
+    # #36: y' = x F(y/x) + y/x (Kamke 1.610) failed with "Can't calculate
+    # derivative wrt y(x)/x": the Subs for F'(y/x) has to stay. With v = y/x
+    # it is v' = F(v), so (1, y/x) is a symmetry and (0, 1) is not
+    x, Y = Symbol('x'), Symbol('y')
+    y, F = Function('y')(x), Function('F')
+    infinitesimals = create_infinitesimals([y], [x])
+    det = overdetermined_system_ode(
+        Derivative(y, x) - (x**2 * F(y / x) + y) / x, [y], [x], infinitesimals=infinitesimals
+    )
+    X_, Y_ = (infinitesimals[v].xreplace({y: Y}) for v in (x, y))
+
+    def residues(xi, eta):
+        solution = {X_.func: Lambda(X_.args, xi), Y_.func: Lambda(Y_.args, eta)}
+        return [simplify(e.xreplace({y: Y}).subs(solution).doit()) for e in det]
+
+    assert all(r == 0 for r in residues(1, Y / x))
+    assert any(r != 0 for r in residues(0, 1))
+
+
+def test_version():
+    # the version is written only in pyproject.toml; the package reads it
+    # from its metadata
+    import tomllib
+    from pathlib import Path
+
+    import delierium
+
+    pyproject = tomllib.loads((Path(__file__).parents[1] / "pyproject.toml").read_text())
+    assert delierium.__version__ == pyproject["project"]["version"]

@@ -20,7 +20,12 @@ The public interface is what this package exports (``from delierium import
 The modules' ``__all__`` list in addition building blocks of the algorithms
 (e.g. delierium.janet_basis.complete_system, vec_multipliers); they may
 change. Every other name is internal.
+
+``delierium.__version__`` is the version of the installed package, from its
+metadata; the only place it is written is ``pyproject.toml``.
 """
+
+from importlib.metadata import version as _version
 
 from .derivative_operators import (
     adjoint_frechet_derivative,
@@ -50,6 +55,8 @@ from .janet_basis import (
 )
 from .matrix_order import Context, Mgrevlex, Mgrlex, Mlex
 
+__version__ = _version("delierium")
+
 __all__ = [
     "LHDP",
     "Context",
@@ -59,6 +66,7 @@ __all__ = [
     "Mgrevlex",
     "Mgrlex",
     "Mlex",
+    "__version__",
     "adjoint_frechet_derivative",
     "create_infinitesimals",
     "euler_operator",

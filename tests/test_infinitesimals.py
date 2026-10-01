@@ -5,18 +5,37 @@ import sys
 from collections import OrderedDict
 from itertools import product
 
-from sympy import Derivative, Function, Lambda, Rational, Symbol, cancel, simplify
+import pytest
+from sympy import (
+    Abs,
+    Derivative,
+    Float,
+    Function,
+    Lambda,
+    Rational,
+    Symbol,
+    cancel,
+    im,
+    oo,
+    re,
+    sign,
+    simplify,
+    sin,
+)
 from sympy.core.function import AppliedUndef
 
 from delierium.helpers import finish_substitution, make_infinitesimal
 from delierium.infinitesimals import (
+    _linear_system_odes,
     canonical_derivatives,
+    create_infinitesimals,
     is_janet_basis_of_odes,
     janet_basis_from_odes,
     overdetermined_system_ode,
     overdetermined_system_odes,
     overdetermined_system_pde,
 )
+from delierium.janet_basis import JanetBasis
 
 sys.path.insert(0, pathlib.Path("tests/Arrigo").absolute())
 
@@ -484,3 +503,97 @@ def test_symbolic_power_of_a_derivative():
             infinitesimals[s].xreplace(plain).func: Lambda(args, generator[s]) for s in (x, t, v)
         }
         assert all(simplify(e.xreplace(plain).subs(solution).doit()) == 0 for e in det)
+
+
+def test_float_in_the_equation():
+    # #37: Kamke 1.641 has the float 0.5; solve() used to turn the whole
+    # equation into floats, so the determining equation carried
+    # sqrt(4*x**2*y + 1) and sqrt(4.0*x**2*y + 1.0) as different roots, and
+    # the symmetry (1/x**2, 1/(2*x**5)) left a residue zero only numerically
+    x, Y = Symbol('x'), Symbol('y')
+    y = Function('y')(x)
+    infinitesimals = OrderedDict(
+        {x: make_infinitesimal(x, y, x, name='X'), y: make_infinitesimal(y, y, x, name='Y')}
+    )
+    ode = Derivative(y, x) - (x**4 * (4 * x**2 * y + 1) ** Rational(1, 2) + 0.5) / x**3
+    det = overdetermined_system_ode(ode, [y], [x], infinitesimals=infinitesimals)
+    assert not any(e.atoms(Float) for e in det)
+    plain = {y: Y}
+    X_, Y_ = (infinitesimals[v].xreplace(plain) for v in (x, y))
+    solution = {X_.func: Lambda(X_.args, 1 / x**2), Y_.func: Lambda(Y_.args, 1 / (2 * x**5))}
+    assert all(simplify(e.xreplace(plain).subs(solution).doit()) == 0 for e in det)
+
+
+def test_absolute_value_of_a_dependent_variable():
+    # #51: x1' = c - sin(x0) - x1 |x1| (ODEBench 44, pendulum with quadratic
+    # damping). Abs(x1) used to become re, im and sign, and the Janet basis
+    # stopped at an assertion; |x1| is now s*x1 with a constant sign s
+    t, c = Symbol('t'), Symbol('c')
+    x0, x1 = Function('x0')(t), Function('x1')(t)
+    system = [Derivative(x0, t) - x1, Derivative(x1, t) - c + sin(x0) + x1 * Abs(x1)]
+    det = overdetermined_system_odes(system, [x0, x1], [t])
+    assert not any(e.has(re, im, Abs, sign) for e in det)
+    equations, functions, variables, _ = _linear_system_odes(system, [x0, x1], [t])
+    assert JanetBasis(equations, functions, variables).rank() == oo
+
+
+NOT_POLYNOMIAL_IN_DERIVATIVES = [
+    "Baumann p. 203: Kamke 7.13 u'' u''' - a sqrt(1 + b**2 u''**2) = 0",
+    "CRC 1, 10.3: nonlinear filtration equation v_t = k(v_x) v_xx",
+    "CRC 1, 10.4: potential filtration equation w_t = exp(w_xx)",
+    "CRC 1, 12.4: w_tt = k w_xx**(-1/3)",
+    "CRC 1, 12.4: w_tt = k log(w_xx)",
+    "Gabel et al. 7: u_t = atan(u_xx)",
+]
+
+
+@pytest.mark.parametrize("name", NOT_POLYNOMIAL_IN_DERIVATIVES)
+def test_not_polynomial_in_the_derivatives(name):
+    # #5: square roots, fractional powers, log, atan and arbitrary functions
+    # of derivatives raised PolynomialError; the published generators of
+    # these catalogue entries solve the determining equations now
+    from tests.symmetry_catalog import CATALOG
+    from tests.test_symmetry_catalog import determining_equations, vanishes
+
+    (entry,) = [e for e in CATALOG if e.name == name]
+    indep, dep = entry.variables()
+    infinitesimals = create_infinitesimals(dep, indep)
+    system = determining_equations(entry, infinitesimals)
+    plain = {d: Symbol(d.func.__name__) for d in dep}
+    for generator in entry.parsed_generators():
+        values = dict(zip(entry.independent + entry.dependent, generator, strict=True))
+        solution = {
+            f.func: Lambda(tuple(a.xreplace(plain) for a in f.args), values[str(v.xreplace(plain))])
+            for v, f in infinitesimals.items()
+        }
+        assert all(vanishes(e.xreplace(plain).subs(solution).doit()) for e in system)
+
+
+def _residues(ode, y, x, xi, eta):
+    infinitesimals = create_infinitesimals([y], [x])
+    det = overdetermined_system_ode(ode, [y], [x], infinitesimals=infinitesimals)
+    Y = Symbol(y.func.__name__)
+    X_, Y_ = (infinitesimals[v].xreplace({y: Y}) for v in (x, y))
+    solution = {X_.func: Lambda(X_.args, xi), Y_.func: Lambda(Y_.args, eta)}
+    return [simplify(e.xreplace({y: Y}).subs(solution).doit()) for e in det]
+
+
+def test_square_root_of_the_highest_derivative():
+    # #5: Kamke 1.558, a x sqrt(y'**2 + 1) + x y' - y = 0: the root contains
+    # the highest derivative; homogeneous, so (x, y) is a symmetry
+    x, a, Y = Symbol('x'), Symbol('a'), Symbol('y')
+    y = Function('y')(x)
+    ode = a * x * (Derivative(y, x) ** 2 + 1) ** Rational(1, 2) + x * Derivative(y, x) - y
+    assert all(r == 0 for r in _residues(ode, y, x, x, Y))
+    assert any(r != 0 for r in _residues(ode, y, x, 1, 0))
+
+
+def test_trigonometric_function_of_a_derivative():
+    # #5: y'' = sin(y'), written with exponentials and split into real and
+    # imaginary parts; the translations are symmetries, the scaling (x, y) not
+    x = Symbol('x')
+    y = Function('y')(x)
+    ode = Derivative(y, x, 2) - sin(Derivative(y, x))
+    assert all(r == 0 for r in _residues(ode, y, x, 1, 0))
+    assert all(r == 0 for r in _residues(ode, y, x, 0, 1))
+    assert any(r != 0 for r in _residues(ode, y, x, x, Symbol('y')))

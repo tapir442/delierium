@@ -1,6 +1,6 @@
 [project]
 name = "delierium"
-version = "1.1.0"
+version = "1.1.1"
 description = "Symmetry Analysis for ODEs and PDEs using SymPy"
 readme = "README.md"
 license = "MIT"

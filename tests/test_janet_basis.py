@@ -14,6 +14,7 @@ from sympy import (
     oo,
     simplify,
     sin,
+    sinh,
     solve,
     symbols,
 )
@@ -550,3 +551,22 @@ def test_equation_zero_after_simplify():
         ).p
         == []
     )
+
+
+def test_hyperbolic_coefficients():
+    # #52: the determining equations of sinh-Gordon w_tt = a w_xx + b sinh(lam w)
+    # (EqWorld 2.1.5) made simplify() fail inside trigsimp/collect on mixed
+    # derivatives; dimension 3 (translations and the boost)
+    x, t, a, b, lam = symbols("x t a b lam")
+    w = Function("w")(x, t)
+    infinitesimals = create_infinitesimals([w], [x, t])
+    det = overdetermined_system_pde(
+        diff(w, t, 2) - a * diff(w, x, 2) - b * sinh(lam * w),
+        [w],
+        [x, t],
+        infinitesimals=infinitesimals,
+    )
+    plain = {w: Symbol("w")}
+    functions = [infinitesimals[v].xreplace(plain) for v in (x, t, w)]
+    janet = JanetBasis([e.xreplace(plain) for e in det], functions, [x, t, Symbol("w")])
+    assert janet.rank() == 3

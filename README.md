@@ -29,6 +29,31 @@ part of this release.
 
 # Release notes
 
+### 1.1.1
+
+* `delierium.__version__`, read from the package metadata: the version is written only in
+  `pyproject.toml` (`uv version --bump patch` updates it and `uv.lock` together).
+* Floats in an equation are taken for the decimals they print as (0.5 -> 1/2) before the
+  determining equations are computed; `solve()` had turned all numbers into floats, so one
+  root appeared in two forms (#37).
+* An arbitrary function of an expression, e.g. y' = x F(y/x) + y/x, no longer fails in
+  `finish_substitution`: the derivative F'(y/x) stays a `Subs` (#36).
+* `Abs(e)` and `sign(e)` are replaced by s*e and s with a constant sign s (symmetries are
+  local); SymPy had differentiated Abs of a complex symbol into re, im and sign (#51).
+* `LHDP` simplifies with the derivatives replaced by symbols: SymPy's `simplify()` failed
+  on hyperbolic functions next to mixed derivatives ("Improve MV Derivative support in
+  collect", sinh-Gordon) (#52).
+* Equations not polynomial in the derivatives (#5): functions of jet variables are split
+  as independent generators - transcendental functions (log, atan, ...) and arbitrary
+  functions F(p) with their derivatives (the generic case), trigonometric and hyperbolic
+  functions as exponentials (real and imaginary parts), fractional powers and roots as
+  algebraic generators modulo their relation. An equation not polynomial in its highest
+  derivative is solved for it when the solution is unique (u_t = atan(u_xx)); with one
+  square root of it (Kamke 1.558) the condition is taken on the whole equation.
+* Catalogue: Baumann's KdV with slowly varying coefficients, ODEBench 44 and EqWorld's
+  sinh-Gordon equation pass now; with #5 every entry of the catalogue does: no
+  expected failures are left.
+
 ### 1.1.0
 
 * Symbolic powers of derivatives give the right determining equations (#39): powers of one
@@ -54,7 +79,7 @@ part of this release.
 * Catalogue: 73 equations from the group classifications of the CRC Handbook, Vol. 1,
   chapters 10, 11 and 12.1-12.4 (diffusion, filtration, anisotropic and hyperbolic heat
   equations, transfer, Hopf and KdV-Burgers type equations, linear and nonlinear wave
-  equations). 70 pass completely; the others show #5. Eight generators
+  equations). All pass (the last 8 needed #5). Eight generators
   are misprinted in the book and corrected in the entries.
 * Catalogue: the scalar equations of the PDEBench datasets (advection, Fisher-KPP,
   diffusion-sorption); the systems among them need #21.

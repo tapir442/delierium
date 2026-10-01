@@ -11,7 +11,7 @@ from typing import Any
 
 import sympy as sp
 from more_itertools import bucket, flatten
-from sympy import Add, Basic, Expr, Mul, Symbol, default_sort_key, numer, oo, together
+from sympy import Add, Basic, Dummy, Expr, Mul, Symbol, default_sort_key, numer, oo, together
 from sympy.core.function import AppliedUndef
 from sympy.functions.elementary.exponential import ExpBase
 from sympy.polys.polyerrors import CoercionFailed, PolynomialError
@@ -221,6 +221,26 @@ class _Dterm:
     _cache_key = __hash__
 
 
+def _simplify_coefficients(e: Basic) -> Basic:
+    """e.simplify() with the derivatives replaced by symbols while simplifying:
+    SymPy's trigsimp (inside simplify) calls collect(), which raises
+    NotImplementedError ("Improve MV Derivative support in collect") on
+    derivatives with respect to several variables, e.g. for the determining
+    equations of sinh-Gordon w_tt = a w_xx + b sinh(lam w).
+
+    >>> from sympy import Function, cosh, sinh, symbols
+    >>> x, t = symbols('x t')
+    >>> T = Function('T')(x, t)
+    >>> _simplify_coefficients(sinh(x) ** 2 * T.diff(x, t) - (cosh(x) ** 2 - 1) * T.diff(x, t))
+    0
+    """
+    derivatives = {d: Dummy() for d in e.atoms(Derivative)}
+    # rebuilt, so that the variables are in canonical order as after
+    # simplify(): Derivative(X, x, y) and Derivative(X, y, x) must not differ
+    back = {v: k.doit(simplify=False) for k, v in derivatives.items()}
+    return e.xreplace(derivatives).simplify().xreplace(back)
+
+
 class LHDP:
     """Linear Homogenious Differential Polynomial."""
 
@@ -242,7 +262,7 @@ class LHDP:
             # e is only a placeholder (0) when the terms come as dterms
             if isinstance(e, int):
                 raise TypeError(f"LHDP({e}, ...) without dterms: e must be an expression")
-            self._init(e.simplify().expand())
+            self._init(_simplify_coefficients(e).expand())
         # coefficients are in canonical form (coefficients.Coeff), so a
         # vanishing one is recognized
         self.p = [_ for _ in self.p if _.coeff.canonical()]
