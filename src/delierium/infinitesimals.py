@@ -19,18 +19,23 @@ from sympy import (  # noqa: F401
     Expr,
     Float,
     Function,
+    I,
     Integer,
     Poly,
     Pow,
     Rational,
+    Subs,
     Symbol,
     cancel,
     default_sort_key,
     diff,
     exp,
+    expand,
     fraction,
     ilcm,
     init_printing,
+    log,
+    nsimplify,
     numer,
     prem,
     sign,
@@ -39,6 +44,8 @@ from sympy import (  # noqa: F401
     together,
 )
 from sympy.core.function import AppliedUndef
+from sympy.functions.elementary.hyperbolic import HyperbolicFunction
+from sympy.functions.elementary.trigonometric import TrigonometricFunction
 from sympy.polys.polyerrors import PolynomialError
 
 from delierium.helpers import finish_substitution, func_diff, make_infinitesimal, profile_if_enabled
@@ -319,18 +326,33 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     expr = expr.xreplace(jet)
     to_symbol = {d: Symbol(d.name) for d in dep}
     expr = expr.xreplace(to_symbol).doit(simplify=False)
-    expr, pow_gens = _power_generators(expr, list(jet.values()))
+    jets = list(jet.values())
+    # trigonometric and hyperbolic functions of jet variables as
+    # exponentials, which _exp_generators splits (sin**2 + cos**2 = 1 would
+    # be lost if sin and cos were independent generators)
+    expr = expr.replace(
+        lambda a: isinstance(a, (TrigonometricFunction, HyperbolicFunction)) and a.has(*jets),
+        lambda a: a.rewrite(exp),
+    )
+    expr, pow_gens = _power_generators(expr, jets)
+    expr, alg_gens, relations = _algebraic_generators(expr, jets)
+    expr, fun_gens = _function_generators(expr, jets)
+    gens = [*jets, *pow_gens, *alg_gens, *fun_gens]
     # after solving for the highest derivative, jet variables may occur
     # in denominators; multiply by the jet-dependent part of the
     # denominator (it does not change where the expression vanishes)
     num, den = fraction(together(expr))
-    other_den, _ = den.as_independent(*jet.values(), *pow_gens, as_Add=False)
+    other_den, _ = den.as_independent(*gens, as_Add=False)
     expr = (num / other_den).expand()
-    expr, exp_gens = _exp_generators(expr, list(jet.values()))
-    coeffs = Poly(expr, *jet.values(), *pow_gens, *exp_gens).coeffs() if jet else [expr]
+    for gen, relation in zip(alg_gens, relations, strict=True):
+        # only the powers of G below its degree are linearly independent
+        expr = prem(expr, relation, gen).expand()
+    # exponentials of jet variables and of the new generators (exp(n atan(p)))
+    expr, exp_gens = _exp_generators(expr, gens)
+    coeffs = Poly(expr, *gens, *exp_gens).coeffs() if jet else [expr]
     back = {v: k for k, v in to_symbol.items()}
     result = set()
-    for c in coeffs:
+    for c in _real_and_imaginary_parts(coeffs):
         c = numer(cancel(c)).expand().xreplace(back)
         if c != 0:
             if not c.is_Add:
@@ -386,6 +408,97 @@ def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dumm
             n, s = p.exp.as_coeff_Add()
             repl[p] = gen ** cancel(s / unit) * base**n
     return expr.xreplace(repl), gens
+
+
+def _algebraic_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy], list[Expr]]:
+    """Replace the powers b**(m/n) of jet-dependent b with a non-integer
+    rational exponent by powers of a new generator G = b**(1/q), q the lcm
+    of the denominators of the exponents of b, and return the relations
+    G**q - b = 0 (cleared of denominators). Modulo its relation,
+    1, G, ..., G**(q - 1) are linearly independent over the rational
+    functions of the jet variables (#5: w_tt = k w_xx**(-1/3), Kamke 7.13
+    u'' u''' = a sqrt(1 + b**2 u''**2)).
+
+    >>> p = Symbol('p')
+    >>> e, (g,), (r,) = _algebraic_generators(p ** Rational(-1, 3) + p ** Rational(2, 3), [p])
+    >>> e == g**-1 + g**2, r == g**3 - p
+    (True, True)
+    """
+    pows = sorted(
+        (
+            p
+            for p in expr.atoms(Pow)
+            if p.base.has(*jet) and p.exp.is_Rational and not p.exp.is_Integer
+        ),
+        key=default_sort_key,
+    )
+    bases: dict[Expr, list[Expr]] = {}
+    for p in pows:
+        bases.setdefault(p.base, []).append(p)
+    repl = {}
+    gens, relations = [], []
+    for base, members in bases.items():
+        q = reduce(ilcm, (p.exp.q for p in members), 1)
+        gen = Dummy()
+        gens.append(gen)
+        relations.append(numer(together(gen**q - base)))
+        for p in members:
+            repl[p] = gen ** (p.exp * q)
+    return expr.xreplace(repl), gens, relations
+
+
+def _function_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]]:
+    """Replace the functions of jet variables (log, atan, ..., arbitrary
+    functions F(p) and their derivatives, which are Subs) by new generators.
+    A transcendental function of p is algebraically independent of p; an
+    arbitrary F(p) and its derivatives are taken as independent, which is
+    the generic case of a group classification (#5: CRC Vol. 1, 10.3
+    v_t = k(v_x) v_xx). Exponentials are left to _exp_generators.
+
+    >>> p = Symbol('p')
+    >>> F = Function('F')
+    >>> e, gens = _function_generators(p * log(p) + F(p) + 1, [p])
+    >>> len(gens), e.has(log, F)
+    (2, False)
+
+    The derivative of F is a Derivative of an expression in p; F(p) inside
+    it and on its own become two generators:
+
+    >>> e, gens = _function_generators(F(p) + Derivative(F(p), p), [p])
+    >>> len(gens), e.has(F)
+    (2, False)
+    """
+    gens: list[Dummy] = []
+    while True:
+        candidates = [
+            a
+            for a in expr.atoms(Function, Subs, Derivative)
+            if a.has(*jet) and not isinstance(a, exp)
+        ]
+        # the outermost first: log(F(p)) is one generator; an F(p) inside
+        # F'(p) that also occurs on its own is replaced in the next round
+        outer = [a for a in candidates if not any(a != b and b.has(a) for b in candidates)]
+        if not outer:
+            return expr, gens
+        repl = {a: Dummy() for a in sorted(outer, key=default_sort_key)}
+        gens.extend(repl.values())
+        expr = expr.xreplace(repl)
+
+
+def _real_and_imaginary_parts(coeffs: Iterable[Expr]) -> list[Expr]:
+    """Each coefficient with I (from trigonometric functions written as
+    exponentials) split into its real and imaginary part: the infinitesimals
+    and the parameters are real."""
+    result = []
+    for c in coeffs:
+        # expand only where needed: the coefficients can be large
+        if c.has(I):
+            c = expand(c)
+            imaginary = c.coeff(I)
+            result.extend([expand(c - I * imaginary), imaginary])
+        else:
+            result.append(c)
+    return result
 
 
 def _exp_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]]:
@@ -451,18 +564,21 @@ def _canonical_derivatives_of(expr: Expr, dep: Variables) -> Expr:
 
 
 def _exact_numbers(expr: Expr) -> Expr:
-    """expr with every float taken for the decimal it prints as (0.5 -> 1/2),
-    as the coefficient field does (coefficients._prepare). With a float in
-    the equation, solve() turns all its numbers into floats (4 -> 4.0), and
-    the determining equations carried sqrt(4*x**2*y + 1) and
-    sqrt(4.0*x**2*y + 1.0) as two different quantities (#37).
+    """expr with every float replaced by the simplest rational number within
+    its precision (0.5 -> 1/2, 1.66666666666667 -> 5/3), as the coefficient
+    field does (coefficients._prepare). With a float in the equation,
+    solve() turns all its numbers into floats (4 -> 4.0), and the
+    determining equations carried sqrt(4*x**2*y + 1) and
+    sqrt(4.0*x**2*y + 1.0) as two different quantities (#37). Taking the
+    full decimal instead gave exponents like 166666666666667/100000000000000
+    (Kamke 1.624), on which GMP aborts.
 
     >>> x = Symbol('x')
-    >>> _exact_numbers(0.5 * x + 1.25)
-    x/2 + 5/4
+    >>> _exact_numbers(0.5 * x + 1.25 + x**1.66666666666667)
+    x**(5/3) + x/2 + 5/4
     """
     floats = expr.atoms(Float)
-    return expr.xreplace({f: Rational(str(f)) for f in floats}) if floats else expr
+    return expr.xreplace({f: nsimplify(f, rational=True) for f in floats}) if floats else expr
 
 
 def _local_signs(expr: Expr) -> Expr:
@@ -575,6 +691,55 @@ def _leading_derivative(eq: Expr, candidates: set[Expr], dep: list[Function]) ->
     return min(candidates, key=lambda d: (rank(d), default_sort_key(d)))
 
 
+def _algebraic_in_highest_derivative(
+    eq_h: Expr, r: Expr, highest_term: Expr, h: Dummy
+) -> Expr | None:
+    """The symmetry condition r (the prolonged equation) on eq = 0, for an
+    equation with one square root S = sqrt(b) depending on its highest
+    derivative h, e.g. Kamke 1.558, a x sqrt(y'**2 + 1) + x y' - y = 0 (#5).
+
+    With eq = A + B*S and r = C + D*S modulo S**2 = b, eq = 0 gives
+    S = -A/B, and C*B - D*A has to vanish where A**2 - B**2*b = 0, the
+    equation with the root removed: its pseudo-remainder modulo that
+    polynomial in h. As for equations polynomial in h (prem below), this is
+    the condition for the whole equation, i.e. both signs of the root, not
+    one branch. None if eq is not of this form.
+    """
+    roots = {
+        p.base
+        for p in eq_h.atoms(Pow)
+        if p.base.has(h) and p.exp.is_Rational and not p.exp.is_Integer
+    }
+    if len(roots) != 1:
+        return None
+    (base,) = roots
+    s = Dummy()
+
+    def with_s(e: Expr) -> Expr | None:
+        """e with the powers of sqrt(base) as powers of s, None for other roots."""
+        pows = [
+            p for p in e.atoms(Pow) if p.base == base and p.exp.is_Rational and not p.exp.is_Integer
+        ]
+        if any(p.exp.q != 2 for p in pows):
+            return None
+        return numer(together(e.xreplace({p: s ** (2 * p.exp) for p in pows})))
+
+    eq_s = with_s(eq_h)
+    r_s = with_s(r.xreplace({highest_term: h}))
+    if eq_s is None or r_s is None or r_s.has(*(p for p in r_s.atoms(Pow) if p.base == base)):
+        return None
+    relation = numer(together(s**2 - base))
+    try:
+        eq_s = prem(eq_s, relation, s)
+        r_s = prem(r_s, relation, s)
+        A, B = (Poly(eq_s, s).coeff_monomial(s**k) for k in (0, 1))
+        C, D = (Poly(r_s, s).coeff_monomial(s**k) for k in (0, 1))
+        P = numer(together(A**2 - B**2 * base))
+        return prem((C * B - D * A).expand(), P, h).xreplace({h: highest_term})
+    except PolynomialError:
+        return None
+
+
 def compute_overdetermined_system_of_infinitesimals(
     eq: Expr,
     dep: Variables,
@@ -607,7 +772,22 @@ def compute_overdetermined_system_of_infinitesimals(
     r = prolongation(eq, infinitesimals, dep, indep)
     h = Dummy()
     eq_h = numer(together(eq.xreplace({highest_term: h})))
-    if Poly(eq_h, h).degree() == 1:
+    try:
+        degree = Poly(eq_h, h).degree()
+    except PolynomialError:
+        algebraic = _algebraic_in_highest_derivative(eq_h, r, highest_term, h)
+        if algebraic is not None:
+            return split_jet_coefficients(algebraic, dep)
+        # not polynomial in the highest derivative, e.g. u_t = atan(u_xx):
+        # solve for it if the solution is unique (u_xx = tan(u_t)) (#5)
+        sols = solve(eq, highest_term)
+        if len(sols) != 1:
+            raise NotImplementedError(
+                f"{eq} is not polynomial in its highest derivative {highest_term} "
+                f"and cannot be solved uniquely for it (#5)"
+            ) from None
+        return split_jet_coefficients(r.xreplace({highest_term: sols[0]}), dep)
+    if degree == 1:
         sol = solve(eq, highest_term)[0]
         r = r.xreplace({highest_term: sol})
     else:

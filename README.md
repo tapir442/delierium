@@ -41,8 +41,16 @@ part of this release.
 * `LHDP` simplifies with the derivatives replaced by symbols: SymPy's `simplify()` failed
   on hyperbolic functions next to mixed derivatives ("Improve MV Derivative support in
   collect", sinh-Gordon) (#52).
+* Equations not polynomial in the derivatives (#5): functions of jet variables are split
+  as independent generators - transcendental functions (log, atan, ...) and arbitrary
+  functions F(p) with their derivatives (the generic case), trigonometric and hyperbolic
+  functions as exponentials (real and imaginary parts), fractional powers and roots as
+  algebraic generators modulo their relation. An equation not polynomial in its highest
+  derivative is solved for it when the solution is unique (u_t = atan(u_xx)); with one
+  square root of it (Kamke 1.558) the condition is taken on the whole equation.
 * Catalogue: Baumann's KdV with slowly varying coefficients, ODEBench 44 and EqWorld's
-  sinh-Gordon equation pass now.
+  sinh-Gordon equation pass now; with #5 every entry of the catalogue does: no
+  expected failures are left.
 
 ### 1.1.0
 
@@ -69,7 +77,7 @@ part of this release.
 * Catalogue: 73 equations from the group classifications of the CRC Handbook, Vol. 1,
   chapters 10, 11 and 12.1-12.4 (diffusion, filtration, anisotropic and hyperbolic heat
   equations, transfer, Hopf and KdV-Burgers type equations, linear and nonlinear wave
-  equations). 65 pass completely; the other 8 need #5. Eight generators
+  equations). All pass (the last 8 needed #5). Eight generators
   are misprinted in the book and corrected in the entries.
 * Catalogue: the scalar equations of the PDEBench datasets (advection, Fisher-KPP,
   diffusion-sorption); the systems among them need #21.

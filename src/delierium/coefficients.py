@@ -65,6 +65,7 @@ from sympy import (
     Symbol,
     cancel,
     expand_power_exp,
+    nsimplify,
     sympify,
 )
 from sympy.core.function import AppliedUndef, Function
@@ -256,12 +257,13 @@ def _prepare(e: Any) -> Expr:
     # b**(n - 1) -> b**n/b, exp(x + 1) -> E*exp(x), so that the field sees
     # the same generators whatever form the powers come in
     e = sympify(e)
-    # a float is taken for the decimal it prints as (0.1 -> 1/10, not the
-    # binary approximation): the field cannot represent floats, and as
-    # expressions they make every comparison slow (Kamke 3.51: 124 s)
+    # a float is taken for the simplest rational within its precision (0.1
+    # -> 1/10, not the binary approximation; 1.66666666666667 -> 5/3): the
+    # field cannot represent floats, and as expressions they make every
+    # comparison slow (Kamke 3.51: 124 s)
     floats = e.atoms(Float)
     if floats:
-        e = e.xreplace({f: Rational(str(f)) for f in floats})
+        e = e.xreplace({f: nsimplify(f, rational=True) for f in floats})
     return expand_power_exp(e)
 
 
