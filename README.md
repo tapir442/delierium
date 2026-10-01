@@ -29,7 +29,7 @@ part of this release.
 
 # Release notes
 
-### Not released yet
+### 1.1.1
 
 * Floats in an equation are taken for the decimals they print as (0.5 -> 1/2) before the
   determining equations are computed; `solve()` had turned all numbers into floats, so one
