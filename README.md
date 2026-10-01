@@ -29,7 +29,7 @@ part of this release.
 
 # Release notes
 
-### Not released yet
+### 1.1.0
 
 * Symbolic powers of derivatives give the right determining equations (#39): powers of one
   jet variable whose symbolic exponents are rational multiples of each other, such as
