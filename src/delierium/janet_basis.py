@@ -268,7 +268,10 @@ class LHDP:
         self.p = [_ for _ in self.p if _.coeff.canonical()]
 
         self.p.sort(reverse=True)
-        self.normalize()
+        if context.defer_normalize:
+            self._set_leading()
+        else:
+            self.normalize()
 
     @profile_if_enabled
     def _init(self, e: Basic) -> None:
@@ -368,7 +371,9 @@ class LHDP:
                     term.coeff = coeff
             else:
                 self.make_monic()
-        # XXX: wrong place?
+        self._set_leading()
+
+    def _set_leading(self) -> None:
         if self.p:
             self.order = self.p[0].order
             self.function = self.p[0].function
@@ -491,18 +496,27 @@ def reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP | None:
     derivative of a leading derivative in S; None if e reduces to zero.
 
     After each reduction all of S is tried again: a term may become
-    reducible by an element tried before (#54)."""
-    changed = True
-    while changed:
-        changed = False
-        for dp in S:
-            enew = _reduce(e, dp, context)
-            if enew is None:
-                return None
-            if enew is not e:
-                e = enew
-                changed = True
-                break
+    reducible by an element tried before (#54). The intermediate results
+    are not normalized (in a fraction free context the gcd of all
+    coefficients each time), only the result."""
+    original = e
+    deferred, context.defer_normalize = context.defer_normalize, True
+    try:
+        changed = True
+        while changed:
+            changed = False
+            for dp in S:
+                enew = _reduce(e, dp, context)
+                if enew is None:
+                    return None
+                if enew is not e:
+                    e = enew
+                    changed = True
+                    break
+    finally:
+        context.defer_normalize = deferred
+    if e is not original and not deferred:
+        e.normalize()
     return e
 
 

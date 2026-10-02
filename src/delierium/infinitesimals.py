@@ -46,7 +46,8 @@ from sympy import (  # noqa: F401
 from sympy.core.function import AppliedUndef
 from sympy.functions.elementary.hyperbolic import HyperbolicFunction
 from sympy.functions.elementary.trigonometric import TrigonometricFunction
-from sympy.polys.polyerrors import PolynomialError
+from sympy.polys.fields import sfield
+from sympy.polys.polyerrors import CoercionFailed, PolynomialError
 
 from delierium.helpers import finish_substitution, func_diff, make_infinitesimal, profile_if_enabled
 from delierium.janet_basis import (
@@ -130,37 +131,37 @@ def order(  # pylint: disable=unused-argument
 
 
 @profile_if_enabled
-def compute_level(
-    deriv_vars_order: list[Any],
+def prolonged_infinitesimals(
     dep: list[Expr],
     indep: list[Symbol],
     infinitesimals: Mapping[Basic, Expr],
-) -> tuple[list[Expr], list[Expr]]:
-    """Compute all derivatives and infinitesimals for a given derivative order.
-    Extended Gamma operator (Arrigo, eq 2.85, or Schwarz, eq. 5.10)
+    max_order: int,
+) -> OrderedDict[Basic, Expr]:
+    """The infinitesimals of all derivatives of the dependent variables up
+    to max_order, {Derivative(u, *J): phi_J}, in the order of
+    variable_combinations.
 
-    >>> from delierium.helpers import ltf
+    Computed in jet coordinates: x, u and the derivatives u_J are plain
+    symbols, and with the characteristic Q = phi - sum_i xi^i u_i
+    (Olver, Theorem 2.36)
+
+        phi_J = D_J Q + sum_i xi^i u_{J,i},
+        D_i F = dF/dx^i + sum_{u, J} u_{J,i} dF/du_J,
+
+    D_J Q from D_{J-i} Q (each multi-index once). Then x, u, u_J are put
+    back: u(x), Derivative(u(x), ...), Derivative(X(x, u(x)), u(x)).
+
     >>> x = Symbol('x')
     >>> y = Function('y')(x)
     >>> X = make_infinitesimal(x, x, y, name='X')
     >>> Y = make_infinitesimal(y, x, y, name='Y')
-    >>> infinitesimals = {x: X, y: Y}
-
-    First prolongation eta^(x) = Y_x + (Y_y - X_x) y_x - X_y y_x^2:
-
-    >>> funcs, etas = compute_level([x], [y], [x], infinitesimals)
-    >>> funcs
-    [Derivative(y(x), x)]
-    >>> eta = finish_substitution(etas[0]).expand()
-    >>> print(ltf(eta, [Y], [X], printer=False))
+    >>> from delierium.helpers import ltf
+    >>> etas = prolonged_infinitesimals([y], [x], {x: X, y: Y}, 2)
+    >>> list(etas)
+    [Derivative(y(x), x), Derivative(y(x), (x, 2))]
+    >>> print(ltf(etas[y.diff(x)].expand(), [Y], [X], printer=False))
     -X_x*y_x - X_y*y_x**2 + Y_x + Y_y*y_x
-
-    Second prolongation eta^(xx), computed recursively from the first:
-
-    >>> funcs, etas = compute_level([x, x], [y], [x], infinitesimals)
-    >>> funcs
-    [Derivative(y(x), (x, 2))]
-    >>> eta = finish_substitution(etas[0]).expand()
+    >>> eta = etas[y.diff(x, 2)].expand()
     >>> print(ltf(eta, [Y], [X], printer=False))  # doctest: +NORMALIZE_WHITESPACE
     -2*X_x*y_xx - X_xx*y_x - 2*X_xy*y_x**2 - 3*X_y*y_x*y_xx - X_yy*y_x**3 + Y_xx + 2*Y_xy*y_x +
     Y_y*y_xx + Y_yy*y_x**2
@@ -172,37 +173,87 @@ def compute_level(
     >>> Xi = make_infinitesimal(x, x, t, u, name='X')
     >>> T = make_infinitesimal(t, x, t, u, name='T')
     >>> U = make_infinitesimal(u, x, t, u, name='U')
-    >>> infinitesimals = {x: Xi, t: T, u: U}
-    >>> funcs, etas = compute_level([t], [u], [x, t], infinitesimals)
-    >>> funcs
-    [Derivative(u(x, t), t)]
-    >>> eta = finish_substitution(etas[0]).expand()
-    >>> print(ltf(eta, [U], [Xi, T], printer=False))
+    >>> etas = prolonged_infinitesimals([u], [x, t], {x: Xi, t: T, u: U}, 2)
+    >>> list(etas)  # doctest: +NORMALIZE_WHITESPACE
+    [Derivative(u(x, t), x), Derivative(u(x, t), t), Derivative(u(x, t), (x, 2)),
+    Derivative(u(x, t), t, x), Derivative(u(x, t), (t, 2))]
+    >>> print(ltf(etas[u.diff(t)].expand(), [U], [Xi, T], printer=False))
     -T_t*u_t - T_u*u_t**2 + U_t + U_u*u_t - X_t*u_x - X_u*u_t*u_x
     """
-    v = deriv_vars_order[-1]
-    # Base case (first order)
-    if len(deriv_vars_order) == 1:
-        funcs = dep
-        etas = [infinitesimals[f] for f in funcs]
-    else:
-        prev_order = deriv_vars_order[:-1]
-        funcs, etas = compute_level(prev_order, dep, indep, infinitesimals)
-    # Compute current derivatives and infinitesimals functionally
-    results = [
-        (
-            func_diff(func, v),
-            reduce(
-                # reduce() calls the lambda right away, while func is current
-                lambda acc, var: acc - func_diff(func, var) * func_diff(infinitesimals[var], v),  # pylint: disable=cell-var-from-loop
-                indep,
-                func_diff(eta, v),
-            ),
-        )
-        for func, eta in zip(funcs, etas, strict=True)
-    ]
-    funcs_next, etas_next = zip(*results, strict=True)
-    return list(funcs_next), list(etas_next)
+    n = len(indep)
+    base = {d: Dummy(d.func.__name__) for d in dep}
+    jets: dict[tuple[int, tuple[int, ...]], Symbol] = {}
+    # symbol -> (a, J)
+    jet_of: dict[Basic, tuple[int, tuple[int, ...]]] = {base[d]: (a, ()) for a, d in enumerate(dep)}
+
+    def jet(a: int, multi: tuple[int, ...]) -> Symbol:
+        multi = tuple(sorted(multi))
+        if not multi:
+            return base[dep[a]]
+        if (a, multi) not in jets:
+            name = f"{dep[a].func.__name__}_{''.join(str(indep[i]) for i in multi)}"
+            jets[(a, multi)] = s = Dummy(name)
+            jet_of[s] = (a, multi)
+        return jets[(a, multi)]
+
+    def total(F: Expr, i: int) -> Expr:
+        """D_i F: F depends on x, u and finitely many u_J."""
+        result = F.diff(indep[i])
+        for s in F.free_symbols & jet_of.keys():
+            a, multi = jet_of[s]
+            result += jet(a, (*multi, i)) * F.diff(s)
+        return result
+
+    plain = {d: base[d] for d in dep}
+    xi = [finish_substitution(infinitesimals[v]).xreplace(plain) for v in indep]
+    phi = [finish_substitution(infinitesimals[d]).xreplace(plain) for d in dep]
+    dq = {
+        (a, ()): phi[a] - sum((xi[i] * jet(a, (i,)) for i in range(n)), Integer(0))
+        for a in range(len(dep))
+    }
+    result: OrderedDict[Basic, Expr] = OrderedDict()
+    for combi in variable_combinations(list(range(n)), max_order):
+        multi = tuple(combi)
+        for a, d in enumerate(dep):
+            dq[(a, multi)] = total(dq[(a, multi[:-1])], multi[-1])
+            eta = dq[(a, multi)] + sum(xi[i] * jet(a, (*multi, i)) for i in range(n))
+            result[d.diff(*(indep[i] for i in multi))] = eta
+    back: dict[Basic, Basic] = {base[d]: d for d in dep}
+    for (a, multi), sym in jets.items():
+        # diff() as in the rest of delierium: the canonical order u_tx
+        back[sym] = dep[a].diff(*(indep[i] for i in multi))
+
+    return OrderedDict(
+        (k, _partials_in_argument_order(v.xreplace(back), dep)) for k, v in result.items()
+    )
+
+
+def _partials_in_argument_order(e: Expr, dep: list[Expr]) -> Expr:
+    """e with the mixed partials of the infinitesimals in the order of their
+    arguments, X_yx for X(y, x): one form for one derivative. Those of the
+    dependent variables stay in SymPy's canonical order, u_tx, as in the
+    equation.
+
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> X = Function('X')(y, x)
+    >>> _partials_in_argument_order(Derivative(X, x, y) + Derivative(y, x), [y]).args[1].variables
+    (y(x), x)
+    """
+
+    def in_argument_order(d: Derivative) -> Derivative:
+        args = list(d.expr.args)
+        return Derivative(d.expr, *sorted(d.variable_count, key=lambda vc: args.index(vc[0])))
+
+    return e.xreplace(
+        {
+            d: in_argument_order(d)
+            for d in e.atoms(Derivative)
+            if isinstance(d.expr, AppliedUndef)
+            and d.expr not in dep
+            and all(v in d.expr.args for v in d.variables)
+        }
+    )
 
 
 @profile_if_enabled
@@ -265,12 +316,11 @@ def prolongation(
     """
     infinitesimals = OrderedDict((k, finish_substitution(v)) for k, v in infinitesimals.items())
     dummies: OrderedDict[Basic, Symbol] = OrderedDict()
-    for combi in variable_combinations(indep, order(expr, dep, indep)[0]):
-        funcs, etas = compute_level(combi, dep, indep, infinitesimals)
-        suffix = "".join(str(v) for v in combi)
-        for d, func, eta in zip(dep, funcs, etas, strict=True):
-            infinitesimals[func] = eta
-            dummies[func] = Symbol(f"{d.name}_{suffix}")
+    etas = prolonged_infinitesimals(dep, indep, infinitesimals, order(expr, dep, indep)[0])
+    for func, eta in etas.items():
+        infinitesimals[func] = eta
+        suffix = "".join(str(v) for v in func.variables)
+        dummies[func] = Symbol(f"{func.expr.func.__name__}_{suffix}")
     for v in dep + indep:
         dummies[v] = Symbol(v.name)
 
@@ -353,7 +403,7 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     back = {v: k for k, v in to_symbol.items()}
     result = set()
     for c in _real_and_imaginary_parts(coeffs):
-        c = numer(cancel(c)).expand().xreplace(back)
+        c = _numerator(c).xreplace(back)
         if c != 0:
             if not c.is_Add:
                 # a single term: its numeric factor does not matter, e.g.
@@ -361,6 +411,28 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
                 c = c.as_coeff_Mul()[1]
             result.add(c)
     return sorted(result, key=default_sort_key)
+
+
+def _numerator(c: Expr) -> Expr:
+    """The numerator of c in lowest terms, expanded: numer(cancel(c)).expand().
+
+    Computed in SymPy's sparse field of rational functions, with derivatives
+    and functions as symbols: cancel() took 15 s for a coefficient of 2000
+    terms of the apoptosis model (ODEBench 53), the field 0.7 s.
+
+    >>> x, a = Symbol('x'), Symbol('a')
+    >>> f = Function('f')(x)
+    >>> _numerator(x / (x + a) + a * f.diff(x) / x)
+    a**2*Derivative(f(x), x) + a*x*Derivative(f(x), x) + x**2
+    """
+    atoms = {a: Dummy() for a in c.atoms(Derivative, AppliedUndef)}
+    plain = c.xreplace(atoms)
+    try:
+        _, element = sfield(plain)
+        result = element.numer.as_expr()
+    except (PolynomialError, CoercionFailed, NotImplementedError):
+        result = numer(cancel(plain)).expand()
+    return result.xreplace({d: a for a, d in atoms.items()})
 
 
 def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]]:

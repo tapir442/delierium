@@ -43,6 +43,15 @@ part of this release.
   earlier elements again after a reduction), so integrability conditions that reduce to
   zero could be kept; the results were correct but not minimal. Checked against CoCoA 5's
   `JanetBasis` on 207 systems with constant coefficients: all equal.
+* Faster: the numerators of the determining equations are computed in SymPy's sparse
+  field of rational functions instead of with `cancel()` (the apoptosis model of
+  ODEBench: 51 s -> 20 s), and a reduction normalizes only its result, not every
+  intermediate step (Stokes' creeping flow: 129 s -> 58 s). The prolongation is computed in
+  jet coordinates, with the characteristic and each total derivative once (4th order PDEs in
+  two space variables: 17 s -> 3 s). The generators of the coefficient field are in a fixed
+  order: the variable order of its polynomial ring, and with it the time of a Janet basis,
+  depended on the hash seed (PINNacle Heat2D_LongTime: 7 s to 450 s, now 7 s). The results
+  are the same; the slow test suite takes 106 s instead of 217 s.
 
 ### 1.1.1
 

@@ -64,6 +64,7 @@ from sympy import (
     S,
     Symbol,
     cancel,
+    default_sort_key,
     expand_power_exp,
     nsimplify,
     sympify,
@@ -121,7 +122,11 @@ class _FieldState:
     def extend(self, atoms: Iterable[tuple[AtomKey, Rational]]) -> bool:
         """Make every (key, c) in atoms representable; True if the field changed."""
         changed = False
-        for key, c in atoms:
+        # in a fixed order: the order of the generators is the variable order
+        # of the polynomial ring, and the cost of the gcds depends on it (a
+        # set's order changed with the hash seed: one Janet basis took 8 s to
+        # 450 s)
+        for key, c in sorted(atoms, key=lambda a: (default_sort_key(a[0]), a[1])):
             L = self.keys.get(key)
             q = Rational(c).q
             if L is None:
