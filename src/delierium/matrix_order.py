@@ -126,6 +126,9 @@ class Context:  # pylint: disable=too-few-public-methods  # the public API are t
         # LHDP.normalize makes the coefficients coprime polynomials instead
         # of dividing by the leading coefficient (see JanetBasis)
         self.fraction_free = False
+        # LHDPs made while this is set are not normalized (janet_basis.
+        # reduce_by_system normalizes only its result)
+        self.defer_normalize = False
         self._weight = weight(self.dependent, self.independent)
         # per-instance caches; functools.cache on the methods themselves
         # would keep every Context alive for the lifetime of the process

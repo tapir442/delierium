@@ -46,7 +46,8 @@ from sympy import (  # noqa: F401
 from sympy.core.function import AppliedUndef
 from sympy.functions.elementary.hyperbolic import HyperbolicFunction
 from sympy.functions.elementary.trigonometric import TrigonometricFunction
-from sympy.polys.polyerrors import PolynomialError
+from sympy.polys.fields import sfield
+from sympy.polys.polyerrors import CoercionFailed, PolynomialError
 
 from delierium.helpers import finish_substitution, func_diff, make_infinitesimal, profile_if_enabled
 from delierium.janet_basis import (
@@ -353,7 +354,7 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     back = {v: k for k, v in to_symbol.items()}
     result = set()
     for c in _real_and_imaginary_parts(coeffs):
-        c = numer(cancel(c)).expand().xreplace(back)
+        c = _numerator(c).xreplace(back)
         if c != 0:
             if not c.is_Add:
                 # a single term: its numeric factor does not matter, e.g.
@@ -361,6 +362,28 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
                 c = c.as_coeff_Mul()[1]
             result.add(c)
     return sorted(result, key=default_sort_key)
+
+
+def _numerator(c: Expr) -> Expr:
+    """The numerator of c in lowest terms, expanded: numer(cancel(c)).expand().
+
+    Computed in SymPy's sparse field of rational functions, with derivatives
+    and functions as symbols: cancel() took 15 s for a coefficient of 2000
+    terms of the apoptosis model (ODEBench 53), the field 0.7 s.
+
+    >>> x, a = Symbol('x'), Symbol('a')
+    >>> f = Function('f')(x)
+    >>> _numerator(x / (x + a) + a * f.diff(x) / x)
+    a**2*Derivative(f(x), x) + a*x*Derivative(f(x), x) + x**2
+    """
+    atoms = {a: Dummy() for a in c.atoms(Derivative, AppliedUndef)}
+    plain = c.xreplace(atoms)
+    try:
+        _, element = sfield(plain)
+        result = element.numer.as_expr()
+    except (PolynomialError, CoercionFailed, NotImplementedError):
+        result = numer(cancel(plain)).expand()
+    return result.xreplace({d: a for a, d in atoms.items()})
 
 
 def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]]:

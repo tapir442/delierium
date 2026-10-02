@@ -43,6 +43,11 @@ part of this release.
   earlier elements again after a reduction), so integrability conditions that reduce to
   zero could be kept; the results were correct but not minimal. Checked against CoCoA 5's
   `JanetBasis` on 207 systems with constant coefficients: all equal.
+* Faster: the numerators of the determining equations are computed in SymPy's sparse
+  field of rational functions instead of with `cancel()` (the apoptosis model of
+  ODEBench: 51 s -> 20 s), and a reduction normalizes only its result, not every
+  intermediate step (Stokes' creeping flow: 129 s -> 58 s). The results are the same; the
+  slow test suite takes 144 s instead of 217 s.
 
 ### 1.1.1
 
