@@ -2,7 +2,8 @@
 
 For every entry of tests/symmetry_catalog.py: each listed generator solves the
 determining equations, and the Janet basis of the determining equations has
-the expected dimension of the symmetry algebra.
+the expected dimension of the symmetry algebra. A complete list of generators
+of a finite algebra is closed under commutators.
 
 Slow (the whole catalogue takes over a minute, 15 s with -n auto), so
 deselected by default; run with
@@ -25,6 +26,7 @@ from delierium.infinitesimals import (
     overdetermined_system_pde,
 )
 from delierium.janet_basis import JanetBasis
+from delierium.lie_algebra import LieAlgebra
 
 from .symmetry_catalog import CATALOG, INFINITE
 
@@ -160,3 +162,19 @@ def test_dimension_symbolic(entry):
 def check_dimension(entry):
     dimension = janet_basis(entry).rank()  # the dimension of the symmetry algebra
     assert (INFINITE if dimension == oo else dimension) == entry.dimension
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        entry_param(e, "algebra")
+        for e in CATALOG
+        if e.dimension not in (INFINITE, None) and len(e.generators) == e.dimension
+    ],
+)
+def test_closed_under_commutators(entry):
+    """The generators of a complete list span a Lie algebra: every commutator
+    is a constant linear combination of them (NotClosedError otherwise)."""
+    coordinates = [Symbol(v) for v in entry.independent + entry.dependent]
+    algebra = LieAlgebra(entry.parsed_generators(), coordinates)
+    assert len(algebra.structure_constants) == entry.dimension

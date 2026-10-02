@@ -11,6 +11,9 @@ The public interface is what this package exports (``from delierium import
   integrability_conditions, JanetType, and the result types LHDP, LHDPList
 * rankings: Context, Mgrevlex, Mgrlex, Mlex
 * printing in the notation of Lie: ltf, lie_form, lie_derivative_printer
+* Lie algebras of generators: LieAlgebra (structure constants, commutator
+  table, derived and lower central series, center, Killing form),
+  VectorField, NotClosedError
 * operators: euler_operator, frechet_derivative, adjoint_frechet_derivative,
   variational_derivative
 * pictures: the module delierium.visualization (staircase diagrams of Janet
@@ -53,6 +56,7 @@ from .janet_basis import (
     integrability_conditions,
     is_janet_basis_of,
 )
+from .lie_algebra import LieAlgebra, NotClosedError, VectorField
 from .matrix_order import Context, Mgrevlex, Mgrlex, Mlex
 
 __version__ = _version("delierium")
@@ -63,9 +67,12 @@ __all__ = [
     "JanetBasis",
     "JanetType",
     "LHDPList",
+    "LieAlgebra",
     "Mgrevlex",
     "Mgrlex",
     "Mlex",
+    "NotClosedError",
+    "VectorField",
     "__version__",
     "adjoint_frechet_derivative",
     "create_infinitesimals",

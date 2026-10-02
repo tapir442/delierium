@@ -31,6 +31,13 @@ part of this release.
 
 ### Not released yet
 
+* `LieAlgebra`: the Lie algebra spanned by given generators (vector fields on the
+  independent and dependent variables), with structure constants, commutator table,
+  derived and lower central series, solvability, nilpotency, center and Killing form;
+  `NotClosedError` if a commutator is not a constant linear combination of the generators
+  (#11). The generators can come from anywhere, e.g. the literature.
+* The catalogue checks that each of its 228 complete lists of generators of a finite
+  algebra is closed under commutators.
 * Janet bases are the minimal reduced ones: distinct leading derivatives, no redundant
   element, reduced tails (#54). `reduce_by_system` stopped too early (it did not try the
   earlier elements again after a reduction), so integrability conditions that reduce to
