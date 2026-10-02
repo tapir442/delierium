@@ -183,7 +183,8 @@ def prolonged_infinitesimals(
     n = len(indep)
     base = {d: Dummy(d.func.__name__) for d in dep}
     jets: dict[tuple[int, tuple[int, ...]], Symbol] = {}
-    jet_of = {base[d]: (a, ()) for a, d in enumerate(dep)}  # symbol -> (a, J)
+    # symbol -> (a, J)
+    jet_of: dict[Basic, tuple[int, tuple[int, ...]]] = {base[d]: (a, ()) for a, d in enumerate(dep)}
 
     def jet(a: int, multi: tuple[int, ...]) -> Symbol:
         multi = tuple(sorted(multi))
@@ -211,7 +212,7 @@ def prolonged_infinitesimals(
         for a in range(len(dep))
     }
     result: OrderedDict[Basic, Expr] = OrderedDict()
-    for combi in variable_combinations(list(range(n)), max_order):  # type: ignore[arg-type]
+    for combi in variable_combinations(list(range(n)), max_order):
         multi = tuple(combi)
         for a, d in enumerate(dep):
             dq[(a, multi)] = total(dq[(a, multi[:-1])], multi[-1])
@@ -222,26 +223,37 @@ def prolonged_infinitesimals(
         # diff() as in the rest of delierium: the canonical order u_tx
         back[sym] = dep[a].diff(*(indep[i] for i in multi))
 
-    def put_back(e: Expr) -> Expr:
-        e = e.xreplace(back)
-        # mixed partials of the infinitesimals with the variables in the
-        # order of the arguments, X_yx for X(y, x) (one form for one
-        # derivative); those of the dependent variables stay in SymPy's
-        # canonical order, u_tx, as in the equation
-        return e.xreplace(
-            {
-                d: Derivative(
-                    d.expr,
-                    *sorted(d.variable_count, key=lambda vc: list(d.expr.args).index(vc[0])),
-                )
-                for d in e.atoms(Derivative)
-                if isinstance(d.expr, AppliedUndef)
-                and d.expr not in dep
-                and all(v in d.expr.args for v in d.variables)
-            }
-        )
+    return OrderedDict(
+        (k, _partials_in_argument_order(v.xreplace(back), dep)) for k, v in result.items()
+    )
 
-    return OrderedDict((k, put_back(v)) for k, v in result.items())
+
+def _partials_in_argument_order(e: Expr, dep: list[Expr]) -> Expr:
+    """e with the mixed partials of the infinitesimals in the order of their
+    arguments, X_yx for X(y, x): one form for one derivative. Those of the
+    dependent variables stay in SymPy's canonical order, u_tx, as in the
+    equation.
+
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> X = Function('X')(y, x)
+    >>> _partials_in_argument_order(Derivative(X, x, y) + Derivative(y, x), [y]).args[1].variables
+    (y(x), x)
+    """
+
+    def in_argument_order(d: Derivative) -> Derivative:
+        args = list(d.expr.args)
+        return Derivative(d.expr, *sorted(d.variable_count, key=lambda vc: args.index(vc[0])))
+
+    return e.xreplace(
+        {
+            d: in_argument_order(d)
+            for d in e.atoms(Derivative)
+            if isinstance(d.expr, AppliedUndef)
+            and d.expr not in dep
+            and all(v in d.expr.args for v in d.variables)
+        }
+    )
 
 
 @profile_if_enabled

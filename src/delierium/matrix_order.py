@@ -105,7 +105,7 @@ def Mgrevlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # n
     return l
 
 
-class Context:  # pylint: disable=too-few-public-methods  # the public API are the cached callables
+class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attributes  # the public API are the cached callables
     """Define the context for comparisons, orders, etc."""
 
     def __init__(
