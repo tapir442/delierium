@@ -38,6 +38,11 @@ part of this release.
   (#11). The generators can come from anywhere, e.g. the literature.
 * The catalogue checks that each of its 228 complete lists of generators of a finite
   algebra is closed under commutators.
+* Janet bases are the minimal reduced ones: distinct leading derivatives, no redundant
+  element, reduced tails (#54). `reduce_by_system` stopped too early (it did not try the
+  earlier elements again after a reduction), so integrability conditions that reduce to
+  zero could be kept; the results were correct but not minimal. Checked against CoCoA 5's
+  `JanetBasis` on 207 systems with constant coefficients: all equal.
 
 ### 1.1.1
 
