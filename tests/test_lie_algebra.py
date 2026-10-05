@@ -82,3 +82,45 @@ def test_vector_field():
     assert rotation.commutator(rotation).is_zero()
     with pytest.raises(ValueError):
         VectorField([1], [x, y])
+
+
+def test_trigonometric_identities():
+    """y'' + y = 0, the generators as LIEPDE gives them: [X1, X4] is
+    (sin(x)**2 cos(x) + cos(x)**3) d/dy = X1 only by sin**2 + cos**2 = 1."""
+    from sympy import cos, sin
+
+    generators = [
+        (0, cos(x)),
+        (0, sin(x)),
+        (2 * cos(x) ** 2 - 1, -2 * y * sin(x) * cos(x)),
+        (sin(x) * cos(x), y * cos(x) ** 2),
+        (0, y),
+        (1, 0),
+        (y * sin(x), y**2 * cos(x)),
+        (y * cos(x), -(y**2) * sin(x)),
+    ]
+    assert LieAlgebra(generators, [x, y]).is_semisimple()  # sl(3)
+
+
+@pytest.mark.parametrize(
+    "generators",
+    [
+        # Kamke 6.134, (x - y) y'' + 2 (y' + 1) y' = 0: poles on y = x
+        [
+            (-y / (y - x), x / (y - x)),
+            (-x * y / (y - x), x * y / (y - x)),
+            ((x * y - x**2) / (y - x), (y**2 - x * y) / (y - x)),
+            (x**3 / (y - x), -(y**3) / (y - x)),
+            (1, 1),
+            (x**3 * y / (y - x), -x * y**3 / (y - x)),
+            (1 / (y - x), -1 / (y - x)),
+            (x**2 * y / (y - x), -x * y**2 / (y - x)),
+        ],
+        # poles on y = 1: [X1, X3] = X1, [X3, X2] = -X2
+        [(1 / (y - 1), 0), (1, 0), (x, 0)],
+    ],
+)
+def test_poles_at_the_random_points(generators):
+    """The structure constants do not depend on random points where a
+    coefficient has a pole."""
+    assert len(LieAlgebra(generators, [x, y]).structure_constants) == len(generators)

@@ -28,11 +28,25 @@ from sympy import (
     Rational,
     Symbol,
     cancel,
+    cos,
+    cot,
+    csc,
+    expand_power_exp,
+    expand_trig,
     ilcm,
+    nan,
+    oo,
+    sec,
     simplify,
+    sin,
     sympify,
+    tan,
     zeros,
+    zoo,
 )
+from sympy import exp as exp_
+from sympy.functions.elementary.hyperbolic import HyperbolicFunction
+from sympy.functions.elementary.trigonometric import TrigonometricFunction
 from sympy.polys.matrices import DomainMatrix
 
 __all__ = [
@@ -98,6 +112,42 @@ class VectorField:
             if c != 0
         ]
         return " + ".join(terms).replace("+ -", "- ") if terms else "0"
+
+
+def _rational_at_points(
+    e: Expr, symbols: dict[Symbol, tuple[Symbol, Symbol]]
+) -> tuple[Expr, set[Symbol]]:
+    """e with sin(k z), cos(k z), tan, cot, sec, csc, the hyperbolic functions
+    and exp(k z) of a coordinate z (k an integer) written in the symbols
+    (t, w) = symbols[z]: sin(z) = 2 t/(1 + t**2), cos(z) = (1 - t**2)/(1 + t**2),
+    exp(z) = w; and the symbols used.
+
+    z, sin(z), cos(z), exp(z) are algebraically independent apart from
+    sin**2 + cos**2 = 1, which this parametrization keeps: an identity in z
+    holds iff it holds for z, t, w independent. So at random rational z, t,
+    w the values are rational and every identity among them is kept
+    (sin(x)**2*cos(x) + cos(x)**3 = cos(x), sin(2 x) = 2 sin(x) cos(x)),
+    where independent symbols for sin(5/3), cos(5/3) would lose it."""
+    new: set[Symbol] = set()
+    if not e.has(TrigonometricFunction, HyperbolicFunction, exp_):
+        return e, new
+    e = e.replace(lambda f: isinstance(f, HyperbolicFunction), lambda f: f.rewrite(exp_))
+    e = e.replace(lambda f: isinstance(f, tan), lambda f: sin(f.args[0]) / cos(f.args[0]))
+    e = e.replace(lambda f: isinstance(f, cot), lambda f: cos(f.args[0]) / sin(f.args[0]))
+    e = e.replace(lambda f: isinstance(f, sec), lambda f: 1 / cos(f.args[0]))
+    e = e.replace(lambda f: isinstance(f, csc), lambda f: 1 / sin(f.args[0]))
+    e = expand_power_exp(expand_trig(e))
+    for z, (t, w) in symbols.items():
+        rules = {sin(z): 2 * t / (1 + t**2), cos(z): (1 - t**2) / (1 + t**2)}
+        f = e.xreplace(rules)
+        f = f.replace(
+            lambda g, z=z: isinstance(g, exp_) and (g.args[0] / z).is_Integer,
+            lambda g, z=z, w=w: w ** (g.args[0] / z),
+        )
+        if f != e:
+            new.update(s for s in (t, w) if f.has(s))
+            e = f
+    return e, new
 
 
 class LieAlgebra:
@@ -168,31 +218,27 @@ class LieAlgebra:
     def _solve_at_points(self, v: VectorField, exact: bool) -> list[Expr] | None:
         """a with sum_k a_k X_k(p) = v(p) at random points p, or None.
 
-        Unless exact, the transcendental numbers at the points (sin(5/3),
-        exp(3*a/2), ...) are replaced by new symbols, so that the linear
-        algebra is over rational functions (fast); a relation between them
-        that this loses can only make a solution fail the exact check."""
+        Unless exact, sin, cos, exp, ... of the coordinates are written
+        rationally in new variables (_rational_at_points), and the
+        transcendental numbers left at the points (sin(a*5/3), exp(3*a/2),
+        ...) are replaced by new symbols, so that the linear algebra is over
+        rational functions (fast); a relation between them that this loses
+        can only make a solution fail the exact check."""
         r, n = self.dimension, len(self.coordinates)
-        rng = random.Random(0)
-        # the coordinates at perfect L-th powers, L the lcm of the
-        # denominators of the rational exponents: then u**(-4/3) and the
-        # like are rational there, not new algebraic numbers
-        exponents = [
-            e.exp
-            for c in (*v.coefficients, *(c for g in self.generators for c in g.coefficients))
-            for e in c.atoms(Pow)
-            if e.exp.is_Rational and not e.exp.is_Integer
+        coefficients = [
+            [*(g.coefficients[m] for g in self.generators), v.coefficients[m]] for m in range(n)
         ]
-        power = reduce(ilcm, (e.q for e in exponents), 1)
-        rows: list[list[Expr]] = []
-        rhs: list[Expr] = []
-        for _ in range(r + 2):
-            point = {
-                z: Rational(rng.randint(2, 9), rng.randint(2, 5)) ** power for z in self.coordinates
-            }
-            for m in range(n):
-                rows.append([g.coefficients[m].subs(point) for g in self.generators])
-                rhs.append(v.coefficients[m].subs(point))
+        variables = list(self.coordinates)
+        if not exact:
+            symbols = {z: (Dummy(f"t_{z}"), Dummy(f"w_{z}")) for z in self.coordinates}
+            converted = [[_rational_at_points(c, symbols) for c in row] for row in coefficients]
+            coefficients = [[c for c, _ in row] for row in converted]
+            variables += sorted({s for row in converted for _, new in row for s in new}, key=str)
+        values = _values_at_points(coefficients, variables, r + 2)
+        if values is None:
+            return None
+        rows = [row[:-1] for row in values]
+        rhs = [row[-1] for row in values]
         A = Matrix(rows).row_join(Matrix(rhs))
         if not exact:
             transcendental = {
@@ -304,3 +350,35 @@ def _row_basis(vectors: list[list[Expr]], r: int) -> Matrix:
         return zeros(0, r)
     reduced, pivots = Matrix(vectors).rref(simplify=True)
     return reduced[: len(pivots), :]
+
+
+def _values_at_points(
+    coefficients: list[list[Expr]], variables: list[Symbol], count: int
+) -> list[list[Expr]] | None:
+    """The rows of coefficients at count random points of the variables
+    (one block of rows per point), or None. Points where a coefficient has
+    a pole (y = x for 1/(y - x)) are skipped. The variables are taken at
+    perfect L-th powers, L the lcm of the denominators of the rational
+    exponents: then u**(-4/3) and the like are rational there, not new
+    algebraic numbers."""
+    rng = random.Random(0)
+    exponents = [
+        e.exp
+        for row in coefficients
+        for c in row
+        for e in c.atoms(Pow)
+        if e.exp.is_Rational and not e.exp.is_Integer
+    ]
+    power = reduce(ilcm, (e.q for e in exponents), 1)
+    values: list[list[Expr]] = []
+    points = 0
+    for _ in range(20 * count):
+        if points == count:
+            return values
+        point = {z: Rational(rng.randint(2, 9), rng.randint(2, 5)) ** power for z in variables}
+        block = [[c.subs(point) for c in row] for row in coefficients]
+        if any(e.has(zoo, nan, oo) for row in block for e in row):
+            continue
+        points += 1
+        values += block
+    return values if points == count else None
