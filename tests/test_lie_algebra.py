@@ -124,3 +124,21 @@ def test_poles_at_the_random_points(generators):
     """The structure constants do not depend on random points where a
     coefficient has a pole."""
     assert len(LieAlgebra(generators, [x, y]).structure_constants) == len(generators)
+
+
+def test_symbolic_exponents():
+    """Kamke 6.173, x y y'' + 2 x y'**2 + a y y' = 0, the generators as LIEPDE
+    gives them: closed only if x**a, x**(a + 1) = x x**a and x**(2 - a) at a
+    point are not taken as independent numbers."""
+    a = Symbol("a")
+    generators = [
+        (0, y**-2),
+        (0, y),
+        (3 * x ** (a + 1) * y**3 / x**a, (1 - a) * y**4),
+        (x**a * y**3, 0),
+        (x ** (a + 1) / x**a, 0),
+        (x**a, 0),
+        (0, x ** (1 - a) / (a * y**2 - y**2)),
+        (-3 * x ** (2 - a) / (a**2 - 2 * a + 1), x ** (1 - a) * y / (a - 1)),
+    ]
+    assert len(LieAlgebra(generators, [x, y]).structure_constants) == 8
