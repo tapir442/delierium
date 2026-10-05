@@ -975,6 +975,30 @@ BAUMANN_EXAMPLES = [
         note="solutions (u + C1*x + C2)**2 = C3*x + C4 (Kamke)",
         y="u",
     ),
+    # 5.5 similarity reduction
+    pde(
+        "Baumann p. 270: Karpman-Belashov"
+        " (u_t + 6 u u_x - mu u_xx - epsilon u_xxx - lambda u_xxxxx)_x - u_yy = 0",
+        "6*Derivative(u(x, y, t), x)**2 + Derivative(u(x, y, t), t, x)"
+        " + 6*u(x, y, t)*Derivative(u(x, y, t), (x, 2)) - Derivative(u(x, y, t), (y, 2))"
+        " - mu*Derivative(u(x, y, t), (x, 3)) - epsilon*Derivative(u(x, y, t), (x, 4))"
+        " - lambda_*Derivative(u(x, y, t), (x, 6))",
+        ("x", "y", "t"),
+        INFINITE,
+        [
+            ("0", "0", "1", "0"),
+            ("1", "0", "0", "0"),
+            ("t", "0", "0", "1/6"),
+            ("0", "1", "0", "0"),
+            ("y/2", "t", "0", "0"),
+            ("y*t", "t**2", "0", "y/6"),
+        ],
+        f"{BAUMANN}, section 5.5, Example 4, p. 270, equation (5.47)",
+        note="Karpman, Belashov (1991); contains the Zabolotskaya-Khokhlov (epsilon = lambda = 0)"
+        " and the Kadomtsev-Petviashvili equation (mu = lambda = 0). xi_x = F2 + y F1'/2,"
+        " xi_y = F1, xi_t = k1, phi = (2 F2' + y F1'')/12 with free functions F1(t), F2(t); the"
+        " generators are those of F2 = 1, t and F1 = 1, t, t**2",
+    ),
     # 5.6 working examples, the scalar PDEs (5.6.1/5.6.2, the diffusion
     # equation, is the heat equation above)
     pde(
