@@ -1359,11 +1359,15 @@ class JanetBasis:
         ...     [(a * x + b) * diff(z, x) + z, (a - 1) * diff(z, y) - x * z], [z], [y, x]
         ... )
         >>> janet.assumed_nonzero()
-        [x, a - 1, a*x + b]
+        [a - 1, a*x + b]
         >>> janet.parameter_conditions()
         [[a - 1], [a, b]]
+
+        Here no factor vanishes only on points or curves, the Janet basis z = 0
+        holds for every x:
+
         >>> janet.singular_loci()
-        [x]
+        []
         """
         return self._assumptions()[2][0]
 
