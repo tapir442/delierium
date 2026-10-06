@@ -1157,27 +1157,13 @@ class JanetBasis:
                 # no change since last run
                 return
             old = self.S[:]
-            #            self.show(rich=True, short=False, heading="This is where we start")
-            #         import pdb; pdb.set_trace()
             self.S = autoreduce(self.S, context)
-            #            self.show(rich=False, short=True, heading="after autoreduce")
-            #            import pdb; pdb.set_trace()
             self.S = complete_system(self.S, context)
-            #            self.show(rich=False, short=True, heading="after complete system")
             conditions = list(split_by_function(self.S, context))
-            #            print("after conditions")
-            #            for _ in conditions:
-            #                print(_)
             candidates = [reduce_by_system(_m, self.S, context) for _m in conditions]
-            #            print("after reduced")
-            #            for _ in reduced:
-            #                print(_)
-            #            print(reduced)
             reduced = [_ for _ in candidates if _]
-            #            print("after reduced")
             if not reduced:
                 self.S = reorder(self.S, context, ascending=True)
-                #                print("ÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖ")
                 return
             self.S += [_ for _ in reduced if _ not in self.S]
             self.S = reorder(self.S, context, ascending=True)
