@@ -157,11 +157,15 @@ class _FieldState:
                 self.keys[key] = lcm(L, q)
                 changed = True
         if changed:
-            self.symbols = tuple(self.generator(k, L) for k, L in self.keys.items())
-            self.index = {g: i for i, g in enumerate(self.symbols)}
-            self.field = FracField(self.symbols, ZZ)
-            self.relations = self._relations()
+            self._rebuild()
         return changed
+
+    def _rebuild(self) -> None:
+        """The generators, the field and the relations from self.keys."""
+        self.symbols = tuple(self.generator(k, L) for k, L in self.keys.items())
+        self.index = {g: i for i, g in enumerate(self.symbols)}
+        self.field = FracField(self.symbols or (Symbol("_delierium_dummy"),), ZZ)
+        self.relations = self._relations()
 
     def drop_generators(self, generators: Iterable[Expr]) -> None:
         """Remove generators replaced by others (a finer trigonometric base):
@@ -171,10 +175,7 @@ class _FieldState:
             return
         for key in gone:
             del self.keys[key]
-        self.symbols = tuple(self.generator(k, L) for k, L in self.keys.items())
-        self.index = {g: i for i, g in enumerate(self.symbols)}
-        self.field = FracField(self.symbols or (Symbol("_delierium_dummy"),), ZZ)
-        self.relations = self._relations()
+        self._rebuild()
         self.dgen = {k: v for k, v in self.dgen.items() if (k[0], S.One) not in gone}
 
     def _relations(self) -> list[tuple[int, int, int]]:
@@ -471,15 +472,19 @@ class Coeff:
         f = self.f = _lift(self.f)
         return f
 
+    def _common_field_elements(self, other: "Coeff") -> tuple[FracElement, FracElement]:
+        """self and other as elements of the same (current) field."""
+        a = self._field_element()
+        b = other._field_element()
+        if a.field is not b.field:  # lifting b has grown the field
+            a = self._field_element()
+        return a, b
+
     def _binary(self, other: CoeffLike, op: Callable[[Any, Any], Any]) -> "Coeff":
         if not isinstance(other, Coeff):
             other = Coeff(other)
         if self.f is not None and other.f is not None:
-            a = self._field_element()
-            b = other._field_element()
-            if a.field is not b.field:  # lifting b has grown the field
-                a = self._field_element()
-            return Coeff._new(f=op(a, b))
+            return Coeff._new(f=op(*self._common_field_elements(other)))
         return Coeff._new(expr=op(self.as_expr(), other.as_expr()))
 
     def __add__(self, other: CoeffLike) -> "Coeff":
@@ -531,10 +536,7 @@ class Coeff:
         if self.f is not None and other.f is not None:
             # field elements are canonical (coprime, normalized sign), so
             # compare them structurally: subtracting would need a gcd
-            a = self._field_element()
-            b = other._field_element()
-            if a.field is not b.field:  # lifting b has grown the field
-                a = self._field_element()
+            a, b = self._common_field_elements(other)
             if a == b:
                 return True
             return bool(_state().relations) and not _state().reduce_numerator(a - b)

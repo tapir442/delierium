@@ -903,8 +903,16 @@ def overdetermined_system_ode(  # pylint: disable=keyword-arg-before-vararg,unus
     X_yyy
     Y_xx*y + Y_xxx
     """
+    return _determining_equations(ode, dependent, independent, infinitesimals)
+
+
+def _determining_equations(
+    eq: Expr, dependent: Variables, independent: Variables, infinitesimals: InfinitesimalNames
+) -> list[Expr]:
+    """The determining equations of the scalar equation eq, for
+    overdetermined_system_ode and overdetermined_system_pde."""
     result = compute_overdetermined_system_of_infinitesimals(
-        ode, dependent, independent, infinitesimals=infinitesimals
+        eq, dependent, independent, infinitesimals=infinitesimals
     )
     return [finish_substitution(e) for e in result]
 
@@ -1075,10 +1083,7 @@ def overdetermined_system_pde(  # pylint: disable=keyword-arg-before-vararg,unus
     """
     if len(convert_to_iterable(dependent)) != 1:
         raise NotImplementedError("only one dependent variable is supported")
-    result = compute_overdetermined_system_of_infinitesimals(
-        pde, dependent, independent, infinitesimals=infinitesimals
-    )
-    return [finish_substitution(e) for e in result]
+    return _determining_equations(pde, dependent, independent, infinitesimals)
 
 
 def _linear_system_ode(
