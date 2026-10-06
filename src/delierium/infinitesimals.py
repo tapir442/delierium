@@ -459,7 +459,7 @@ def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dumm
     # of one another in one group
     groups: list[tuple[Expr, Expr, list[Expr]]] = []  # (base, reference part, members)
     for p in pows:
-        _, s = p.exp.as_coeff_Add()
+        _, s = p.exp.expand().as_coeff_Add()
         for base, s0, members in groups:
             if base == p.base and cancel(s / s0).is_Rational:
                 members.append(p)
@@ -470,14 +470,14 @@ def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dumm
     gens = []
     for base, s0, members in groups:
         # the unit s0/L makes every symbolic part an integer multiple of it
-        ratios = [cancel(p.exp.as_coeff_Add()[1] / s0) for p in members]
+        ratios = [cancel(p.exp.expand().as_coeff_Add()[1] / s0) for p in members]
         unit = s0 / reduce(ilcm, (r.q for r in ratios), 1)
         if unit.could_extract_minus_sign():  # G = b**(n/2), not b**(-n/2)
             unit = -unit
         gen = Dummy()
         gens.append(gen)
         for p in members:
-            n, s = p.exp.as_coeff_Add()
+            n, s = p.exp.expand().as_coeff_Add()
             repl[p] = gen ** cancel(s / unit) * base**n
     return expr.xreplace(repl), gens
 

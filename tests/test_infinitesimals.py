@@ -597,3 +597,22 @@ def test_trigonometric_function_of_a_derivative():
     assert all(r == 0 for r in _residues(ode, y, x, 1, 0))
     assert all(r == 0 for r in _residues(ode, y, x, 0, 1))
     assert any(r != 0 for r in _residues(ode, y, x, x, Symbol('y')))
+
+
+def test_exponent_with_a_parameter_in_a_denominator():
+    """#69: u_x**((5*q - 8)/q) and u_x**(-8/q) are one family of powers;
+    as independent generators they split into too many determining
+    equations (rank 2 instead of 3)."""
+    from sympy import Function, Symbol, diff, symbols
+
+    from delierium.infinitesimals import create_infinitesimals, overdetermined_system_pde
+
+    x, t, a, c, kappa, q = symbols("x t a c kappa q")
+    u = Function("u")(x, t)
+    p = 6 - 8 / q
+    pde = diff(u, t) + kappa * p * diff(u, x) ** (p - 1) * diff(u, x, 2) - c * (a + u) ** q
+    inf = create_infinitesimals([u], [x, t])
+    plain = {u: Symbol("u")}
+    system = [e.xreplace(plain) for e in overdetermined_system_pde(pde, [u], [x, t], inf)]
+    functions = [inf[v].xreplace(plain) for v in (x, t, u)]
+    assert JanetBasis(system, functions, [x, t, Symbol("u")]).rank() == 3
