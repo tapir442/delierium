@@ -1,9 +1,8 @@
 """Convenience functions"""
 
 import builtins
-import itertools
 import os
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any, cast
 
 import sympy as sp
@@ -35,13 +34,6 @@ def profile_if_enabled[F: Callable[..., Any]](func: F) -> F:
 
         return cast(F, profile(func))
     return func
-
-
-@profile_if_enabled
-def pairs_exclude_diagonal[T](it: Iterable[T]) -> Iterator[tuple[T, T]]:
-    for x, y in itertools.product(it, repeat=2):
-        if x != y:
-            yield (x, y)
 
 
 @profile_if_enabled

@@ -5,7 +5,7 @@ Janet Basis
 import functools
 from collections import OrderedDict, namedtuple
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from itertools import product
+from itertools import permutations, product
 from operator import mul
 from typing import Any
 
@@ -21,7 +21,6 @@ from delierium.coefficients import ONE, Coeff, CoeffLike, fresh_field, primitive
 from delierium.helpers import (
     Derivative,
     ltf,
-    pairs_exclude_diagonal,
     profile_if_enabled,
     show_output,
 )
@@ -1022,7 +1021,7 @@ def _integrability_pairs(
             )
         )
 
-    for ei, ej in pairs_exclude_diagonal(multiplier_collection):
+    for ei, ej in permutations(multiplier_collection, 2):
         for n in ei.nonmultipliers:
             m = _multiplicative_derivative(ei, n, ej, context)
             if m is not None:

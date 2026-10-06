@@ -2,21 +2,7 @@
 
 from sympy import *
 
-from delierium.helpers import pairs_exclude_diagonal
 from delierium.infinitesimals import create_infinitesimals, overdetermined_system_ode
-
-
-def test_pairs_exclude_diagonal():
-    it = range(5)
-    for x, y in pairs_exclude_diagonal(it):
-        assert x != y
-
-
-def test_pairs_exclude_diagonal_empty_output():
-    it = range(1)
-    for _ in pairs_exclude_diagonal(it):
-        # shouldn't happen
-        assert False
 
 
 def test_derivative_patch_keeps_sympy_behaviour():
