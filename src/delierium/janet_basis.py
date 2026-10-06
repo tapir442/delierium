@@ -208,11 +208,11 @@ class _Dterm:
             result.append(d2)
         return result
 
-    @profile_if_enabled
     def __hash__(self) -> int:
-        return hash(str(self.coeff) + str(self.derivative))
-
-    _cache_key = __hash__
+        # only the derivative: equal terms have equal comparison vectors, and
+        # a coefficient has no cheap hash that agrees with its == (#61:
+        # cos**2 + sin**2 - 1 == 0); a tuple of ints, the same in every run
+        return hash(self.comparison_vector)
 
 
 def _simplify_coefficients(e: Basic) -> Basic:
@@ -249,7 +249,6 @@ class LHDP:
         self.p: list[_Dterm] = []
         self.multipliers: list[int] = []
         self.nonmultipliers: list[int] = []
-        self.hash = 0
         if dterms:
             self.p = [_.copy() for _ in dterms]
         else:
@@ -400,17 +399,14 @@ class LHDP:
     def __repr__(self) -> str:
         return str(self)
 
-    @profile_if_enabled
     def __hash__(self) -> int:
-        if self.hash == 0:
-            self.hash = hash("".join([str(hash(_)) for _ in self.p]))
-        return self.hash
+        # the derivatives of the terms, see _Dterm.__hash__; not cached, the
+        # coefficients change in place
+        return hash(tuple(_.comparison_vector for _ in self.p))
 
     @profile_if_enabled
     def xreplace(self, d: dict) -> "LHDP":
         return self.__class__(self.expression().xreplace(d), self.context)
-
-    _cache_key = __hash__
 
 
 @profile_if_enabled
