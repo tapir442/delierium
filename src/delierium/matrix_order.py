@@ -129,9 +129,9 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
         self.order_of_derivative = cache(self._order_of_derivative)
 
     def _gt(self, v1: Sequence[int], v2: Sequence[int]) -> bool:
-        """Computes the weighted difference vector of v1 and v2
-        and returns 'True' if the first nonzero entry is > 0
-        """
+        """v1 ranks above v2: the first nonzero entry of the weight matrix
+        times v1 - v2 is positive. v1, v2 are comparison vectors (see
+        janet_basis.ComparisonVector); equal ones are not greater."""
         diffvector = Matrix(len(v1), 1, [v1[i] - v2[i] for i in range(len(v1))])
         r = list(self._weight @ diffvector)
         for entry in r:

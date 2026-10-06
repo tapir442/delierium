@@ -47,7 +47,17 @@ __all__ = [
 
 # the orders of a derivative by each independent variable
 Order = list[int]
-# a term's order followed by its function's position among the dependent ones
+# The comparison vector of a term: its derivative as a tuple of ints, the
+# orders by each independent variable (Order) followed by a 0/1 marker of its
+# function among the dependent ones. For the dependent functions (w, z) and
+# the independent variables (x, y), z_xxy is (2, 1, 0, 1) and w is (0, 0, 1, 0).
+#
+# - Ranking: a weight matrix M (matrix_order.Mlex, Mgrlex, Mgrevlex) ranks a
+#   term above another if the first nonzero entry of M (v1 - v2) is positive
+#   (Context.gt; Riquier's "cotes", Schwarz, Term orders and Rankings, pp. 43).
+# - Identity: equal vectors mean the same derivative, so the vector is the key
+#   of a term within an LHDP (dict keys in reductions, hashes), a tuple of ints
+#   instead of a SymPy Derivative, cheap to compute, compare and hash.
 ComparisonVector = tuple[int, ...]
 # JanetBasis._assumptions: (number of divisors, the factors, split_assumptions of them)
 _AssumptionCache = tuple[int, list[Expr], tuple[list[list[Expr]], list[Expr]]]
@@ -55,6 +65,8 @@ _AssumptionCache = tuple[int, list[Expr], tuple[list[list[Expr]], list[Expr]]]
 
 @profile_if_enabled
 def compute_comparison_vector(dependent: Sequence[Basic], func: Basic) -> list[int]:
+    """The function part of a comparison vector: 1 at the position of func
+    among the dependent functions, 0 elsewhere."""
     iv = [0] * len(dependent)
     if func in dependent:
         iv[dependent.index(func)] = 1
@@ -108,7 +120,17 @@ class _Dterm:
 
     @profile_if_enabled
     def _compute_comparison_vector(self) -> ComparisonVector:
-        """Concatenates order and comparison vector for input for ..."""
+        """The comparison vector of the term, see ComparisonVector.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> w, z = Function("w")(x, y), Function("z")(x, y)
+        >>> ctx = Context([w, z], [x, y])
+        >>> _Dterm(coeff=1, derivative=z.diff(x, x, y), context=ctx).comparison_vector
+        (2, 1, 0, 1)
+        >>> _Dterm(coeff=y, derivative=w, context=ctx).comparison_vector
+        (0, 0, 1, 0)
+        """
         iv = compute_comparison_vector(self.context.dependent, self.function)
         return tuple(self.order + iv)
 
