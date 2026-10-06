@@ -117,30 +117,10 @@ class _Dterm:
         return result.replace("Derivative", "D")
 
     @profile_if_enabled
-    def term(self) -> Expr:
-        return self.expression()
-
-    @profile_if_enabled
     def _compute_order(self) -> Order:
         """computes the monomial tuple from the derivative part"""
         return compute_order(
             self.derivative, self.context.independent, self.context.order_of_derivative
-        )
-
-    @profile_if_enabled
-    def __sub__(self, other: "_Dterm") -> "_Dterm":
-        if self.comparison_vector != other.comparison_vector:
-            raise ValueError
-        return self.__class__(
-            coeff=self.coeff - other.coeff, derivative=self.derivative, context=self.context
-        )
-
-    @profile_if_enabled
-    def __add__(self, other: "_Dterm") -> "_Dterm":
-        if self.comparison_vector != other.comparison_vector:
-            raise ValueError
-        return self.__class__(
-            coeff=self.coeff + other.coeff, derivative=self.derivative, context=self.context
         )
 
     @profile_if_enabled
@@ -177,10 +157,6 @@ class _Dterm:
         return ltf(
             self.expression(), self.context.dependent, self.context.independent, printer=False
         )
-
-    @profile_if_enabled
-    def add_coefficient(self, c: CoeffLike) -> "_Dterm":
-        return _Dterm(coeff=self.coeff + c, derivative=self.derivative, context=self.context)
 
     @profile_if_enabled
     def diff(self, *variables: Basic) -> list["_Dterm"]:
@@ -277,30 +253,11 @@ class LHDP:
     def expression(self) -> Expr:
         return sum(_.expression() for _ in self.p)
 
-    def _collect_terms(self, e: Basic) -> None:
-        pass
-
-    def atoms(self, e: type) -> set[Basic]:
-        # needed for ltf
-        return self.expression().atoms(e)
-
     def leading_derivative(self) -> Expr:
         return self.p[0].derivative
 
     def leading_function(self) -> Expr:
         return self.p[0].function
-
-    def terms(self) -> Iterator[Expr]:
-        for p in self.p:
-            yield p.term()
-
-    def derivatives(self) -> Iterator[Expr]:
-        for p in self.p:
-            yield p.derivative
-
-    def coefficients(self) -> Iterator[Coeff]:
-        for p in self.p:
-            yield p.coeff
 
     def make_monic(self) -> None:
         """Divide by the leading coefficient."""
@@ -345,10 +302,6 @@ class LHDP:
                 continue
             return _[0] < _[1]
         return False
-
-    @profile_if_enabled
-    def __le__(self, other: "LHDP") -> bool:
-        return self == other or self < other
 
     @profile_if_enabled
     def __eq__(self, other: object) -> bool:
@@ -398,10 +351,6 @@ class LHDP:
         # the derivatives of the terms, see _Dterm.__hash__; not cached, the
         # coefficients change in place
         return hash(tuple(_.comparison_vector for _ in self.p))
-
-    @profile_if_enabled
-    def xreplace(self, d: dict) -> "LHDP":
-        return self.__class__(self.expression().xreplace(d), self.context)
 
 
 @profile_if_enabled

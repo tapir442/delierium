@@ -2,7 +2,6 @@
 
 from collections.abc import Callable, Iterable, Sequence
 from functools import cache
-from typing import Any
 
 from sympy import Basic, Matrix, eye
 
@@ -20,12 +19,6 @@ WeightFunction = Callable[[Sequence[Basic], Sequence[Basic]], Matrix]
 # standard weight matrices for lex, grlex and grevlex order
 # according to 'Term orders and Rankings' Schwarz, pp 43.
 #
-
-
-def insert_row(mat: Matrix, k: int, row: Any) -> Matrix:
-    """Use this as insert_row is only defined for integer matrices :("""
-    rows = mat.tolist()
-    return Matrix([*rows[:k], list(row), *rows[k:]])
 
 
 def Mlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
@@ -132,7 +125,6 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
         # per-instance caches; functools.cache on the methods themselves
         # would keep every Context alive for the lifetime of the process
         self.gt = cache(self._gt)
-        self.lt = cache(self._lt)
         self.is_ctxfunc = cache(self._is_ctxfunc)
         self.order_of_derivative = cache(self._order_of_derivative)
 
@@ -147,10 +139,6 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
                 continue
             return bool(entry > 0)
         return False
-
-    def _lt(self, v1: Sequence[int], v2: Sequence[int]) -> bool:
-        """Checks if v1 < v2."""
-        return v1 != v2 and not self.gt(v1, v2)
 
     def _is_ctxfunc(self, f: Basic) -> bool:
         """Check if 'f' is in the list of dependent variables."""
