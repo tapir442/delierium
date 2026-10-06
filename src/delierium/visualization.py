@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
 from matplotlib.axes import Axes
+from matplotlib.colors import Normalize
 from matplotlib.figure import Figure
 from sympy import Basic, Derivative, Expr, Symbol, lambdify, latex, oo, solve, sympify
 
@@ -103,8 +104,8 @@ def rk4(
 
 def _numbers(expr: Expr | str, keep: Iterable[Basic], values: Values) -> Expr:
     """expr with the values substituted and every other symbol not in keep 1."""
-    expr = sympify(expr).subs({sympify(k): sympify(v) for k, v in (values or {}).items()})
-    return expr.subs(dict.fromkeys(expr.free_symbols - set(keep), 1))
+    e = sympify(expr).subs({sympify(k): sympify(v) for k, v in (values or {}).items()})
+    return e.subs(dict.fromkeys(e.free_symbols - set(keep), 1))
 
 
 def field_functions(
@@ -148,7 +149,7 @@ def draw_field(  # pylint: disable=too-many-arguments,too-many-positional-argume
         # the scale starts below 0, so that a field of constant length is not white
         ax.streamplot(
             X, Y, U, V, color=shade, cmap="Blues",
-            norm=plt.Normalize(-0.3 * shade.max(), shade.max()),
+            norm=Normalize(-0.3 * shade.max(), shade.max()),
             density=1.1, linewidth=0.8, arrowsize=0.8,
         )  # fmt: skip
     else:

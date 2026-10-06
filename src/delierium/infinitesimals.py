@@ -1128,17 +1128,17 @@ def _back_substituted(
     def back_substitute(e: Expr) -> Expr:
         return e.xreplace(back)
 
+    ctx = Context(
+        dependent=[back_substitute(_) for _ in janet.context.dependent],
+        independent=[back_substitute(_) for _ in janet.context.independent],
+        weight=sort_order,
+    )
     res = []
     for lhdp in janet.S:
         p = []
         for term in lhdp.p:
             coeff = back_substitute(term.coeff.as_expr())
             d = back_substitute(term.derivative)
-            ctx = Context(
-                dependent=[back_substitute(_) for _ in term.context.dependent],
-                independent=[back_substitute(_) for _ in term.context.independent],
-                weight=sort_order,
-            )
             p.append(_Dterm(derivative=d, coeff=coeff, context=ctx))
         res.append(LHDP(e=0, context=ctx, dterms=p))
 

@@ -26,7 +26,8 @@ WeightFunction = Callable[[Sequence[Basic], Sequence[Basic]], Matrix]
 
 def insert_row(mat: Matrix, k: int, row: Any) -> Matrix:
     """Use this as insert_row is only defined for integer matrices :("""
-    return Matrix([*mat.rows()[:k], row, *mat.rows()[k:]])
+    rows = mat.tolist()
+    return Matrix([*rows[:k], list(row), *rows[k:]])
 
 
 def Mlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
