@@ -13,7 +13,12 @@ Generators of the field are the symbols and the non-rational atoms of the
 coefficients (``exp(x)``, ``y**n``, ``f(x)``, ...). They are chosen so that
 the field does not miss a relation between them: ``x``, ``sqrt(x)`` and
 ``1/x**(3/2)`` are all powers of the one generator ``sqrt(x)``, ``exp(2*x)``
-is ``exp(x)**2``, and ``y**(n - 1)`` is ``y**n/y``. A float is taken for the
+is ``exp(x)**2``, and ``y**(n - 1)`` is ``y**n/y``. Trigonometric and hyperbolic
+functions are written in ``sin``, ``cos`` (``sinh``, ``cosh``) of one argument
+(``sin(2*x)`` is ``2*sin(x)*cos(x)``, ``tan`` is ``sin/cos``), and where the field
+has both of a pair, the zero test and comparisons reduce modulo
+``cos**2 + sin**2 - 1`` (``cosh**2 - sinh**2 - 1``): a normal form, so that they
+are exact (#61). A float is taken for the
 decimal it prints as: ``0.25`` is ``1/4``, ``0.1`` is ``1/10``. A coefficient
 containing an algebraic element the field cannot represent faithfully
 (``sqrt(2)``, ``I``, ``sqrt(x + 1)``) stays a canonical SymPy expression, as
@@ -43,6 +48,11 @@ True
 False
 >>> Coeff(0.1 * x + 0.25)
 x/10 + 1/4
+>>> from sympy import sin, cos
+>>> Coeff(sin(2 * x)) == Coeff(2 * sin(x) * cos(x))
+True
+>>> Coeff(sin(x) ** 2 + cos(x) ** 2 - 1) == Coeff(0)
+True
 """
 
 # Coeff's private helpers are applied to other Coeff instances as well
@@ -51,12 +61,13 @@ x/10 + 1/4
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
-from math import lcm
+from math import comb, gcd, lcm
 from typing import Any
 
 from sympy import (
     Basic,
     Derivative,
+    Dummy,
     Expr,
     Float,
     Pow,
@@ -66,11 +77,14 @@ from sympy import (
     cancel,
     default_sort_key,
     expand_power_exp,
+    expand_trig,
     nsimplify,
     sympify,
 )
 from sympy.core.function import AppliedUndef, Function
 from sympy.functions.elementary.exponential import ExpBase
+from sympy.functions.elementary.hyperbolic import cosh, coth, csch, sech, sinh, tanh
+from sympy.functions.elementary.trigonometric import cos, cot, csc, sec, sin, tan
 from sympy.polys.domains import ZZ
 from sympy.polys.fields import FracElement, FracField
 
@@ -107,6 +121,12 @@ class _FieldState:
         self.index: dict[Basic, int] = {}  # generator expression -> index
         # (generator expression, variable) -> Coeff
         self.dgen: dict[tuple[Basic, Basic], Coeff] = {}
+        # cos**2 + sin**2 - 1, cosh**2 - sinh**2 - 1 of the pairs among the
+        # generators, as (index of cos, index of sin, sign): cos**2 = 1 - sign*sin**2
+        self.relations: list[tuple[int, int, int]] = []
+        # (sin or sinh, u) -> g: sin(k u), cos(k u) are written in sin(g u),
+        # cos(g u), g the greatest common divisor of the multiples k seen
+        self.trig_base: dict[tuple[Any, Basic], Rational] = {}
 
     @staticmethod
     def generator(key: AtomKey, L: int) -> Expr:
@@ -139,7 +159,55 @@ class _FieldState:
             self.symbols = tuple(self.generator(k, L) for k, L in self.keys.items())
             self.index = {g: i for i, g in enumerate(self.symbols)}
             self.field = FracField(self.symbols, ZZ)
+            self.relations = self._relations()
         return changed
+
+    def drop_generators(self, generators: Iterable[Expr]) -> None:
+        """Remove generators replaced by others (a finer trigonometric base):
+        the elements that contain them are converted again when lifted."""
+        gone = {(g, S.One) for g in generators} & set(self.keys)
+        if not gone:
+            return
+        for key in gone:
+            del self.keys[key]
+        self.symbols = tuple(self.generator(k, L) for k, L in self.keys.items())
+        self.index = {g: i for i, g in enumerate(self.symbols)}
+        self.field = FracField(self.symbols or (Symbol("_delierium_dummy"),), ZZ)
+        self.relations = self._relations()
+        self.dgen = {k: v for k, v in self.dgen.items() if (k[0], S.One) not in gone}
+
+    def _relations(self) -> list[tuple[int, int, int]]:
+        relations = []
+        for g, i in self.index.items():
+            for c, s, sign in ((cos, sin, 1), (cosh, sinh, -1)):
+                if isinstance(g, c) and s(g.args[0]) in self.index:
+                    relations.append((i, self.index[s(g.args[0])], sign))
+        return relations
+
+    def reduce_numerator(self, f: FracElement) -> Any:
+        """The numerator of f in normal form modulo the relations, every
+        cos**(2q + r) written as cos**r (1 - sign*sin**2)**q (unique: the
+        relations are a Groebner basis, the pairs being disjoint): 0 iff f is.
+        Directly on the terms: PolyElement.rem searches the leading term anew
+        for every step, quadratic in the number of terms (#61)."""
+        numer = f.numer
+        if not self.relations or f.field is not self.field:
+            return numer
+        terms = dict(numer)
+        for i, j, sign in self.relations:
+            if all(e[i] < 2 for e in terms):
+                continue
+            reduced: dict[tuple[int, ...], Any] = {}
+            for e, c in terms.items():
+                q, r = divmod(e[i], 2)
+                m = list(e)
+                m[i] = r
+                for k in range(q + 1):
+                    t = tuple(m)
+                    reduced[t] = reduced.get(t, 0) + c * comb(q, k) * (-sign) ** k
+                    m[j] += 2
+            terms = {e: c for e, c in reduced.items() if c}
+        return numer.ring.from_dict(terms)
 
 
 # the field outside of any fresh_field(), shared by all threads
@@ -258,6 +326,53 @@ def _convert(e: Basic, field: FracField) -> FracElement:  # pylint: disable=too-
     return _state().element_of(*_atom_key(e))
 
 
+# tan, cot, ... in terms of sin and cos (sinh and cosh)
+_QUOTIENTS: dict[Any, Callable[[Expr], Expr]] = {
+    tan: lambda u: sin(u) / cos(u),
+    cot: lambda u: cos(u) / sin(u),
+    sec: lambda u: 1 / cos(u),
+    csc: lambda u: 1 / sin(u),
+    tanh: lambda u: sinh(u) / cosh(u),
+    coth: lambda u: cosh(u) / sinh(u),
+    sech: lambda u: 1 / cosh(u),
+    csch: lambda u: 1 / sinh(u),
+}
+
+
+def _rational_gcd(a: Rational, b: Rational) -> Rational:
+    return Rational(gcd(a.p * b.q, b.p * a.q), a.q * b.q)
+
+
+def _trigonometric_normal(e: Expr) -> Expr:
+    """tan, cot, sec, csc (and the hyperbolic ones) in sin and cos; sin(k u),
+    cos(k u) in sin(g u), cos(g u) (expand_trig), g the greatest common
+    divisor of all multiples k of u the field has seen. So sin(2 x) and
+    sin(x) cos(x) are in the same generators, related by cos**2 + sin**2 = 1,
+    while sin(4 pi x) alone stays one generator. A finer g drops the old
+    generators from the field; elements containing them are converted again."""
+    e = e.replace(lambda f: type(f) in _QUOTIENTS, lambda f: _QUOTIENTS[type(f)](f.args[0]))
+    state = _state()
+    atoms = []
+    for f in e.atoms(sin, cos, sinh, cosh):
+        k, u = f.args[0].as_coeff_Mul(rational=True)
+        family = sin if isinstance(f, (sin, cos)) else sinh
+        atoms.append((f, family, k, u))
+        key = (family, u)
+        old = state.trig_base.get(key)
+        g = abs(k) if old is None else _rational_gcd(old, k)
+        if old is not None and g != old:
+            pair = (sin, cos) if family is sin else (sinh, cosh)
+            state.drop_generators(p(old * u) for p in pair)
+        state.trig_base[key] = g
+    rule = {}
+    for f, family, k, u in atoms:
+        m = k / state.trig_base[(family, u)]
+        if m != 1:
+            d = Dummy()
+            rule[f] = expand_trig(type(f)(m * d)).xreplace({d: state.trig_base[(family, u)] * u})
+    return e.xreplace(rule) if rule else e
+
+
 def _prepare(e: Any) -> Expr:
     # b**(n - 1) -> b**n/b, exp(x + 1) -> E*exp(x), so that the field sees
     # the same generators whatever form the powers come in
@@ -269,6 +384,8 @@ def _prepare(e: Any) -> Expr:
     floats = e.atoms(Float)
     if floats:
         e = e.xreplace({f: nsimplify(f, rational=True) for f in floats})
+    if e.has(sin, cos, tan, cot, sec, csc, sinh, cosh, tanh, coth, sech, csch):
+        e = _trigonometric_normal(e)
     return expand_power_exp(e)
 
 
@@ -395,14 +512,20 @@ class Coeff:
 
     def __bool__(self) -> bool:
         if self.f is not None:
-            return bool(self.f.numer)
+            # zero modulo cos**2 + sin**2 - 1 is zero (#61): only here and in
+            # comparisons, the arithmetic stays in the field (reducing every
+            # result would prevent cancellations: cos**2/cos)
+            return bool(_state().reduce_numerator(self._field_element()))
         return self.canonical()._expr != 0
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Coeff):
             if isinstance(other, int) and self.f is not None:
                 f = self.f
-                return f.denom == 1 and f.numer == other
+                if f.denom == 1 and f.numer == other:
+                    return True
+                if not _state().relations:
+                    return False
             other = Coeff(other)
         if self.f is not None and other.f is not None:
             # field elements are canonical (coprime, normalized sign), so
@@ -411,7 +534,9 @@ class Coeff:
             b = other._field_element()
             if a.field is not b.field:  # lifting b has grown the field
                 a = self._field_element()
-            return a == b
+            if a == b:
+                return True
+            return bool(_state().relations) and not _state().reduce_numerator(a - b)
         return not self - other
 
     def __hash__(self) -> int:
