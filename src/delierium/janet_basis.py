@@ -1383,12 +1383,15 @@ class JanetBasis:
 
         >>> JanetBasis([diff(z, x)], [z], [x, y]).rank()
         oo
+
+        Schwarz calls it the order, so order() is the same:
+
+        >>> JanetBasis([diff(z, x)], [z], [x, y]).order()
+        oo
         """
         return self.type().dimension
 
-    def order(self) -> Any:
-        """The order of the Janet basis, Schwarz's name for its rank."""
-        return self.rank()
+    order = rank
 
     def parametric_derivatives(self, max_order: int | None = None) -> list[Expr] | None:
         """The parametric derivatives: those that are no derivative of a
