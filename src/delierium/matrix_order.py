@@ -128,7 +128,7 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
         # per-instance caches; functools.cache on the methods themselves
         # would keep every Context alive for the lifetime of the process
         self.gt = cache(self._gt)
-        self.is_ctxfunc = cache(self._is_ctxfunc)
+        self.is_dependent = cache(self._is_dependent)
         self.order_of_derivative = cache(self._order_of_derivative)
 
     def _gt(self, v1: Sequence[int], v2: Sequence[int]) -> bool:
@@ -141,7 +141,7 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
                 return bool(entry > 0)
         return False
 
-    def _is_ctxfunc(self, f: Basic) -> bool:
+    def _is_dependent(self, f: Basic) -> bool:
         """Check if 'f' is in the list of dependent variables."""
         return f in self.dependent
 

@@ -33,7 +33,6 @@ __all__ = [
     "autoreduce",
     "complete",
     "complete_system",
-    "find_integrable_conditions",
     "integrability_conditions",
     "is_janet_basis_of",
     "janet_type",
@@ -62,7 +61,7 @@ _AssumptionCache = tuple[int, list[Expr], tuple[list[list[Expr]], list[Expr]]]
 
 
 @profile_if_enabled
-def compute_comparison_vector(dependent: Sequence[Basic], func: Basic) -> list[int]:
+def function_marker(dependent: Sequence[Basic], func: Basic) -> list[int]:
     """The function part of a comparison vector: 1 at the position of func
     among the dependent functions, 0 elsewhere."""
     iv = [0] * len(dependent)
@@ -129,7 +128,7 @@ class _Dterm:
         >>> _Dterm(coeff=y, derivative=w, context=ctx).comparison_vector
         (0, 0, 1, 0)
         """
-        iv = compute_comparison_vector(self.context.dependent, self.function)
+        iv = function_marker(self.context.dependent, self.function)
         return tuple(self.order + iv)
 
     def __str__(self) -> str:
@@ -402,7 +401,7 @@ def analyze_term(context: Context, term: Expr) -> tuple[Expr, Expr]:
     coeffs: list[Expr] = []
     for factor in Mul.make_args(term):
         function = factor.args[0] if factor.is_Derivative else factor
-        (unknowns if context.is_ctxfunc(function) else coeffs).append(factor)
+        (unknowns if context.is_dependent(function) else coeffs).append(factor)
     if len(unknowns) != 1:
         unknowns_of_context = list(context.dependent)
         raise ValueError(f"{term} is not linear homogeneous in the unknowns {unknowns_of_context}")
@@ -480,7 +479,7 @@ def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
         dif = [a - b for a, b in zip(term.order, e2.order, strict=True)]
         if any(d < 0 for d in dif):
             continue
-        return _subtract_derivative(e1, e2, term.coeff, get_diff_vars(context, dif))
+        return _subtract_derivative(e1, e2, term.coeff, _variables_of(context, dif))
     return e1
 
 
@@ -536,7 +535,9 @@ def _subtract_derivative(
 
 
 @profile_if_enabled
-def get_diff_vars(context: Context, dif: Sequence[int]) -> list[Basic]:
+def _variables_of(context: Context, dif: Sequence[int]) -> list[Basic]:
+    """The independent variables, each repeated as often as dif says
+    (an exponent vector): the variables to differentiate by."""
     variables: list[Basic] = []
     for v, d in zip(context.independent, dif, strict=False):
         if d != 0:
@@ -557,24 +558,24 @@ def _reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
 
 @profile_if_enabled
 def autoreduce(S: Iterable[LHDP], context: Context) -> list[LHDP]:
-    dps = list(S)
+    equations = list(S)
     i = 0
-    head, r = dps[: i + 1], dps[i + 1 :]
+    head, r = equations[: i + 1], equations[i + 1 :]
     while r:
-        newdps = []
+        new = []
         have_reduced = False
         for e in r:
-            rnew = reduce_by_system(e, head, context)
-            have_reduced = have_reduced or e != rnew
-            if rnew:
-                newdps.append(rnew)
-        dps = reorder(head + [e for e in newdps if e not in head], context, ascending=True)
+            reduced = reduce_by_system(e, head, context)
+            have_reduced = have_reduced or e != reduced
+            if reduced:
+                new.append(reduced)
+        equations = reorder(head + [e for e in new if e not in head], context, ascending=True)
         if not have_reduced:
             i += 1
         else:
             i = 0
-        head, r = dps[: i + 1], dps[i + 1 :]
-    return dps
+        head, r = equations[: i + 1], equations[i + 1 :]
+    return equations
 
 
 def vec_degree(v: int, m: Sequence[int]) -> int:
@@ -692,7 +693,8 @@ def vec_multipliers(
     return mult, sorted(set(Vars) - set(mult))
 
 
-coll = namedtuple('coll', ['monom', 'dp', 'multipliers', 'nonmultipliers'])
+# an element of S with its multiplier and nonmultiplier variables
+_MultiplierClass = namedtuple("_MultiplierClass", ["monom", "dp", "multipliers", "nonmultipliers"])
 
 
 def _in_janet_class(
@@ -829,7 +831,7 @@ def _reduce_tail(e: LHDP, basis: list[LHDP], context: Context) -> LHDP:
         else:
             return e
         dif = [a - b for a, b in zip(term.order, g.order, strict=True)]
-        reduced = _subtract_derivative(e, g, term.coeff, get_diff_vars(context, dif))
+        reduced = _subtract_derivative(e, g, term.coeff, _variables_of(context, dif))
         assert reduced is not None  # the leading term stays
         e = reduced
 
@@ -906,7 +908,7 @@ def integrability_conditions_by_function(S: Iterable[LHDP], context: Context) ->
     """The integrability conditions of S, computed separately for the
     elements of each leading function."""
     s = bucket(S, key=lambda d: d.leading_function())
-    return flatten(find_integrable_conditions(s[k], context) for k in s)
+    return flatten(_integrability_conditions_of_function(s[k], context) for k in s)
 
 
 @profile_if_enabled
@@ -928,20 +930,17 @@ def _integrability_pairs(
 
     ms = tuple(monom for _, monom in monomials)
 
-    def map_old_to_new(i: int) -> Basic:
-        return context.independent[i]
-
     # multiplier-collection is our M
     multiplier_collection = []
     for dp, monom in monomials:
         # S1
         multipliers, nonmultipliers = vec_multipliers(monom, ms, indices)
         multiplier_collection.append(
-            coll(
+            _MultiplierClass(
                 monom,
                 dp,
-                [map_old_to_new(i) for i in multipliers],
-                [map_old_to_new(i) for i in nonmultipliers],
+                [context.independent[i] for i in multipliers],
+                [context.independent[i] for i in nonmultipliers],
             )
         )
 
@@ -953,7 +952,7 @@ def _integrability_pairs(
 
 
 @profile_if_enabled
-def find_integrable_conditions(S: Iterable[LHDP], context: Context) -> list[LHDP]:
+def _integrability_conditions_of_function(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     result = []
     for ei, n, ej, m in _integrability_pairs(S, context):
         condition = _difference(ei.diff(n), ej.diff(*m) if m else ej, context)
@@ -1538,7 +1537,7 @@ def _reduce_with_cofactors(
             return terms, remaining
         b = S[j]
         variables = tuple(
-            get_diff_vars(context, [a - c for a, c in zip(t.order, b.order, strict=True)])
+            _variables_of(context, [a - c for a, c in zip(t.order, b.order, strict=True)])
         )
         factor = t.coeff
         key = (variables, j)
