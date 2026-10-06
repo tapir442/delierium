@@ -1148,22 +1148,20 @@ class JanetBasis:
         self.S = minimize(self.S, context)
 
     def _complete(self, context: Context) -> None:
+        """Autoreduce, complete and add the reduced integrability conditions
+        until there is no new one, or S does not change."""
         old: list[LHDP] = []
-        while 1:
-            if old == self.S:
-                # no change since last run
-                return
+        while old != self.S:
             old = self.S[:]
             self.S = autoreduce(self.S, context)
             self.S = complete_system(self.S, context)
             conditions = list(split_by_function(self.S, context))
-            candidates = [reduce_by_system(_m, self.S, context) for _m in conditions]
-            reduced = [_ for _ in candidates if _]
+            reduced = [r for c in conditions if (r := reduce_by_system(c, self.S, context))]
             if not reduced:
-                self.S = reorder(self.S, context, ascending=True)
-                return
-            self.S += [_ for _ in reduced if _ not in self.S]
+                break
+            self.S += [r for r in reduced if r not in self.S]
             self.S = reorder(self.S, context, ascending=True)
+        self.S = reorder(self.S, context, ascending=True)
 
     def representation(self, e: Expr) -> tuple[list[tuple[Expr, tuple[Basic, ...], int]], Expr]:
         """e as a combination of the basis elements and their derivatives.
