@@ -20,8 +20,6 @@ from sympy.polys.rings import sring
 from delierium.coefficients import ONE, Coeff, CoeffLike, fresh_field, primitive
 from delierium.helpers import (
     Derivative,
-    is_derivative,
-    is_function,
     ltf,
     pairs_exclude_diagonal,
     profile_if_enabled,
@@ -71,7 +69,7 @@ def compute_order(
     derivative: Basic, independent: Sequence[Basic], comp_order: Callable[[Basic], Order]
 ) -> Order:
     """Computes the monomial tuple from the derivative part."""
-    if is_derivative(derivative):
+    if derivative.is_Derivative:
         return comp_order(derivative)
     # XXX: Check can that be within a system of linear PDEs ?
     return [0] * len(independent)
@@ -91,7 +89,7 @@ class _Dterm:
         self.coeff = coeff if isinstance(coeff, Coeff) else Coeff(coeff)
         self.derivative = derivative
         self.context = context
-        if is_derivative(self.derivative):
+        if self.derivative.is_Derivative:
             self.function = self.derivative.args[0]
         else:
             self.function = self.derivative
@@ -457,12 +455,12 @@ def analyze_term(context: Context, term: Expr) -> tuple[str, Expr, Expr] | None:
     coeffs: list[Expr] = []
     d: list[Expr] = []
     for operand in operands:
-        if is_function(operand):
+        if operand.is_Function:
             if context.is_ctxfunc(operand):
                 d.append(operand)
             else:
                 coeffs.append(operand)
-        elif is_derivative(operand):
+        elif operand.is_Derivative:
             if context.is_ctxfunc(operand.args[0]):
                 d.append(operand)
             else:
@@ -477,7 +475,7 @@ def analyze_term(context: Context, term: Expr) -> tuple[str, Expr, Expr] | None:
 
 @profile_if_enabled
 def split_into_operands(term: Expr) -> list[Expr]:
-    if is_derivative(term) or is_function(term):
+    if term.is_Derivative or term.is_Function:
         return [term]
     return term.as_ordered_factors()
 

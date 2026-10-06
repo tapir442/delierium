@@ -45,30 +45,6 @@ def pairs_exclude_diagonal[T](it: Iterable[T]) -> Iterator[tuple[T, T]]:
 
 
 @profile_if_enabled
-def is_derivative(e: Basic) -> bool:
-    """checks whether an expression 'e' is a pure derivative
-    >>> from sympy import diff
-    >>> x = Symbol('x')
-    >>> f = Function('f')(x)
-    >>> is_derivative(f)
-    False
-    >>> is_derivative(diff(f, x))
-    True
-    >>> is_derivative(diff(f, x) * x)
-    False
-    """
-    return e.is_Derivative
-
-
-@profile_if_enabled
-def is_function(e: Basic) -> bool:
-    """checks whether an expression 'e' is a pure function without any
-    derivative as a factor
-    """
-    return e.is_Function
-
-
-@profile_if_enabled
 def func_diff(fun: Expr, var: Symbol | Function) -> Expr:
     # simplify=False: SymPy's factor_terms(signsimp(...)) after every higher
     # derivative costs time and is of no use here
