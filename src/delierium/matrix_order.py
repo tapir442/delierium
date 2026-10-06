@@ -2,7 +2,6 @@
 
 from collections.abc import Callable, Iterable, Sequence
 from functools import cache
-from typing import Any
 
 from sympy import Basic, Matrix, eye
 
@@ -20,12 +19,6 @@ WeightFunction = Callable[[Sequence[Basic], Sequence[Basic]], Matrix]
 # standard weight matrices for lex, grlex and grevlex order
 # according to 'Term orders and Rankings' Schwarz, pp 43.
 #
-
-
-def insert_row(mat: Matrix, k: int, row: Any) -> Matrix:
-    """Use this as insert_row is only defined for integer matrices :("""
-    rows = mat.tolist()
-    return Matrix([*rows[:k], list(row), *rows[k:]])
 
 
 def Mlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
@@ -75,8 +68,7 @@ def Mgrlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noq
     '''
     m = Mlex(funcs, variables)
     first_row = Matrix(1, len(variables) + len(funcs), [1] * len(variables) + [0] * len(funcs))
-    m = m.row_insert(0, first_row)
-    return m
+    return m.row_insert(0, first_row)
 
 
 def Mgrevlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
@@ -98,9 +90,9 @@ def Mgrevlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # n
     second_row = Matrix(1, cols, [0] * no_vars + list(range(no_funcs, 0, -1)))
     l = l.row_insert(cols, second_row)
     for idx in range(no_vars):
-        _v = Matrix(1, cols, [0] * cols)
-        _v[no_vars - idx - 1] = -1
-        l = l.row_insert(2 + idx, _v)
+        row = Matrix(1, cols, [0] * cols)
+        row[no_vars - idx - 1] = -1
+        l = l.row_insert(2 + idx, row)
     return l
 
 
@@ -128,31 +120,28 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
         # LHDPs made while this is set are not normalized (janet_basis.
         # reduce_by_system normalizes only its result)
         self.defer_normalize = False
-        self._weight = weight(self.dependent, self.independent)
+        # the rows of the weight matrix, as Python ints where they are integers
+        self._weight = [
+            [int(w) if w.is_Integer else w for w in row]
+            for row in weight(self.dependent, self.independent).tolist()
+        ]
         # per-instance caches; functools.cache on the methods themselves
         # would keep every Context alive for the lifetime of the process
         self.gt = cache(self._gt)
-        self.lt = cache(self._lt)
-        self.is_ctxfunc = cache(self._is_ctxfunc)
+        self.is_dependent = cache(self._is_dependent)
         self.order_of_derivative = cache(self._order_of_derivative)
 
     def _gt(self, v1: Sequence[int], v2: Sequence[int]) -> bool:
-        """Computes the weighted difference vector of v1 and v2
-        and returns 'True' if the first nonzero entry is > 0
-        """
-        diffvector = Matrix(len(v1), 1, [v1[i] - v2[i] for i in range(len(v1))])
-        r = list(self._weight @ diffvector)
-        for entry in r:
-            if entry == 0:
-                continue
-            return bool(entry > 0)
+        """v1 ranks above v2: the first nonzero entry of the weight matrix
+        times v1 - v2 is positive. v1, v2 are comparison vectors (see
+        janet_basis.ComparisonVector); equal ones are not greater."""
+        difference = [a - b for a, b in zip(v1, v2, strict=True)]
+        for row in self._weight:
+            if entry := sum(w * d for w, d in zip(row, difference, strict=True)):
+                return bool(entry > 0)
         return False
 
-    def _lt(self, v1: Sequence[int], v2: Sequence[int]) -> bool:
-        """Checks if v1 < v2."""
-        return v1 != v2 and not self.gt(v1, v2)
-
-    def _is_ctxfunc(self, f: Basic) -> bool:
+    def _is_dependent(self, f: Basic) -> bool:
         """Check if 'f' is in the list of dependent variables."""
         return f in self.dependent
 

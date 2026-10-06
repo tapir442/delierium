@@ -119,7 +119,7 @@ def make_infinitesimal(v: Basic, *variables: Basic, name: str = "") -> Expr:
     >>> i
     phi(f(x), x)
     """
-    return Function(f'{name if name else v.name.swapcase()}')(*variables)  # pylint: disable=not-callable
+    return Function(f'{name or v.name.swapcase()}')(*variables)  # pylint: disable=not-callable
 
 
 def is_jupyter_lab() -> bool:
@@ -246,25 +246,3 @@ def lie_derivative_printer(  # pylint: disable=keyword-arg-before-vararg,unused-
         for e in forms:
             print(e)
     return None
-
-
-# ToDo (from AllTypes.de
-# CommutatorTable
-# DterminingSystem
-# Free Resolution
-# Gcd
-# Groebner Basis
-# In?
-# Intersection
-# JanetBasis
-# Lcm
-# LöwDecomposioipn
-# Primary Decomposition
-# Product
-# Qutiont
-# Radical
-# Random
-# Saturation
-# Sum
-# Symmetric Power
-# # Syzygys

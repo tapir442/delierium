@@ -18,14 +18,14 @@ __all__ = [
 ]
 
 
-def is_op_du(expr: Basic, u: Expr) -> bool:
+def is_derivative_of(expr: Basic, u: Expr) -> bool:
     """
     Check if expr is a derivative of u.
     """
     return isinstance(expr, Derivative) and expr.expr.func == u.func
 
 
-def iter_du_orders(expr: Basic, u: Expr) -> Iterator[int]:
+def derivative_orders_of(expr: Basic, u: Expr) -> Iterator[int]:
     """
     Yield all derivative orders of u appearing in expr.
     """
@@ -33,10 +33,10 @@ def iter_du_orders(expr: Basic, u: Expr) -> Iterator[int]:
         for sub_expr in expr.args:
             if sub_expr == []:
                 continue
-            if is_op_du(sub_expr, u):
+            if is_derivative_of(sub_expr, u):
                 yield sub_expr.derivative_count
             else:
-                yield from iter_du_orders(sub_expr, u)
+                yield from derivative_orders_of(sub_expr, u)
 
 
 def variational_derivative(L: Expr, u_in: Expr) -> Expr:
@@ -57,7 +57,7 @@ def variational_derivative(L: Expr, u_in: Expr) -> Expr:
         raise TypeError("Input function must have exactly one variable.")
     t = symbols('tapir')  # dummy variable
     result = S(0)
-    orders = set(iter_du_orders(L, u)).union((0,))
+    orders = set(derivative_orders_of(L, u)).union((0,))
     for c in orders:
         du = diff(u, x, c)
         sign = (-1) ** c
@@ -125,9 +125,9 @@ def _total_derivative(expr: Expr, jet: Expr) -> Expr:
 
 def frechet_derivative(
     support: Sequence[Expr],
-    dependVar: Sequence[UndefinedFunction],
-    independVar: Sequence[Basic],
-    testfunction: Sequence[UndefinedFunction],
+    dependent: Sequence[UndefinedFunction],
+    independent: Sequence[Basic],
+    test_functions: Sequence[UndefinedFunction],
 ) -> list[list[Expr]]:
     """
     >>> from sympy import symbols, Function, diff, Matrix
@@ -151,9 +151,9 @@ def frechet_derivative(
     eps = symbols("eps")
     for eq in support:
         deriv = []
-        for i in range(len(support)):
-            perturbed = dependVar[i](*independVar) + testfunction[i](*independVar) * eps
-            s = eq.replace(dependVar[i], lambda *_, p=perturbed: p)
+        for function, test in zip(dependent, test_functions, strict=True):
+            perturbed = function(*independent) + test(*independent) * eps
+            s = eq.replace(function, lambda *_, p=perturbed: p)
             deriv.append(diff(s, eps).subs({eps: 0}))
         frechet.append(deriv)
     return frechet
@@ -161,12 +161,12 @@ def frechet_derivative(
 
 def adjoint_frechet_derivative(
     support: Sequence[Expr],
-    dependVar: Sequence[UndefinedFunction],
-    independVar: Sequence[Basic],
-    testfunction: Sequence[UndefinedFunction],
+    dependent: Sequence[UndefinedFunction],
+    independent: Sequence[Basic],
+    test_functions: Sequence[UndefinedFunction],
 ) -> list[list[Expr]]:
     # Placeholder: in SymPy, adjoint computation is not built-in
-    return frechet_derivative(support, dependVar, independVar, testfunction)
+    return frechet_derivative(support, dependent, independent, test_functions)
 
 
 if __name__ == "__main__":

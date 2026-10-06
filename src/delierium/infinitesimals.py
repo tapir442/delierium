@@ -118,15 +118,15 @@ def order(  # pylint: disable=unused-argument
     """
     max_order = 0
     max_deriv: set[Expr] = set()
-    dep_names = [_.name for _ in dep]
+    dep_names = [d.name for d in dep]
     for atom in expr.expand().atoms(Derivative):
         if atom.args[0].name in dep_names:
-            _order = len(atom.variables)
-            if max_order == _order:
+            atom_order = len(atom.variables)
+            if max_order == atom_order:
                 max_deriv |= {atom}
-            elif max_order < _order:
+            elif max_order < atom_order:
                 max_deriv = {atom}
-                max_order = _order
+                max_order = atom_order
     return (max_order, max_deriv)
 
 
@@ -208,8 +208,8 @@ def prolonged_infinitesimals(
     xi = [finish_substitution(infinitesimals[v]).xreplace(plain) for v in indep]
     phi = [finish_substitution(infinitesimals[d]).xreplace(plain) for d in dep]
     dq = {
-        (a, ()): phi[a] - sum((xi[i] * jet(a, (i,)) for i in range(n)), Integer(0))
-        for a in range(len(dep))
+        (a, ()): phi_a - sum((xi[i] * jet(a, (i,)) for i in range(n)), Integer(0))
+        for a, phi_a in enumerate(phi)
     }
     result: OrderedDict[Basic, Expr] = OrderedDict()
     for combi in variable_combinations(list(range(n)), max_order):
@@ -326,9 +326,9 @@ def prolongation(
 
     reverse_dummies = {v: k for k, v in dummies.items()}
     acc = sum(
-        infinitesimals[_]
-        * func_diff(expr.xreplace(dummies), _.xreplace(dummies)).xreplace(reverse_dummies)
-        for _ in infinitesimals
+        infinitesimals[v]
+        * func_diff(expr.xreplace(dummies), v.xreplace(dummies)).xreplace(reverse_dummies)
+        for v in infinitesimals
     )
     return finish_substitution(acc)
 
@@ -747,7 +747,7 @@ def _leading_derivative(eq: Expr, candidates: set[Expr], dep: list[Function]) ->
     >>> _leading_derivative(eq, {u.diff(t, 2), u.diff(x, 2)}, [u])
     Derivative(u(x, t), (t, 2))
     """
-    dep_names = {_.name for _ in dep}
+    dep_names = {d.name for d in dep}
     h = Dummy()
 
     def rank(d: Expr) -> int:
@@ -903,11 +903,18 @@ def overdetermined_system_ode(  # pylint: disable=keyword-arg-before-vararg,unus
     X_yyy
     Y_xx*y + Y_xxx
     """
+    return _determining_equations(ode, dependent, independent, infinitesimals)
+
+
+def _determining_equations(
+    eq: Expr, dependent: Variables, independent: Variables, infinitesimals: InfinitesimalNames
+) -> list[Expr]:
+    """The determining equations of the scalar equation eq, for
+    overdetermined_system_ode and overdetermined_system_pde."""
     result = compute_overdetermined_system_of_infinitesimals(
-        ode, dependent, independent, infinitesimals=infinitesimals
+        eq, dependent, independent, infinitesimals=infinitesimals
     )
-    result = [finish_substitution(_) for _ in result]
-    return result
+    return [finish_substitution(e) for e in result]
 
 
 def overdetermined_system_odes(  # pylint: disable=keyword-arg-before-vararg
@@ -958,7 +965,7 @@ def overdetermined_system_odes(  # pylint: disable=keyword-arg-before-vararg
         r = reduce_on_system(prolongation(eq, infinitesimals, dep, indep))
         for c in split_jet_coefficients(r, dep):
             c = finish_substitution(c)
-            if not any((c - _).expand() == 0 for _ in result):
+            if not any((c - known).expand() == 0 for known in result):
                 result.append(c)
     return result
 
@@ -1004,7 +1011,7 @@ def _solved_form(
     """
     candidates = [sorted(order(eq, dep, [t])[1], key=default_sort_key) for eq in eqs]
     for leaders in product(*candidates):
-        if len({_.expr for _ in leaders}) == len(leaders):
+        if len({leader.expr for leader in leaders}) == len(leaders):
             break
     else:
         raise NotImplementedError("no distinct leading derivatives for the equations")
@@ -1034,7 +1041,7 @@ def _check_termination(
             for d in reducible(value)
         )
 
-    if not any(is_orderly_ranking(_) for _ in permutations(rhs)):
+    if not any(is_orderly_ranking(ranking) for ranking in permutations(rhs)):
         raise NotImplementedError("the reduction of the system by its equations may not terminate")
 
 
@@ -1076,10 +1083,7 @@ def overdetermined_system_pde(  # pylint: disable=keyword-arg-before-vararg,unus
     """
     if len(convert_to_iterable(dependent)) != 1:
         raise NotImplementedError("only one dependent variable is supported")
-    result = compute_overdetermined_system_of_infinitesimals(
-        pde, dependent, independent, infinitesimals=infinitesimals
-    )
-    return [finish_substitution(_) for _ in result]
+    return _determining_equations(pde, dependent, independent, infinitesimals)
 
 
 def _linear_system_ode(
@@ -1097,10 +1101,10 @@ def _linear_system_ode(
         ode, [dependent], [independent], infinitesimals=infinitesimals
     )
     h_symbol = Symbol("H")
-    inf = [infinitesimals[_] for _ in [dependent, independent]]
+    inf = [infinitesimals[v] for v in [dependent, independent]]
 
     r1 = [h_symbol, independent]
-    inf = [_.xreplace({dependent: h_symbol}) for _ in inf]
+    inf = [f.xreplace({dependent: h_symbol}) for f in inf]
     system = [e.replace(dependent, h_symbol) for e in overdetermined_system]
     return system, list(reversed(inf)), list(reversed(r1)), h_symbol
 
@@ -1129,14 +1133,14 @@ def _back_substituted(
         return e.xreplace(back)
 
     ctx = Context(
-        dependent=[back_substitute(_) for _ in janet.context.dependent],
-        independent=[back_substitute(_) for _ in janet.context.independent],
+        dependent=[back_substitute(v) for v in janet.context.dependent],
+        independent=[back_substitute(v) for v in janet.context.independent],
         weight=sort_order,
     )
     res = []
     for lhdp in janet.S:
         p = []
-        for term in lhdp.p:
+        for term in lhdp.terms:
             coeff = back_substitute(term.coeff.as_expr())
             d = back_substitute(term.derivative)
             p.append(_Dterm(derivative=d, coeff=coeff, context=ctx))
@@ -1172,8 +1176,8 @@ def _linear_system_odes(
     infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
     system = overdetermined_system_odes(eqs, dep, indep, infinitesimals=infinitesimals)
     to_symbol = {d: Symbol(d.func.__name__) for d in dep}
-    inf = [infinitesimals[_].xreplace(to_symbol) for _ in indep + dep]
-    variables = indep + [to_symbol[_] for _ in dep]
+    inf = [infinitesimals[v].xreplace(to_symbol) for v in indep + dep]
+    variables = indep + [to_symbol[d] for d in dep]
     return [e.xreplace(to_symbol) for e in system], inf, variables, to_symbol
 
 
@@ -1370,8 +1374,8 @@ def _ranked[T](
     """default, rearranged like ordering; the entries are matched by key."""
     if ordering is None:
         return default
-    by_key = {key(_): _ for _ in default}
-    ranked = [by_key.get(key(_)) for _ in ordering]
+    by_key = {key(item): item for item in default}
+    ranked = [by_key.get(key(item)) for item in ordering]
     if None in ranked or len(set(ranked)) != len(default):
         raise ValueError(f"{list(ordering)} is not an ordering of {default}")
     return cast(list[T], ranked)

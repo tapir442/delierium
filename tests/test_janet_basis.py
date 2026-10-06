@@ -73,7 +73,7 @@ def test_janet_basis_schwarz_example_5_2():
 def leading_orders(B, variables):
     orders = []
     for b in B:
-        d = b.p[0].derivative
+        d = b.terms[0].derivative
         counts = dict(d.variable_count) if d.is_Derivative else {}
         f = d.expr if d.is_Derivative else d
         orders.append((f.func, tuple(counts.get(v, 0) for v in variables)))
@@ -554,7 +554,7 @@ def test_equation_zero_after_simplify():
         LHDP(
             sigma * Symbol("u") ** (sigma - 1) - sigma * Symbol("u") ** sigma / Symbol("u"),
             janet.context,
-        ).p
+        ).terms
         == []
     )
 
@@ -654,7 +654,7 @@ def test_minimal_reduced_janet_basis(name, variables, system, expected):
     ]
     assert _janet_completion(generators, len(variables)) == set(leading)
     for e in janet.S:
-        for term in e.p[1:]:
+        for term in e.terms[1:]:
             assert not any(
                 all(a >= b for a, b in zip(term.order, g.order, strict=True)) for g in janet.S
             ), (e, term)
