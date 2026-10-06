@@ -38,13 +38,6 @@ def profile_if_enabled[F: Callable[..., Any]](func: F) -> F:
 
 
 @profile_if_enabled
-def eq(d1: Any, d2: Any) -> bool:
-    if d1.__class__ != d2.__class__:
-        return False
-    return d1 == d2
-
-
-@profile_if_enabled
 def pairs_exclude_diagonal[T](it: Iterable[T]) -> Iterator[tuple[T, T]]:
     for x, y in itertools.product(it, repeat=2):
         if x != y:

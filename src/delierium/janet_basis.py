@@ -20,7 +20,6 @@ from sympy.polys.rings import sring
 from delierium.coefficients import ONE, Coeff, CoeffLike, fresh_field, primitive
 from delierium.helpers import (
     Derivative,
-    eq,
     is_derivative,
     is_function,
     ltf,
@@ -386,14 +385,14 @@ class LHDP:
     #    @cache
     def __lt__(self, other: "LHDP") -> bool:
         for _ in zip(self.p, other.p, strict=False):
-            if eq(_[0], _[1]):
+            if _[0] == _[1]:
                 continue
             return _[0] < _[1]
         return False
 
     @profile_if_enabled
     def __le__(self, other: "LHDP") -> bool:
-        return eq(self, other) or self < other
+        return self == other or self < other
 
     @profile_if_enabled
     def __eq__(self, other: object) -> bool:
