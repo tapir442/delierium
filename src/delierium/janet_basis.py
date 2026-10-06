@@ -903,9 +903,10 @@ def complete_system(S: Iterable[LHDP], context: Context) -> list[LHDP]:
 
 @profile_if_enabled
 def split_by_function(S: Iterable[LHDP], context: Context) -> Iterator[LHDP]:
+    """The integrability conditions of S, computed separately for the
+    elements of each leading function."""
     s = bucket(S, key=lambda d: d.leading_function())
-    murksi = [find_integrable_conditions(s[k], context) for k in s]
-    return flatten(murksi)
+    return flatten(find_integrable_conditions(s[k], context) for k in s)
 
 
 @profile_if_enabled
