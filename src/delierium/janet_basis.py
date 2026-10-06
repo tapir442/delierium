@@ -521,21 +521,33 @@ def _subtract_derivative(
         e2.context.divisors.append(lc)
         for t in remaining.values():
             t.coeff *= lc
-    for dterm in e2_terms:
-        subtrahend = dterm.coeff * factor
-        hit = remaining.get(dterm.comparison_vector)
-        if hit is None:
-            remaining[dterm.comparison_vector] = _Dterm(
-                coeff=-subtrahend, derivative=dterm.derivative, context=dterm.context
-            )
-        elif hit.coeff == subtrahend:
-            del remaining[dterm.comparison_vector]
-        else:
-            hit.coeff -= subtrahend
+    _subtract_terms(remaining, e2_terms, factor, e2.context)
     dterms = [t for t in remaining.values() if t.coeff]
     if not dterms:
         return None
     return LHDP(e=0, context=e2.context, dterms=dterms)
+
+
+def _subtract_terms(
+    remaining: dict[ComparisonVector, _Dterm],
+    dterms: Iterable[_Dterm],
+    factor: Coeff,
+    context: Context,
+) -> None:
+    """remaining -= factor * dterms, the terms keyed by comparison vector:
+    a term is added, its coefficient changed in place, or, if it cancels,
+    removed (so no term of remaining is 0 that was not before)."""
+    scaled = factor != ONE
+    for dterm in dterms:
+        subtrahend = dterm.coeff * factor if scaled else dterm.coeff
+        key = dterm.comparison_vector
+        hit = remaining.get(key)
+        if hit is None:
+            remaining[key] = _Dterm(coeff=-subtrahend, derivative=dterm.derivative, context=context)
+        elif hit.coeff == subtrahend:
+            del remaining[key]
+        else:
+            hit.coeff -= subtrahend
 
 
 @profile_if_enabled
@@ -991,15 +1003,9 @@ def _difference(d1: LHDP, d2: LHDP, context: Context) -> LHDP | None:
             t.coeff *= lc2
     else:
         lc1 = ONE
-    new_terms = []
-    terms_from_first = {t.comparison_vector: t for t in d1.terms}
-    for s in d2.terms:
-        coeff = s.coeff if lc1 == ONE else s.coeff * lc1
-        if s.comparison_vector in terms_from_first:
-            terms_from_first[s.comparison_vector].coeff -= coeff
-        else:
-            new_terms.append(_Dterm(coeff=-coeff, derivative=s.derivative, context=context))
-    dterms = [t for t in [*new_terms, *terms_from_first.values()] if t.coeff]
+    remaining = {t.comparison_vector: t for t in d1.terms}
+    _subtract_terms(remaining, d2.terms, lc1, context)
+    dterms = [t for t in remaining.values() if t.coeff]
     return LHDP(e=0, context=context, dterms=dterms) if dterms else None
 
 
@@ -1546,20 +1552,7 @@ def _reduce_with_cofactors(
         factor = t.coeff
         key = (variables, j)
         terms[key] = terms[key] + factor if key in terms else factor
-        for dterm in (b.diff(*variables) if variables else b).terms:
-            hit = remaining.get(dterm.comparison_vector)
-            subtrahend = dterm.coeff * factor
-            if hit is None:
-                remaining[dterm.comparison_vector] = _Dterm(
-                    coeff=-subtrahend, derivative=dterm.derivative, context=context
-                )
-            else:
-                hit = hit.copy()
-                hit.coeff -= subtrahend
-                if hit.coeff:
-                    remaining[dterm.comparison_vector] = hit
-                else:
-                    del remaining[dterm.comparison_vector]
+        _subtract_terms(remaining, (b.diff(*variables) if variables else b).terms, factor, context)
 
 
 def _leader_set(*leaders: str) -> frozenset[tuple[int, tuple[int, int]]]:
