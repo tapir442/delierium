@@ -43,8 +43,6 @@ __all__ = [
     "vec_multipliers",
 ]
 
-# Basic.free_symbols.cache_clear()
-
 # the orders of a derivative by each independent variable
 Order = list[int]
 # The comparison vector of a term: its derivative as a tuple of ints, the
@@ -316,7 +314,6 @@ class LHDP:
         return len(self.p) > 0
 
     @profile_if_enabled
-    #    @cache
     def __lt__(self, other: "LHDP") -> bool:
         for _ in zip(self.p, other.p, strict=False):
             if _[0] == _[1]:
@@ -1810,25 +1807,3 @@ if __name__ == "__main__":
     import doctest
 
     doctest.testmod()
-# -
-
-# https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt#overlay-context=contents
-
-########### Pommaret Division #############
-# def LeftPommaret(u,U,Vars):
-#    local N,Ind,i
-#    N=NULL
-#    Ind=indets(u):
-#    for i from 1 to nops(Vars) while not (Vars[i] in Ind):
-#        N = N,Vars[i]
-#    N = N,Vars[i]
-#    return N
-
-# def RightPommaret(u,U,Vars):
-#    local N,Ind,i
-#    N:=NULL
-#    Ind:=indets(u)
-#    for i from  nops(Vars) by -1 to 1 while not (Vars[i] in Ind):
-#        N:=N,Vars[i]
-#    N:=N,Vars[i]
-#    return N
