@@ -144,11 +144,6 @@ class _Dterm:
         )
 
     @profile_if_enabled
-    def is_coefficient(self) -> bool:
-        # XXX nonsense
-        return self.derivative == 1
-
-    @profile_if_enabled
     def __lt__(self, other: "_Dterm") -> bool:
         """
         >>> from sympy import *
