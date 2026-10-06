@@ -68,7 +68,7 @@ def compute_order(
     """Computes the monomial tuple from the derivative part."""
     if derivative.is_Derivative:
         return comp_order(derivative)
-    # XXX: Check can that be within a system of linear PDEs ?
+    # the unknown itself, e.g. the term w in w + 2 y z_x: order 0
     return [0] * len(independent)
 
 
@@ -138,10 +138,9 @@ class _Dterm:
         >>> print(dterm1 < dterm2)
         True
         """
-        # XXX context.gt still a bad place
-        return not self == other and self.context.gt(
-            other.comparison_vector, self.comparison_vector
-        )
+        # terms of the same derivative are not ordered: gt of equal
+        # comparison vectors is False, the coefficients need no comparison
+        return self.context.gt(other.comparison_vector, self.comparison_vector)
 
     @profile_if_enabled
     def __eq__(self, other: object) -> bool:
@@ -1116,8 +1115,8 @@ class JanetBasis:
     ) -> None:
         self.context = context = Context(dependent, independent, sort_order)
         context.fraction_free = fraction_free
-        # XXX bad criterion
-        equations = list(S) if isinstance(S, Iterable) else [S]
+        # one equation, or several (list, tuple, sympy Tuple, Matrix)
+        equations = [S] if isinstance(S, Expr) else list(S)
         # equations that vanish after simplify() give empty LHDPs (#38)
         nonzero = [e for e in (LHDP(s, context, dterms=[]) for s in equations) if e.p]
         self.S = reorder(nonzero, context, ascending=True)

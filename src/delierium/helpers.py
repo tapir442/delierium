@@ -246,25 +246,3 @@ def lie_derivative_printer(  # pylint: disable=keyword-arg-before-vararg,unused-
         for e in forms:
             print(e)
     return None
-
-
-# ToDo (from AllTypes.de
-# CommutatorTable
-# DterminingSystem
-# Free Resolution
-# Gcd
-# Groebner Basis
-# In?
-# Intersection
-# JanetBasis
-# Lcm
-# LöwDecomposioipn
-# Primary Decomposition
-# Product
-# Qutiont
-# Radical
-# Random
-# Saturation
-# Sum
-# Symmetric Power
-# # Syzygys
