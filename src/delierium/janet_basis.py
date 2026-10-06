@@ -866,9 +866,9 @@ def minimize(S: list[LHDP], context: Context) -> tuple[list[LHDP], list[LHDP]]:
         if e not in kept:
             dropped.append(reduced := _reduce_by_system(e, kept, context))
             if reduced:
-                # not a minimal basis after all; the assumptions of these
-                # trial reductions are kept as before (#31: to be revisited)
-                return S, dropped
+                # not a minimal basis after all: S stays, and does not depend
+                # on these trial reductions
+                return S, []
     if context.fraction_free:
         return reorder(kept, context, ascending=True), dropped
     reduced_tails = [_reduce_tail(e, kept, context) for e in kept]
