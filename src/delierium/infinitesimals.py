@@ -8,11 +8,12 @@ via prolongation of the vector field and extraction of coefficients.
 from collections import OrderedDict
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from functools import reduce
-from itertools import combinations_with_replacement, permutations, product
+from itertools import combinations, combinations_with_replacement, permutations, product
 from typing import Any, cast
 
 from sympy import (  # noqa: F401
     Abs,
+    Add,
     Basic,
     Derivative,
     Dummy,
@@ -333,6 +334,49 @@ def prolongation(
     return finish_substitution(acc)
 
 
+def jet_power_conditions(expr: Expr, dep: Sequence[Expr]) -> list[list[Expr]]:
+    """The conditions on the parameters under which two monomials of expr in
+    the jet variables coincide: split_jet_coefficients takes them as
+    different (a symbolic exponent is generic), so where they coincide there
+    may be fewer determining equations and more symmetries (#16).
+
+    Each condition is a list of expressions that vanish together: the
+    differences of the exponents of two monomials, as long as none of them
+    is a nonzero number (then the monomials never coincide).
+
+    >>> from sympy import Function, symbols
+    >>> x, p, q = symbols("x p q")
+    >>> y = Function("y")(x)
+    >>> u1, u2 = y.diff(x), y.diff(x, 2)
+    >>> e = u1 ** (p - 1) * u2 + u1**2 * u2 + u1 ** (q + 1) * u2 + u1 ** (q + 1)
+    >>> jet_power_conditions(e, [y])  # u1**(q + 1) alone differs by u2
+    [[p - 3], [q - 1], [-p + q + 2]]
+    """
+    jet = {d: Dummy() for d in expr.atoms(Derivative) if d.expr in dep}
+    if not jet:
+        return []
+    jets = list(jet.values())
+    numerator = numer(together(expr.xreplace(jet))).expand()
+    vectors = []
+    for term in Add.make_args(numerator):
+        powers = term.as_powers_dict()
+        vector = tuple(powers.get(v, 0) for v in jets)
+        if vector not in vectors:
+            vectors.append(vector)
+    conditions: list[list[Expr]] = []
+    for v1, v2 in combinations(vectors, 2):
+        differences = [numer(together(a - b)) for a, b in zip(v1, v2, strict=True)]
+        if any(d.is_number and d != 0 for d in differences):
+            continue
+        condition = sorted(
+            {-d if d.could_extract_minus_sign() else d for d in differences if d != 0},
+            key=default_sort_key,
+        )
+        if condition and condition not in conditions:
+            conditions.append(condition)
+    return sorted(conditions, key=default_sort_key)
+
+
 def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     """Split expr into determining equations: the coefficients of expr
     as a polynomial in the jet variables, i.e. in all derivatives of the
@@ -459,7 +503,7 @@ def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dumm
     # of one another in one group
     groups: list[tuple[Expr, Expr, list[Expr]]] = []  # (base, reference part, members)
     for p in pows:
-        _, s = p.exp.as_coeff_Add()
+        _, s = p.exp.expand().as_coeff_Add()
         for base, s0, members in groups:
             if base == p.base and cancel(s / s0).is_Rational:
                 members.append(p)
@@ -470,14 +514,14 @@ def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dumm
     gens = []
     for base, s0, members in groups:
         # the unit s0/L makes every symbolic part an integer multiple of it
-        ratios = [cancel(p.exp.as_coeff_Add()[1] / s0) for p in members]
+        ratios = [cancel(p.exp.expand().as_coeff_Add()[1] / s0) for p in members]
         unit = s0 / reduce(ilcm, (r.q for r in ratios), 1)
         if unit.could_extract_minus_sign():  # G = b**(n/2), not b**(-n/2)
             unit = -unit
         gen = Dummy()
         gens.append(gen)
         for p in members:
-            n, s = p.exp.as_coeff_Add()
+            n, s = p.exp.expand().as_coeff_Add()
             repl[p] = gen ** cancel(s / unit) * base**n
     return expr.xreplace(repl), gens
 
@@ -812,6 +856,57 @@ def _algebraic_in_highest_derivative(
         return None
 
 
+def determining_condition(
+    eq: Expr,
+    dep: Variables,
+    indep: Variables,
+    infinitesimals: InfinitesimalNames = None,
+) -> Expr:
+    """The symmetry condition of eq (its prolongation on eq = 0) as an
+    expression in the jet variables; split_jet_coefficients splits it into
+    the determining equations (compute_overdetermined_system_of_infinitesimals).
+
+    infinitesimals : dict{Function/Symbol : new name}
+    """
+    dep = convert_to_iterable(dep)
+    indep = convert_to_iterable(indep)
+    eq = _local_signs(_exact_numbers(_canonical_derivatives_of(eq, dep)))
+
+    infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
+    _, highest_terms = order(eq, dep, indep)
+    highest_term = _leading_derivative(eq, highest_terms, dep)
+
+    r = prolongation(eq, infinitesimals, dep, indep)
+    h = Dummy()
+    eq_h = numer(together(eq.xreplace({highest_term: h})))
+    try:
+        degree = Poly(eq_h, h).degree()
+    except PolynomialError:
+        algebraic = _algebraic_in_highest_derivative(eq_h, r, highest_term, h)
+        if algebraic is not None:
+            return algebraic
+        # not polynomial in the highest derivative, e.g. u_t = atan(u_xx):
+        # solve for it if the solution is unique (u_xx = tan(u_t)) (#5)
+        sols = solve(eq, highest_term)
+        if len(sols) != 1:
+            raise NotImplementedError(
+                f"{eq} is not polynomial in its highest derivative {highest_term} "
+                f"and cannot be solved uniquely for it (#5)"
+            ) from None
+        return r.xreplace({highest_term: sols[0]})
+    if degree == 1:
+        sol = solve(eq, highest_term)[0]
+        r = r.xreplace({highest_term: sol})
+    else:
+        # eq is not linear in its highest derivative: solving for it would
+        # bring in roots of jet variables. pr X(eq) has to vanish on eq = 0,
+        # i.e. (eq being irreducible) eq has to divide it as a polynomial in
+        # the highest derivative, so its pseudo-remainder has to vanish
+        r_h = numer(together(r.xreplace({highest_term: h})))
+        r = prem(r_h, eq_h, h).xreplace({h: highest_term})
+    return r
+
+
 def compute_overdetermined_system_of_infinitesimals(
     eq: Expr,
     dep: Variables,
@@ -833,43 +928,8 @@ def compute_overdetermined_system_of_infinitesimals(
     D(X(y(x), x), y(x))
     D(Y(y(x), x), x)
     """
-    dep = convert_to_iterable(dep)
-    indep = convert_to_iterable(indep)
-    eq = _local_signs(_exact_numbers(_canonical_derivatives_of(eq, dep)))
-
-    infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
-    _, highest_terms = order(eq, dep, indep)
-    highest_term = _leading_derivative(eq, highest_terms, dep)
-
-    r = prolongation(eq, infinitesimals, dep, indep)
-    h = Dummy()
-    eq_h = numer(together(eq.xreplace({highest_term: h})))
-    try:
-        degree = Poly(eq_h, h).degree()
-    except PolynomialError:
-        algebraic = _algebraic_in_highest_derivative(eq_h, r, highest_term, h)
-        if algebraic is not None:
-            return split_jet_coefficients(algebraic, dep)
-        # not polynomial in the highest derivative, e.g. u_t = atan(u_xx):
-        # solve for it if the solution is unique (u_xx = tan(u_t)) (#5)
-        sols = solve(eq, highest_term)
-        if len(sols) != 1:
-            raise NotImplementedError(
-                f"{eq} is not polynomial in its highest derivative {highest_term} "
-                f"and cannot be solved uniquely for it (#5)"
-            ) from None
-        return split_jet_coefficients(r.xreplace({highest_term: sols[0]}), dep)
-    if degree == 1:
-        sol = solve(eq, highest_term)[0]
-        r = r.xreplace({highest_term: sol})
-    else:
-        # eq is not linear in its highest derivative: solving for it would
-        # bring in roots of jet variables. pr X(eq) has to vanish on eq = 0,
-        # i.e. (eq being irreducible) eq has to divide it as a polynomial in
-        # the highest derivative, so its pseudo-remainder has to vanish
-        r_h = numer(together(r.xreplace({highest_term: h})))
-        r = prem(r_h, eq_h, h).xreplace({h: highest_term})
-    return split_jet_coefficients(r, dep)
+    condition = determining_condition(eq, dep, indep, infinitesimals)
+    return split_jet_coefficients(condition, convert_to_iterable(dep))
 
 
 def overdetermined_system_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument
