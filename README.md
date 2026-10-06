@@ -29,8 +29,40 @@ part of this release.
 
 # Release notes
 
-### Not released yet
+### 2.0.0
 
+Incompatible changes (of the public interface; the major version follows them):
+
+* `LHDP.p`, the list of an equation's terms, is now `LHDP.terms`; the unused methods
+  `LHDP.terms()`, `derivatives()`, `coefficients()`, `atoms()`, `xreplace()` and `__le__`
+  are gone.
+* `frechet_derivative` and `adjoint_frechet_derivative` take `dependent`, `independent` and
+  `test_functions` instead of `dependVar`, `independVar` and `testfunction`.
+  `frechet_derivative` gives one column per unknown also when there are more or fewer
+  equations than unknowns.
+* `Context.divisors` is gone: every `LHDP` carries its own `assumptions` (see below).
+* `delierium.janet_basis.find_integrable_conditions` is no longer exported (it is
+  `_integrability_conditions_of_function`); `matrix_order.insert_row` is gone.
+
+New:
+
+* **Group classification** (#16, the linear first stage of the Thomas decomposition #58):
+  `group_classification(eq, u, [x, t])` splits the Lie point symmetries of a scalar
+  differential equation with parameters into disjoint cases, each with its Janet basis and
+  rank, instead of assuming the parameter conditions nonzero; `classify` does the same for
+  a linear system with parameters. Each case is computed from the equation itself; the
+  cases branch on the parameter conditions of the Janet basis, on the initial of the
+  equation and on the parameter values where two powers of jet variables coincide.
+  Conditions are solved as in an algebraic Thomas decomposition (`a*b = 0`: `b = 0`, or
+  `a = 0` with `b != 0`). Checked against the classical results: `u_t = (u**sigma u_x)_x`
+  (4 symmetries, 5 for `sigma = -4/3`), with a source `a u**n` (3; 4 for `n = 1`; 5 for
+  `sigma = -4/3` with `n = 1` or `n = -1/3`), and `u_t = (u_x**n)_x`, where `n = -1`
+  (linearizable) has infinitely many.
+* `LHDP.assumptions`: the factors an equation's derivation assumed nonzero (#31);
+  `JanetBasis.assumed_nonzero()` collects them explicitly instead of through a side
+  channel, with the same results.
+* `JanetBasis.order` is an alias of `rank` (Schwarz's name); a `Matrix` of equations is
+  taken as several equations, not as one.
 * `LieAlgebra`: the Lie algebra spanned by given generators (vector fields on the
   independent and dependent variables), with structure constants, commutator table,
   derived and lower central series, solvability, nilpotency, center and Killing form;
@@ -52,6 +84,21 @@ part of this release.
   order: the variable order of its polynomial ring, and with it the time of a Janet basis,
   depended on the hash seed (PINNacle Heat2D_LongTime: 7 s to 450 s, now 7 s). The results
   are the same; the slow test suite takes 106 s instead of 217 s.
+
+Fixed:
+
+* Wrong determining equations when an exponent has a parameter in a denominator
+  (`u_x**(p - 1)` with `p = 6 - 8/q`): powers of one jet variable were split as independent,
+  giving too many equations and too small a rank (#69).
+* Trigonometric identities in the coefficients (#61): the Janet basis divided by
+  `2 sin(x) cos(x) - sin(2 x)`, which is zero. `tan`, `cot`, `sec`, `csc` (and the hyperbolic
+  ones) are written in `sin` and `cos`, multiples of an argument in one base, and the zero
+  test reduces modulo `cos**2 + sin**2 - 1`.
+* A term with two unknowns (`f*g`) in a linear equation raises `ValueError` instead of
+  losing one of them silently.
+* Code cleanup: dead code removed, internal helpers replaced by SymPy's own, clearer names;
+  the hashes of terms and equations no longer depend on how they print (they could
+  disagree with `==` since #61, and the order of results varied between runs).
 
 ### 1.1.1
 
