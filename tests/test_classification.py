@@ -4,9 +4,15 @@ import itertools
 import random
 
 import pytest
-from sympy import Function, Rational, Symbol, diff, symbols
+from sympy import Function, Rational, Symbol, diff, oo, symbols
 
-from delierium.classification import Case, _inequations, _solutions, classify
+from delierium.classification import (
+    Case,
+    _inequations,
+    _solutions,
+    classify,
+    group_classification,
+)
 from delierium.infinitesimals import create_infinitesimals
 
 from .symmetry_catalog import CATALOG
@@ -93,4 +99,59 @@ def test_classify_anco():
             for s in (c, kappa, p, q)
         }
         point[Symbol("a")] = Rational(5, 3)
+        assert sum(holds(case, point) for case in cases) == 1, point
+
+
+def test_group_classification_porous_medium():
+    """u_t = (u**sigma u_x)_x (Ovsiannikov): 4 symmetries in general, the
+    heat equation for sigma = 0, a projective one more for sigma = -4/3."""
+    x, t, sigma = symbols("x t sigma")
+    u = Function("u")(x, t)
+    cases = group_classification(diff(u, t) - diff(u**sigma * diff(u, x), x), u, [x, t])
+    assert [str(c) for c in cases] == [
+        "generic (sigma != 0; 3*sigma + 4 != 0): rank 4",
+        "sigma = 0: rank oo",
+        "sigma = -4/3: rank 5",
+    ]
+    assert_partition(cases, [sigma], [0, Rational(-4, 3), 1, Rational(2, 3)])
+
+
+@pytest.mark.slow
+def test_group_classification_with_source():
+    """u_t = (u**sigma u_x)_x + a u**n (Dorodnitsyn): 3 symmetries in general,
+    4 for n = 1, 5 for sigma = -4/3 with n = 1 or n = -1/3."""
+    x, t, sigma, a, n = symbols("x t sigma a n")
+    u = Function("u")(x, t)
+    eq = diff(u, t) - diff(u**sigma * diff(u, x), x) - a * u**n
+    cases = group_classification(eq, u, [x, t])
+    ranks = {str(c).split(" (")[0].split(":")[0]: c.rank() for c in cases}
+    assert ranks["generic"] == 3
+    assert ranks["n = 1"] == 4
+    assert ranks["n = 1, sigma = -4/3"] == 5
+    assert ranks["sigma = -4/3, n = -1/3"] == 5
+    assert ranks["a = 0, sigma = -4/3"] == 5
+    assert_partition(cases, [sigma, a, n], [0, 1, Rational(-4, 3), Rational(-1, 3), 2])
+
+
+@pytest.mark.slow
+def test_group_classification_anco():
+    """Computed from the equation itself, kappa = 0 (no x derivatives left)
+    has infinitely many symmetries; the determining equations of the generic
+    case, derived by solving for u_xx, do not show that."""
+    x, t, a, c, kappa, p, q = symbols("x t a c kappa p q")
+    u = Function("u")(x, t)
+    eq = diff(u, t) + kappa * p * diff(u, x) ** (p - 1) * diff(u, x, 2) - c * (a + u) ** q
+    cases = group_classification(eq, u, [x, t])
+    ranks = {str(case).split(" (")[0].split(":")[0]: case.rank() for case in cases}
+    assert ranks["generic"] == 3
+    assert ranks["kappa = 0"] == oo
+    assert ranks["c = 0"] == 5
+    assert ranks["p = 2, q = 2"] == 4
+    rng = random.Random(2)
+    for _ in range(200):
+        point = {
+            s: rng.choice([0, 1, -1, 2, Rational(rng.randint(3, 20), rng.randint(2, 9))])
+            for s in (c, kappa, p, q)
+        }
+        point[a] = Rational(5, 3)
         assert sum(holds(case, point) for case in cases) == 1, point

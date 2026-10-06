@@ -9,17 +9,49 @@ generic case, where none holds, and for each condition the case where it
 holds (and the earlier ones do not), computed again with the condition
 substituted, recursively. A special case whose Janet basis is that of the
 generic case is merged into it.
+
+group_classification does the same for the Lie point symmetries of a scalar
+differential equation, computing each case from the equation itself: there
+are also cases where two powers of jet variables with symbolic exponents
+coincide, which the determining equations of the generic case do not show
+(infinitesimals.jet_power_conditions).
 """
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
-from sympy import Basic, Expr, I, Poly, default_sort_key, nan, numer, solve, together, zoo
+from sympy import (
+    Basic,
+    Derivative,
+    Dummy,
+    Expr,
+    I,
+    Poly,
+    PolynomialError,
+    default_sort_key,
+    nan,
+    numer,
+    solve,
+    together,
+    zoo,
+)
 
-from delierium.janet_basis import LHDP, JanetBasis
+from delierium.helpers import finish_substitution
+from delierium.infinitesimals import (
+    _leading_derivative,
+    create_infinitesimals,
+    determining_condition,
+    jet_power_conditions,
+    order,
+    split_jet_coefficients,
+)
+from delierium.janet_basis import LHDP, JanetBasis, nonzero_factors, split_assumptions
 from delierium.matrix_order import Mgrevlex, WeightFunction
 
-__all__ = ["Case", "classify"]
+__all__ = ["Case", "classify", "group_classification"]
+
+# rule -> (Janet basis there, the conditions to branch on)
+_Builder = Callable[[dict[Basic, Expr]], tuple[JanetBasis, list[list[Expr]]]]
 
 
 @dataclass
@@ -67,25 +99,103 @@ def classify(
     """
     equations = [S] if isinstance(S, Expr) else list(S)
     dependent, independent = list(dependent), list(independent)
-    return _classify(equations, dependent, independent, sort_order, {}, [], max_depth)
+
+    def build(rule: dict[Basic, Expr]) -> tuple[JanetBasis, list[list[Expr]]]:
+        system = [e.subs(rule) for e in equations]
+        janet = JanetBasis(system, dependent, independent, sort_order)
+        return janet, janet.parameter_conditions()
+
+    return _classify(build, {}, [], max_depth)
+
+
+def group_classification(
+    eq: Expr,
+    dependent: Basic,
+    independent: Iterable[Basic],
+    sort_order: WeightFunction = Mgrevlex,
+    max_depth: int = 4,
+) -> list[Case]:
+    """The cases of the Lie point symmetries of the scalar differential
+    equation eq = 0 (one dependent variable, e.g. u(x, t)) with respect to
+    its parameters, the generic case first; Case.rank() is the dimension of
+    the symmetry algebra. Each case is computed from eq with the parameter
+    values substituted.
+
+    >>> from sympy import Function, diff, symbols
+    >>> x, t, n = symbols("x t n")
+    >>> u = Function("u")(x, t)
+    >>> for case in group_classification(diff(u, t) - diff(diff(u, x) ** n, x), u, [x, t]):
+    ...     print(case)
+    generic (n != 0; n - 1 != 0; n + 1 != 0): rank 5
+    n = 0: rank oo
+    n = 1: rank oo
+    n = -1: rank oo
+
+    (n = -1 is linearizable by a hodograph transformation.)
+    """
+    independent = list(independent)
+    infinitesimals = create_infinitesimals([dependent], independent)
+    plain = {dependent: sp_symbol(dependent)}
+    functions = [infinitesimals[v].xreplace(plain) for v in [*independent, dependent]]
+    variables = [*independent, plain[dependent]]
+
+    def build(rule: dict[Basic, Expr]) -> tuple[JanetBasis, list[list[Expr]]]:
+        special = eq.subs(rule)
+        condition = determining_condition(special, [dependent], independent, infinitesimals)
+        system = [
+            finish_substitution(e).xreplace(plain)
+            for e in split_jet_coefficients(condition, [dependent])
+        ]
+        janet = JanetBasis(system, functions, variables, sort_order)
+        conditions = _initial_conditions(special, dependent, independent)
+        for c in [*janet.parameter_conditions(), *jet_power_conditions(condition, [dependent])]:
+            if c not in conditions and not any(e.has(*variables) for e in c):
+                conditions.append(c)
+        return janet, conditions
+
+    return _classify(build, {}, [], max_depth)
+
+
+def _initial_conditions(eq: Expr, dependent: Basic, independent: list[Basic]) -> list[list[Expr]]:
+    """The parameter conditions of the initial of eq, the coefficient of its
+    highest derivative: deriving the determining equations divides by it
+    (solving for the highest derivative), so where it vanishes the equation
+    is a different one."""
+    _, highest = order(eq, [dependent], independent)
+    if not highest:
+        return []
+    leader = _leading_derivative(eq, highest, [dependent])
+    h = Dummy()
+    try:
+        initial = Poly(numer(together(eq.xreplace({leader: h}))), h).LC()
+    except PolynomialError:
+        return []
+    # the jet variables and the dependent variable are variables as well
+    variables = {d: Dummy() for d in initial.atoms(Derivative)} | {dependent: Dummy()}
+    initial = initial.xreplace(variables)
+    return split_assumptions(nonzero_factors([initial]), [*independent, *variables.values()])[0]
+
+
+def sp_symbol(f: Basic) -> Basic:
+    """The plain symbol for the dependent variable f, e.g. u for u(x, t)."""
+    from sympy import Symbol  # pylint: disable=import-outside-toplevel
+
+    return Symbol(f.func.__name__)
 
 
 def _classify(
-    equations: list[Basic],
-    dependent: list[Basic],
-    independent: list[Basic],
-    sort_order: WeightFunction,
+    build: _Builder,
     rule: dict[Basic, Expr],
     inequations: list[list[Expr]],
     depth: int,
 ) -> list[Case]:
-    janet = JanetBasis(equations, dependent, independent, sort_order)
+    janet, conditions = build(rule)
     generic = Case(rule, list(inequations), janet)
     if depth == 0:
         return [generic]
     special: list[Case] = []
     excluded: list[list[Expr]] = []  # conditions handled before: they do not hold
-    for condition in janet.parameter_conditions():
+    for condition in conditions:
         for solution, initials in _solutions(condition):
             outer = _inequations(
                 [[e.subs(solution) for e in ineq] for ineq in [*inequations, *excluded]]
@@ -94,10 +204,7 @@ def _classify(
             if outer is None:
                 continue  # contradicts a condition that does not hold here
             cases = _classify(
-                [e.subs(solution) for e in equations],
-                dependent,
-                independent,
-                sort_order,
+                build,
                 {**{k: v.subs(solution) for k, v in rule.items()}, **solution},
                 outer,
                 depth - 1,
@@ -122,8 +229,9 @@ def _inequations(inequations: list[list[Expr]]) -> list[list[Expr]] | None:
             return None
         if any(e.is_number for e in nonzero):
             continue  # a nonzero number: holds everywhere
+        primitive = [e.as_content_primitive()[1] for e in nonzero]  # 2*a: a
         normalized = sorted(
-            {-e if e.could_extract_minus_sign() else e for e in nonzero}, key=default_sort_key
+            {-e if e.could_extract_minus_sign() else e for e in primitive}, key=default_sort_key
         )
         if normalized not in result:
             result.append(normalized)
@@ -151,7 +259,7 @@ def _solutions(condition: Sequence[Expr]) -> list[tuple[dict[Basic, Expr], list[
         # initial = 0: the equation without its leading term
         results += _solutions([initial, f - initial * leader ** poly.degree(), *rest])
     try:
-        roots = solve(f, leader)
+        roots: list[Expr] = list(solve(f, leader))
     except NotImplementedError:
         roots = []
     for root in roots:

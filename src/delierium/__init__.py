@@ -10,7 +10,8 @@ The public interface is what this package exports (``from delierium import
   is_janet_basis_of, is_janet_basis_of_ode, is_janet_basis_of_odes,
   integrability_conditions, JanetType, and the result types LHDP, LHDPList
 * group classification: classify (cases of a linear system with parameters,
-  each with its Janet basis), Case
+  each with its Janet basis), group_classification (cases of the symmetries
+  of a differential equation with parameters), Case
 * rankings: Context, Mgrevlex, Mgrlex, Mlex
 * printing in the notation of Lie: ltf, lie_form, lie_derivative_printer
 * Lie algebras of generators: LieAlgebra (structure constants, commutator
@@ -32,7 +33,7 @@ metadata; the only place it is written is ``pyproject.toml``.
 
 from importlib.metadata import version as _version
 
-from .classification import Case, classify
+from .classification import Case, classify, group_classification
 from .derivative_operators import (
     adjoint_frechet_derivative,
     euler_operator,
@@ -83,6 +84,7 @@ __all__ = [
     "create_infinitesimals",
     "euler_operator",
     "frechet_derivative",
+    "group_classification",
     "integrability_conditions",
     "is_janet_basis_of",
     "is_janet_basis_of_ode",
