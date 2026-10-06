@@ -240,7 +240,7 @@ class LHDP:
         self.multipliers: list[int] = []
         self.nonmultipliers: list[int] = []
         if dterms:
-            self.p = [_.copy() for _ in dterms]
+            self.p = [t.copy() for t in dterms]
         else:
             # e is only a placeholder (0) when the terms come as dterms
             if isinstance(e, int):
@@ -248,7 +248,7 @@ class LHDP:
             self._init(_simplify_coefficients(e).expand())
         # coefficients are in canonical form (coefficients.Coeff), so a
         # vanishing one is recognized
-        self.p = [_ for _ in self.p if _.coeff.canonical()]
+        self.p = [t for t in self.p if t.coeff.canonical()]
 
         self.p.sort(reverse=True)
         if context.defer_normalize:
@@ -270,7 +270,7 @@ class LHDP:
         self.p = [_Dterm(derivative=d, coeff=c, context=self.context) for d, c in dterms.items()]
 
     def expression(self) -> Expr:
-        return sum(_.expression() for _ in self.p)
+        return sum(t.expression() for t in self.p)
 
     def leading_derivative(self) -> Expr:
         return self.p[0].derivative
@@ -284,13 +284,13 @@ class LHDP:
         self.p[0].coeff = ONE
         if coeff != ONE:
             self.context.divisors.append(coeff)
-            for _ in self.p[1:]:
-                _.coeff = (_.coeff / coeff).canonical()
+            for t in self.p[1:]:
+                t.coeff = (t.coeff / coeff).canonical()
 
     @profile_if_enabled
     def normalize(self) -> None:
         if self.p:
-            scaled = primitive([_.coeff for _ in self.p]) if self.context.fraction_free else None
+            scaled = primitive([t.coeff for t in self.p]) if self.context.fraction_free else None
             if scaled is not None:
                 # the equation is divided by what makes its coefficients
                 # coprime; like the leading coefficient in make_monic, that
@@ -334,7 +334,7 @@ class LHDP:
         if not rich:
             return str(self)
         res = ""
-        show_output([_.show() for _ in self.p])
+        show_output([t.show() for t in self.p])
         if self.multipliers or self.nonmultipliers:
             res += f"[{self.multipliers}], [{self.nonmultipliers}]"
         return res
@@ -343,20 +343,19 @@ class LHDP:
     def diff(self, *args: Basic) -> "LHDP":
         new_dterms: dict[ComparisonVector, _Dterm] = {}
         for dterm in self.p:
-            _dterms = dterm.diff(*args)
-            for new_dterm in _dterms:
+            for new_dterm in dterm.diff(*args):
                 if new_dterm.comparison_vector in new_dterms:
                     new_dterms[new_dterm.comparison_vector].coeff += new_dterm.coeff
                 else:
                     new_dterms[new_dterm.comparison_vector] = new_dterm
         return self.__class__(
-            e=0, dterms=[_ for _ in new_dterms.values() if _.coeff], context=self.context
+            e=0, dterms=[t for t in new_dterms.values() if t.coeff], context=self.context
         )
 
     def __str__(self) -> str:
-        m = [self.context.independent[_] for _ in self.multipliers]
-        n = [self.context.independent[_] for _ in self.nonmultipliers]
-        result = " + ".join([str(_) for _ in self.p])
+        m = [self.context.independent[i] for i in self.multipliers]
+        n = [self.context.independent[i] for i in self.nonmultipliers]
+        result = " + ".join([str(t) for t in self.p])
         if m or n:
             result += f", {m}, {n}"
         return result
@@ -367,7 +366,7 @@ class LHDP:
     def __hash__(self) -> int:
         # the derivatives of the terms, see _Dterm.__hash__; not cached, the
         # coefficients change in place
-        return hash(tuple(_.comparison_vector for _ in self.p))
+        return hash(tuple(t.comparison_vector for t in self.p))
 
 
 @profile_if_enabled
@@ -512,7 +511,7 @@ def _subtract_derivative(
     # without the copy would be e1's own, changing e1 behind the caller's back.
     # Differentiating e2 may give several terms with the same derivative
     # (product rule), so they must be added up, not kept side by side
-    remaining = OrderedDict((_.comparison_vector, _.copy()) for _ in e1.p)
+    remaining = OrderedDict((t.comparison_vector, t.copy()) for t in e1.p)
     lc = e2.p[0].coeff
     if lc != ONE:
         # e1 is multiplied by lc: the result is equivalent where lc != 0
@@ -530,7 +529,7 @@ def _subtract_derivative(
             del remaining[dterm.comparison_vector]
         else:
             hit.coeff -= subtrahend
-    dterms = [_ for _ in remaining.values() if _.coeff]
+    dterms = [t for t in remaining.values() if t.coeff]
     if not dterms:
         return None
     return LHDP(e=0, context=e2.context, dterms=dterms)
@@ -560,21 +559,21 @@ def _reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
 def autoreduce(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     dps = list(S)
     i = 0
-    _p, r = dps[: i + 1], dps[i + 1 :]
+    head, r = dps[: i + 1], dps[i + 1 :]
     while r:
         newdps = []
         have_reduced = False
-        for _r in r:
-            rnew = reduce_by_system(_r, _p, context)
-            have_reduced = have_reduced or _r != rnew
+        for e in r:
+            rnew = reduce_by_system(e, head, context)
+            have_reduced = have_reduced or e != rnew
             if rnew:
                 newdps.append(rnew)
-        dps = reorder(_p + [_ for _ in newdps if _ not in _p], context, ascending=True)
+        dps = reorder(head + [e for e in newdps if e not in head], context, ascending=True)
         if not have_reduced:
             i += 1
         else:
             i = 0
-        _p, r = dps[: i + 1], dps[i + 1 :]
+        head, r = dps[: i + 1], dps[i + 1 :]
     return dps
 
 
@@ -924,9 +923,9 @@ def _integrability_pairs(
 
     # reverse order as in context the highest independent is first,
     # but for multiplier computation it is last
-    monomials = [(_, list(_.order)) for _ in result]
+    monomials = [(dp, list(dp.order)) for dp in result]
 
-    ms = tuple(_[1] for _ in monomials)
+    ms = tuple(monom for _, monom in monomials)
 
     def map_old_to_new(i: int) -> Basic:
         return context.independent[i]
@@ -935,13 +934,13 @@ def _integrability_pairs(
     multiplier_collection = []
     for dp, monom in monomials:
         # S1
-        _multipliers, _nonmultipliers = vec_multipliers(monom, ms, indices)
+        multipliers, nonmultipliers = vec_multipliers(monom, ms, indices)
         multiplier_collection.append(
             coll(
                 monom,
                 dp,
-                [map_old_to_new(_) for _ in _multipliers],
-                [map_old_to_new(_) for _ in _nonmultipliers],
+                [map_old_to_new(i) for i in multipliers],
+                [map_old_to_new(i) for i in nonmultipliers],
             )
         )
 
@@ -983,20 +982,20 @@ def _difference(d1: LHDP, d2: LHDP, context: Context) -> LHDP | None:
     cancel; None if it vanishes. d1's terms are modified."""
     lc1, lc2 = d1.p[0].coeff, d2.p[0].coeff
     if lc1 != lc2:
-        context.divisors.extend(_ for _ in (lc1, lc2) if _ != ONE)
+        context.divisors.extend(lc for lc in (lc1, lc2) if lc != ONE)
         for t in d1.p:
             t.coeff *= lc2
     else:
         lc1 = ONE
     new_terms = []
-    terms_from_first = {_.comparison_vector: _ for _ in d1.p}
+    terms_from_first = {t.comparison_vector: t for t in d1.p}
     for s in d2.p:
         coeff = s.coeff if lc1 == ONE else s.coeff * lc1
         if s.comparison_vector in terms_from_first:
             terms_from_first[s.comparison_vector].coeff -= coeff
         else:
             new_terms.append(_Dterm(coeff=-coeff, derivative=s.derivative, context=context))
-    dterms = [_ for _ in [*new_terms, *terms_from_first.values()] if _.coeff]
+    dterms = [t for t in [*new_terms, *terms_from_first.values()] if t.coeff]
     return LHDP(e=0, context=context, dterms=dterms) if dterms else None
 
 
@@ -1302,8 +1301,8 @@ class JanetBasis:
         """Print the Janet basis with leading derivative first."""
         if heading:
             print(heading)
-        for _ in self.S:
-            _.show()
+        for e in self.S:
+            e.show()
 
     def rank(self) -> Any:
         """The rank of the Janet basis: the dimension of the solution space

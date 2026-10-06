@@ -90,9 +90,9 @@ def Mgrevlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # n
     second_row = Matrix(1, cols, [0] * no_vars + list(range(no_funcs, 0, -1)))
     l = l.row_insert(cols, second_row)
     for idx in range(no_vars):
-        _v = Matrix(1, cols, [0] * cols)
-        _v[no_vars - idx - 1] = -1
-        l = l.row_insert(2 + idx, _v)
+        row = Matrix(1, cols, [0] * cols)
+        row[no_vars - idx - 1] = -1
+        l = l.row_insert(2 + idx, row)
     return l
 
 
