@@ -6,13 +6,11 @@ import functools
 from collections import OrderedDict, namedtuple
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from itertools import permutations, product
-from operator import mul
 from typing import Any
 
 import sympy as sp
 from more_itertools import bucket, flatten
-from sympy import Add, Basic, Dummy, Expr, Mul, Symbol, default_sort_key, numer, oo, together
-from sympy.core.function import AppliedUndef
+from sympy import Add, Basic, Dummy, Expr, Mul, default_sort_key, numer, oo, together
 from sympy.functions.elementary.exponential import ExpBase
 from sympy.polys.polyerrors import CoercionFailed, PolynomialError
 from sympy.polys.rings import sring
@@ -275,25 +273,12 @@ class LHDP:
             # an equation that vanishes only after simplify() (#38): no terms
             self.p = []
             return
-        if isinstance(e, (Symbol, Derivative, Mul, AppliedUndef)):
-            operands = [e]
-        elif isinstance(e, Symbol):
-            raise ValueError(f"{e} is no term in a LHDP")
-        else:
-            assert isinstance(e, Add)
-            operands = e.args
-        r = [analyze_term(self.context, o) for o in operands]
-        dterms: dict[str, list[tuple[Expr, Expr]]] = {}
-        for _r in r:
-            assert _r is not None
-            dterms.setdefault(_r[0], []).append((_r[1], _r[2]))
-        self.p = []
-        for v in dterms.values():
-            # v is a list of tuples
-            c: Any = 0
-            for tup in v:
-                c += tup[1]
-            self.p.append(_Dterm(derivative=v[0][0], coeff=c, context=self.context))
+        # the coefficients of equal derivatives are collected
+        dterms: dict[Expr, Expr] = {}
+        for term in Add.make_args(e):
+            derivative, coeff = analyze_term(self.context, term)
+            dterms[derivative] = dterms.get(derivative, sp.S.Zero) + coeff
+        self.p = [_Dterm(derivative=d, coeff=c, context=self.context) for d, c in dterms.items()]
 
     def expression(self) -> Expr:
         return sum(_.expression() for _ in self.p)
@@ -305,20 +290,11 @@ class LHDP:
         # needed for ltf
         return self.expression().atoms(e)
 
-    def show_derivatives(self) -> None:
-        print(list(self.derivatives()))
-
-    def leading_term(self) -> Expr:
-        return self.p[0].term()
-
     def leading_derivative(self) -> Expr:
         return self.p[0].derivative
 
     def leading_function(self) -> Expr:
         return self.p[0].function
-
-    def leading_coefficient(self) -> Coeff:
-        return self.p[0].coeff
 
     def terms(self) -> Iterator[Expr]:
         for p in self.p:
@@ -344,17 +320,6 @@ class LHDP:
     @profile_if_enabled
     def normalize(self) -> None:
         if self.p:
-            #            intermediate = [_Dterm(coeff=Rational(1, 1),
-            #                                   derivative=self.p[0].derivative,
-            #                                   context=self.p[0].context)
-            #                           ]
-            #            c = self.leading_coefficient()
-            #            for _ in self.p[1:]:
-            #                intermediate.append(_Dterm(coeff=_.coeff/c, # nsimplify done in LHDP
-            #                                            derivative = _.derivative,
-            #                                            context = _.context
-            #                                           ))
-            #            self.p = intermediate[:]
             scaled = primitive([_.coeff for _ in self.p]) if self.context.fraction_free else None
             if scaled is not None:
                 # the equation is divided by what makes its coefficients
@@ -449,34 +414,43 @@ class LHDP:
 
 
 @profile_if_enabled
-def analyze_term(context: Context, term: Expr) -> tuple[str, Expr, Expr] | None:
-    operands = split_into_operands(term)
+def analyze_term(context: Context, term: Expr) -> tuple[Expr, Expr]:
+    """A term of a linear homogeneous equation split into (derivative,
+    coefficient).
+
+    The derivative is the one factor of the term that is an unknown of the
+    context (a dependent function) or a derivative of one. The coefficient
+    is the product of the other factors: it may contain the independent
+    variables, parameters and any other functions, also derivatives of
+    functions that are not unknowns.
+
+    >>> from sympy import Function, diff, sin, symbols
+    >>> from delierium.matrix_order import Context, Mgrevlex
+    >>> x, y, a = symbols("x y a")
+    >>> f, g = Function("f")(x, y), Function("g")(x)
+    >>> context = Context([f], [x, y], Mgrevlex)
+    >>> analyze_term(context, a * sin(x) * diff(g, x) * diff(f, x, y))
+    (Derivative(f(x, y), x, y), a*sin(x)*Derivative(g(x), x))
+    >>> analyze_term(context, f)
+    (f(x, y), 1)
+
+    A term without an unknown, or with more than one, is not linear
+    homogeneous:
+
+    >>> analyze_term(context, x * f**2)
+    Traceback (most recent call last):
+    ...
+    ValueError: x*f(x, y)**2 is not linear homogeneous in the unknowns [f(x, y)]
+    """
+    unknowns: list[Expr] = []
     coeffs: list[Expr] = []
-    d: list[Expr] = []
-    for operand in operands:
-        if operand.is_Function:
-            if context.is_ctxfunc(operand):
-                d.append(operand)
-            else:
-                coeffs.append(operand)
-        elif operand.is_Derivative:
-            if context.is_ctxfunc(operand.args[0]):
-                d.append(operand)
-            else:
-                coeffs.append(operand)
-        else:
-            coeffs.append(operand)
-    coefficient = functools.reduce(mul, coeffs, sp.S.One)
-    if not d:
-        return None
-    return str(d[0]), d[0], coefficient
-
-
-@profile_if_enabled
-def split_into_operands(term: Expr) -> list[Expr]:
-    if term.is_Derivative or term.is_Function:
-        return [term]
-    return term.as_ordered_factors()
+    for factor in Mul.make_args(term):
+        function = factor.args[0] if factor.is_Derivative else factor
+        (unknowns if context.is_ctxfunc(function) else coeffs).append(factor)
+    if len(unknowns) != 1:
+        unknowns_of_context = list(context.dependent)
+        raise ValueError(f"{term} is not linear homogeneous in the unknowns {unknowns_of_context}")
+    return unknowns[0], Mul(*coeffs)
 
 
 @profile_if_enabled
@@ -530,7 +504,7 @@ def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
         * the reduced LHDP otherwise.
 
     Schwarz, Example 2.33, p. 48
-    >>> from sympy import Function, simplify
+    >>> from sympy import Function, Symbol, simplify
     >>> x = Symbol('x')
     >>> y = Symbol('y')
     >>> z = Function('z')(x, y)
@@ -566,7 +540,7 @@ def _subtract_derivative(
     Differentiating e2 w.r.t. H yields Y_H twice, from (-x/H) * Y_H and
     from (-x/H**2) * Y; the two contributions cancel (Schwarz, Example 5.16):
 
-    >>> from sympy import Function, diff
+    >>> from sympy import Function, Symbol, diff
     >>> x, H = Symbol('x'), Symbol('H')
     >>> X, Y = Function('X')(H, x), Function('Y')(H, x)
     >>> ctx = Context([X, Y], [x, H])
@@ -638,9 +612,6 @@ def autoreduce(S: Iterable[LHDP], context: Context) -> list[LHDP]:
             have_reduced = have_reduced or _r != rnew
             if rnew:
                 newdps.append(rnew)
-        # print("NNNNNNNNNNNNNNNNNNNNNNNN")
-        # for _ in newdps:
-        #    print("===>", _)
         dps = reorder(_p + [_ for _ in newdps if _ not in _p], context, ascending=True)
         if not have_reduced:
             i += 1
