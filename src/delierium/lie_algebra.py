@@ -298,6 +298,7 @@ class LieAlgebra:
         rows = [row[:-1] for row in values]
         rhs = [row[-1] for row in values]
         A = Matrix(rows).row_join(Matrix(rhs))
+        back: dict[Expr, Expr] = {}
         if not exact:
             transcendental = {
                 e: Dummy()
@@ -315,7 +316,7 @@ class LieAlgebra:
             return None  # inconsistent or the generators look dependent
         R = reduced.to_Matrix()
         a = [cancel(R[k, r]) for k in range(r)]
-        return [e.xreplace(back) for e in a] if not exact else a
+        return [e.xreplace(back) for e in a]
 
     def _is_combination(self, v: VectorField, a: Sequence[Expr]) -> bool:
         return all(
