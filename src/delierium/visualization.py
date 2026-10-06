@@ -77,7 +77,7 @@ def generator_latex(generator: Generator, coordinates: Sequence[Basic]) -> str:
             factor = latex(c) + r"\,"
         terms.append(f"{sign} {factor}\\partial_{{{latex(v)}}}")
     text = " ".join(terms)
-    return (text[2:] if text.startswith("+ ") else text) or "0"
+    return text.removeprefix("+ ") or "0"
 
 
 def rk4(

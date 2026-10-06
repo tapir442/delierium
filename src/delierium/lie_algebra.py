@@ -336,15 +336,11 @@ class LieAlgebra:
     def _span_of_brackets(self, left: Matrix, right: Matrix) -> Matrix:
         """A basis (rows, coordinates in X_1..X_r) of [span(left), span(right)]."""
         r, c = self.dimension, self.structure_constants
-        vectors = []
-        for u in left.tolist():
-            for w in right.tolist():
-                vectors.append(
-                    [
-                        sum(u[i] * w[j] * c[i][j][k] for i in range(r) for j in range(r))
-                        for k in range(r)
-                    ]
-                )
+        vectors = [
+            [sum(u[i] * w[j] * c[i][j][k] for i in range(r) for j in range(r)) for k in range(r)]
+            for u in left.tolist()
+            for w in right.tolist()
+        ]
         return _row_basis(vectors, r)
 
     def derived_series(self) -> list[int]:

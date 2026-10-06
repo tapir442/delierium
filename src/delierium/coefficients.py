@@ -58,6 +58,7 @@ True
 # Coeff's private helpers are applied to other Coeff instances as well
 # pylint: disable=protected-access
 
+import operator
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -482,23 +483,23 @@ class Coeff:
         return Coeff._new(expr=op(self.as_expr(), other.as_expr()))
 
     def __add__(self, other: CoeffLike) -> "Coeff":
-        return self._binary(other, lambda a, b: a + b)
+        return self._binary(other, operator.add)
 
     __radd__ = __add__
 
     def __sub__(self, other: CoeffLike) -> "Coeff":
-        return self._binary(other, lambda a, b: a - b)
+        return self._binary(other, operator.sub)
 
     def __rsub__(self, other: CoeffLike) -> "Coeff":
         return self._binary(other, lambda a, b: b - a)
 
     def __mul__(self, other: CoeffLike) -> "Coeff":
-        return self._binary(other, lambda a, b: a * b)
+        return self._binary(other, operator.mul)
 
     __rmul__ = __mul__
 
     def __truediv__(self, other: CoeffLike) -> "Coeff":
-        return self._binary(other, lambda a, b: a / b)
+        return self._binary(other, operator.truediv)
 
     def __pow__(self, n: int) -> "Coeff":
         if self.f is not None:

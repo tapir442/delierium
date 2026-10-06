@@ -208,8 +208,8 @@ def prolonged_infinitesimals(
     xi = [finish_substitution(infinitesimals[v]).xreplace(plain) for v in indep]
     phi = [finish_substitution(infinitesimals[d]).xreplace(plain) for d in dep]
     dq = {
-        (a, ()): phi[a] - sum((xi[i] * jet(a, (i,)) for i in range(n)), Integer(0))
-        for a in range(len(dep))
+        (a, ()): phi_a - sum((xi[i] * jet(a, (i,)) for i in range(n)), Integer(0))
+        for a, phi_a in enumerate(phi)
     }
     result: OrderedDict[Basic, Expr] = OrderedDict()
     for combi in variable_combinations(list(range(n)), max_order):
@@ -906,8 +906,7 @@ def overdetermined_system_ode(  # pylint: disable=keyword-arg-before-vararg,unus
     result = compute_overdetermined_system_of_infinitesimals(
         ode, dependent, independent, infinitesimals=infinitesimals
     )
-    result = [finish_substitution(_) for _ in result]
-    return result
+    return [finish_substitution(e) for e in result]
 
 
 def overdetermined_system_odes(  # pylint: disable=keyword-arg-before-vararg

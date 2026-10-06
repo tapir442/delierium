@@ -119,7 +119,7 @@ def make_infinitesimal(v: Basic, *variables: Basic, name: str = "") -> Expr:
     >>> i
     phi(f(x), x)
     """
-    return Function(f'{name if name else v.name.swapcase()}')(*variables)  # pylint: disable=not-callable
+    return Function(f'{name or v.name.swapcase()}')(*variables)  # pylint: disable=not-callable
 
 
 def is_jupyter_lab() -> bool:

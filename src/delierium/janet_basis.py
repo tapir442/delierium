@@ -315,10 +315,9 @@ class LHDP:
 
     @profile_if_enabled
     def __lt__(self, other: "LHDP") -> bool:
-        for _ in zip(self.p, other.p, strict=False):
-            if _[0] == _[1]:
-                continue
-            return _[0] < _[1]
+        for a, b in zip(self.p, other.p, strict=False):
+            if a != b:
+                return a < b
         return False
 
     @profile_if_enabled
@@ -329,7 +328,7 @@ class LHDP:
             return True
         if len(self.p) != len(other.p):
             return False
-        return all(_[0] == _[1] for _ in zip(self.p, other.p, strict=True))
+        return all(a == b for a, b in zip(self.p, other.p, strict=True))
 
     def show(self, rich: bool = True, short: bool = False) -> str:  # pylint: disable=unused-argument
         if not rich:
@@ -686,14 +685,10 @@ def vec_multipliers(
     mult = []
     if vec_degree(Vars[0], m) == d:
         mult.append(Vars[0])
-    for j in range(1, len(Vars)):
-        v = Vars[j]
+    for j, v in enumerate(Vars[1:], start=1):
         dd = [vec_degree(x, m) for x in Vars[:j]]
-        V = []
-        for _u in M:
-            if [vec_degree(_v, _u) for _v in Vars[:j]] == dd:
-                V.append(_u)
-        if vec_degree(v, m) == max((vec_degree(v, _u) for _u in V), default=0):
+        V = [u for u in M if [vec_degree(x, u) for x in Vars[:j]] == dd]
+        if vec_degree(v, m) == max((vec_degree(v, u) for u in V), default=0):
             mult.append(v)
     return mult, sorted(set(Vars) - set(mult))
 
@@ -1557,7 +1552,7 @@ def _reduce_with_cofactors(
                 )
             else:
                 hit = hit.copy()
-                hit.coeff = hit.coeff - subtrahend
+                hit.coeff -= subtrahend
                 if hit.coeff:
                     remaining[dterm.comparison_vector] = hit
                 else:
@@ -1658,9 +1653,11 @@ def janet_type(S: Iterable[LHDP], context: Context) -> JanetType:
         if not all(pures):
             return JanetType([b.leading_derivative() for b in leaders], None, oo, None)
         bounds = [min(pure) for pure in pures]
-        for o in product(*(range(n) for n in bounds)):
-            if not any(all(a >= b for a, b in zip(o, lo, strict=True)) for lo in orders):
-                parametric.append((f, o))
+        parametric.extend(
+            (f, o)
+            for o in product(*(range(n) for n in bounds))
+            if not any(all(a >= b for a, b in zip(o, lo, strict=True)) for lo in orders)
+        )
     parametric_derivatives = [
         t.derivative
         for t in sorted(

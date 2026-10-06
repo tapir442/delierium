@@ -68,8 +68,7 @@ def Mgrlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noq
     '''
     m = Mlex(funcs, variables)
     first_row = Matrix(1, len(variables) + len(funcs), [1] * len(variables) + [0] * len(funcs))
-    m = m.row_insert(0, first_row)
-    return m
+    return m.row_insert(0, first_row)
 
 
 def Mgrevlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
@@ -121,7 +120,11 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
         # LHDPs made while this is set are not normalized (janet_basis.
         # reduce_by_system normalizes only its result)
         self.defer_normalize = False
-        self._weight = weight(self.dependent, self.independent)
+        # the rows of the weight matrix, as Python ints where they are integers
+        self._weight = [
+            [int(w) if w.is_Integer else w for w in row]
+            for row in weight(self.dependent, self.independent).tolist()
+        ]
         # per-instance caches; functools.cache on the methods themselves
         # would keep every Context alive for the lifetime of the process
         self.gt = cache(self._gt)
@@ -132,12 +135,10 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
         """v1 ranks above v2: the first nonzero entry of the weight matrix
         times v1 - v2 is positive. v1, v2 are comparison vectors (see
         janet_basis.ComparisonVector); equal ones are not greater."""
-        diffvector = Matrix(len(v1), 1, [v1[i] - v2[i] for i in range(len(v1))])
-        r = list(self._weight @ diffvector)
-        for entry in r:
-            if entry == 0:
-                continue
-            return bool(entry > 0)
+        difference = [a - b for a, b in zip(v1, v2, strict=True)]
+        for row in self._weight:
+            if entry := sum(w * d for w, d in zip(row, difference, strict=True)):
+                return bool(entry > 0)
         return False
 
     def _is_ctxfunc(self, f: Basic) -> bool:

@@ -151,9 +151,9 @@ def frechet_derivative(
     eps = symbols("eps")
     for eq in support:
         deriv = []
-        for i in range(len(support)):
-            perturbed = dependVar[i](*independVar) + testfunction[i](*independVar) * eps
-            s = eq.replace(dependVar[i], lambda *_, p=perturbed: p)
+        for function, test in zip(dependVar, testfunction, strict=True):
+            perturbed = function(*independVar) + test(*independVar) * eps
+            s = eq.replace(function, lambda *_, p=perturbed: p)
             deriv.append(diff(s, eps).subs({eps: 0}))
         frechet.append(deriv)
     return frechet
