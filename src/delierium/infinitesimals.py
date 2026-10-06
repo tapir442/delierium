@@ -1135,7 +1135,7 @@ def _back_substituted(
     res = []
     for lhdp in janet.S:
         p = []
-        for term in lhdp.p:
+        for term in lhdp.terms:
             coeff = back_substitute(term.coeff.as_expr())
             d = back_substitute(term.derivative)
             p.append(_Dterm(derivative=d, coeff=coeff, context=ctx))

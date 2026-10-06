@@ -63,7 +63,7 @@ def test_janet_basis_has_a_field_of_its_own():
     janet = JanetBasis([diff(u, x) - a * exp(x) * u, diff(u, y) - a * u], [u], [x, y])
     assert coefficients._state() is default and default.symbols == before
     # its coefficients still work together with those of the default field
-    c = janet.S[0].p[-1].coeff
+    c = janet.S[0].terms[-1].coeff
     assert c - c * Coeff(1) == 0
 
 

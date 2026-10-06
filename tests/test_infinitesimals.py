@@ -385,7 +385,7 @@ def parametric_dimension(B, variables, bound=6):
     bound (then the space is taken as infinite-dimensional)."""
 
     def leader(b):
-        d = b.p[0].derivative
+        d = b.terms[0].derivative
         if not isinstance(d, Derivative):
             return d.func, (0,) * len(variables)
         counts = dict(d.variable_count)
