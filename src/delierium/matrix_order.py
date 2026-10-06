@@ -111,9 +111,6 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
         self.independent = tuple(independent)
         self.dependent = tuple(dependent)
         self.sort_order = weight
-        # leading coefficients divided by in LHDP.normalize: the results hold
-        # where they do not vanish (see janet_basis.nonzero_factors)
-        self.divisors: list[Basic] = []
         # LHDP.normalize makes the coefficients coprime polynomials instead
         # of dividing by the leading coefficient (see JanetBasis)
         self.fraction_free = False

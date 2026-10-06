@@ -675,3 +675,17 @@ def test_reduce_by_system_reduces_fully():
         LHDP(f.diff(x, 5), context),  # last: reduces nothing
     ]
     assert reduce_by_system(LHDP(f.diff(x, y, z, 4), context), S, context) is None
+
+
+def test_assumptions_of_the_basis_elements():
+    """#31: every equation knows the factors its derivation assumed nonzero;
+    assumed_nonzero() collects them."""
+    x, y, a = symbols("x y a")
+    z, w = Function("z")(x, y), Function("w")(x, y)
+    janet = JanetBasis([x * diff(z, x) + y * w, diff(w, y) - a * z], [z, w], [x, y])
+    assumptions = {str(e.leading_derivative()): e.assumptions for e in janet.S}
+    assert assumptions == {
+        "Derivative(w(x, y), y)": frozenset(),
+        "Derivative(z(x, y), x)": frozenset({x}),
+    }
+    assert janet.assumed_nonzero() == [x]

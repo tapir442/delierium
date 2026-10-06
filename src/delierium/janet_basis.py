@@ -56,8 +56,8 @@ Order = list[int]
 #   of a term within an LHDP (dict keys in reductions, hashes), a tuple of ints
 #   instead of a SymPy Derivative, cheap to compute, compare and hash.
 ComparisonVector = tuple[int, ...]
-# JanetBasis._assumptions: (number of divisors, the factors, split_assumptions of them)
-_AssumptionCache = tuple[int, list[Expr], tuple[list[list[Expr]], list[Expr]]]
+# JanetBasis._assumptions: (the factors, split_assumptions of them)
+_AssumptionCache = tuple[list[Expr], tuple[list[list[Expr]], list[Expr]]]
 
 
 @profile_if_enabled
@@ -233,11 +233,20 @@ class LHDP:
     comparison_vector: ComparisonVector
 
     @profile_if_enabled
-    def __init__(self, e: Basic | int, context: Context, dterms: Iterable[_Dterm] = ()) -> None:
+    def __init__(
+        self,
+        e: Basic | int,
+        context: Context,
+        dterms: Iterable[_Dterm] = (),
+        assumptions: Iterable[Expr] = frozenset(),
+    ) -> None:
         self.context = context
         self.terms: list[_Dterm] = []
         self.multipliers: list[int] = []
         self.nonmultipliers: list[int] = []
+        # the factors assumed nonzero in deriving this equation: those of the
+        # equations it comes from and those it was divided or multiplied by
+        self.assumptions: frozenset[Expr] = frozenset(assumptions)
         if dterms:
             self.terms = [t.copy() for t in dterms]
         else:
@@ -254,6 +263,10 @@ class LHDP:
             self._set_leading()
         else:
             self.normalize()
+
+    def _assume(self, factor: Coeff) -> None:
+        """Record that this equation was divided or multiplied by factor."""
+        self.assumptions |= {factor.as_expr()}
 
     @profile_if_enabled
     def _init(self, e: Basic) -> None:
@@ -284,7 +297,7 @@ class LHDP:
         coeff = self.terms[0].coeff
         self.terms[0].coeff = ONE
         if coeff != ONE:
-            self.context.divisors.append(coeff)
+            self._assume(coeff)
             for t in self.terms[1:]:
                 t.coeff = (t.coeff / coeff).canonical()
 
@@ -300,7 +313,7 @@ class LHDP:
                 # has to be nonzero
                 coeff = self.terms[0].coeff
                 if coeff != ONE:
-                    self.context.divisors.append(coeff)
+                    self._assume(coeff)
                 for term, coeff in zip(self.terms, scaled, strict=True):
                     term.coeff = coeff
             else:
@@ -352,7 +365,10 @@ class LHDP:
                 else:
                     new_dterms[new_dterm.comparison_vector] = new_dterm
         return self.__class__(
-            e=0, dterms=[t for t in new_dterms.values() if t.coeff], context=self.context
+            e=0,
+            dterms=[t for t in new_dterms.values() if t.coeff],
+            context=self.context,
+            assumptions=self.assumptions,
         )
 
     def __str__(self) -> str:
@@ -423,11 +439,19 @@ def reorder(  # pylint: disable=unused-argument
 def reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP | None:
     """e reduced by S as far as possible: no term of the result is a
     derivative of a leading derivative in S; None if e reduces to zero.
+    See _reduce_by_system for the assumptions of a vanishing e.
 
     After each reduction all of S is tried again: a term may become
     reducible by an element tried before (#54). The intermediate results
     are not normalized (in a fraction free context the gcd of all
     coefficients each time), only the result."""
+    reduced = _reduce_by_system(e, S, context)
+    return reduced if reduced else None
+
+
+def _reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP:
+    """reduce_by_system, but an e that reduces to zero gives an empty LHDP
+    (falsy) with the assumptions its vanishing depends on."""
     original = e
     deferred, context.defer_normalize = context.defer_normalize, True
     try:
@@ -436,8 +460,8 @@ def reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP | None:
             changed = False
             for dp in S:
                 enew = _reduce(e, dp, context)
-                if enew is None:
-                    return None
+                if not enew:
+                    return enew
                 if enew is not e:
                     e = enew
                     changed = True
@@ -450,7 +474,7 @@ def reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP | None:
 
 
 @profile_if_enabled
-def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
+def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
     """One reduction step of e1 modulo e2 (Schwarz, Algorithm 2.4).
 
     Finds the first term of e1 that is a derivative ∂^dif of e2's leading
@@ -459,7 +483,7 @@ def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
 
     Returns:
         * e1 itself (same object) if no term of e1 is reducible by e2,
-        * None if the reduction yields zero,
+        * an empty LHDP (with the assumptions) if the reduction yields zero,
         * the reduced LHDP otherwise.
 
     Schwarz, Example 2.33, p. 48
@@ -488,11 +512,10 @@ def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
 
 
 @profile_if_enabled
-def _subtract_derivative(
-    e1: LHDP, e2: LHDP, factor: Coeff, variables: Sequence[Basic]
-) -> LHDP | None:
-    """lc * e1 - factor * ∂^variables(e2), or None if that is zero; lc is
-    e2's leading coefficient, 1 unless the context is fraction free.
+def _subtract_derivative(e1: LHDP, e2: LHDP, factor: Coeff, variables: Sequence[Basic]) -> LHDP:
+    """lc * e1 - factor * ∂^variables(e2), an empty LHDP if that is zero; lc
+    is e2's leading coefficient, 1 unless the context is fraction free. The
+    result has the assumptions of e1 and e2, and lc.
 
     With no variables this is step S2 of Algorithm 2.4, e1 - factor * e2.
 
@@ -516,16 +539,27 @@ def _subtract_derivative(
     # (product rule), so they must be added up, not kept side by side
     remaining = OrderedDict((t.comparison_vector, t.copy()) for t in e1.terms)
     lc = e2.terms[0].coeff
+    assumptions = e1.assumptions | e2.assumptions
     if lc != ONE:
         # e1 is multiplied by lc: the result is equivalent where lc != 0
-        e2.context.divisors.append(lc)
+        assumptions |= {lc.as_expr()}
         for t in remaining.values():
             t.coeff *= lc
     _subtract_terms(remaining, e2_terms, factor, e2.context)
     dterms = [t for t in remaining.values() if t.coeff]
     if not dterms:
-        return None
-    return LHDP(e=0, context=e2.context, dterms=dterms)
+        return _vanished(e2.context, assumptions)
+    return LHDP(e=0, context=e2.context, dterms=dterms, assumptions=assumptions)
+
+
+def _vanished(context: Context, assumptions: Iterable[Expr]) -> LHDP:
+    """The zero equation an equation reduced to, with the assumptions its
+    vanishing depends on; falsy like every LHDP without terms."""
+    zero = LHDP.__new__(LHDP)
+    zero.context = context
+    zero.terms, zero.multipliers, zero.nonmultipliers = [], [], []
+    zero.assumptions = frozenset(assumptions)
+    return zero
 
 
 def _subtract_terms(
@@ -562,11 +596,11 @@ def _variables_of(context: Context, dif: Sequence[int]) -> list[Basic]:
 
 
 @profile_if_enabled
-def _reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
+def _reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
     while True:
         new_e1 = _reduce_inner(e1, e2, context)
         if not new_e1:
-            return None
+            return new_e1
         if e1 is new_e1:
             return e1
         e1 = new_e1
@@ -574,6 +608,13 @@ def _reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP | None:
 
 @profile_if_enabled
 def autoreduce(S: Iterable[LHDP], context: Context) -> list[LHDP]:
+    return _autoreduce(S, context)[0]
+
+
+def _autoreduce(S: Iterable[LHDP], context: Context) -> tuple[list[LHDP], list[LHDP]]:
+    """autoreduce, and the equations it dropped (reduced to zero, or equal
+    to one kept), for their assumptions."""
+    dropped: list[LHDP] = []
     equations = list(S)
     i = 0
     head, r = equations[: i + 1], equations[i + 1 :]
@@ -581,17 +622,20 @@ def autoreduce(S: Iterable[LHDP], context: Context) -> list[LHDP]:
         new = []
         have_reduced = False
         for e in r:
-            reduced = reduce_by_system(e, head, context)
+            reduced = _reduce_by_system(e, head, context)
             have_reduced = have_reduced or e != reduced
             if reduced:
                 new.append(reduced)
+            else:
+                dropped.append(reduced)
+        dropped += [e for e in new if e in head]
         equations = reorder(head + [e for e in new if e not in head], context, ascending=True)
         if not have_reduced:
             i += 1
         else:
             i = 0
         head, r = equations[: i + 1], equations[i + 1 :]
-    return equations
+    return equations, dropped
 
 
 def vec_degree(v: int, m: Sequence[int]) -> int:
@@ -788,7 +832,7 @@ def _janet_completion(monomials: Iterable[Sequence[int]], n: int) -> set[tuple[i
         result.add(min(missing, key=lambda m: (sum(m), tuple(reversed(m)))))
 
 
-def minimize(S: list[LHDP], context: Context) -> list[LHDP]:
+def minimize(S: list[LHDP], context: Context) -> tuple[list[LHDP], list[LHDP]]:
     """The minimal reduced Janet basis from a Janet basis S (#54).
 
     For each leading function: the leading derivatives of the minimal Janet
@@ -815,15 +859,20 @@ def minimize(S: list[LHDP], context: Context) -> list[LHDP]:
         ]
         wanted = _janet_completion(generators, n)
         if not wanted <= set(orders):
-            return S
+            return S, []
         kept += [by_order[m] for m in wanted]
-    if len(kept) < len(S) and any(
-        reduce_by_system(e, kept, context) is not None for e in S if e not in kept
-    ):
-        return S
+    dropped = []
+    for e in S:
+        if e not in kept:
+            dropped.append(reduced := _reduce_by_system(e, kept, context))
+            if reduced:
+                # not a minimal basis after all; the assumptions of these
+                # trial reductions are kept as before (#31: to be revisited)
+                return S, dropped
     if context.fraction_free:
-        return reorder(kept, context, ascending=True)
-    return reorder([_reduce_tail(e, kept, context) for e in kept], context, ascending=True)
+        return reorder(kept, context, ascending=True), dropped
+    reduced_tails = [_reduce_tail(e, kept, context) for e in kept]
+    return reorder(reduced_tails, context, ascending=True), dropped
 
 
 def _reduce_tail(e: LHDP, basis: list[LHDP], context: Context) -> LHDP:
@@ -848,7 +897,7 @@ def _reduce_tail(e: LHDP, basis: list[LHDP], context: Context) -> LHDP:
             return e
         dif = [a - b for a, b in zip(term.order, g.order, strict=True)]
         reduced = _subtract_derivative(e, g, term.coeff, _variables_of(context, dif))
-        assert reduced is not None  # the leading term stays
+        assert reduced  # the leading term stays
         e = reduced
 
 
@@ -971,9 +1020,7 @@ def _integrability_pairs(
 def _integrability_conditions_of_function(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     result = []
     for ei, n, ej, m in _integrability_pairs(S, context):
-        condition = _difference(ei.diff(n), ej.diff(*m) if m else ej, context)
-        if condition is not None:
-            result.append(condition)
+        result.append(_difference(ei.diff(n), ej.diff(*m) if m else ej, context))
     return result
 
 
@@ -992,13 +1039,15 @@ def _multiplicative_derivative(ei: Any, n: Basic, ej: Any, context: Context) -> 
     return [v for v, d in zip(context.independent, difference, strict=True) for _ in range(d)]
 
 
-def _difference(d1: LHDP, d2: LHDP, context: Context) -> LHDP | None:
+def _difference(d1: LHDP, d2: LHDP, context: Context) -> LHDP:
     """lc2 * d1 - lc1 * d2 as an LHDP, lc1 and lc2 their leading coefficients
     (1 unless the context is fraction free), so that the leading derivatives
-    cancel; None if it vanishes. d1's terms are modified."""
+    cancel; an empty LHDP if it vanishes, with the assumptions of d1 and d2
+    (and lc1, lc2). d1's terms are modified."""
     lc1, lc2 = d1.terms[0].coeff, d2.terms[0].coeff
+    assumptions = d1.assumptions | d2.assumptions
     if lc1 != lc2:
-        context.divisors.extend(lc for lc in (lc1, lc2) if lc != ONE)
+        assumptions |= {lc.as_expr() for lc in (lc1, lc2) if lc != ONE}
         for t in d1.terms:
             t.coeff *= lc2
     else:
@@ -1006,7 +1055,9 @@ def _difference(d1: LHDP, d2: LHDP, context: Context) -> LHDP | None:
     remaining = {t.comparison_vector: t for t in d1.terms}
     _subtract_terms(remaining, d2.terms, lc1, context)
     dterms = [t for t in remaining.values() if t.coeff]
-    return LHDP(e=0, context=context, dterms=dterms) if dterms else None
+    if not dterms:
+        return _vanished(context, assumptions)
+    return LHDP(e=0, context=context, dterms=dterms, assumptions=assumptions)
 
 
 class JanetBasis:
@@ -1125,6 +1176,9 @@ class JanetBasis:
         """
         self.S: list[LHDP] = []
         self._assumed: _AssumptionCache | None = None  # cache of assumed_nonzero
+        # the equations dropped while computing the basis (reduced to zero, or
+        # equal to one kept): their assumptions count as well (#31)
+        self._dropped: list[LHDP] = []
         with fresh_field():  # a field of its own, see coefficients.fresh_field
             self._build(S, dependent, independent, sort_order, fraction_free)
 
@@ -1149,7 +1203,8 @@ class JanetBasis:
             for e in self.S:
                 e.make_monic()
             self.S = reorder(self.S, context, ascending=True)
-        self.S = minimize(self.S, context)
+        self.S, dropped = minimize(self.S, context)
+        self._dropped += dropped
 
     def _complete(self, context: Context) -> None:
         """Autoreduce, complete and add the reduced integrability conditions
@@ -1157,10 +1212,14 @@ class JanetBasis:
         old: list[LHDP] = []
         while old != self.S:
             old = self.S[:]
-            self.S = autoreduce(self.S, context)
+            self.S, dropped = _autoreduce(self.S, context)
+            self._dropped += dropped
             self.S = complete_system(self.S, context)
             conditions = list(integrability_conditions_by_function(self.S, context))
-            reduced = [r for c in conditions if (r := reduce_by_system(c, self.S, context))]
+            reductions = [_reduce_by_system(c, self.S, context) for c in conditions if c]
+            self._dropped += [c for c in conditions if not c]
+            self._dropped += [r for r in reductions if not r or r in self.S]
+            reduced = [r for r in reductions if r]
             if not reduced:
                 break
             self.S += [r for r in reduced if r not in self.S]
@@ -1226,6 +1285,11 @@ class JanetBasis:
         variables only mark singular points or lines; factors in parameters
         mark special cases that may have a different Janet basis.
 
+        Each equation knows its own share, LHDP.assumptions: the factors of
+        its derivation. assumed_nonzero() collects those of the basis
+        elements and of the equations dropped on the way (reduced to zero,
+        or equal to one kept).
+
         >>> from sympy import *
         >>> x, y, a = symbols("x y a")
         >>> z = Function("z")(x, y)
@@ -1241,21 +1305,18 @@ class JanetBasis:
         an intermediate equation of the (fraction free) completion; it
         depends on x, so it excludes no special value of a.
         """
-        return self._assumptions()[1]
+        return self._assumptions()[0]
 
     def _assumptions(self) -> _AssumptionCache:
-        """(number of divisors, assumed_nonzero, split_assumptions of it),
-        cached until the divisors change."""
-        divisors = self.context.divisors
-        cached = self._assumed
-        if cached is None or cached[0] != len(divisors):
-            factors = nonzero_factors(divisors)
-            self._assumed = cached = (
-                len(divisors),
-                factors,
-                split_assumptions(factors, self.context.independent),
+        """(assumed_nonzero, split_assumptions of it), computed once: the
+        assumptions of the basis elements and of the equations dropped on
+        the way (#31)."""
+        if self._assumed is None:
+            factors = nonzero_factors(
+                set().union(*(e.assumptions for e in [*self.S, *self._dropped]))
             )
-        return cached
+            self._assumed = (factors, split_assumptions(factors, self.context.independent))
+        return self._assumed
 
     def parameter_conditions(self) -> list[list[Expr]]:
         """The special cases of the parameters that the Janet basis excludes.
@@ -1282,13 +1343,13 @@ class JanetBasis:
         >>> janet.singular_loci()
         []
         """
-        return self._assumptions()[2][0]
+        return self._assumptions()[1][0]
 
     def singular_loci(self) -> list[Expr]:
         """The factors of assumed_nonzero that vanish only on points, curves,
         ... of the independent variables, never identically: the Janet basis
         does not hold there, but everywhere else."""
-        return self._assumptions()[2][1]
+        return self._assumptions()[1][1]
 
     def type(self) -> "JanetType":
         """The type of the Janet basis: leading derivatives, parametric
