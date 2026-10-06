@@ -1,9 +1,8 @@
 """Convenience functions"""
 
 import builtins
-import itertools
 import os
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any, cast
 
 import sympy as sp
@@ -35,44 +34,6 @@ def profile_if_enabled[F: Callable[..., Any]](func: F) -> F:
 
         return cast(F, profile(func))
     return func
-
-
-@profile_if_enabled
-def eq(d1: Any, d2: Any) -> bool:
-    if d1.__class__ != d2.__class__:
-        return False
-    return d1 == d2
-
-
-@profile_if_enabled
-def pairs_exclude_diagonal[T](it: Iterable[T]) -> Iterator[tuple[T, T]]:
-    for x, y in itertools.product(it, repeat=2):
-        if x != y:
-            yield (x, y)
-
-
-@profile_if_enabled
-def is_derivative(e: Basic) -> bool:
-    """checks whether an expression 'e' is a pure derivative
-    >>> from sympy import diff
-    >>> x = Symbol('x')
-    >>> f = Function('f')(x)
-    >>> is_derivative(f)
-    False
-    >>> is_derivative(diff(f, x))
-    True
-    >>> is_derivative(diff(f, x) * x)
-    False
-    """
-    return e.is_Derivative
-
-
-@profile_if_enabled
-def is_function(e: Basic) -> bool:
-    """checks whether an expression 'e' is a pure function without any
-    derivative as a factor
-    """
-    return e.is_Function
 
 
 @profile_if_enabled

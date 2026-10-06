@@ -6,8 +6,6 @@ from typing import Any
 
 from sympy import Basic, Matrix, eye
 
-from delierium.helpers import is_derivative
-
 __all__ = [
     "Context",
     "Mgrevlex",
@@ -170,7 +168,7 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
         [2, 1, 3]
         """
         res = [0] * len(e.args[0].args)
-        if not is_derivative(e):
+        if not e.is_Derivative:
             return res
         for variable in e.variables:
             i = self.independent.index(variable)
