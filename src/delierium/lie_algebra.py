@@ -15,11 +15,14 @@ not have to come from delierium (#9).
 """
 
 import random
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from functools import cached_property, reduce
-from typing import Any
+from itertools import product
+from math import prod
+from typing import TYPE_CHECKING, Any
 
 from sympy import (
+    Derivative,
     Dummy,
     Expr,
     Function,
@@ -27,10 +30,13 @@ from sympy import (
     Pow,
     Rational,
     Symbol,
+    binomial,
     cancel,
     cos,
     cot,
+    count_ops,
     csc,
+    denom,
     expand_power_exp,
     expand_trig,
     ilcm,
@@ -41,13 +47,18 @@ from sympy import (
     sin,
     sympify,
     tan,
+    together,
     zeros,
     zoo,
 )
 from sympy import exp as exp_
+from sympy.core.function import AppliedUndef
 from sympy.functions.elementary.hyperbolic import HyperbolicFunction
 from sympy.functions.elementary.trigonometric import TrigonometricFunction
 from sympy.polys.matrices import DomainMatrix
+
+if TYPE_CHECKING:
+    from delierium.janet_basis import JanetBasis
 
 __all__ = [
     "LieAlgebra",
@@ -243,6 +254,113 @@ class LieAlgebra:
         self.dimension = len(self.generators)
         self.basis_symbols = [Symbol(f"X{i + 1}") for i in range(self.dimension)]
 
+    @classmethod
+    def from_structure_constants(cls, c: Sequence[Sequence[Sequence[Any]]]) -> "LieAlgebra":
+        """The abstract Lie algebra with [X_i, X_j] = sum_k c[i][j][k] X_k
+        (no generators as vector fields).
+
+        >>> h = LieAlgebra.from_structure_constants(
+        ...     [
+        ...         [[0, 0, 0], [0, 0, 1], [0, 0, 0]],
+        ...         [[0, 0, -1], [0, 0, 0], [0, 0, 0]],
+        ...         [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+        ...     ]
+        ... )
+        >>> h.commutator_table()
+        Matrix([
+        [  0, X3, 0],
+        [-X3,  0, 0],
+        [  0,  0, 0]])
+        >>> h.is_nilpotent(), h.is_abelian()
+        (True, False)
+        """
+        r = len(c)
+        constants = [[[sympify(c[i][j][k]) for k in range(r)] for j in range(r)] for i in range(r)]
+        if any(
+            constants[i][j][k] != -constants[j][i][k]
+            for i in range(r)
+            for j in range(r)
+            for k in range(r)
+        ):
+            raise ValueError("structure constants must be antisymmetric: c[i][j] = -c[j][i]")
+        algebra = cls([], [])
+        algebra.dimension = r
+        algebra.basis_symbols = [Symbol(f"X{i + 1}") for i in range(r)]
+        algebra.__dict__["structure_constants"] = constants  # the cached_property's value
+        return algebra
+
+    @classmethod
+    def from_janet_basis(
+        cls, janet: "JanetBasis", point: Sequence[Any] | None = None
+    ) -> "LieAlgebra":
+        """The Lie algebra of the solutions of a Janet basis of determining
+        equations, without solving them (#11; Schwarz, Lie's relations,
+        Theorems 3.17-3.19). The unknown functions of the Janet basis are
+        the components of the generators, in the order of its variables
+        (xi along x, eta along y, ...), as for the catalogue.
+
+        A solution is determined by the values of the parametric
+        derivatives at a regular point z0; X_k is the one where the k-th of
+        them (parametric_derivatives()) is 1 and the others 0. Every
+        derivative of a solution at z0 is then a linear combination of
+        these values (its normal form modulo the Janet basis), and so are
+        the derivatives of [X_i, X_j], a solution as well: c_ij^k is its k-th
+        parametric derivative at z0. The basis depends on z0 (point, by
+        default the first regular point with small integer coordinates),
+        the algebra up to isomorphism does not.
+
+        The Killing vectors of the plane (xi_x = eta_y = xi_y + eta_x = 0):
+        translations and the rotation, the Euclidean algebra e(2).
+        symmetry_algebra (delierium.classification) does this for the
+        determining equations of a differential equation.
+
+        >>> from sympy import Function, diff
+        >>> from delierium.janet_basis import JanetBasis
+        >>> x, y = Symbol('x'), Symbol('y')
+        >>> xi, eta = Function('xi')(x, y), Function('eta')(x, y)
+        >>> killing = [diff(xi, x), diff(eta, y), diff(xi, y) + diff(eta, x)]
+        >>> e2 = LieAlgebra.from_janet_basis(JanetBasis(killing, [xi, eta], [x, y]))
+        >>> e2.dimension, e2.derived_series(), e2.is_nilpotent()
+        (3, [3, 2, 0], False)
+        """
+        functions, coordinates = list(janet.context.dependent), list(janet.context.independent)
+        if len(functions) != len(coordinates):
+            raise ValueError("one unknown function (generator component) per variable")
+        parametric = janet.parametric_derivatives()
+        if parametric is None:
+            raise ValueError("infinitely many parametric derivatives: no finite Lie algebra")
+        if not parametric:
+            return cls.from_structure_constants([])
+        keys = [_derivative_key(p, functions, coordinates) for p in parametric]
+        top = max((sum(alpha) for _, alpha in keys), default=0) + 1
+        indices = [
+            alpha for alpha in product(range(top + 1), repeat=len(coordinates)) if sum(alpha) <= top
+        ]
+        normal_forms = _normal_forms(janet, keys, indices)
+        jets = _jets_at_point(normal_forms, coordinates, janet.assumed_nonzero(), point)
+        r, n = len(parametric), len(coordinates)
+
+        def bracket_value(i: int, j: int, a: int, beta: tuple[int, ...]) -> Expr:
+            """d^beta [X_i, X_j]^a at z0 (Leibniz' rule)."""
+            total = sympify(0)
+            for b in range(n):
+                e_b = tuple(int(m == b) for m in range(n))
+                for gamma in product(*(range(m + 1) for m in beta)):
+                    rest = tuple(bm - gm + em for bm, gm, em in zip(beta, gamma, e_b, strict=True))
+                    weight = prod(binomial(bm, gm) for bm, gm in zip(beta, gamma, strict=True))
+                    total += weight * (
+                        jets[b, gamma][i] * jets[a, rest][j] - jets[b, gamma][j] * jets[a, rest][i]
+                    )
+            return total
+
+        c: list[list[list[Expr]]] = [[[sympify(0)] * r for _ in range(r)] for _ in range(r)]
+        for i in range(r):
+            for j in range(i + 1, r):
+                for k, (a, beta) in enumerate(keys):
+                    value = cancel(bracket_value(i, j, a, beta))
+                    c[i][j][k], c[j][i][k] = value, -value
+        return cls.from_structure_constants(c)
+
     @cached_property
     def structure_constants(self) -> list[list[list[Expr]]]:
         """c[i][j][k] with [X_i, X_j] = sum_k c[i][j][k] X_k; NotClosedError
@@ -398,6 +516,79 @@ class LieAlgebra:
     def is_semisimple(self) -> bool:
         """Cartan's criterion: the Killing form is nondegenerate."""
         return self.dimension > 0 and simplify(self.killing_form().det()) != 0
+
+
+def _derivative_key(
+    e: Expr, functions: list[Expr], coordinates: list[Symbol]
+) -> tuple[int, tuple[int, ...]]:
+    """(index of the function, multi-index over the coordinates) of a
+    derivative of one of the functions, or of the function itself."""
+    if isinstance(e, Derivative):
+        counts = dict(e.variable_count)
+        return functions.index(e.expr), tuple(int(counts.get(z, 0)) for z in coordinates)
+    return functions.index(e), (0,) * len(coordinates)
+
+
+def _normal_forms(
+    janet: "JanetBasis", keys: list[tuple[int, tuple[int, ...]]], indices: list[tuple[int, ...]]
+) -> dict[tuple[int, tuple[int, ...]], list[Expr]]:
+    """For each unknown function a and multi-index alpha in indices: the
+    coefficients of the normal form of d^alpha f_a modulo janet in the
+    parametric derivatives (whose keys are keys)."""
+    functions, coordinates = list(janet.context.dependent), list(janet.context.independent)
+    t = [Dummy(f"t{k}") for k in range(len(keys))]
+    result = {}
+    for a, f in enumerate(functions):
+        for alpha in indices:
+            orders = [(z, n) for z, n in zip(coordinates, alpha, strict=True) if n]
+            remainder = janet.representation(f.diff(*orders) if orders else f)[1]
+            atoms = remainder.atoms(Derivative) | (remainder.atoms(AppliedUndef) & set(functions))
+            linear = remainder.xreplace(
+                {e: t[keys.index(_derivative_key(e, functions, coordinates))] for e in atoms}
+            )
+            result[a, alpha] = [linear.diff(tk) for tk in t]
+    return result
+
+
+def _jets_at_point(
+    normal_forms: dict[tuple[int, tuple[int, ...]], list[Expr]],
+    coordinates: list[Symbol],
+    assumed_nonzero: list[Expr],
+    point: Sequence[Any] | None,
+) -> dict[tuple[int, tuple[int, ...]], list[Expr]]:
+    """normal_forms at point, or else at the first point with small
+    coordinates (integers first, then fractions: sin(4*pi*x) vanishes at
+    every integer x) where they are finite and the factors the Janet basis
+    assumes nonzero do not vanish."""
+    if point is not None:
+        candidates: Iterable[tuple[Any, ...]] = [tuple(point)]
+    else:
+        values = [0, 1, -1, 2, -2, Rational(1, 3), Rational(-1, 3), Rational(3, 7)]
+        candidates = sorted(
+            product(values, repeat=len(coordinates)),
+            key=lambda p: (sum(not isinstance(v, int) for v in p), sum(abs(v) for v in p)),
+        )
+    # vanishing at a singular point: the denominators and the assumptions
+    singular = {denom(together(c)) for row in normal_forms.values() for c in row}
+    singular_list = sorted(
+        {f for f in singular | set(assumed_nonzero) if not f.is_number}, key=count_ops
+    )  # the small ones first: they usually reject a point
+    for candidate in candidates:
+        at = dict(zip(coordinates, map(sympify, candidate), strict=True))
+        if any(_vanishes_or_pole(f, at) for f in singular_list):
+            continue
+        jets = {key: [cancel(c.subs(at)) for c in row] for key, row in normal_forms.items()}
+        if not any(c.has(zoo, nan, oo) for row in jets.values() for c in row):
+            return jets
+    raise ValueError(
+        f"{tuple(point)} is not a regular point" if point is not None else "no regular point found"
+    )
+
+
+def _vanishes_or_pole(f: Expr, at: dict[Symbol, Expr]) -> bool:
+    value = f.subs(at)
+    value = value if value.is_number else cancel(value)
+    return value == 0 or value.has(zoo, nan, oo)
 
 
 def _row_basis(vectors: list[list[Expr]], r: int) -> Matrix:

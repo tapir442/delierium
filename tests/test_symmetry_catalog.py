@@ -178,3 +178,33 @@ def test_closed_under_commutators(entry):
     coordinates = [Symbol(v) for v in entry.independent + entry.dependent]
     algebra = LieAlgebra(entry.parsed_generators(), coordinates)
     assert len(algebra.structure_constants) == entry.dimension
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        entry_param(e, "algebra")
+        for e in CATALOG
+        if e.dimension not in (INFINITE, None)
+        and len(e.generators) == e.dimension
+        and e.name not in RANDOM_PARAMETERS
+    ],
+)
+def test_algebra_of_the_janet_basis(entry):
+    """The Lie algebra from the Janet basis of the determining equations,
+    without generators (LieAlgebra.from_janet_basis), is that of the
+    complete list of generators: the same derived and lower central series,
+    center and rank of the Killing form."""
+    coordinates = [Symbol(v) for v in entry.independent + entry.dependent]
+
+    def invariants(algebra):
+        return (
+            algebra.dimension,
+            algebra.derived_series(),
+            algebra.lower_central_series(),
+            algebra.center().rows,
+            algebra.killing_form().rank(simplify=True),
+        )
+
+    given = LieAlgebra(entry.parsed_generators(), coordinates)
+    assert invariants(LieAlgebra.from_janet_basis(janet_basis(entry))) == invariants(given)

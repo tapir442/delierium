@@ -12,14 +12,17 @@ The public interface is what this package exports (``from delierium import
 * group classification: classify (cases of a linear system with parameters,
   each with its Janet basis), group_classification (cases of the symmetries
   of a differential equation with parameters), Case
+* symmetry algebras: symmetry_algebra (the Lie algebra of the point
+  symmetries of a differential equation, from its determining equations
+  without solving them)
 * algebraic Thomas decomposition: thomas_decomposition (polynomial equations
   and inequations split into simple systems with disjoint solutions),
   SimpleSystem
 * rankings: Context, Mgrevlex, Mgrlex, Mlex
 * printing in the notation of Lie: ltf, lie_form, lie_derivative_printer
-* Lie algebras of generators: LieAlgebra (structure constants, commutator
-  table, derived and lower central series, center, Killing form),
-  VectorField, NotClosedError
+* Lie algebras: LieAlgebra (of generators, of a Janet basis of determining
+  equations or from structure constants; commutator table, derived and lower
+  central series, center, Killing form), VectorField, NotClosedError
 * operators: euler_operator, frechet_derivative, adjoint_frechet_derivative,
   variational_derivative
 * pictures: the module delierium.visualization (staircase diagrams of Janet
@@ -36,7 +39,7 @@ metadata; the only place it is written is ``pyproject.toml``.
 
 from importlib.metadata import version as _version
 
-from .classification import Case, classify, group_classification
+from .classification import Case, classify, group_classification, symmetry_algebra
 from .derivative_operators import (
     adjoint_frechet_derivative,
     euler_operator,
@@ -104,6 +107,7 @@ __all__ = [
     "overdetermined_system_odes",
     "overdetermined_system_pde",
     "prolongation",
+    "symmetry_algebra",
     "thomas_decomposition",
     "variational_derivative",
 ]
