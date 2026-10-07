@@ -47,10 +47,11 @@ from delierium.infinitesimals import (
     split_jet_coefficients,
 )
 from delierium.janet_basis import LHDP, JanetBasis, nonzero_factors, split_assumptions
+from delierium.lie_algebra import LieAlgebra
 from delierium.matrix_order import Mgrevlex, WeightFunction
 from delierium.thomas import thomas_decomposition
 
-__all__ = ["Case", "classify", "group_classification"]
+__all__ = ["Case", "classify", "group_classification", "symmetry_algebra"]
 
 # rule -> (Janet basis there, the conditions to branch on)
 _Builder = Callable[[dict[Basic, Expr]], tuple[JanetBasis, list[list[Expr]]]]
@@ -136,19 +137,11 @@ def group_classification(
     (n = -1 is linearizable by a hodograph transformation.)
     """
     independent = list(independent)
-    infinitesimals = create_infinitesimals([dependent], independent)
-    plain = {dependent: sp_symbol(dependent)}
-    functions = [infinitesimals[v].xreplace(plain) for v in [*independent, dependent]]
-    variables = [*independent, plain[dependent]]
+    variables = [*independent, sp_symbol(dependent)]
 
     def build(rule: dict[Basic, Expr]) -> tuple[JanetBasis, list[list[Expr]]]:
         special = eq.subs(rule)
-        condition = determining_condition(special, [dependent], independent, infinitesimals)
-        system = [
-            finish_substitution(e).xreplace(plain)
-            for e in split_jet_coefficients(condition, [dependent])
-        ]
-        janet = JanetBasis(system, functions, variables, sort_order)
+        janet, condition = _determining_janet_basis(special, dependent, independent, sort_order)
         conditions = _initial_conditions(special, dependent, independent)
         for c in [*janet.parameter_conditions(), *jet_power_conditions(condition, [dependent])]:
             if c not in conditions and not any(e.has(*variables) for e in c):
@@ -156,6 +149,56 @@ def group_classification(
         return janet, conditions
 
     return _classify(build, {}, [], max_depth)
+
+
+def symmetry_algebra(
+    eq: Expr,
+    dependent: Basic,
+    independent: Iterable[Basic],
+    sort_order: WeightFunction = Mgrevlex,
+) -> LieAlgebra:
+    """The Lie algebra of the point symmetries of the scalar differential
+    equation eq = 0 (one dependent variable, e.g. y(x) or u(x, t)), from the
+    Janet basis of its determining equations, without solving them
+    (LieAlgebra.from_janet_basis). The parameters of eq are assumed generic;
+    ValueError if the algebra is infinite.
+
+    y'' = y'**2/y is linearizable: sl(3), simple of dimension 8. Burgers'
+    equation: dimension 5, sl(2) acting irreducibly on the abelian ideal of
+    d/dx and the Galilean boost, so the algebra is perfect ([g, g] = g):
+
+    >>> from sympy import Function, diff, symbols
+    >>> x, t = symbols("x t")
+    >>> y = Function("y")(x)
+    >>> sl3 = symmetry_algebra(diff(y, x, 2) - diff(y, x) ** 2 / y, y, [x])
+    >>> sl3.dimension, sl3.is_semisimple()
+    (8, True)
+    >>> u = Function("u")(x, t)
+    >>> burgers = symmetry_algebra(diff(u, t) - diff(u, x, 2) - u * diff(u, x), u, [x, t])
+    >>> burgers.dimension, burgers.is_solvable(), burgers.derived_series()
+    (5, False, [5])
+    """
+    janet, _ = _determining_janet_basis(eq, dependent, list(independent), sort_order)
+    return LieAlgebra.from_janet_basis(janet)
+
+
+def _determining_janet_basis(
+    eq: Expr, dependent: Basic, independent: list[Basic], sort_order: WeightFunction
+) -> tuple[JanetBasis, Expr]:
+    """The Janet basis of the determining equations of eq (unknown
+    functions: the infinitesimals in the order of the coordinates, the
+    independent variables, then the dependent one as a plain symbol) and
+    the symmetry condition they come from."""
+    infinitesimals = create_infinitesimals([dependent], independent)
+    plain = {dependent: sp_symbol(dependent)}
+    functions = [infinitesimals[v].xreplace(plain) for v in [*independent, dependent]]
+    condition = determining_condition(eq, [dependent], independent, infinitesimals)
+    system = [
+        finish_substitution(e).xreplace(plain)
+        for e in split_jet_coefficients(condition, [dependent])
+    ]
+    janet = JanetBasis(system, functions, [*independent, plain[dependent]], sort_order)
+    return janet, condition
 
 
 def _initial_conditions(eq: Expr, dependent: Basic, independent: list[Basic]) -> list[list[Expr]]:
