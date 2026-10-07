@@ -29,6 +29,7 @@ from sympy import (
     Poly,
     PolynomialError,
     default_sort_key,
+    factor_list,
     nan,
     numer,
     solve,
@@ -47,6 +48,7 @@ from delierium.infinitesimals import (
 )
 from delierium.janet_basis import LHDP, JanetBasis, nonzero_factors, split_assumptions
 from delierium.matrix_order import Mgrevlex, WeightFunction
+from delierium.thomas import thomas_decomposition
 
 __all__ = ["Case", "classify", "group_classification"]
 
@@ -239,37 +241,48 @@ def _inequations(inequations: list[list[Expr]]) -> list[list[Expr]] | None:
 
 
 def _solutions(condition: Sequence[Expr]) -> list[tuple[dict[Basic, Expr], list[Expr]]]:
-    """The real solutions of the polynomial equations condition, each with
-    the initials it assumes nonzero, as in an algebraic Thomas decomposition:
-    an equation is solved for its leading symbol only where its initial (the
-    leading coefficient) does not vanish; where it does, the initial and the
-    rest of the equation are new equations."""
+    """The real solutions of the polynomial equations condition, each with the
+    expressions it assumes nonzero.
+
+    They come from an algebraic Thomas
+    decomposition (#58): disjoint simple systems, each solved for its
+    leaders from the lowest up; the inequations of a system are the
+    assumptions. In a simple system the initial of each equation and its
+    discriminant do not vanish, so the roots are distinct and the solutions
+    disjoint."""
     polys = [numer(together(e)).expand() for e in condition]
     polys = [f for f in polys if f != 0]
     if not polys:
         return [({}, [])]
-    f, rest = polys[0], polys[1:]
-    if f.is_number:
+    if any(f.is_number for f in polys):
         return []  # a nonzero constant vanishes nowhere
-    leader = sorted(f.free_symbols, key=default_sort_key)[0]
-    poly = Poly(f, leader)
-    initial = poly.LC()
+    variables = sorted(set().union(*(f.free_symbols for f in polys)), key=default_sort_key)
     results = []
-    if not initial.is_number:
-        # initial = 0: the equation without its leading term
-        results += _solutions([initial, f - initial * leader ** poly.degree(), *rest])
-    try:
-        roots: list[Expr] = list(solve(f, leader))
-    except NotImplementedError:
-        roots = []
-    for root in roots:
-        if root.has(I):
-            continue
-        for solution, initials in _solutions([e.subs(leader, root) for e in rest]):
-            value = root.subs(solution)
-            assumed = [initial.subs(solution)] if not initial.is_number else []
-            results.append(({leader: value, **solution}, assumed + initials))
+    for system in thomas_decomposition(polys, variables=variables):
+        for solution in _solve_triangular(system.equations, variables):
+            assumed = [
+                factor for e in system.inequations for factor, _ in factor_list(e.subs(solution))[1]
+            ]
+            results.append((solution, assumed))
     return results
+
+
+def _solve_triangular(equations: list[Expr], variables: list[Basic]) -> list[dict[Basic, Expr]]:
+    """The real solutions of the equations of a simple system, its leaders
+    in terms of the free variables: each equation solved for its leader
+    after substituting the solutions of the lower ones."""
+    solutions: list[dict[Basic, Expr]] = [{}]
+    for equation in reversed(equations):  # lowest leader first
+        leader = next(v for v in variables if equation.has(v))
+        extended = []
+        for solution in solutions:
+            try:
+                roots: list[Expr] = list(solve(equation.subs(solution), leader))
+            except NotImplementedError:
+                roots = []
+            extended += [{**solution, leader: root} for root in roots if not root.has(I)]
+        solutions = extended
+    return solutions
 
 
 def _same_basis(janet: JanetBasis, solution: dict[Basic, Expr], other: JanetBasis) -> bool:

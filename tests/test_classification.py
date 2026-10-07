@@ -4,7 +4,7 @@ import itertools
 import random
 
 import pytest
-from sympy import Function, Rational, Symbol, diff, oo, symbols
+from sympy import Function, Rational, Symbol, diff, oo, sqrt, symbols
 
 from delierium.classification import (
     Case,
@@ -49,6 +49,15 @@ def test_solutions_split_on_the_initial():
     # several equations together; no real solution
     assert _solutions([a - 1, b - a]) == [({a: 1, b: 1}, [])]
     assert _solutions([a**2 + 1]) == []
+
+
+def test_solutions_are_disjoint():
+    """#58: the solutions come from a Thomas decomposition; where two roots
+    coincide (a**2 = b at b = 0) that is a solution of its own."""
+    a, b = symbols("a b")
+    solutions = _solutions([a**2 - b])
+    assert [rule for rule, _ in solutions] == [{a: -sqrt(b)}, {a: sqrt(b)}, {a: 0, b: 0}]
+    assert [initials for _, initials in solutions] == [[b], [b], []]
 
 
 def test_inequations_are_cleaned_up():

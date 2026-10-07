@@ -12,6 +12,9 @@ The public interface is what this package exports (``from delierium import
 * group classification: classify (cases of a linear system with parameters,
   each with its Janet basis), group_classification (cases of the symmetries
   of a differential equation with parameters), Case
+* algebraic Thomas decomposition: thomas_decomposition (polynomial equations
+  and inequations split into simple systems with disjoint solutions),
+  SimpleSystem
 * rankings: Context, Mgrevlex, Mgrlex, Mlex
 * printing in the notation of Lie: ltf, lie_form, lie_derivative_printer
 * Lie algebras of generators: LieAlgebra (structure constants, commutator
@@ -62,6 +65,7 @@ from .janet_basis import (
 )
 from .lie_algebra import LieAlgebra, NotClosedError, VectorField
 from .matrix_order import Context, Mgrevlex, Mgrlex, Mlex
+from .thomas import SimpleSystem, thomas_decomposition
 
 __version__ = _version("delierium")
 
@@ -77,6 +81,7 @@ __all__ = [
     "Mgrlex",
     "Mlex",
     "NotClosedError",
+    "SimpleSystem",
     "VectorField",
     "__version__",
     "adjoint_frechet_derivative",
@@ -99,5 +104,6 @@ __all__ = [
     "overdetermined_system_odes",
     "overdetermined_system_pde",
     "prolongation",
+    "thomas_decomposition",
     "variational_derivative",
 ]
