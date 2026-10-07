@@ -22,7 +22,8 @@ The public interface is what this package exports (``from delierium import
 * printing in the notation of Lie: ltf, lie_form, lie_derivative_printer
 * Lie algebras: LieAlgebra (of generators, of a Janet basis of determining
   equations or from structure constants; commutator table, derived and lower
-  central series, center, Killing form), VectorField, NotClosedError
+  central series, center, Killing form, type in Lie's classification up to
+  dimension 4: LieAlgebraType), VectorField, NotClosedError
 * operators: euler_operator, frechet_derivative, adjoint_frechet_derivative,
   variational_derivative
 * pictures: the module delierium.visualization (staircase diagrams of Janet
@@ -67,6 +68,7 @@ from .janet_basis import (
     is_janet_basis_of,
 )
 from .lie_algebra import LieAlgebra, NotClosedError, VectorField
+from .lie_algebra_types import LieAlgebraType
 from .matrix_order import Context, Mgrevlex, Mgrlex, Mlex
 from .thomas import SimpleSystem, thomas_decomposition
 
@@ -80,6 +82,7 @@ __all__ = [
     "JanetType",
     "LHDPList",
     "LieAlgebra",
+    "LieAlgebraType",
     "Mgrevlex",
     "Mgrlex",
     "Mlex",

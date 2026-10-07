@@ -59,6 +59,7 @@ from sympy.polys.matrices import DomainMatrix
 
 if TYPE_CHECKING:
     from delierium.janet_basis import JanetBasis
+    from delierium.lie_algebra_types import LieAlgebraType
 
 __all__ = [
     "LieAlgebra",
@@ -512,6 +513,23 @@ class LieAlgebra:
         r, c = self.dimension, self.structure_constants
         ad = [Matrix(r, r, lambda k, j, i=i: c[i][j][k]) for i in range(r)]
         return Matrix(r, r, lambda i, j: cancel((ad[i] * ad[j]).trace()))
+
+    def type(self) -> "LieAlgebraType | None":
+        """The type in Lie's classification of the complex Lie algebras of
+        dimension at most 4, with Schwarz's names (section 3.4), None above
+        (delierium.lie_algebra_types).
+
+        >>> x, y = Symbol('x'), Symbol('y')
+        >>> print(LieAlgebra([[1, 0], [0, 1], [y, -x]], [x, y]).type())  # e(2)
+        l3,2(c = -1)
+        >>> print(LieAlgebra([[1, 0], [0, 1], [0, y]], [x, y]).type())
+        l3,4
+        """
+        from delierium.lie_algebra_types import (  # pylint: disable=import-outside-toplevel
+            lie_algebra_type,
+        )
+
+        return lie_algebra_type(self)
 
     def is_semisimple(self) -> bool:
         """Cartan's criterion: the Killing form is nondegenerate."""

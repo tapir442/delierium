@@ -194,7 +194,7 @@ def test_algebra_of_the_janet_basis(entry):
     """The Lie algebra from the Janet basis of the determining equations,
     without generators (LieAlgebra.from_janet_basis), is that of the
     complete list of generators: the same derived and lower central series,
-    center and rank of the Killing form."""
+    center, rank of the Killing form and, up to dimension 4, type."""
     coordinates = [Symbol(v) for v in entry.independent + entry.dependent]
 
     def invariants(algebra):
@@ -204,6 +204,7 @@ def test_algebra_of_the_janet_basis(entry):
             algebra.lower_central_series(),
             algebra.center().rows,
             algebra.killing_form().rank(simplify=True),
+            str(algebra.type()),
         )
 
     given = LieAlgebra(entry.parsed_generators(), coordinates)

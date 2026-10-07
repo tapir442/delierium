@@ -46,6 +46,14 @@ New:
   and Killing form rank as the algebra of the generators. `y'' = y'**2/y` gives sl(3),
   Burgers' equation a perfect 5-dimensional algebra.
 * `LieAlgebra.from_structure_constants(c)`: an abstract Lie algebra.
+* `LieAlgebra.type()`: the type of an algebra of dimension at most 4 in Lie's classification
+  of the complex Lie algebras, with Schwarz's names (section 3.4: `l1`, `l2,1`, ...,
+  `l4,17`) and parameters, e.g. `l3,2(c = -1)` for the Euclidean algebra e(2). Decided by
+  invariants (derived series, nilpotency, center, Killing form, the Jordan form of `ad X`
+  on the derived algebra), checked on every listed type in random bases and on the
+  catalogue: the Janet basis and the generators give the same type for all 154 entries of
+  dimension at most 4. Two corrections of the listing: `l4,7` has a derived algebra of
+  dimension 3, and `l4,9` with `a = 1` is `l4,14`.
 
 ### 2.1.0
 
