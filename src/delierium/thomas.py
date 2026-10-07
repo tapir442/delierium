@@ -23,7 +23,8 @@ from dataclasses import dataclass, field
 from functools import cache
 from typing import Any
 
-from sympy import ZZ, Basic, Expr, S, Symbol, expand
+from sympy import QQ, ZZ, Basic, Dummy, Expr, S, Symbol, expand, groebner
+from sympy import Poly as SPoly
 from sympy.polys.matrices import DomainMatrix
 from sympy.polys.rings import PolyRing
 
@@ -188,7 +189,7 @@ class _Ring:
             c = p.coeff_wrt(g, d)
             if c != 0:
                 content = c if content == 0 else content.gcd(c)
-        return self.primitive(p.exquo(content)) if not content.is_ground else p
+        return self.primitive(p if content.is_ground else p.exquo(content))
 
     def prs(self, p: Pol, q: Pol, x: Symbol, i: int) -> tuple[Pol, Pol]:
         """(PRS_i, res_i) of p and q, deg p > deg q (Definition 2.13):
@@ -246,27 +247,56 @@ class _System:
 
     def normalized(self, ring: _Ring) -> list[tuple[Pol, bool]]:
         """The (simple) system, highest leader first, each polynomial in
-        normal form: its coefficients reduced modulo the lower equations,
-        without content and with a positive sign. All initials are nonzero
-        on the solutions, so neither step changes the solutions."""
-        order = sorted(self.triangular, key=ring.rank.__getitem__, reverse=True)
-        return [
-            (self.normal_form(self.triangular[x][0], x, ring), self.triangular[x][1]) for x in order
-        ]
+        normal form: reduced modulo a lex Groebner basis (over the
+        rationals) of the lower equations, with the denominators cleared,
+        without content and with a positive sign.
 
-    def normal_form(self, p: Pol, x: Symbol, ring: _Ring) -> Pol:
-        lower = sorted(
-            (y for y in self.triangular if ring.rank[y] < ring.rank[x]),
-            key=ring.rank.__getitem__,
-            reverse=True,
-        )
-        for y in lower:
-            e = self.equation(y)
-            if e is not None and ring.mdeg(p, y) >= ring.mdeg(e, y):
-                p = ring.prem(p, e, y)
-        p = ring.content_free(p, x)
-        # the sign of the initial's leading term: x**2 - a, not a - x**2
-        return -p if ring.init(p, x).LC < 0 else p
+        The remainder differs from the polynomial by an element of the
+        ideal of the lower equations, so it has the same values on their
+        solutions: the same initial and square-freeness, the system stays
+        simple. Unlike pseudo-reduction it is canonical and does not
+        multiply by powers of the lower initials, whose coefficients would
+        grow over the levels (1419 digits for a two-equation input). Where
+        the initial is invertible modulo the lower equations, the polynomial
+        is made monic first (25 digits instead of 1419 there)."""
+        lowest_first = sorted(self.triangular, key=ring.rank.__getitem__)
+        done: dict[Symbol, tuple[Pol, bool]] = {}
+        equations: list[Expr] = []  # the normalized equations below the current leader
+        for x in lowest_first:
+            p, is_equation = self.triangular[x]
+            if equations:
+                p = _monic_normal_form(p, x, equations, ring)
+            p = ring.content_free(p, x)
+            # the sign of the initial's leading term: x**2 - a, not a - x**2
+            p = -p if ring.init(p, x).LC < 0 else p
+            done[x] = (p, is_equation)
+            if is_equation:
+                equations.append(p.as_expr())
+        return [done[x] for x in reversed(lowest_first)]
+
+
+def _monic_normal_form(p: Pol, x: Symbol, equations: list[Expr], ring: _Ring) -> Pol:
+    """p reduced modulo a lex Groebner basis of the lower equations, made
+    monic in x first if its initial has an inverse f modulo them (an element
+    t - f of the basis of the equations and t init - 1), the denominators
+    cleared. f init = 1 on the solutions of the lower equations, so f does
+    not vanish there: the zeros, the initial and square-freeness stay."""
+    variables = ring.variables
+    expr = p.as_expr()
+    init = ring.init(p, x).as_expr()
+    if not init.is_number:
+        t = Dummy("t")
+        with_inverse = groebner([*equations, t * init - 1], t, *variables, order="lex", domain=QQ)
+        inverse = [g for g in with_inverse.exprs if SPoly(g, t).degree() == 1]
+        if inverse:
+            g = SPoly(inverse[-1], t)
+            a, b = g.all_coeffs()
+            if a.is_number:  # t - f: f = -b/a
+                expr = expand(expr * (-b / a))
+    remainder = groebner(equations, *variables, order="lex", domain=QQ).reduce(expr)[1]
+    _, cleared = SPoly(remainder, *variables).clear_denoms(convert=True)
+    assert ring.ring is not None
+    return ring.ring.from_expr(cleared.as_expr())
 
 
 def _reduce(system: _System, p: Pol, ring: _Ring) -> Pol:
