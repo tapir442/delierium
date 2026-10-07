@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from functools import cache
 from typing import Any
 
-from sympy import QQ, ZZ, Basic, Dummy, Expr, S, Symbol, expand, groebner
+from sympy import QQ, ZZ, Basic, Dummy, Expr, PolynomialError, S, Symbol, expand, groebner
 from sympy import Poly as SPoly
 from sympy.polys.matrices import DomainMatrix
 from sympy.polys.rings import PolyRing
@@ -125,7 +125,12 @@ class _Ring:
             raise ValueError(f"{e}: symbols {unknown} are not among the variables")
         if self.ring is None:
             raise ValueError("no variables")
-        return self.primitive(self.ring.from_expr(e))
+        try:
+            poly = SPoly(e, *self.variables, domain=QQ)
+        except PolynomialError as error:
+            raise ValueError(f"{e} is not a polynomial in {self.variables}") from error
+        _, poly = poly.clear_denoms(convert=True)  # a/2 - 1: a - 2
+        return self.primitive(self.ring.from_expr(poly.as_expr()))
 
     def ld(self, p: Pol) -> Symbol | None:
         """The leader, None for a constant."""

@@ -139,6 +139,13 @@ def test_unknown_symbols():
         thomas_decomposition([a * x - 1], variables=[x])
 
 
+def test_rational_coefficients():
+    """Denominators of numbers are cleared; other non-polynomials are refused."""
+    assert decomposition([x / 2 - Rational(1, 3)], variables=[x]) == ["{3*x - 2 = 0}"]
+    with pytest.raises(ValueError, match="not a polynomial"):
+        thomas_decomposition([x - 1 / y], variables=[x, y])
+
+
 def test_factorize():
     """Splitting on factors: y*(x - 1) = 0 into y = 0 and y != 0, x = 1."""
     assert decomposition([y * (x - 1)], variables=[x, y], factorize=True) == [
