@@ -159,13 +159,32 @@ def test_factorize():
     ]
 
 
-@pytest.mark.parametrize(
-    "factorize", [True, pytest.param(False, marks=pytest.mark.slow)], ids=["factorize", "plain"]
-)
-def test_defective_subresultant_sequence(factorize):
-    """F is a polynomial in y**3, so its subresultant sequence with dF/dy
-    is defective; SymPy's subresultant PRS has a spurious factor 9 z + 1 in
-    the resultant there, which lost the solutions at z = -1/9 (fuzz test)."""
+def test_subresultants_of_a_defective_sequence():
+    """F is a polynomial in y**3, so the subresultant sequence of F and dF/dy
+    has degree gaps; SymPy's subresultants() then differs from the
+    subresultants by polynomial factors (its resultant has a spurious factor
+    9 z + 1, which lost the solutions at z = -1/9). res_0 is the resultant."""
+    from sympy import cancel, diff, resultant
+
+    z = symbols("z")
+    F = expand(
+        y**6 * z**4 + 2 * y**6 * z**2 + y**6 + 9 * y**3 * z**3
+        + y**3 * z**2 + 9 * y**3 * z + y**3 - 27 * z**3
+    )  # fmt: skip
+    ring = _Ring([y, z])
+    p, q = ring.check(F), ring.check(diff(F, y))
+    res0 = ring.prs(p, q, y, 0)[1].as_expr()
+    assert cancel(res0 / resultant(F, diff(F, y), y)).is_number
+    # the regular subresultants are those of degree 3 and 2 (and 0)
+    assert [i for i in range(5) if ring.prs(p, q, y, i)[1] != 0] == [0, 2, 3]
+
+
+def test_defective_subresultant_sequence():
+    """The fuzz case that lost the solutions at z = -1/9 through the
+    defective subresultant sequence (see test_subresultants_of_a_defective_
+    sequence); since the coefficients are reduced modulo 9 z + 1, the
+    decomposition no longer meets that sequence here, but the case stays."""
+    factorize = True
     z = symbols("z")
     p = (
         y**9 * z**6 + 2 * y**9 * z**4 + y**9 * z**2 + 9 * y**6 * z**5
@@ -175,3 +194,159 @@ def test_defective_subresultant_sequence(factorize):
     assert any("6724*y**6 + 243" in s or "6724*y**7 + 243*y" in s for s in systems), systems
     special = [{z: Rational(-1, 9)}, {z: 0}, {z: Rational(-1, 3)}, {z: 1}]
     assert_partition([p], [], [y, z], special, factorize=factorize)
+
+
+# ---------------------------------------------------------------------------
+# fuzz test: random systems, the partition checked at points built level by
+# level from rationals and roots (a numerical check with adaptive precision:
+# the coefficients of a decomposition may have thousands of digits)
+
+
+def _coefficient_digits(polys, variables):
+    from sympy import Poly as SPoly
+
+    return max(
+        int(abs(int(c)).bit_length() * 0.30103) + 1
+        for p in polys
+        for c in SPoly(p, *variables).coeffs()
+    )
+
+
+def _mp(value, dps):
+    import mpmath
+    from sympy import Float
+
+    re, im = value.as_real_imag()
+    return mpmath.mpc(mpmath.mpf(Float(re, dps)), mpmath.mpf(Float(im, dps)))
+
+
+def _sympy_point(point, dps):
+    import mpmath
+    from sympy import Float, I
+
+    return {
+        v: c if isinstance(c, Rational) else Float(mpmath.re(c), dps) + I * Float(mpmath.im(c), dps)
+        for v, c in point.items()
+    }
+
+
+def _roots(p, v, point, dps):
+    """roots of p in v at point: exact where all coordinates are rational
+    (the rational ones stay Rational, the others from the square-free part),
+    numerical otherwise"""
+    import mpmath
+    from sympy import Poly as SPoly
+    from sympy import factor_list, quo, sqf_part
+
+    with mpmath.workdps(dps):
+        if all(isinstance(c, Rational) for c in point.values()):
+            q = SPoly(expand(p.subs(point)), v)
+            if q.degree() <= 0:
+                return []
+            exact = [
+                Rational(-f.all_coeffs()[1], f.all_coeffs()[0])
+                for f, _ in factor_list(q)[1]
+                if f.degree() == 1
+            ]
+            q = SPoly(sqf_part(q.as_expr()), v)
+            for r in exact:
+                q = SPoly(quo(q.as_expr(), v - r, v), v)
+        else:
+            q = SPoly(expand(p.subs(_sympy_point(point, dps))), v)
+            exact = []
+        if q.degree() <= 0:
+            return exact
+        coeffs = [_mp(c.evalf(dps + 20), dps + 20) for c in q.all_coeffs()]
+        found = mpmath.polyroots(coeffs, maxsteps=2000, extraprec=4 * dps, error=False)
+        tiny = mpmath.mpf(10) ** -(dps // 3)  # an exact root 0 comes out tiny
+        return exact + [mpmath.mpf(0) if abs(r) < tiny else r for r in found if abs(r) < 1e10]
+
+
+def _point(path, dps):
+    """the point of path [(v, Rational or (p, approximate root))] at dps"""
+    import mpmath
+
+    point = {}
+    for v, source in path:
+        if isinstance(source, Rational):
+            point[v] = source
+            continue
+        p, approx = source
+        found = _roots(p, v, point, dps)
+
+        def distance(r, approx=approx):
+            def mp(c):
+                return mpmath.mpf(c.p) / c.q if isinstance(c, Rational) else c
+
+            return abs(mp(r) - mp(approx))
+
+        point[v] = min(found, key=distance) if found else approx
+    return point
+
+
+def _partition_fails(systems, equations, inequations, path, dps, tol):
+    import mpmath
+
+    point = _point(path, dps)
+
+    def zero(e):
+        with mpmath.workdps(dps):
+            sub = _sympy_point(point, dps)
+            terms = [abs(_mp(t.subs(sub).evalf(dps), dps)) for t in expand(e).as_ordered_terms()]
+            return abs(_mp(e.subs(sub).evalf(dps), dps)) <= tol * max(sum(terms), 1)
+
+    def holds(eqs, ineqs):
+        return all(zero(e) for e in eqs) and not any(zero(e) for e in ineqs)
+
+    inside = sum(holds(s.equations, s.inequations) for s in systems)
+    return inside > 1 or inside != holds(equations, inequations)
+
+
+def _random_system(rng, variables, degree):
+    def poly():
+        e = 0
+        for _ in range(rng.randint(1, 3)):
+            t = rng.choice([-2, -1, 1, 2, 3])
+            for v in variables:
+                t *= v ** rng.randint(0, degree if v == variables[0] else 2)
+            e += t
+        return expand(e)
+
+    eqs = [e for e in (poly() for _ in range(rng.randint(0, 2))) if e != 0]
+    ineqs = [e for e in (poly() for _ in range(rng.randint(0, 2))) if e != 0]
+    return eqs, ineqs
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize(
+    "nvars, count, degree", [(2, 60, 3), (3, 8, 2)], ids=["2 variables", "3 variables"]
+)
+def test_fuzz_partition(nvars, count, degree):
+    """Random systems: at points built from rationals and roots of the
+    polynomials involved, the input holds iff exactly one simple system
+    does. This found the defective subresultants, ResSplitDivide and the
+    pquo of SymPy 1.14."""
+    import random
+
+    variables = list(symbols("x y z")[:nvars])
+    rng = random.Random(58)
+    for _ in range(count):
+        eqs, ineqs = _random_system(rng, variables, degree)
+        if not eqs and not ineqs:
+            continue
+        systems = thomas_decomposition(eqs, ineqs, variables)
+        polys = [*eqs, *ineqs] + [p for s in systems for p in [*s.equations, *s.inequations]]
+        high = max(200, 2 * _coefficient_digits(polys, variables) + 100)
+        for _ in range(10):
+            path = []
+            for v in reversed(variables):
+                point = _point(path, 60)
+                options = [Rational(rng.randint(-9, 9), rng.randint(1, 5))]
+                for p in polys:
+                    if p.has(v) and not (p.free_symbols - {v} - set(point)):
+                        options += [(p, r) for r in _roots(p, v, point, 60)]
+                path.append((v, rng.choice(options)))
+            if _partition_fails(systems, eqs, ineqs, path, 60, 1e-20):  # screen, then recheck
+                assert not _partition_fails(
+                    systems, eqs, ineqs, path, 4 * high, Rational(1, 10 ** (high // 2))
+                ), (eqs, ineqs, [str(s) for s in systems], path)
