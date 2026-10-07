@@ -29,6 +29,26 @@ part of this release.
 
 # Release notes
 
+### 2.1.0
+
+New:
+
+* **Algebraic Thomas decomposition** (#58, stage 2): `thomas_decomposition(equations,
+  inequations, variables)` splits a system of polynomial equations and inequations into
+  disjoint simple systems (`SimpleSystem`: triangular, nonvanishing initials,
+  square-free), which together have exactly its solutions (Bächler, Gerdt,
+  Lange-Hegermann, Robertz, J. Symb. Comput. 2012, Algorithms 2.6-2.25). By default
+  polynomials are factored and the systems split on their factors. Deviations from the
+  paper and from SymPy, documented in the code: subresultants as exact Sylvester
+  determinants (SymPy's `subresultants()` is wrong for defective sequences),
+  `ResSplitDivide` keeps the original inequation (the paper's version lost cases), and a
+  workaround for SymPy 1.14's `PolyElement.pquo`. The output is in a compact normal form
+  (reduced modulo a Groebner basis of the lower equations, monic where possible). Checked
+  on the paper's examples and by a seeded fuzz test of the partition property.
+* `group_classification` and `classify` solve their parameter conditions with it, so the
+  cases are disjoint also where roots coincide (`a**2 = b`: `a = +-sqrt(b)` with
+  `b != 0`, and `a = b = 0`). The existing classifications are unchanged.
+
 ### 2.0.0
 
 Incompatible changes (of the public interface; the major version follows them):
