@@ -871,6 +871,49 @@ def _algebraic_in_highest_derivative(
         return None
 
 
+def _on_lower_derivative(eq: Expr, r: Expr, dep: list[Expr], highest_term: Expr) -> Expr | None:
+    """r on eq = 0 when eq cannot be solved for its highest derivative but is
+    linear in a lower one, e.g. u_t + F(u_xx) = 0 for u_t (#84): that
+    derivative and its derivatives in r are replaced by the solution and its
+    total derivatives. None if there is no such derivative."""
+    candidates = sorted(
+        (d for d in eq.atoms(Derivative) if d != highest_term and d.expr in dep),
+        key=lambda d: (-len(d.variables), default_sort_key(d)),
+    )
+    for d in candidates:
+        h = Dummy()
+        eq_h = numer(together(eq.xreplace({d: h})))
+        try:
+            if Poly(eq_h, h).degree() != 1:
+                continue
+        except PolynomialError:
+            continue
+        sol = solve(eq_h, h)[0]
+        if sol.has(d):
+            continue
+        result = r
+        while derived := [e for e in result.atoms(Derivative) if _derivative_of(e, d)]:
+            for e in derived:
+                rest = list(e.variables)
+                for v in d.variables:
+                    rest.remove(v)
+                result = result.xreplace({e: sol.diff(*rest) if rest else sol})
+        return result
+    return None
+
+
+def _derivative_of(e: Derivative, d: Derivative) -> bool:
+    """e is d or one of its derivatives."""
+    if e.expr != d.expr:
+        return False
+    rest = list(e.variables)
+    for v in d.variables:
+        if v not in rest:
+            return False
+        rest.remove(v)
+    return True
+
+
 def determining_condition(
     eq: Expr,
     dep: Variables,
@@ -902,13 +945,19 @@ def determining_condition(
             return algebraic
         # not polynomial in the highest derivative, e.g. u_t = atan(u_xx):
         # solve for it if the solution is unique (u_xx = tan(u_t)) (#5)
-        sols = solve(eq, highest_term)
-        if len(sols) != 1:
-            raise NotImplementedError(
-                f"{eq} is not polynomial in its highest derivative {highest_term} "
-                f"and cannot be solved uniquely for it (#5)"
-            ) from None
-        return r.xreplace({highest_term: sols[0]})
+        try:
+            sols: list[Expr] = list(solve(eq, highest_term))
+        except NotImplementedError:
+            sols = []
+        if len(sols) == 1:
+            return r.xreplace({highest_term: sols[0]})
+        lower = _on_lower_derivative(eq, r, dep, highest_term)
+        if lower is not None:
+            return lower
+        raise NotImplementedError(
+            f"{eq} is not polynomial in its highest derivative {highest_term} "
+            f"and cannot be solved uniquely for it (#5)"
+        ) from None
     if degree == 1:
         sol = solve(eq, highest_term)[0]
         r = r.xreplace({highest_term: sol})
