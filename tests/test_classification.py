@@ -166,3 +166,29 @@ def test_group_classification_anco():
         }
         point[a] = Rational(5, 3)
         assert sum(holds(case, point) for case in cases) == 1, point
+
+
+def test_solutions_with_a_root():
+    """A condition with a root of the parameters, from a parameter solved
+    for in an outer case (#83): sqrt(-kappa*lambda) = 0 is kappa*lambda = 0."""
+    kappa, lam = symbols("kappa lambda")
+    assert _solutions([sqrt(-kappa * lam)]) == [({lam: 0}, []), ({kappa: 0}, [lam])]
+
+
+@pytest.mark.slow
+def test_group_classification_mbe():
+    """Molecular beam epitaxy (Baumann 5.83): 3 symmetries in general; the
+    classification failed on a condition sqrt(-kappa*lambda) = 0 (#83)."""
+    x, t, kappa, alpha, gamma, lam, phi = symbols("x t kappa alpha gamma lambda Phi")
+    a = Function("a")(x, t)
+    mbe = (
+        diff(a, t)
+        + kappa * diff(a, x, 4)
+        - alpha * diff(a, x, 2)
+        - gamma * diff(diff(a, x) ** 2, x, 2)
+        - lam * diff(diff(a, x) ** 3, x)
+        - phi
+    )
+    cases = group_classification(mbe, a, [x, t])
+    assert cases[0].rank() == 3
+    assert all(c.rank() >= 3 for c in cases)
