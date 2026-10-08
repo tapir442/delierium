@@ -21,6 +21,7 @@ from delierium.infinitesimals import (
 from delierium.janet_basis import JanetBasis
 from delierium.lie_algebra import LieAlgebra
 from delierium.matrix_order import Mgrevlex, WeightFunction
+from delierium.solve import generators_by_ansatz
 
 __all__ = ["LieSymmetries", "lie_symmetries"]
 
@@ -41,6 +42,7 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
     parameter_conditions: the special parameter values the Janet basis
         excludes (see group_classification for them)
     algebra: the Lie algebra (finite dimension only), from the Janet basis
+    generators(): generators of the algebra by an ansatz (#9)
     """
 
     def __init__(
@@ -60,6 +62,7 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
         self.determining_equations: list[Expr] = system
         self.infinitesimals: list[Expr] = functions
         self.coordinates: list[Basic] = coordinates
+        self._generators: dict[Any, list[tuple[Expr, ...]]] = {}
 
     @cached_property
     def janet_basis(self) -> JanetBasis:
@@ -91,6 +94,33 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
     def algebra(self) -> LieAlgebra:
         """ValueError if the algebra is infinite."""
         return LieAlgebra.from_janet_basis(self.janet_basis)
+
+    def generators(
+        self, max_degree: int = 3, functions: Sequence[Expr] | None = None
+    ) -> list[tuple[Expr, ...]]:
+        """Generators of the symmetry algebra, each a tuple with one component
+        per coordinate, by an ansatz: linear combinations of monomials of
+        degree <= max_degree in the coordinates and functions (by default
+        tried: none, then log, sqrt, exp of the coordinates), see
+        delierium.solve.generators_by_ansatz. All of them if as many as the
+        dimension are found (complete()); for an infinite algebra the ones of
+        this form."""
+        key = (max_degree, None if functions is None else tuple(functions))
+        if key not in self._generators:
+            self._generators[key] = generators_by_ansatz(
+                self.determining_equations,
+                self.infinitesimals,
+                self.coordinates,
+                self.dimension,
+                max_degree,
+                functions,
+            )
+        return self._generators[key]
+
+    def complete(self, generators: Sequence[Sequence[Any]]) -> bool:
+        """Whether generators span the whole (finite) algebra: as many as
+        the dimension (they are linearly independent by construction)."""
+        return self.is_finite and len(generators) == self.dimension
 
     def verify(self, generators: Sequence[Sequence[Any]]) -> list[VerificationResult]:
         """verify_symmetries for the generators, each a tuple with one
@@ -124,6 +154,9 @@ def lie_symmetries(
     (2, [x, y], 'l2,1')
     >>> [bool(r) for r in s.verify([(1, 0), (x, -y_), (x, y_)])]
     [True, True, False]
+    >>> generators = s.generators()
+    >>> generators, s.complete(generators)
+    ([(1, 0), (-x, y)], True)
 
     The heat equation has infinitely many:
 

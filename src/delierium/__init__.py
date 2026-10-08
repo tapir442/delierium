@@ -4,7 +4,8 @@ The public interface is what this package exports (``from delierium import
 ...``):
 
 * everything at once: lie_symmetries (a LieSymmetries object: determining
-  equations, Janet basis, dimension, assumptions, algebra, verify())
+  equations, Janet basis, dimension, assumptions, algebra, verify(), and
+  generators() by an ansatz, see delierium.solve)
 * determining equations: overdetermined_system_ode, overdetermined_system_odes,
   overdetermined_system_pde, make_infinitesimal, create_infinitesimals,
   prolongation; verify_symmetry, verify_symmetries (a given generator
