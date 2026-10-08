@@ -7,12 +7,14 @@ whose nullspace gives the generators.
 This finds the generators of polynomial (or elementary, with the functions)
 type; the rank of the Janet basis tells whether all are found."""
 
+import random
 from collections.abc import Sequence
 from itertools import combinations_with_replacement
 from typing import Any
 
 from sympy import (
     Basic,
+    Derivative,
     Dummy,
     Expr,
     Function,
@@ -22,7 +24,9 @@ from sympy import (
     Poly,
     PolynomialError,
     Pow,
+    Rational,
     S,
+    Subs,
     exp,
     expand,
     expand_power_exp,
@@ -36,6 +40,8 @@ from sympy import (
     sympify,
     together,
 )
+
+from delierium.infinitesimals import _simplified_residue
 
 __all__ = ["ansatz_generators", "candidate_functions", "generators_by_ansatz"]
 
@@ -52,14 +58,17 @@ def _monomials(variables: Sequence[Basic], degree: int) -> list[Expr]:
     return result
 
 
-def _identity_coefficients(e: Expr, coordinates: Sequence[Basic]) -> list[Expr]:
+def _identity_coefficients(
+    e: Expr, coordinates: Sequence[Basic], unknowns: Sequence[Basic]
+) -> list[Expr]:
     """The conditions for e = 0 identically in the coordinates: e as a
     polynomial in the coordinates and in the other functions of them (each
     replaced by a new symbol), its coefficients. Roots of a coordinate v are
     written with one new variable (v = s**L), exponentials exp(c*v) as
     powers of exp(v), so that they are not taken as independent. Treating
     related functions (log(v), u**a) as independent can only give more
-    conditions, so the solutions remain solutions."""
+    conditions, so the solutions remain solutions. Where e is no
+    polynomial in them, its values at random points."""
     e = sympify(expand_power_exp(expand(e)))
     variables: list[Basic] = []
     for v in coordinates:
@@ -83,16 +92,27 @@ def _identity_coefficients(e: Expr, coordinates: Sequence[Basic]) -> list[Expr]:
         return []
     atoms = [
         a
-        for a in numerator.atoms(Function, Pow)
+        for a in numerator.atoms(Function, Pow, Derivative, Subs)
         if a.has(*variables)
         and not (isinstance(a, Pow) and a.exp.is_Integer and a.base in variables)
     ]
     replacements = {a: Dummy() for a in sorted(atoms, key=lambda a: -a.count_ops())}
     polynomial = expand(numerator.xreplace(replacements))
+    generators = [*variables, *replacements.values()]
     try:
-        return Poly(polynomial, *variables, *replacements.values()).coeffs()
+        coefficients = Poly(polynomial, *generators).coeffs()
+        if not any(c.has(*generators) for c in coefficients):
+            return coefficients
     except PolynomialError:
-        return [polynomial]
+        pass
+    # not a polynomial in them: e is linear in the unknowns, so its values at
+    # random points are linear conditions (the result is verified at the end)
+    rng = random.Random(len(unknowns))
+    samples = []
+    for _ in range(len(unknowns) + 3):
+        point = {g: Rational(rng.randint(1, 97), rng.randint(1, 13)) for g in generators}
+        samples.append(expand(polynomial.xreplace(point)))
+    return [c for c in samples if c != 0 and not c.has(*generators)]
 
 
 def ansatz_generators(
@@ -130,7 +150,8 @@ def ansatz_generators(
     rows = []
     for e in system:
         rows += [
-            expand(r) for r in _identity_coefficients(e.subs(substitution).doit(), coordinates)
+            expand(r)
+            for r in _identity_coefficients(e.subs(substitution).doit(), coordinates, flat)
         ]
     matrix = (
         Matrix([[r.coeff(c) for c in flat] for r in rows]) if rows else Matrix.zeros(1, len(flat))
@@ -155,6 +176,32 @@ def candidate_functions(coordinates: Sequence[Basic]) -> list[list[Expr]]:
 
 
 def generators_by_ansatz(
+    system: Sequence[Expr],
+    infinitesimals: Sequence[Expr],
+    coordinates: Sequence[Basic],
+    dimension: Any = oo,
+    max_degree: int = 3,
+    functions: Sequence[Expr] | None = None,
+) -> list[tuple[Expr, ...]]:
+    """generators by ansatz_generators with increasing degree up to
+    max_degree, until dimension many are found. Without functions given,
+    monomials in the coordinates first, then the families of
+    candidate_functions one by one, and finally those that helped,
+    together. Every generator is checked against the system."""
+    found = _search(system, infinitesimals, coordinates, dimension, max_degree, functions)
+    return [g for g in found if _satisfies(system, infinitesimals, g)]
+
+
+def _satisfies(
+    system: Sequence[Expr], infinitesimals: Sequence[Expr], generator: Sequence[Expr]
+) -> bool:
+    substitution = {
+        f.func: Lambda(f.args, c) for f, c in zip(infinitesimals, generator, strict=True)
+    }
+    return all(_simplified_residue(e.subs(substitution).doit()) == 0 for e in system)
+
+
+def _search(
     system: Sequence[Expr],
     infinitesimals: Sequence[Expr],
     coordinates: Sequence[Basic],
