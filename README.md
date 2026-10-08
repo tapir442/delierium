@@ -69,6 +69,9 @@ New:
   functions written as exponentials is split off now. `verify_symmetry` also counts a
   residue as 0 where it vanishes for positive variables and parameters (symmetries are
   local: `y' = sqrt(|y|)`, `y'**n = f(x) g(y)`). Both found by the SymPy benchmark (#6).
+* `benchmarks/sympy_symmetries.py` and its report `benchmarks/sympy_symmetries.md`:
+  delierium against SymPy's `infinitesimals` and sympy-extras on Kamke's first order ODEs
+  and on the catalogue, with cross checks of the generators each tool finds (#6).
 * `LieAlgebra.type()`: the type of an algebra of dimension at most 4 in Lie's classification
   of the complex Lie algebras, with Schwarz's names (section 3.4: `l1`, `l2,1`, ...,
   `l4,17`) and parameters, e.g. `l3,2(c = -1)` for the Euclidean algebra e(2). Decided by
