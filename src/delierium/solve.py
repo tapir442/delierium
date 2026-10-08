@@ -474,12 +474,15 @@ class _Names:
                 return name
 
 
-def _one_term(e: Expr, functions: Sequence[Expr]) -> tuple[Expr, dict[Basic, int]] | None:
+def _one_term(
+    e: Expr, functions: Sequence[Expr], constants: Sequence[Symbol] = ()
+) -> tuple[Expr, dict[Basic, int]] | None:
     """(g, orders) if e is c * (a derivative of the unknown g) with c free of
-    the unknowns, orders the derivative's order per variable (empty for g
-    itself); None otherwise."""
+    the unknowns (functions and constants: c3 * g' = 0 does not give g' = 0),
+    orders the derivative's order per variable (empty for g itself); None
+    otherwise."""
     terms = Add.make_args(expand(e))
-    if len(terms) != 1:
+    if len(terms) != 1 or terms[0].has(*constants):
         return None
     unknown_parts = [f for f in Mul.make_args(terms[0]) if any(f.has(g) for g in functions)]
     if len(unknown_parts) != 1:
@@ -624,7 +627,7 @@ def reduce_determining_equations(  # pylint: disable=too-many-locals
         functions.extend(f for f in new if not isinstance(f, Symbol))
         constants.extend(f for f in new if isinstance(f, Symbol))
         representation = [
-            _substitute(r, substitution) if r.has(g.func) else r for r in representation
+            expand(r.subs(substitution).doit()) if r.has(g.func) else r for r in representation
         ]
         split: list[Expr] = []
         for e in equations:
@@ -635,7 +638,7 @@ def reduce_determining_equations(  # pylint: disable=too-many-locals
     while True:
         candidates = []
         for e in equations:
-            found = _one_term(e, functions)
+            found = _one_term(e, functions, constants)
             if found is not None:
                 g, orders = found
                 candidates.append((len(orders), sum(orders.values()), str(e), e, g, orders))

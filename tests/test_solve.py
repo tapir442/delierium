@@ -88,3 +88,23 @@ def test_candidate_functions_order():
     families = candidate_functions(s.coordinates, s.determining_equations)
     assert [sqrt(t), 1 / t] in families[:3]
     assert families.index([sqrt(t), 1 / t]) < families.index([sqrt(x), 1 / x])
+
+
+def test_linear_ode_solved_by_dsolve():
+    """y''' = 7y' - 6y (Hydon, Exercise 3.5): the reduction leaves an ODE for
+    the y-independent part of Y, solved by dsolve: exp(x), exp(2x),
+    exp(-3x) (the infinitesimals must not be multiplied by a denominator)."""
+    x = symbols("x")
+    y = Function("y")(x)
+    ok, generators = complete_and_verified(diff(y, x, 3) - 7 * diff(y, x) + 6 * y, y, x)
+    assert ok and (0, exp(-3 * x)) in generators
+
+
+def test_constant_coefficient_is_not_one_term():
+    """c * g' = 0 with an unknown constant c does not give g' = 0."""
+    from delierium.solve import _one_term  # pylint: disable=import-outside-toplevel
+
+    x, c = symbols("x c")
+    g = Function("g")(x)
+    assert _one_term(c * diff(g, x), [g], [c]) is None
+    assert _one_term(x * diff(g, x), [g], [c]) == (g, {x: 1})
