@@ -18,6 +18,7 @@ from sympy import (  # noqa: F401
     Basic,
     Derivative,
     Dummy,
+    Equality,
     Expr,
     Float,
     Function,
@@ -1035,6 +1036,7 @@ def _determining_equations(
 ) -> list[Expr]:
     """The determining equations of the scalar equation eq, for
     overdetermined_system_ode and overdetermined_system_pde."""
+    _checked_arguments(eq, dependent, independent)
     result = compute_overdetermined_system_of_infinitesimals(
         eq, dependent, independent, infinitesimals=infinitesimals
     )
@@ -1075,6 +1077,7 @@ def overdetermined_system_odes(  # pylint: disable=keyword-arg-before-vararg
     -T_t*x**2 - T_t*y**2 - 2*T_x*x**3*y - 2*T_x*x*y**3 - T_y*x**4 - 2*T_y*x**2*y**2 - T_y*y**4 -
     2*X*x - 2*Y*y + Y_t + 2*Y_x*x*y + Y_y*x**2 + Y_y*y**2
     """
+    _checked_arguments(eqs, dependent, independent)
     eqs = [_local_signs(_exact_numbers(_canonical_derivatives_of(eq, dependent))) for eq in eqs]
     dep = convert_to_iterable(dependent)
     indep = convert_to_iterable(independent)
@@ -1261,15 +1264,74 @@ def determining_janet_basis(
     return JanetBasis(system, functions, variables, sort_order=sort_order)
 
 
+def _checked_arguments(
+    equations: Expr | Iterable[Expr], dependent: Variables, independent: Variables
+) -> tuple[list[Expr], list[Expr], list[Basic]]:
+    """equations, dependent and independent variables as lists, checked: the
+    independent variables are distinct symbols, the dependent variables
+    functions of them (y(x), not y), every equation (Eq(a, b) is a - b)
+    contains a derivative of a dependent variable, only with respect to the
+    independent ones. ValueError otherwise."""
+    eqs = [equations] if isinstance(equations, (Basic, int, float)) else list(equations)
+    eqs = [e.lhs - e.rhs if isinstance(e, Equality) else sympify(e) for e in eqs]
+    dep = convert_to_iterable(dependent)
+    indep = convert_to_iterable(independent)
+    _check_independent(indep)
+    _check_dependent(dep, indep)
+    for e in eqs:
+        _check_equation(e, dep, indep)
+    return eqs, dep, indep
+
+
+def _check_independent(indep: list[Any]) -> None:
+    if not indep:
+        raise ValueError("no independent variables")
+    for v in indep:
+        if not isinstance(v, Symbol):
+            raise ValueError(f"the independent variable {v} is not a symbol")
+    if len(set(indep)) != len(indep):
+        raise ValueError(f"the independent variables {indep} are not distinct")
+
+
+def _check_dependent(dep: list[Any], indep: list[Any]) -> None:
+    if not dep:
+        raise ValueError("no dependent variables")
+    for d in dep:
+        if not isinstance(d, AppliedUndef):
+            raise ValueError(
+                f"the dependent variable {d} is not a function of the independent variables "
+                f"{indep}: write {d}({', '.join(map(str, indep))})"
+            )
+        others = [a for a in d.args if a not in indep]
+        if others:
+            raise ValueError(
+                f"the dependent variable {d} depends on {others}, which are not among the "
+                f"independent variables {indep}"
+            )
+
+
+def _check_equation(e: Expr, dep: list[Any], indep: list[Any]) -> None:
+    if e == 0:
+        raise ValueError("an equation is 0")
+    derivatives = [a for a in e.atoms(Derivative) if a.expr in dep]
+    if not derivatives:
+        raise ValueError(f"{e} contains no derivative of the dependent variables {dep}")
+    for a in derivatives:
+        others = sorted({v for v in a.variables if v not in indep}, key=str)
+        if others:
+            raise ValueError(
+                f"{a}: derivative with respect to {others}, which are not among the "
+                f"independent variables {indep}"
+            )
+
+
 def _determining_system(
     equations: Expr | Iterable[Expr], dependent: Variables, independent: Variables
 ) -> tuple[list[Expr], list[Expr], list[Basic]]:
     """(determining equations, infinitesimals, coordinates) of a scalar ODE,
     a system of ODEs or a scalar PDE, the dependent variables written as
     plain symbols, the infinitesimals in the order of the coordinates."""
-    eqs = [equations] if isinstance(equations, Basic) else list(equations)
-    dep = convert_to_iterable(dependent)
-    indep = convert_to_iterable(independent)
+    eqs, dep, indep = _checked_arguments(equations, dependent, independent)
     if len(indep) == 1:
         system, functions, variables, _ = _linear_system_odes(eqs, dep, indep)
         return system, functions, variables

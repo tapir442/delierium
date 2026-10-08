@@ -41,6 +41,7 @@ from sympy.solvers.solvers import unrad
 
 from delierium.helpers import finish_substitution
 from delierium.infinitesimals import (
+    _checked_arguments,
     _leading_derivative,
     create_infinitesimals,
     determining_condition,
@@ -140,6 +141,7 @@ def group_classification(
     (n = -1 is linearizable by a hodograph transformation.)
     """
     independent = list(independent)
+    _checked_arguments(eq, dependent, independent)
     variables = [*independent, sp_symbol(dependent)]
 
     def build(rule: dict[Basic, Expr]) -> tuple[JanetBasis, list[list[Expr]]]:
