@@ -113,6 +113,13 @@ A first-order ODE always has infinitely many symmetries:
     >>> determining_janet_basis(diff(y, x) - y**2, y, x).rank()
     oo
 
+`lie_symmetries` does all of it in one call:
+
+    >>> from delierium import lie_symmetries
+    >>> s = lie_symmetries(ode, y, x)
+    >>> s.dimension, s.algebra.type().name
+    (2, 'l2,1')
+
 ### Janet bases of linear systems
 
 `JanetBasis` takes a list of linear homogeneous PDEs, the unknown functions and the
@@ -166,6 +173,8 @@ A generator is a tuple of its components, the independent variables first: `("x"
 
 The public interface is what `delierium` exports; `help(delierium)` lists it:
 
+* everything at once: `lie_symmetries` (determining equations, Janet basis, dimension,
+  assumptions, algebra, `verify()`)
 * determining equations: `overdetermined_system_ode`, `overdetermined_system_odes`,
   `overdetermined_system_pde`, `prolongation`, `make_infinitesimal`, `create_infinitesimals`,
   `determining_janet_basis`; checks: `verify_symmetry`, `verify_symmetries`
