@@ -16,6 +16,7 @@ Details are in the issues referenced.
 * A benchmark against SymPy and sympy-extras, `benchmarks/sympy_symmetries.py`, with its
   report ([#6](https://github.com/tapir442/delierium/issues/6)).
 * Fixed: equations with complex coefficients lost their complex symmetries ([#6](https://github.com/tapir442/delierium/issues/6)).
+* `verify_symmetry` uses the identities of the Lambert W function ([#77](https://github.com/tapir442/delierium/issues/77)).
 * Fixed: `adjoint_frechet_derivative` returned the Fréchet derivative itself ([#50](https://github.com/tapir442/delierium/issues/50)).
 * Catalogue: the examples and exercises of Hydon, Bluman and Anco, Bluman and Kumei ([#50](https://github.com/tapir442/delierium/issues/50));
   27 first order ODEs with a finite algebra ([#28](https://github.com/tapir442/delierium/issues/28)).

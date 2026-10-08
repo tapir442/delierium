@@ -642,3 +642,18 @@ def test_complex_coefficients_and_local_symmetries():
     assert not verify_symmetry(Derivative(y, x) - sqrt(Abs(y)), y, x, (0, Y))
     f, g = Function("f"), Function("g")
     assert verify_symmetry(Derivative(y, x) ** n - f(x) * g(y), y, x, (0, g(Y) ** (1 / n)))
+
+
+def test_lambert_w_residues():
+    """#77: Kamke 1.565, y' + y log(y') = x y + y log(y): solving for y'
+    brings in W = LambertW(exp(x)); the residues of SymPy's generators vanish
+    by log(W) = x - W and exp(W) = exp(x)/W."""
+    from sympy import LambertW, exp, log
+
+    x, Y = Symbol("x"), Symbol("y")
+    y = Function("y")(x)
+    eq = Derivative(y, x) + y * log(Derivative(y, x)) - x * y - y * log(y)
+    W = LambertW(exp(x))
+    generators = [(0, exp(W**2 / 2 + W)), (0, Y), (exp(-x + W), 0)]
+    assert all(verify_symmetries(eq, y, x, generators))
+    assert not verify_symmetry(eq, y, x, (1, Y))
