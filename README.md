@@ -78,6 +78,9 @@ New:
   and Kumei's exercises (heat and Laplace equations in space, u_tt = c(u)**2 u_xx, the
   stream function equation, ...) (#50). Three slips in Bluman and Anco are noted at their
   entries.
+* Fixed: `adjoint_frechet_derivative` was a placeholder returning the Frechet derivative
+  itself; it now computes the adjoint (Baumann (3.22)). Tests of the derivative operators
+  with Baumann's explicit results of chapter 3 (#50).
 * `LieAlgebra.type()`: the type of an algebra of dimension at most 4 in Lie's classification
   of the complex Lie algebras, with Schwarz's names (section 3.4: `l1`, `l2,1`, ...,
   `l4,17`) and parameters, e.g. `l3,2(c = -1)` for the Euclidean algebra e(2). Decided by

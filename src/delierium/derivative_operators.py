@@ -7,7 +7,7 @@ Created on Tue Jan 18 13:45:11 2022
 
 from collections.abc import Iterable, Iterator, Sequence
 
-from sympy import Basic, Derivative, Expr, Function, Integer, S, diff, symbols
+from sympy import Basic, Derivative, Expr, Function, Integer, S, cancel, diff, symbols
 from sympy.core.function import UndefinedFunction
 
 __all__ = [
@@ -165,8 +165,41 @@ def adjoint_frechet_derivative(
     independent: Sequence[Basic],
     test_functions: Sequence[UndefinedFunction],
 ) -> list[list[Expr]]:
-    # Placeholder: in SymPy, adjoint computation is not built-in
-    return frechet_derivative(support, dependent, independent, test_functions)
+    """The adjoint of the Frechet derivative (Baumann (3.22)): entry
+    [alpha][mu] is the formal adjoint of the Frechet entry [mu][alpha],
+    sum_J c_J D_J w -> sum_J (-D)_J (c_J w), applied to the same test function
+    w_alpha as in frechet_derivative (Baumann's convention: his AdjointFrechetD
+    substitutes the test functions of the dependent variables and transposes).
+
+    Baumann's example (3.19), v_x = u, v_t = u_x/u**2:
+
+    >>> from sympy import symbols, Function, diff, Matrix
+    >>> x, t = symbols("x t")
+    >>> u, v, w1, w2 = Function("u"), Function("v"), Function("w1"), Function("w2")
+    >>> eqsys = [diff(v(x, t), x) - u(x, t), diff(v(x, t), t) - diff(u(x, t), x) / u(x, t) ** 2]
+    >>> Matrix(adjoint_frechet_derivative(eqsys, [u, v], [x, t], [w1, w2]))
+    Matrix([
+    [               -w1(x, t), Derivative(w1(x, t), x)/u(x, t)**2],
+    [-Derivative(w2(x, t), x),           -Derivative(w2(x, t), t)]])
+    """
+    frechet = frechet_derivative(support, dependent, independent, test_functions)
+    variables = tuple(independent)
+    adjoint = []
+    for alpha, test in enumerate(test_functions):
+        w = test(*variables)
+        row = []
+        for entry in (frechet[mu][alpha] for mu in range(len(support))):
+            jets = {w} | {d for d in entry.atoms(Derivative) if d.expr == w}
+            row.append(
+                cancel(
+                    sum(
+                        ((-1) ** _order(jet) * _total_derivative(entry.diff(jet) * w, jet))
+                        for jet in jets
+                    )
+                )
+            )
+        adjoint.append(row)
+    return adjoint
 
 
 if __name__ == "__main__":
