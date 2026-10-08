@@ -24,6 +24,7 @@ from sympy import (  # noqa: F401
     I,
     Integer,
     Lambda,
+    LambertW,
     Poly,
     Pow,
     Rational,
@@ -34,6 +35,7 @@ from sympy import (  # noqa: F401
     diff,
     exp,
     expand,
+    expand_log,
     fraction,
     ilcm,
     init_printing,
@@ -1346,9 +1348,28 @@ def _simplified_residue(residue: Expr) -> Expr:
     # symmetries are local: where the variables and parameters are positive,
     # Abs(y) = y and ((f*g)**(1/n))**n = f*g (Kamke 1.57, 1.552)
     positive = {z: Dummy(z.name, positive=True) for z in residue.free_symbols}
-    if simplify(powdenest(residue.xreplace(positive), force=True)) == 0:
+    local = powdenest(residue.xreplace(positive), force=True)
+    if simplify(local) == 0 or simplify(_lambert_w_rewritten(local)) == 0:
         return sympify(0)
     return residue
+
+
+def _lambert_w_rewritten(expr: Expr) -> Expr:
+    """expr with the identities of W = LambertW(z), W exp(W) = z (principal
+    branch, z > 0): log(W) = log(z) - W, exp(W) = z/W, logarithms of
+    products expanded (positive arguments). Kamke 1.565 (#77)."""
+    if not expr.has(LambertW):
+        return expr
+    expr = expand_log(expr, force=True)
+    expr = expr.replace(
+        lambda e: isinstance(e, log) and isinstance(e.args[0], LambertW),
+        lambda e: log(e.args[0].args[0]) - e.args[0],
+    )
+    expr = expr.replace(
+        lambda e: isinstance(e, exp) and isinstance(e.args[0], LambertW),
+        lambda e: e.args[0].args[0] / e.args[0],
+    )
+    return expand_log(expr, force=True)
 
 
 def janet_basis_from_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument
