@@ -36,6 +36,8 @@ Sources:
   Mathematica, Springer 2000.
 - Bluman, Anco: G. W. Bluman, S. C. Anco, Symmetry and Integration Methods for
   Differential Equations, Springer 2002 (Applied Mathematical Sciences 154).
+- Bluman, Kumei: G. W. Bluman, S. Kumei, Symmetries and Differential Equations,
+  Springer 1989 (Applied Mathematical Sciences 81).
 - CRC 1: N. H. Ibragimov (ed.), CRC Handbook of Lie Group Analysis of
   Differential Equations, Vol. 1, CRC Press 1994, Part B (group
   classifications); cited with section and page.
@@ -55,6 +57,7 @@ SCHWARZ_E = "Schwarz, Algorithmic Lie Theory (2008), Appendix E"
 HYDON = "Hydon, Symmetry Methods for Differential Equations (2000)"
 BAUMANN = "Baumann, Symmetry Analysis of Differential Equations with Mathematica (2000)"
 BLUMAN_ANCO = "Bluman, Anco, Symmetry and Integration Methods for Differential Equations (2002)"
+BLUMAN_KUMEI = "Bluman, Kumei, Symmetries and Differential Equations (1989)"
 BLUMAN_ANCO_DELIERIUM = (
     "the book gives no dimension: it is delierium's, the generators checked against the "
     "determining equations"
@@ -1692,6 +1695,114 @@ BLUMAN_ANCO_EXAMPLES = [
         [("r", "t", "0"), ("2*r*t", "r**2 + t**2", "-t*u"), ("0", "0", "u"), ("0", "1", "0")],
         f"{BLUMAN_ANCO}, Exercise 4.2-7",
         note="linear: these plus the superposition of solutions",
+    ),
+]
+
+# Bluman and Kumei's exercises on scalar PDEs (#50), Exercises 4.2 (the
+# worked examples of 4.2.4 are those of Bluman and Anco above; KdV 4.2-12,
+# the cylindrical KdV 4.2-13 and u_tt = (c(u)**2 u_x)_x 4.2-16 are in the
+# catalogue from other sources). Variables x1, x2 (x3, x4) of the book are
+# named x, t (x, y, z, t) here. Arbitrary functions in generators are
+# instantiated (f(t) = t), as the catalogue lists generators, not families.
+BLUMAN_KUMEI_EXAMPLES = [
+    pde(
+        "Bluman-Kumei Exercise 4.2-6: heat equation in space u_t = u_xx + u_yy + u_zz",
+        "Derivative(u(x, y, z, t), t) - Derivative(u(x, y, z, t), (x, 2)) - Derivative(u(x, y, z, t), (y, 2)) - Derivative(u(x, y, z, t), (z, 2))",
+        ["x", "y", "z", "t"],
+        INFINITE,
+        [
+            ("1", "0", "0", "0", "0"),
+            ("x", "y", "z", "2*t", "0"),
+            ("y", "-x", "0", "0", "0"),
+            ("2*t", "0", "0", "0", "-x*u"),
+            ("0", "0", "0", "0", "u"),
+        ],
+        f"{BLUMAN_KUMEI}, Exercise 4.2-6 (b)",
+        note="linear: a 13-parameter group plus the superposition of solutions",
+    ),
+    pde(
+        "Bluman-Kumei Exercise 4.2-8: u_tt = c(u)**2 u_xx",
+        "Derivative(u(x, t), (t, 2)) - c(u(x, t))**2*Derivative(u(x, t), (x, 2))",
+        ["x", "t"],
+        3,
+        [("x", "t", "0"), ("1", "0", "0"), ("0", "1", "0")],
+        f"{BLUMAN_KUMEI}, Exercise 4.2-8 (a)",
+        note="c(u) arbitrary, not constant",
+    ),
+    pde(
+        "Bluman-Kumei Exercise 4.2-8: u_tt = A**2 (u + B)**(2 C) u_xx",
+        "Derivative(u(x, t), (t, 2)) - A**2*(u(x, t) + B)**(2*C)*Derivative(u(x, t), (x, 2))",
+        ["x", "t"],
+        4,
+        [("x", "t", "0"), ("1", "0", "0"), ("0", "1", "0"), ("C*x", "0", "u + B")],
+        f"{BLUMAN_KUMEI}, Exercise 4.2-8 (b)",
+    ),
+    pde(
+        "Bluman-Kumei Exercise 4.2-8: u_tt = A**2 (u + B)**4 u_xx",
+        "Derivative(u(x, t), (t, 2)) - A**2*(u(x, t) + B)**4*Derivative(u(x, t), (x, 2))",
+        ["x", "t"],
+        5,
+        [
+            ("x", "t", "0"),
+            ("1", "0", "0"),
+            ("0", "1", "0"),
+            ("2*x", "0", "u + B"),
+            ("x**2", "0", "x*(u + B)"),
+        ],
+        f"{BLUMAN_KUMEI}, Exercise 4.2-8 (c)",
+    ),
+    pde(
+        "Bluman-Kumei Exercise 4.2-9: Laplace equation in space u_xx + u_yy + u_zz = 0",
+        "Derivative(u(x, y, z), (x, 2)) + Derivative(u(x, y, z), (y, 2)) + Derivative(u(x, y, z), (z, 2))",
+        ["x", "y", "z"],
+        INFINITE,
+        [
+            ("1", "0", "0", "0"),
+            ("x", "y", "z", "0"),
+            ("y", "-x", "0", "0"),
+            ("x**2 - y**2 - z**2", "2*x*y", "2*x*z", "-x*u"),
+            ("0", "0", "0", "u"),
+        ],
+        f"{BLUMAN_KUMEI}, Exercise 4.2-9",
+        note="linear: 1 + (n + 1)(n + 2)/2 = 11 parameters (the conformal group SO(4, 1) and "
+        "u d/du) plus the superposition of solutions",
+    ),
+    pde(
+        "Bluman-Kumei Exercise 4.2-10: u_xx = u_x**2 u_t",
+        "Derivative(u(x, t), (x, 2)) - Derivative(u(x, t), x)**2*Derivative(u(x, t), t)",
+        ["x", "t"],
+        INFINITE,
+        [("1", "0", "0"), ("0", "1", "0"), ("0", "0", "1")],
+        f"{BLUMAN_KUMEI}, Exercise 4.2-10",
+        note="an infinite-parameter group: a hodograph transformation maps it to the heat "
+        "equation (chapter 6)",
+    ),
+    pde(
+        "Bluman-Kumei Exercise 4.2-14: stream function (Lap u)_t + u_y (Lap u)_x - u_x (Lap u)_y = nu Lap Lap u",
+        "Derivative(Derivative(u(x, y, t), (x, 2)) + Derivative(u(x, y, t), (y, 2)), t) + Derivative(u(x, y, t), y)*Derivative(Derivative(u(x, y, t), (x, 2)) + Derivative(u(x, y, t), (y, 2)), x) - Derivative(u(x, y, t), x)*Derivative(Derivative(u(x, y, t), (x, 2)) + Derivative(u(x, y, t), (y, 2)), y) - nu*(Derivative(u(x, y, t), (x, 4)) + 2*Derivative(u(x, y, t), (x, 2), (y, 2)) + Derivative(u(x, y, t), (y, 4)))",
+        ["x", "y", "t"],
+        INFINITE,
+        [
+            ("x", "y", "2*t", "0"),
+            ("y", "-x", "0", "0"),
+            ("y*t", "-x*t", "0", "(x**2 + y**2)/2"),
+            ("0", "0", "1", "0"),
+            ("t", "0", "0", "y"),
+            ("0", "t", "0", "-x"),
+            ("0", "0", "0", "1"),
+        ],
+        f"{BLUMAN_KUMEI}, Exercise 4.2-14 (Cantwell 1978)",
+        note="incompressible two-dimensional flow, nu != 0 (then h = 2 a); f1(t) = f2(t) = t, "
+        "f3(t) = 1 in the book's generator",
+    ),
+    pde(
+        "Bluman-Kumei Exercise 4.2-15: u_t = u_xx + F(u)",
+        "Derivative(u(x, t), t) - Derivative(u(x, t), (x, 2)) - F(u(x, t))",
+        ["x", "t"],
+        2,
+        [("1", "0", "0"), ("0", "1", "0")],
+        f"{BLUMAN_KUMEI}, Exercise 4.2-15 (Liu, Fang 1986)",
+        note="F arbitrary; three parameters only for A u**B, u (A + B log(u)), A exp(B u)",
     ),
 ]
 
@@ -6232,6 +6343,7 @@ CATALOG = (
     + HYDON_EXAMPLES
     + HYDON_EXERCISES
     + BLUMAN_ANCO_EXAMPLES
+    + BLUMAN_KUMEI_EXAMPLES
     + CRC_VOL1
     + PDEBENCH
     + APEBENCH

@@ -74,8 +74,10 @@ New:
   and on the catalogue, with cross checks of the generators each tool finds (#6).
 * Catalogue: Hydon's worked examples and the exercises with answers (35 new entries) and
   Bluman and Anco's examples and exercises (19 entries, among them the biharmonic equation
-  and three wave speeds of the classification of u_tt = c(x)**2 u_xx) (#50). Three slips in
-  Bluman and Anco are noted at their entries.
+  and three wave speeds of the classification of u_tt = c(x)**2 u_xx) and 8 PDEs from Bluman
+  and Kumei's exercises (heat and Laplace equations in space, u_tt = c(u)**2 u_xx, the
+  stream function equation, ...) (#50). Three slips in Bluman and Anco are noted at their
+  entries.
 * `LieAlgebra.type()`: the type of an algebra of dimension at most 4 in Lie's classification
   of the complex Lie algebras, with Schwarz's names (section 3.4: `l1`, `l2,1`, ...,
   `l4,17`) and parameters, e.g. `l3,2(c = -1)` for the Euclidean algebra e(2). Decided by
