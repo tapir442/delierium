@@ -5,7 +5,9 @@ Created on Tue Jan 18 13:45:11 2022
 @author: tapir (rewritten for SymPy by GitHub Copilot Chat Assistant)
 """
 
+import warnings
 from collections.abc import Iterable, Iterator, Sequence
+from typing import Any
 
 from sympy import Basic, Derivative, Expr, Function, Integer, S, cancel, diff, symbols
 from sympy.core.function import UndefinedFunction
@@ -67,8 +69,31 @@ def variational_derivative(L: Expr, u_in: Expr) -> Expr:
     return result
 
 
+def _renamed_arguments(dependent: Any, independent: Any, deprecated: dict[str, Any]) -> tuple:
+    """dependent and independent, also from the deprecated keywords depend and
+    independ."""
+    for old, new in (("depend", "dependent"), ("independ", "independent")):
+        if old in deprecated:
+            warnings.warn(
+                f"euler_operator: the keyword {old} is deprecated, use {new}",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+    unknown = set(deprecated) - {"depend", "independ"}
+    if unknown:
+        raise TypeError(f"euler_operator: unexpected keywords {sorted(unknown)}")
+    dependent = deprecated.get("depend", dependent)
+    independent = deprecated.get("independ", independent)
+    if dependent is None or independent is None:
+        raise TypeError("euler_operator: dependent and independent are required")
+    return dependent, independent
+
+
 def euler_operator(
-    density: Expr, depend: Iterable[UndefinedFunction], independ: Basic | Iterable[Basic]
+    density: Expr,
+    dependent: Iterable[UndefinedFunction] | None = None,
+    independent: Basic | Iterable[Basic] | None = None,
+    **deprecated: Any,
 ) -> list[Expr]:
     r"""Euler operator (variational derivative) of density with respect to
     each of the dependent variables:
@@ -76,8 +101,9 @@ def euler_operator(
         E_u(L) = sum over alpha of (-D)^alpha dL/du_alpha,
 
     where u_alpha runs over u and all its derivatives occurring in L, and D
-    is the total derivative. depend are the undefined functions (u, v, ...),
-    independ one independent variable or a sequence of them.
+    is the total derivative. dependent are the undefined functions (u, v,
+    ...), independent one independent variable or a sequence of them (the
+    former keywords depend and independ still work, deprecated).
 
     >>> from sympy import symbols, Function, diff
     >>> t = symbols("t")
@@ -103,9 +129,10 @@ def euler_operator(
     >>> euler_operator((diff(u(x, t), t) ** 2 - diff(u(x, t), x) ** 2) / 2, (u,), (x, t))
     [-Derivative(u(x, t), (t, 2)) + Derivative(u(x, t), (x, 2))]
     """
-    variables = tuple(independ) if isinstance(independ, Iterable) else (independ,)
+    dependent, independent = _renamed_arguments(dependent, independent, deprecated)
+    variables = tuple(independent) if isinstance(independent, Iterable) else (independent,)
     result = []
-    for f in depend:
+    for f in dependent:
         u = f(*variables)
         jets = {u} | {d for d in density.atoms(Derivative) if d.expr == u}
         result.append(

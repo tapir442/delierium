@@ -25,7 +25,7 @@ def Mlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa:
     '''Generates the "cotes" according to Riquier for the lex ordering
     INPUT : funcs: a tuple of functions (tuple for caching reasons)
             variables: a tuple of variables
-            these are not used directly , just their lenght is interasting, but
+            these are not used directly , just their length is interesting, but
             so the consumer doesn't has the burden of computing the length of
             list but the lists directly from context
     OUTPUT: a matrix which when multiplying an augmented vector (func + var)
