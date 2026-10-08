@@ -15,15 +15,12 @@ import dataclasses
 import random
 
 import pytest
-from sympy import Dummy, Lambda, Pow, Symbol, expand, numer, oo, simplify, together
+from sympy import Symbol, oo
 
 from delierium import (
     LieAlgebra,
-    create_infinitesimals,
     determining_janet_basis,
-    overdetermined_system_ode,
-    overdetermined_system_odes,
-    overdetermined_system_pde,
+    verify_symmetries,
 )
 
 from .symmetry_catalog import CATALOG, INFINITE
@@ -67,53 +64,18 @@ def entry_param(entry, check):
     return pytest.param(entry, marks=marks, id=entry.name)
 
 
-def determining_equations(entry, infinitesimals):
-    indep, dep = entry.variables()
-    eqs = entry.parsed_equations()
-    if entry.kind == "ode":
-        return overdetermined_system_ode(eqs[0], dep, indep, infinitesimals=infinitesimals)
-    if entry.kind == "odes":
-        return overdetermined_system_odes(eqs, dep, indep, infinitesimals=infinitesimals)
-    return overdetermined_system_pde(eqs[0], dep, indep, infinitesimals=infinitesimals)
-
-
 def janet_basis(entry):
     indep, dep = entry.variables()
     return determining_janet_basis(entry.parsed_equations(), dep, indep)
-
-
-def vanishes(residue):
-    """residue is zero: simplify(), or else with every power b**(s + n), s
-    symbolic and n a number, written as G*b**n, G a new symbol for b**s. simplify
-    misses (u + mu)**2*(u + mu)**(nu - 1) - (u + mu)**(nu + 1); an identity in
-    the symbols G holds for their values too."""
-    residue = simplify(residue)
-    if residue == 0:
-        return True
-    generators = {}
-    powers = {}
-    for p in residue.atoms(Pow):
-        if not p.exp.is_number:
-            n, s = p.exp.as_coeff_Add()
-            powers[p] = generators.setdefault((p.base, s), Dummy()) * p.base**n
-    return expand(numer(together(residue.xreplace(powers)))) == 0
 
 
 @pytest.mark.parametrize("entry", [entry_param(e, "generators") for e in CATALOG if e.generators])
 def test_generators(entry):
     """Every listed generator solves the determining equations."""
     indep, dep = entry.variables()
-    infinitesimals = create_infinitesimals(dep, indep)
-    system = determining_equations(entry, infinitesimals)
-    plain = {d: Symbol(d.func.__name__) for d in dep}
-    for generator in entry.parsed_generators():
-        values = dict(zip(entry.independent + entry.dependent, generator, strict=True))
-        solution = {
-            f.func: Lambda(tuple(a.xreplace(plain) for a in f.args), values[str(v.xreplace(plain))])
-            for v, f in infinitesimals.items()
-        }
-        residues = [e.xreplace(plain).subs(solution).doit() for e in system]
-        assert all(vanishes(r) for r in residues), (generator, residues)
+    eqs = entry.parsed_equations()
+    for result in verify_symmetries(eqs, dep, indep, entry.parsed_generators()):
+        assert result, (result.generator, result.nonzero_residues())
 
 
 def with_random_parameters(entry):

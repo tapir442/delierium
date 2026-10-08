@@ -34,6 +34,8 @@ from delierium.infinitesimals import (
     overdetermined_system_ode,
     overdetermined_system_odes,
     overdetermined_system_pde,
+    verify_symmetries,
+    verify_symmetry,
 )
 from delierium.janet_basis import JanetBasis
 
@@ -553,29 +555,13 @@ def test_not_polynomial_in_the_derivatives(name):
     # of derivatives raised PolynomialError; the published generators of
     # these catalogue entries solve the determining equations now
     from tests.symmetry_catalog import CATALOG
-    from tests.test_symmetry_catalog import determining_equations, vanishes
 
     (entry,) = [e for e in CATALOG if e.name == name]
     indep, dep = entry.variables()
-    infinitesimals = create_infinitesimals(dep, indep)
-    system = determining_equations(entry, infinitesimals)
-    plain = {d: Symbol(d.func.__name__) for d in dep}
-    for generator in entry.parsed_generators():
-        values = dict(zip(entry.independent + entry.dependent, generator, strict=True))
-        solution = {
-            f.func: Lambda(tuple(a.xreplace(plain) for a in f.args), values[str(v.xreplace(plain))])
-            for v, f in infinitesimals.items()
-        }
-        assert all(vanishes(e.xreplace(plain).subs(solution).doit()) for e in system)
-
-
-def _residues(ode, y, x, xi, eta):
-    infinitesimals = create_infinitesimals([y], [x])
-    det = overdetermined_system_ode(ode, [y], [x], infinitesimals=infinitesimals)
-    Y = Symbol(y.func.__name__)
-    X_, Y_ = (infinitesimals[v].xreplace({y: Y}) for v in (x, y))
-    solution = {X_.func: Lambda(X_.args, xi), Y_.func: Lambda(Y_.args, eta)}
-    return [simplify(e.xreplace({y: Y}).subs(solution).doit()) for e in det]
+    for result in verify_symmetries(
+        entry.parsed_equations(), dep, indep, entry.parsed_generators()
+    ):
+        assert result, (result.generator, result.nonzero_residues())
 
 
 def test_square_root_of_the_highest_derivative():
@@ -584,8 +570,8 @@ def test_square_root_of_the_highest_derivative():
     x, a, Y = Symbol('x'), Symbol('a'), Symbol('y')
     y = Function('y')(x)
     ode = a * x * (Derivative(y, x) ** 2 + 1) ** Rational(1, 2) + x * Derivative(y, x) - y
-    assert all(r == 0 for r in _residues(ode, y, x, x, Y))
-    assert any(r != 0 for r in _residues(ode, y, x, 1, 0))
+    assert verify_symmetry(ode, y, x, (x, Y))
+    assert not verify_symmetry(ode, y, x, (1, 0))
 
 
 def test_trigonometric_function_of_a_derivative():
@@ -594,9 +580,9 @@ def test_trigonometric_function_of_a_derivative():
     x = Symbol('x')
     y = Function('y')(x)
     ode = Derivative(y, x, 2) - sin(Derivative(y, x))
-    assert all(r == 0 for r in _residues(ode, y, x, 1, 0))
-    assert all(r == 0 for r in _residues(ode, y, x, 0, 1))
-    assert any(r != 0 for r in _residues(ode, y, x, x, Symbol('y')))
+    assert verify_symmetry(ode, y, x, (1, 0))
+    assert verify_symmetry(ode, y, x, (0, 1))
+    assert not verify_symmetry(ode, y, x, (x, Symbol('y')))
 
 
 def test_exponent_with_a_parameter_in_a_denominator():
@@ -605,7 +591,7 @@ def test_exponent_with_a_parameter_in_a_denominator():
     equations (rank 2 instead of 3)."""
     from sympy import Function, Symbol, diff, symbols
 
-    from delierium.infinitesimals import create_infinitesimals, overdetermined_system_pde
+    from delierium.infinitesimals import overdetermined_system_pde
 
     x, t, a, c, kappa, q = symbols("x t a c kappa q")
     u = Function("u")(x, t)
@@ -616,3 +602,25 @@ def test_exponent_with_a_parameter_in_a_denominator():
     system = [e.xreplace(plain) for e in overdetermined_system_pde(pde, [u], [x, t], inf)]
     functions = [inf[v].xreplace(plain) for v in (x, t, u)]
     assert JanetBasis(system, functions, [x, t, Symbol("u")]).rank() == 3
+
+
+def test_verify_symmetry():
+    """#4: residues, assumptions (initials), systems of ODEs, errors."""
+    x, t, Y = Symbol("x"), Symbol("t"), Symbol("y")
+    y = Function("y")(x)
+    # y' y'' = 1: solving for y'' assumes y' != 0; d/dx, d/dy are symmetries
+    ode = Derivative(y, x) * Derivative(y, x, 2) - 1
+    result = verify_symmetry(ode, y, x, (1, 0))
+    assert result and result.assumptions == [Derivative(y, x)]
+    assert not verify_symmetry(ode, y, x, (Y, 0))
+    with pytest.raises(ValueError, match="one component per coordinate"):
+        verify_symmetry(ode, y, x, (1,))
+    # the harmonic oscillator as a system: rotations in the (p, q) plane
+    p, q = Function("p")(t), Function("q")(t)
+    P, Q = Symbol("p"), Symbol("q")
+    system = [Derivative(p, t) + q, Derivative(q, t) - p]
+    results = verify_symmetries(system, [p, q], [t], [(1, 0, 0), (0, -Q, P), (0, Q, P)])
+    assert [bool(r) for r in results] == [True, True, False]
+    u, v = Function("u")(x, t), Function("v")(x, t)
+    with pytest.raises(NotImplementedError, match="#21"):
+        verify_symmetry([Derivative(u, t) - v, Derivative(v, t) - u], [u, v], [x, t], (0,) * 4)

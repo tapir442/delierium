@@ -13,10 +13,9 @@ from delierium.classification import (
     classify,
     group_classification,
 )
-from delierium.infinitesimals import create_infinitesimals
+from delierium.infinitesimals import create_infinitesimals, overdetermined_system_pde
 
 from .symmetry_catalog import CATALOG
-from .test_symmetry_catalog import determining_equations
 
 
 def holds(case: Case, values: dict) -> bool:
@@ -91,7 +90,10 @@ def test_classify_anco():
     indep, dep = entry.variables()
     infinitesimals = create_infinitesimals(dep, indep)
     plain = {d: Symbol(d.func.__name__) for d in dep}
-    system = [e.xreplace(plain) for e in determining_equations(entry, infinitesimals)]
+    determining = overdetermined_system_pde(
+        entry.parsed_equations()[0], dep, indep, infinitesimals=infinitesimals
+    )
+    system = [e.xreplace(plain) for e in determining]
     functions = [infinitesimals[v].xreplace(plain) for v in indep + dep]
     cases = classify(system, functions, indep + [plain[d] for d in dep])
     assert cases[0].rank() == entry.dimension

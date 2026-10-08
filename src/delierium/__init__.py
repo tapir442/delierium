@@ -5,7 +5,8 @@ The public interface is what this package exports (``from delierium import
 
 * determining equations: overdetermined_system_ode, overdetermined_system_odes,
   overdetermined_system_pde, make_infinitesimal, create_infinitesimals,
-  prolongation
+  prolongation; verify_symmetry, verify_symmetries (a given generator
+  substituted into them: VerificationResult)
 * Janet bases: JanetBasis, determining_janet_basis (of the determining
   equations; rank() is the dimension of the symmetry algebra),
   janet_basis_from_ode, janet_basis_from_odes,
@@ -51,6 +52,7 @@ from .derivative_operators import (
 )
 from .helpers import lie_derivative_printer, lie_form, ltf, make_infinitesimal
 from .infinitesimals import (
+    VerificationResult,
     create_infinitesimals,
     determining_janet_basis,
     is_janet_basis_of_ode,
@@ -61,6 +63,8 @@ from .infinitesimals import (
     overdetermined_system_odes,
     overdetermined_system_pde,
     prolongation,
+    verify_symmetries,
+    verify_symmetry,
 )
 from .janet_basis import (
     LHDP,
@@ -92,6 +96,7 @@ __all__ = [
     "NotClosedError",
     "SimpleSystem",
     "VectorField",
+    "VerificationResult",
     "__version__",
     "adjoint_frechet_derivative",
     "classify",
@@ -117,4 +122,6 @@ __all__ = [
     "symmetry_algebra",
     "thomas_decomposition",
     "variational_derivative",
+    "verify_symmetries",
+    "verify_symmetry",
 ]

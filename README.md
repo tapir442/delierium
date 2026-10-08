@@ -50,6 +50,12 @@ New:
   determining equations of an ODE, a system of ODEs or a scalar PDE as a `JanetBasis`, its
   `rank()` the dimension of the symmetry algebra (#3); the catalogue test uses it.
   `symmetry_algebra` takes systems of ODEs as well.
+* `verify_symmetry(equations, dependent, independent, generator)` (and `verify_symmetries` for
+  several): a given generator, as a tuple of components (independent variables first),
+  substituted into the determining equations; a `VerificationResult` with the residues (0
+  where shown to vanish, also for symbolic powers that `simplify` misses) and the
+  assumptions (the initials of the equations nonzero), true if all residues vanish (#4).
+  The catalogue test and the benchmark use it instead of three private copies.
 * `LieAlgebra.type()`: the type of an algebra of dimension at most 4 in Lie's classification
   of the complex Lie algebras, with Schwarz's names (section 3.4: `l1`, `l2,1`, ...,
   `l4,17`) and parameters, e.g. `l3,2(c = -1)` for the Euclidean algebra e(2). Decided by
