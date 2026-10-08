@@ -15,6 +15,7 @@ from itertools import combinations_with_replacement
 from typing import Any
 
 from sympy import (
+    Add,
     Basic,
     Derivative,
     Dummy,
@@ -198,16 +199,50 @@ def ansatz_generators(  # pylint: disable=too-many-arguments,too-many-positional
     return result
 
 
-def candidate_functions(coordinates: Sequence[Basic]) -> list[list[Expr]]:
+def candidate_functions(
+    coordinates: Sequence[Basic], system: Sequence[Expr] = ()
+) -> list[list[Expr]]:
     """Families of functions that often occur in generators, for each
     coordinate v: [log v], [sqrt v, 1/v], [exp v, exp(-v)]; with
     function_degree 2 also their squares and products (log(v)**2,
-    1/sqrt(v), exp(2v), ...)."""
-    result: list[list[Expr]] = []
+    1/sqrt(v), exp(2v), ...). Those the system points to come first: a
+    negative or fractional power of v ([sqrt v, 1/v], and [log v], which
+    integrates 1/v), log(v), exp(c v). Denominators are cleared in the
+    determining equations: 1/v shows as a power of v in some terms of an
+    equation but not in others."""
+    families: list[tuple[int, list[Expr]]] = []
+    atoms: set[Basic] = set().union(*(e.atoms(Pow, log, exp) for e in system))
     for v in coordinates:
         w = sympify(v)
-        result += [[log(w)], [sqrt(w), 1 / w], [exp(w), exp(-w)]]
-    return result
+        powers = _divides_unevenly(w, system) or any(
+            isinstance(a, Pow) and a.base == w and not (a.exp.is_Integer and a.exp > 0)
+            for a in atoms
+        )
+        logs = any(isinstance(a, log) and a.has(w) for a in atoms)
+        exps = any(isinstance(a, exp) and a.has(w) for a in atoms)
+        families += [
+            (0 if powers or logs else 1, [log(w)]),
+            (0 if powers else 1, [sqrt(w), 1 / w]),
+            (0 if exps else 1, [exp(w), exp(-w)]),
+        ]
+    return [family for _, family in sorted(families, key=lambda f: f[0])]
+
+
+def _divides_unevenly(v: Basic, system: Sequence[Expr]) -> bool:
+    """Whether in an equation of the system v divides some terms but not all:
+    the equation divided by v has a pole at v = 0."""
+    for e in system:
+        powers = set()
+        for term in Add.make_args(expand(e)):
+            power = 0
+            for factor in Mul.make_args(term):
+                base, exponent = factor.as_base_exp()
+                if base == v and exponent.is_Integer:
+                    power += int(exponent)
+            powers.add(power)
+        if len(powers) > 1:
+            return True
+    return False
 
 
 def generators_by_ansatz(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -264,8 +299,8 @@ def _search(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     """generators by ansatz_generators with increasing degree up to
     max_degree, until dimension many are found. Without functions given,
     monomials in the coordinates first, then the families of
-    candidate_functions one by one, and finally those that helped,
-    together."""
+    candidate_functions one by one (those the system points to first, each
+    with increasing degree), and finally those that helped, together."""
     out = _tracer(trace)
     found: list[tuple[Expr, ...]] = []
     extra = list(functions) if functions is not None else []
@@ -278,24 +313,44 @@ def _search(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         out("-> functions given: no further search")
         return found
     out(f"-> {len(found)} < dimension {dimension}: trying functions of the coordinates")
+    return _search_functions(
+        system, infinitesimals, coordinates, dimension, max_degree, found, trace
+    )
+
+
+def _search_functions(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    system: Sequence[Expr],
+    infinitesimals: Sequence[Expr],
+    coordinates: Sequence[Basic],
+    dimension: Any,
+    max_degree: int,
+    found: list[tuple[Expr, ...]],
+    trace: bool | int,
+) -> list[tuple[Expr, ...]]:
+    """The families of candidate_functions one by one, each with increasing
+    degree, then those that helped together."""
+    out = _tracer(trace)
     helpful: list[Expr] = []
-    for family in candidate_functions(coordinates):
-        more = ansatz_generators(
-            system, infinitesimals, coordinates, max_degree, family, trace=trace
-        )
+    for family in candidate_functions(coordinates, system):
+        more = found
+        # an infinite algebra never stops early: only the highest degree
+        for degree in range(1 if dimension != oo else max_degree, max_degree + 1):
+            attempt = ansatz_generators(
+                system, infinitesimals, coordinates, degree, family, trace=trace
+            )
+            if len(attempt) > len(more):
+                more = attempt
+            if len(more) >= dimension:
+                break
         if len(more) > len(found):
             helpful += family
             out(f"-> {family} helps: {len(more)} > {len(found)}")
             if len(more) >= dimension:
                 out(f"-> {len(more)} = dimension: done")
                 return more
-    if helpful:
-        out(f"-> combining the families that helped: {helpful}")
-        more = ansatz_generators(
-            system, infinitesimals, coordinates, max_degree, helpful, trace=trace
-        )
-        if len(more) > len(found):
-            found = more
-    else:
+    if not helpful:
         out("-> no family of functions helps")
-    return found
+        return found
+    out(f"-> combining the families that helped: {helpful}")
+    more = ansatz_generators(system, infinitesimals, coordinates, max_degree, helpful, trace=trace)
+    return more if len(more) > len(found) else found

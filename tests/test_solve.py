@@ -77,3 +77,14 @@ def test_ansatz_generators_linear_system():
 def test_candidate_functions():
     t = symbols("t")
     assert [sqrt(t), 1 / t] in candidate_functions([t])
+
+
+def test_candidate_functions_order():
+    """1/t in the equation (cleared from the determining equations: powers of
+    t in some terms only) puts the families of t first (#9)."""
+    x, t = symbols("x t")
+    u = Function("u")(x, t)
+    s = lie_symmetries(diff(u, t) + 6 * u * diff(u, x) + diff(u, x, 3) + u / (2 * t), u, [x, t])
+    families = candidate_functions(s.coordinates, s.determining_equations)
+    assert [sqrt(t), 1 / t] in families[:3]
+    assert families.index([sqrt(t), 1 / t]) < families.index([sqrt(x), 1 / x])
