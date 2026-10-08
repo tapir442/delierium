@@ -56,6 +56,13 @@ New:
   where shown to vanish, also for symbolic powers that `simplify` misses) and the
   assumptions (the initials of the equations nonzero), true if all residues vanish (#4).
   The catalogue test and the benchmark use it instead of three private copies.
+* `scaling_symmetries(equations, dependent, independent)`: the scaling symmetries
+  `x -> l**a x, u -> l**b u` without the determining equations, by linear algebra on the
+  exponents: every term has to scale with the same power of `l` (#48; dimensional analysis
+  is the special case of physical dimensions). KdV: `x d/dx + 3 t d/dt - 2 u d/du`; symbolic
+  exponents are taken for generic values. On the catalogue: 358 of 579 entries have
+  scalings, all verified as symmetries, and the 264 listed generators that are scalings lie
+  in their span.
 * `LieAlgebra.type()`: the type of an algebra of dimension at most 4 in Lie's classification
   of the complex Lie algebras, with Schwarz's names (section 3.4: `l1`, `l2,1`, ...,
   `l4,17`) and parameters, e.g. `l3,2(c = -1)` for the Euclidean algebra e(2). Decided by

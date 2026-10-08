@@ -6,7 +6,8 @@ The public interface is what this package exports (``from delierium import
 * determining equations: overdetermined_system_ode, overdetermined_system_odes,
   overdetermined_system_pde, make_infinitesimal, create_infinitesimals,
   prolongation; verify_symmetry, verify_symmetries (a given generator
-  substituted into them: VerificationResult)
+  substituted into them: VerificationResult); scaling_symmetries (by linear
+  algebra on the exponents, without the determining equations)
 * Janet bases: JanetBasis, determining_janet_basis (of the determining
   equations; rank() is the dimension of the symmetry algebra),
   janet_basis_from_ode, janet_basis_from_odes,
@@ -77,6 +78,7 @@ from .janet_basis import (
 from .lie_algebra import LieAlgebra, NotClosedError, VectorField
 from .lie_algebra_types import LieAlgebraType
 from .matrix_order import Context, Mgrevlex, Mgrlex, Mlex
+from .scaling import scaling_symmetries
 from .thomas import SimpleSystem, thomas_decomposition
 
 __version__ = _version("delierium")
@@ -119,6 +121,7 @@ __all__ = [
     "overdetermined_system_odes",
     "overdetermined_system_pde",
     "prolongation",
+    "scaling_symmetries",
     "symmetry_algebra",
     "thomas_decomposition",
     "variational_derivative",

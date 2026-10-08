@@ -15,11 +15,12 @@ import dataclasses
 import random
 
 import pytest
-from sympy import Symbol, oo
+from sympy import Matrix, Symbol, cancel, oo
 
 from delierium import (
     LieAlgebra,
     determining_janet_basis,
+    scaling_symmetries,
     verify_symmetries,
 )
 
@@ -158,3 +159,30 @@ def test_algebra_of_the_janet_basis(entry):
 
     given = LieAlgebra(entry.parsed_generators(), coordinates)
     assert invariants(LieAlgebra.from_janet_basis(janet_basis(entry))) == invariants(given)
+
+
+def pure_scaling(generator, coordinates):
+    """The constants c with generator = sum c_i z_i d/dz_i, or None."""
+    factors = [cancel(g / z) for g, z in zip(generator, coordinates, strict=True)]
+    return None if any(f.has(*coordinates) for f in factors) else factors
+
+
+@pytest.mark.parametrize("entry", [entry_param(e, "scalings") for e in CATALOG])
+def test_scaling_symmetries(entry):
+    """#48: the scalings found by linear algebra on the exponents are
+    symmetries, and every listed generator that is a pure scaling lies in
+    their span."""
+    indep, dep = entry.variables()
+    eqs = entry.parsed_equations()
+    scalings = scaling_symmetries(eqs, dep, indep)
+    for result in verify_symmetries(eqs, dep, indep, scalings):
+        assert result, (result.generator, result.nonzero_residues())
+    coordinates = [Symbol(v) for v in entry.independent + entry.dependent]
+    span = Matrix([pure_scaling(g, coordinates) for g in scalings]) if scalings else None
+    for generator in entry.parsed_generators():
+        factors = pure_scaling(generator, coordinates)
+        if factors is None or all(f == 0 for f in factors):
+            continue
+        assert span is not None, generator
+        rank = span.rank(simplify=True)
+        assert span.col_join(Matrix([factors])).rank(simplify=True) == rank, generator
