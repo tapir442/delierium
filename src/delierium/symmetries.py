@@ -96,7 +96,10 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
         return LieAlgebra.from_janet_basis(self.janet_basis)
 
     def generators(
-        self, max_degree: int = 3, functions: Sequence[Expr] | None = None
+        self,
+        max_degree: int = 3,
+        functions: Sequence[Expr] | None = None,
+        trace: bool | int = False,
     ) -> list[tuple[Expr, ...]]:
         """Generators of the symmetry algebra, each a tuple with one component
         per coordinate, by an ansatz: linear combinations of monomials of
@@ -104,9 +107,10 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
         tried: none, then log, sqrt, exp of the coordinates), see
         delierium.solve.generators_by_ansatz. All of them if as many as the
         dimension are found (complete()); for an infinite algebra the ones of
-        this form."""
+        this form. trace (1 or True) prints every attempt of the search, 2
+        also the determining equations with their conditions."""
         key = (max_degree, None if functions is None else tuple(functions))
-        if key not in self._generators:
+        if key not in self._generators or trace:
             self._generators[key] = generators_by_ansatz(
                 self.determining_equations,
                 self.infinitesimals,
@@ -114,6 +118,7 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
                 self.dimension,
                 max_degree,
                 functions,
+                trace,
             )
         return self._generators[key]
 
