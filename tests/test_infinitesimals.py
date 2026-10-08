@@ -624,3 +624,21 @@ def test_verify_symmetry():
     u, v = Function("u")(x, t), Function("v")(x, t)
     with pytest.raises(NotImplementedError, match="#21"):
         verify_symmetry([Derivative(u, t) - v, Derivative(v, t) - u], [u, v], [x, t], (0,) * 4)
+
+
+def test_complex_coefficients_and_local_symmetries():
+    """An equation with complex coefficients has complex symmetries: its
+    determining equations are not split into real and imaginary parts
+    (Kamke 1.743, generator from SymPy). Symmetries are local: residues that
+    vanish for positive variables count (Kamke 1.57, 1.552)."""
+    from sympy import I, sqrt
+
+    x, n, Y = Symbol("x"), Symbol("n"), Symbol("y")
+    y = Function("y")(x)
+    eq = Derivative(y, x) + I * (x**4 + 8 * x**2 * y**2 + 8 * I * x + 16 * y**4) / (32 * y)
+    assert verify_symmetry(eq, y, x, (32 * I * Y, x**4 + 8 * x**2 * Y**2 + 8 * I * x + 16 * Y**4))
+    assert not verify_symmetry(eq, y, x, (Y, x))
+    assert verify_symmetry(Derivative(y, x) - sqrt(Abs(y)), y, x, (0, sqrt(Abs(Y))))
+    assert not verify_symmetry(Derivative(y, x) - sqrt(Abs(y)), y, x, (0, Y))
+    f, g = Function("f"), Function("g")
+    assert verify_symmetry(Derivative(y, x) ** n - f(x) * g(y), y, x, (0, g(Y) ** (1 / n)))
