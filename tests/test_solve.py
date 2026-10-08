@@ -108,3 +108,52 @@ def test_constant_coefficient_is_not_one_term():
     g = Function("g")(x)
     assert _one_term(c * diff(g, x), [g], [c]) is None
     assert _one_term(x * diff(g, x), [g], [c]) == (g, {x: 1})
+
+
+def test_steps_without_ansatz():
+    """Blasius is solved by integration and dsolve alone: the generators
+    come from the remaining constants."""
+    from delierium.solve import (  # pylint: disable=import-outside-toplevel
+        integrate_one_term,
+        solve_linear_ode,
+    )
+
+    x = symbols("x")
+    y = Function("y")(x)
+    s = lie_symmetries(diff(y, x, 3) + y * diff(y, x, 2), y, x)
+    generators = s.generators(steps=[integrate_one_term, solve_linear_ode])
+    assert s.complete(generators) and all(s.verify(generators))
+
+
+def test_own_step():
+    """A step of one's own, before the default ones: called, and its
+    substitution kept (here X = F(x), as integrate_one_term would)."""
+    from delierium.solve import default_steps  # pylint: disable=import-outside-toplevel
+
+    x, y_ = symbols("x y")
+    y = Function("y")(x)
+    calls = []
+
+    def x_independent_of_y(state):
+        calls.append(len(state.system))
+        X = next((f for f in state.functions if f.func.__name__ == "X"), None)
+        if X is None or y_ not in X.args:
+            return False
+        new = state.fresh_function([x])
+        state.log(f"  own step: {X} = {new}")
+        state.substitute(X, new, [new])
+        return True
+
+    s = lie_symmetries(diff(y, x, 3) + y * diff(y, x, 2), y, x)
+    generators = s.generators(steps=[x_independent_of_y, *default_steps()])
+    assert calls and s.complete(generators) and all(s.verify(generators))
+
+
+def test_step_that_always_changes_stops():
+    from delierium.solve import SolverState, run_steps  # pylint: disable=import-outside-toplevel
+
+    x = symbols("x")
+    X = Function("X")(x)
+    state = SolverState([diff(X, x, 2)], [X], [x])
+    run_steps(state, [lambda s: True], max_iterations=5)
+    assert state.history[-1] == "stopped after 5 steps"

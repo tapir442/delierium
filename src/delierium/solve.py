@@ -1,19 +1,27 @@
-"""Generators of the symmetry algebra from the determining equations by an
-ansatz (#9): the infinitesimals as linear combinations of monomials in the
-coordinates and in some functions of them (log x, sqrt(t), exp(t), ...); the
-determining equations, linear, become a linear system for the coefficients,
-whose nullspace gives the generators.
+"""Generators of the symmetry algebra from the determining equations (#9).
 
-This finds the generators of polynomial (or elementary, with the functions)
-type; the rank of the Janet basis tells whether all are found."""
+solve_determining_equations applies a list of steps to a SolverState (the
+remaining equations, the unknown functions and constants, the
+infinitesimals in terms of them), each step a function of the state; write
+your own and add it to the list. The default steps:
+
+* integrate_one_term: an equation c * d^alpha g = 0 is integrated, the
+  result substituted, the equations split again;
+* solve_linear_ode: a linear ODE in one unknown of one variable by dsolve;
+* ansatz: the remaining unknowns as linear combinations of monomials in
+  their variables and in some functions of them (log x, sqrt(t), exp(t),
+  ...): the equations become a linear system for the coefficients, whose
+  nullspace gives the generators.
+
+This finds generators of elementary type; the rank of the Janet basis tells
+whether all are found."""
 
 import random
 import time
 from collections import Counter
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
 from itertools import combinations_with_replacement
-from typing import Any
+from typing import Any, cast
 
 from sympy import (
     Add,
@@ -53,11 +61,17 @@ from sympy.core.function import AppliedUndef
 from delierium.infinitesimals import _simplified_residue
 
 __all__ = [
-    "Reduced",
+    "SolverState",
+    "Step",
+    "ansatz",
     "ansatz_generators",
     "candidate_functions",
-    "generators_by_ansatz",
+    "default_steps",
+    "integrate_one_term",
     "reduce_determining_equations",
+    "run_steps",
+    "solve_determining_equations",
+    "solve_linear_ode",
 ]
 
 
@@ -274,80 +288,6 @@ def _divides_unevenly(v: Basic, system: Sequence[Expr]) -> bool:
     return False
 
 
-def generators_by_ansatz(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-    system: Sequence[Expr],
-    infinitesimals: Sequence[Expr],
-    coordinates: Sequence[Basic],
-    dimension: Any = oo,
-    max_degree: int = 3,
-    functions: Sequence[Expr] | None = None,
-    trace: bool | int = False,
-    reduce: bool = True,
-    reduction_system: Sequence[Expr] | None = None,
-) -> list[tuple[Expr, ...]]:
-    """Generators of the solutions of the determining equations system.
-
-    With reduce (the default), reduce_determining_equations first (of
-    reduction_system if given, e.g. the Janet basis of system): equations of
-    one term are integrated, simple ODEs solved. Then the remaining unknown
-    functions by ansatz_generators with increasing degree up to max_degree,
-    until dimension many are found. Without functions given, monomials
-    first, then the families of candidate_functions one by one, and finally
-    those that helped, together. Every generator is checked against the
-    system; the simplest come first.
-
-    trace (1 or True): print every step and decision; 2: also the
-    determining equations with their conditions and the solutions of every
-    attempt (see ansatz_generators)."""
-    out = _tracer(trace)
-    out(
-        f"solving {len(system)} determining equations for {list(infinitesimals)} "
-        f"in {list(coordinates)}, dimension {dimension}"
-    )
-    if reduce:
-        r = reduce_determining_equations(
-            reduction_system if reduction_system is not None else system,
-            infinitesimals,
-            coordinates,
-            trace,
-        )
-
-        def attempt(degree: int, extra: Sequence[Expr]) -> list[tuple[Expr, ...]]:
-            return ansatz_generators(
-                r.system,
-                r.functions,
-                coordinates,
-                degree,
-                extra,
-                trace=trace,
-                constants=r.constants,
-                result=r.infinitesimals,
-            )
-
-        remaining = r.system
-        degrees = max_degree if r.functions else 1
-    else:
-
-        def attempt(degree: int, extra: Sequence[Expr]) -> list[tuple[Expr, ...]]:
-            return ansatz_generators(
-                system, infinitesimals, coordinates, degree, extra, trace=trace
-            )
-
-        remaining = list(system)
-        degrees = max_degree
-    found = _search(attempt, remaining, coordinates, dimension, degrees, functions, trace)
-    result = sorted(
-        (g for g in found if _satisfies(system, infinitesimals, g)),
-        key=lambda g: (sum(sympify(c).count_ops() for c in g), str(g)),
-    )
-    for g in found:
-        if g not in result:
-            out(f"dropped, does not satisfy the determining equations: {g}")
-    complete = "complete" if len(result) == dimension else "incomplete"
-    out(f"result: {len(result)} generators of dimension {dimension}, {complete}")
-    return result
-
-
 def _satisfies(
     system: Sequence[Expr], infinitesimals: Sequence[Expr], generator: Sequence[Expr]
 ) -> bool:
@@ -428,8 +368,7 @@ def _search_functions(  # pylint: disable=too-many-arguments,too-many-positional
 
 
 # --------------------------------------------------------------------------
-# Reduction before the ansatz: integrate the equations with one term,
-# substitute, split, solve simple ODEs.
+# Helpers of the steps
 
 _FAST_HINTS = (
     "1st_linear",
@@ -440,19 +379,6 @@ _FAST_HINTS = (
     "separable",
     "nth_algebraic",
 )
-
-
-@dataclass
-class Reduced:
-    """The determining equations after the reduction: the remaining
-    equations in the remaining unknowns (functions of some of the
-    coordinates, and constants), and the infinitesimals in terms of them."""
-
-    system: list[Expr]
-    functions: list[Expr]
-    constants: list[Symbol]
-    infinitesimals: list[Expr]  # the original ones, expressed in the new unknowns
-    steps: list[str] = field(default_factory=list)
 
 
 class _Names:
@@ -498,7 +424,9 @@ def _one_term(
     return None
 
 
-def _integration(g: Expr, orders: dict[Basic, int], names: _Names) -> tuple[Expr, list[Expr]]:
+def _integration(
+    g: Expr, orders: dict[Basic, int], state: "SolverState"
+) -> tuple[Expr, list[Expr]]:
     """The general solution of d^orders g = 0: the sum over the variables v
     of polynomials of degree < orders[v] in v with coefficients new functions
     of the other arguments of g (constants if there are none)."""
@@ -508,7 +436,7 @@ def _integration(g: Expr, orders: dict[Basic, int], names: _Names) -> tuple[Expr
     for v, n in orders.items():
         rest = [a for a in args if a != v]
         for p in range(n):
-            h = Function(names.fresh("F"))(*rest) if rest else Symbol(names.fresh("c"))
+            h = state.fresh_function(rest)
             new.append(h)
             solution += v**p * h
     return solution, new
@@ -560,7 +488,7 @@ def _cleaned(system: Sequence[Expr]) -> list[Expr]:
 
 
 def _ode_solution(
-    e: Expr, functions: Sequence[Expr], names: _Names
+    e: Expr, functions: Sequence[Expr], state: "SolverState"
 ) -> tuple[Expr, Expr, list[Symbol]] | None:
     """(g, solution, new constants) if e is a linear ODE in a single unknown
     g of one variable (constants may occur) that a fast dsolve method
@@ -587,23 +515,279 @@ def _ode_solution(
             (s for s in rhs.free_symbols if s.name.startswith("C") and s not in e.free_symbols),
             key=str,
         )
-        new = [Symbol(names.fresh("c")) for _ in constants]
+        new = [state.fresh_constant() for _ in constants]
         return g, rhs.xreplace(dict(zip(constants, new, strict=True))), new
     return None
 
 
-def reduce_determining_equations(  # pylint: disable=too-many-locals
+# --------------------------------------------------------------------------
+# The solver: a list of steps, applied to a SolverState one after the other.
+
+
+class SolverState:  # pylint: disable=too-many-instance-attributes
+    """What a step of the solver works on.
+
+    system: the remaining linear equations (each = 0)
+    functions: the remaining unknown functions, each of some coordinates
+    constants: the remaining unknown constants
+    infinitesimals: the infinitesimals in terms of these unknowns
+    coordinates, dimension: of the symmetry algebra (dimension oo if
+        infinite or unknown)
+    generators: None until a step finds them; setting it ends the solver
+    history: what the steps did, one line each
+
+    Steps change the state by substitute() (an unknown by an expression in
+    new unknowns from fresh_function, fresh_constant) or by setting
+    generators, and report with log()."""
+
+    def __init__(
+        self,
+        system: Sequence[Expr],
+        infinitesimals: Sequence[Expr],
+        coordinates: Sequence[Basic],
+        dimension: Any = oo,
+        trace: bool | int = False,
+    ) -> None:
+        self.system: list[Expr] = _cleaned(system)
+        self.functions: list[Expr] = list(infinitesimals)
+        self.constants: list[Symbol] = []
+        self.infinitesimals: list[Expr] = list(infinitesimals)
+        self.coordinates: list[Basic] = list(coordinates)
+        self.dimension = dimension
+        self.generators: list[tuple[Expr, ...]] | None = None
+        self.history: list[str] = []
+        self.trace = trace
+        self._out = _tracer(trace)
+        self._names = _Names(system)
+
+    def log(self, message: str, level: int = 1) -> None:
+        """Record message (level 1) and print it if trace is at least level."""
+        if level <= 1:
+            self.history.append(message)
+        self._out(message, level)
+
+    def fresh_function(self, arguments: Sequence[Basic]) -> Expr:
+        """A new unknown function of arguments (a new constant if there are
+        none); substitute() adds it to the unknowns."""
+        if not arguments:
+            return self.fresh_constant()
+        return Function(self._names.fresh("F"))(*arguments)  # pylint: disable=not-callable
+
+    def fresh_constant(self) -> Symbol:
+        return Symbol(self._names.fresh("c"))
+
+    def substitute(self, unknown: Expr, solution: Expr, new: Sequence[Expr] = ()) -> None:
+        """Replace the unknown (a function or a constant) by solution, an
+        expression in the new unknowns new (from fresh_function,
+        fresh_constant), in the equations and the infinitesimals; split the
+        equations again by the coordinates their unknowns do not depend on."""
+        if unknown in self.functions:
+            self.functions.remove(unknown)
+            substitution: dict[Any, Any] = {unknown.func: Lambda(unknown.args, solution)}
+        else:
+            self.constants.remove(cast(Symbol, unknown))
+            substitution = {unknown: solution}
+        self.functions += [f for f in new if not isinstance(f, Symbol)]
+        self.constants += [f for f in new if isinstance(f, Symbol)]
+        self.infinitesimals = [
+            expand(r.subs(substitution).doit()) if r.has(*substitution) else r
+            for r in self.infinitesimals
+        ]
+        split: list[Expr] = []
+        for e in self.system:
+            e = _substitute(e, substitution) if e.has(*substitution) else e
+            split += _split_free(e, self.functions, self.coordinates)
+        self.system = _cleaned(split)
+
+
+type Step = Callable[[SolverState], bool]
+
+
+def integrate_one_term(state: SolverState) -> bool:
+    """A step: integrate an equation of one term, c * d^alpha g = 0 (c free
+    of the unknowns): g is a polynomial of degree < alpha_v in each variable
+    v of alpha with new unknown functions of the other arguments as
+    coefficients. Derivatives in one variable come before mixed ones, the
+    lowest order first (g_xx = 0 before g_xxx = 0, which then vanishes)."""
+    candidates = []
+    for e in state.system:
+        found = _one_term(e, state.functions, state.constants)
+        if found is not None:
+            g, orders = found
+            candidates.append((len(orders), sum(orders.values()), str(e), e, g, orders))
+    if not candidates:
+        return False
+    _, _, _, e, g, orders = min(candidates, key=lambda c: c[:3])
+    solution, new = _integration(g, orders, state) if orders else (S.Zero, [])
+    state.log(f"  integrate: {e} = 0  ->  {g} = {solution}")
+    state.substitute(g, solution, new)
+    unknowns = state.functions + state.constants
+    state.log(f"    {len(state.system)} equations left, unknowns {unknowns}", 2)
+    return True
+
+
+def solve_linear_ode(state: SolverState) -> bool:
+    """A step: an equation that is a linear ODE in a single unknown function
+    of one variable (constants may occur), solved by a fast method of dsolve
+    without integrals; its constants of integration become new unknown
+    constants."""
+    for e in state.system:
+        ode = _ode_solution(e, state.functions, state)
+        if ode is not None:
+            g, solution, new = ode
+            state.log(f"  solve: {e} = 0  ->  {g} = {solution}  (dsolve)")
+            state.substitute(g, solution, new)
+            return True
+    return False
+
+
+def ansatz(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> Step:
+    """A step that ends the solver: the remaining unknown functions as linear
+    combinations of monomials in their variables (and functions of them,
+    see candidate_functions) by ansatz_generators, with increasing degree up
+    to max_degree until dimension many generators are found."""
+
+    def step(state: SolverState) -> bool:
+        def attempt(degree: int, extra: Sequence[Expr]) -> list[tuple[Expr, ...]]:
+            return ansatz_generators(
+                state.system,
+                state.functions,
+                state.coordinates,
+                degree,
+                extra,
+                trace=state.trace,
+                constants=state.constants,
+                result=state.infinitesimals,
+            )
+
+        state.generators = _search(
+            attempt,
+            state.system,
+            state.coordinates,
+            state.dimension,
+            max_degree if state.functions else 1,
+            functions,
+            state.trace,
+        )
+        return True
+
+    step.__name__ = f"ansatz(max_degree={max_degree})"
+    return step
+
+
+def default_steps(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> list[Step]:
+    """integrate_one_term, solve_linear_ode, ansatz(max_degree, functions)."""
+    return [integrate_one_term, solve_linear_ode, ansatz(max_degree, functions)]
+
+
+def run_steps(state: SolverState, steps: Sequence[Step], max_iterations: int = 1000) -> None:
+    """Apply the steps: the first one that changes the state, then again from
+    the first one; until a step sets the generators or none changes the
+    state."""
+    for _ in range(max_iterations):
+        if state.generators is not None:
+            return
+        if not any(step(state) for step in steps):
+            return
+    state.log(f"stopped after {max_iterations} steps")
+
+
+def solve_determining_equations(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    system: Sequence[Expr],
+    infinitesimals: Sequence[Expr],
+    coordinates: Sequence[Basic],
+    dimension: Any = oo,
+    steps: Sequence[Step] | None = None,
+    trace: bool | int = False,
+    reduction_system: Sequence[Expr] | None = None,
+) -> list[tuple[Expr, ...]]:
+    """Generators of the solutions of the linear determining equations system
+    in the unknown functions infinitesimals (of the coordinates), each a
+    tuple with one component per infinitesimal.
+
+    The steps (default: default_steps(): integrate_one_term,
+    solve_linear_ode, ansatz()) are applied to a SolverState of
+    reduction_system (if given, e.g. the Janet basis of system) by
+    run_steps. A step is a function of the state that returns whether it
+    changed it; write your own and put it into the list. If the steps end
+    without generators and no equations and unknown functions are left, the
+    generators are those of the remaining constants. Every generator is
+    checked against system; the simplest come first.
+
+    trace (1 or True): print every step and decision; 2: also the details of
+    the steps (see ansatz_generators).
+
+    >>> from sympy import Function, symbols, diff
+    >>> x, y = symbols("x y")
+    >>> X, Y = Function("X")(x, y), Function("Y")(x, y)
+    >>> system = [diff(X, y), diff(Y, x), diff(X, x) + Y / y, diff(Y, y) - Y / y]
+    >>> solve_determining_equations(system, [X, Y], [x, y], 2)
+    [(1, 0), (-x, y)]
+
+    A step of your own, here one that only reports, before the default ones:
+
+    >>> def report(state):
+    ...     print(len(state.system), "equations")
+    ...     return False
+    >>> generators = solve_determining_equations(
+    ...     system, [X, Y], [x, y], 2, steps=[report, *default_steps()]
+    ... )
+    4 equations
+    3 equations
+    2 equations
+    1 equations
+    0 equations
+    """
+    state = SolverState(
+        reduction_system if reduction_system is not None else system,
+        infinitesimals,
+        coordinates,
+        dimension,
+        trace,
+    )
+    state.log(
+        f"solving {len(state.system)} determining equations for {list(infinitesimals)} "
+        f"in {list(coordinates)}, dimension {dimension}"
+    )
+    run_steps(state, default_steps() if steps is None else steps)
+    found = state.generators
+    if found is None:
+        found = _from_constants(state)
+    result = sorted(
+        (g for g in found if _satisfies(system, infinitesimals, g)),
+        key=lambda g: (sum(sympify(c).count_ops() for c in g), str(g)),
+    )
+    for g in found:
+        if g not in result:
+            state.log(f"dropped, does not satisfy the determining equations: {g}")
+    complete = "complete" if len(result) == dimension else "incomplete"
+    state.log(f"result: {len(result)} generators of dimension {dimension}, {complete}")
+    return result
+
+
+def _from_constants(state: SolverState) -> list[tuple[Expr, ...]]:
+    """Without equations and unknown functions left: one generator per
+    remaining constant."""
+    if state.system or state.functions:
+        state.log("no generators: equations or unknown functions left")
+        return []
+    return [
+        tuple(
+            expand(r.xreplace({d: int(d == c) for d in state.constants}))
+            for r in state.infinitesimals
+        )
+        for c in state.constants
+    ]
+
+
+def reduce_determining_equations(
     system: Sequence[Expr],
     infinitesimals: Sequence[Expr],
     coordinates: Sequence[Basic],
     trace: bool | int = False,
-) -> Reduced:
-    """Integrate the equations of one term (c * d^alpha g = 0), substitute
-    the result in all others and split them by the coordinates their
-    unknowns no longer depend on; repeat, then solve the linear ODEs in one
-    unknown of one variable. Of the equations with one term, those with a
-    derivative in one variable come first, the lowest order first (g_xx = 0
-    before g_xxx = 0, which then vanishes).
+) -> SolverState:
+    """The state after integrate_one_term and solve_linear_ode, without the
+    ansatz: what remains to be solved.
 
     >>> from sympy import Function, symbols, diff
     >>> x, y = symbols("x y")
@@ -612,59 +796,10 @@ def reduce_determining_equations(  # pylint: disable=too-many-locals
     >>> r.infinitesimals, r.system
     ([F1(x), y*F3(x) + F2(x)], [])
     """
-    out = _tracer(trace)
-    names = _Names(system)
-    functions: list[Expr] = list(infinitesimals)
-    constants: list[Symbol] = []
-    representation: list[Expr] = list(infinitesimals)
-    equations = _cleaned(system)
-    steps: list[str] = []
-
-    def apply(g: Expr, solution: Expr, new: Sequence[Expr]) -> None:
-        nonlocal equations, representation
-        substitution = {g.func: Lambda(g.args, solution)}
-        functions.remove(g)
-        functions.extend(f for f in new if not isinstance(f, Symbol))
-        constants.extend(f for f in new if isinstance(f, Symbol))
-        representation = [
-            expand(r.subs(substitution).doit()) if r.has(g.func) else r for r in representation
-        ]
-        split: list[Expr] = []
-        for e in equations:
-            e = _substitute(e, substitution) if e.has(g.func) else e
-            split += _split_free(e, functions, coordinates)
-        equations = _cleaned(split)
-
-    while True:
-        candidates = []
-        for e in equations:
-            found = _one_term(e, functions, constants)
-            if found is not None:
-                g, orders = found
-                candidates.append((len(orders), sum(orders.values()), str(e), e, g, orders))
-        if candidates:
-            _, _, _, e, g, orders = min(candidates, key=lambda c: c[:3])
-            if orders:
-                solution, new = _integration(g, orders, names)
-            else:
-                solution, new = S.Zero, []
-            steps.append(f"{e} = 0  ->  {g} = {solution}")
-            out(f"  integrate: {steps[-1]}")
-            apply(g, solution, new)
-            out(f"    {len(equations)} equations left, unknowns {functions + constants}", 2)
-            continue
-        for e in equations:
-            ode = _ode_solution(e, functions, names)
-            if ode is not None:
-                g, solution, new = ode
-                steps.append(f"{e} = 0  ->  {g} = {solution}  (dsolve)")
-                out(f"  solve: {steps[-1]}")
-                apply(g, solution, new)
-                break
-        else:
-            break
-    out(
-        f"reduced: {len(equations)} equations in {functions + constants}; "
-        f"infinitesimals {representation}"
+    state = SolverState(system, infinitesimals, coordinates, trace=trace)
+    run_steps(state, [integrate_one_term, solve_linear_ode])
+    state.log(
+        f"reduced: {len(state.system)} equations in {state.functions + state.constants}; "
+        f"infinitesimals {state.infinitesimals}"
     )
-    return Reduced(equations, functions, constants, representation, steps)
+    return state

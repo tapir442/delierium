@@ -21,7 +21,7 @@ from delierium.infinitesimals import (
 from delierium.janet_basis import JanetBasis
 from delierium.lie_algebra import LieAlgebra
 from delierium.matrix_order import Mgrevlex, WeightFunction
-from delierium.solve import generators_by_ansatz
+from delierium.solve import Step, default_steps, solve_determining_equations
 
 __all__ = ["LieSymmetries", "lie_symmetries"]
 
@@ -100,27 +100,31 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
         max_degree: int = 3,
         functions: Sequence[Expr] | None = None,
         trace: bool | int = False,
+        steps: Sequence[Step] | None = None,
     ) -> list[tuple[Expr, ...]]:
         """Generators of the symmetry algebra, each a tuple with one component
-        per coordinate, by an ansatz: linear combinations of monomials of
-        degree <= max_degree in the coordinates and functions (by default
-        tried: none, then log, sqrt, exp of the coordinates), see
-        delierium.solve.generators_by_ansatz. All of them if as many as the
-        dimension are found (complete()); for an infinite algebra the ones of
-        this form. trace (1 or True) prints every attempt of the search, 2
-        also the determining equations with their conditions."""
+        per coordinate, by solve_determining_equations on the Janet basis
+        with the steps (default: delierium.solve.default_steps(max_degree,
+        functions): integrate the equations of one term, solve linear ODEs,
+        an ansatz of monomials of degree <= max_degree in the coordinates and
+        functions, by default log, sqrt, exp of them). All of them if as
+        many as the dimension are found (complete()); for an infinite
+        algebra the ones of this form. trace (1 or True) prints every step,
+        2 also their details."""
         key = (max_degree, None if functions is None else tuple(functions))
-        if key not in self._generators or trace:
-            self._generators[key] = generators_by_ansatz(
+        if key not in self._generators or trace or steps is not None:
+            result = solve_determining_equations(
                 self.determining_equations,
                 self.infinitesimals,
                 self.coordinates,
                 self.dimension,
-                max_degree,
-                functions,
+                default_steps(max_degree, functions) if steps is None else steps,
                 trace,
                 reduction_system=[p.expression() for p in self.janet_basis.S],
             )
+            if steps is not None:
+                return result
+            self._generators[key] = result
         return self._generators[key]
 
     def complete(self, generators: Sequence[Sequence[Any]]) -> bool:
