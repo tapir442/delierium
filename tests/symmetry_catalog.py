@@ -34,6 +34,8 @@ Sources:
   University Press 2000.
 - Baumann: G. Baumann, Symmetry Analysis of Differential Equations with
   Mathematica, Springer 2000.
+- Bluman, Anco: G. W. Bluman, S. C. Anco, Symmetry and Integration Methods for
+  Differential Equations, Springer 2002 (Applied Mathematical Sciences 154).
 - CRC 1: N. H. Ibragimov (ed.), CRC Handbook of Lie Group Analysis of
   Differential Equations, Vol. 1, CRC Press 1994, Part B (group
   classifications); cited with section and page.
@@ -52,6 +54,11 @@ ARRIGO = "Arrigo, Symmetry Analysis of Differential Equations (2015)"
 SCHWARZ_E = "Schwarz, Algorithmic Lie Theory (2008), Appendix E"
 HYDON = "Hydon, Symmetry Methods for Differential Equations (2000)"
 BAUMANN = "Baumann, Symmetry Analysis of Differential Equations with Mathematica (2000)"
+BLUMAN_ANCO = "Bluman, Anco, Symmetry and Integration Methods for Differential Equations (2002)"
+BLUMAN_ANCO_DELIERIUM = (
+    "the book gives no dimension: it is delierium's, the generators checked against the "
+    "determining equations"
+)
 CRC1 = (
     "Ibragimov (ed.), CRC Handbook of Lie Group Analysis of Differential Equations, Vol. 1 (1994)"
 )
@@ -1487,6 +1494,204 @@ HYDON_EXERCISES = [
         1,
         [("x", "y")],
         f"{HYDON}, Exercise 11.1",
+    ),
+]
+
+# Bluman and Anco's examples and exercises (#50), numbered by the book's
+# equation numbers. The book often says only that an equation "admits" some
+# symmetries, and has no answers to its exercises: then the dimension is
+# delierium's (BLUMAN_ANCO_DELIERIUM), the generators are the book's where it
+# gives them, all checked against the determining equations.
+BLUMAN_ANCO_EXAMPLES = [
+    ode(
+        "Bluman-Anco (3.173): y y' (y/y')'' = 1",
+        "y(x)*Derivative(y(x), x)*Derivative(y(x)/Derivative(y(x), x), (x, 2)) - 1",
+        2,
+        [("1", "0"), ("x", "y")],
+        f"{BLUMAN_ANCO}, (3.173)",
+        note=f"wave equation with wave speed y(x) (Bluman, Kumei 1987); the book has = +-1; "
+        f"{BLUMAN_ANCO_DELIERIUM}",
+    ),
+    ode(
+        "Bluman-Anco (3.194): (y y' (y/y')'')' = 0",
+        "Derivative(y(x)*Derivative(y(x), x)*Derivative(y(x)/Derivative(y(x), x), (x, 2)), x)",
+        3,
+        [("1", "0"), ("x", "0"), ("0", "y")],
+        f"{BLUMAN_ANCO}, (3.194) and (3.264)",
+        note="the book gives these three at (3.194); at (3.264) it says four, with the "
+        "translations in y, but d/dy is no symmetry (y occurs explicitly in (3.265))",
+    ),
+    ode(
+        "Bluman-Anco (3.245): y''' = 6 x y''**3/y'**2 + 6 y''**2/y'",
+        "Derivative(y(x), (x, 3)) - 6*x*Derivative(y(x), (x, 2))**3/Derivative(y(x), x)**2 - 6*Derivative(y(x), (x, 2))**2/Derivative(y(x), x)",
+        3,
+        [("x", "0"), ("0", "y"), ("0", "1")],
+        f"{BLUMAN_ANCO}, (3.245) and (3.506)",
+        note="also seven contact symmetries (3.249), (3.252)",
+    ),
+    ode(
+        "Bluman-Anco (3.257): y'''' = 4 y'''**2/(3 y'')",
+        "Derivative(y(x), (x, 4)) - 4*Derivative(y(x), (x, 3))**2/(3*Derivative(y(x), (x, 2)))",
+        6,
+        [("1", "0"), ("0", "1"), ("x", "0"), ("0", "y"), ("0", "x"), ("x**2", "x*y")],
+        f"{BLUMAN_ANCO}, (3.257)",
+        note="the book says five point symmetries; there are six (delierium, not solvable): "
+        "w = y'' satisfies w'' = 4 w'**2/(3 w), i.e. (w**(-1/3))'' = 0, and x**2 d/dx + x y d/dy "
+        "is a symmetry as well; also 12 second order symmetries (3.263)",
+    ),
+    ode(
+        "Bluman-Anco (3.413): y'' = 2 (x y' - y)(1 + y'**2)/(x**2 + y**2)",
+        "Derivative(y(x), (x, 2)) - 2*(x*Derivative(y(x), x) - y(x))*(1 + Derivative(y(x), x)**2)/(x**2 + y(x)**2)",
+        8,
+        [("y", "-x"), ("x", "y")],
+        f"{BLUMAN_ANCO}, (3.413) and Exercise 3.3-9",
+        note="the circles through the origin, which an inversion maps to straight lines: "
+        f"linearizable; the book gives the rotation and the scaling; {BLUMAN_ANCO_DELIERIUM}",
+    ),
+    ode(
+        "Bluman-Anco (3.499): KdV traveling waves y''' = -y y'",
+        "Derivative(y(x), (x, 3)) + y(x)*Derivative(y(x), x)",
+        2,
+        [("1", "0"), ("x", "-2*y")],
+        f"{BLUMAN_ANCO}, (3.499) and Exercise 3.5-5",
+        note="the point symmetries consist of the translation and the scaling",
+    ),
+    ode(
+        "Bluman-Anco Exercise 3.3-3: y'' = a y'**k",
+        "Derivative(y(x), (x, 2)) - a*Derivative(y(x), x)**k",
+        3,
+        [("1", "0"), ("0", "1")],
+        f"{BLUMAN_ANCO}, Exercise 3.3-3",
+        note=f"k generic (the book: k = N = 1, 2, ..., special for N = 1, 2, 3); {BLUMAN_ANCO_DELIERIUM}",
+    ),
+    ode(
+        "Bluman-Anco Exercise 3.3-4: y'' = exp(-y')",
+        "Derivative(y(x), (x, 2)) - exp(-Derivative(y(x), x))",
+        3,
+        [("1", "0"), ("0", "1")],
+        f"{BLUMAN_ANCO}, Exercise 3.3-4 (b)",
+        note=BLUMAN_ANCO_DELIERIUM,
+    ),
+    ode(
+        "Bluman-Anco Exercise 3.5-2: Duffing y'' + a y' + b y + y**3 = 0",
+        "Derivative(y(x), (x, 2)) + a*Derivative(y(x), x) + b*y(x) + y(x)**3",
+        1,
+        [("1", "0")],
+        f"{BLUMAN_ANCO}, Exercise 3.5-2",
+        note=f"a, b generic; {BLUMAN_ANCO_DELIERIUM}",
+    ),
+    ode(
+        "Bluman-Anco Exercise 3.5-3: y'' = 2 y'**2 cot(y) + sin(y) cos(y)",
+        "Derivative(y(x), (x, 2)) - 2*Derivative(y(x), x)**2*cot(y(x)) - sin(y(x))*cos(y(x))",
+        8,
+        [],
+        f"{BLUMAN_ANCO}, Exercise 3.5-3 (Stephani 1989)",
+        note="the book asks to show that the symmetries form so(3); there are 8 (delierium): "
+        "w = cot(y) satisfies w'' = -w, so the ODE is linearizable and so(3) a subalgebra",
+    ),
+    ode(
+        "Bluman-Anco Exercise 3.5-4: y''' = x (x - 1) y''**3 - 2 x y''**2 + y''",
+        "Derivative(y(x), (x, 3)) - x*(x - 1)*Derivative(y(x), (x, 2))**3 + 2*x*Derivative(y(x), (x, 2))**2 - Derivative(y(x), (x, 2))",
+        2,
+        [],
+        f"{BLUMAN_ANCO}, Exercise 3.5-4 (b); {HYDON}, Example 7.4",
+        note=f"the exercise asks for contact symmetries; {BLUMAN_ANCO_DELIERIUM}",
+    ),
+    ode(
+        "Bluman-Anco Exercise 3.5-4: y''' = y (y''/y')**3",
+        "Derivative(y(x), (x, 3)) - y(x)*(Derivative(y(x), (x, 2))/Derivative(y(x), x))**3",
+        3,
+        [],
+        f"{BLUMAN_ANCO}, Exercise 3.5-4 (c)",
+        note=f"the exercise asks for contact symmetries; {BLUMAN_ANCO_DELIERIUM}",
+    ),
+    ode(
+        "Bluman-Anco Exercise 3.5-6: y'''' = y' y'''/y",
+        "Derivative(y(x), (x, 4)) - Derivative(y(x), x)*Derivative(y(x), (x, 3))/y(x)",
+        3,
+        [],
+        f"{BLUMAN_ANCO}, Exercise 3.5-6",
+        note=f"the exercise asks for second order symmetries; {BLUMAN_ANCO_DELIERIUM}",
+    ),
+    ode(
+        "Bluman-Anco Exercise 3.5-7: y'''' = y**(-5/3)",
+        "Derivative(y(x), (x, 4)) - y(x)**(-5/3)",
+        3,
+        [("1", "0"), ("2*x", "3*y"), ("x**2", "3*x*y")],
+        f"{BLUMAN_ANCO}, Exercise 3.5-7 (Sheftel 1997)",
+        note="the book gives the dimension and the commutators (sl(2)); the generators are "
+        "delierium's, checked",
+    ),
+    pde(
+        "Bluman-Anco (4.80): biharmonic equation u_xxxx + 2 u_xxyy + u_yyyy = 0",
+        "Derivative(u(x, y), (x, 4)) + 2*Derivative(u(x, y), (x, 2), (y, 2)) + Derivative(u(x, y), (y, 4))",
+        ["x", "y"],
+        INFINITE,
+        [
+            ("x**2 - y**2", "2*x*y", "2*x*u"),
+            ("-2*x*y", "x**2 - y**2", "-2*y*u"),
+            ("x", "y", "0"),
+            ("-y", "x", "0"),
+            ("1", "0", "0"),
+            ("0", "1", "0"),
+            ("0", "0", "u"),
+        ],
+        f"{BLUMAN_ANCO}, (4.86a-c)",
+        note="linear: the 7 generators plus the superposition of solutions; "
+        "z -> (a z + b)/(c z + d), u -> lam |dz*/dz| u with z = x + i y",
+    ),
+    pde(
+        "Bluman-Anco (4.64): u_tt = c(x)**2 u_xx, c = (1 + x**2) exp(A atan(x))",
+        "Derivative(u(x, t), (t, 2)) - (1 + x**2)**2*exp(2*A*atan(x))*Derivative(u(x, t), (x, 2))",
+        ["x", "t"],
+        INFINITE,
+        [
+            ("0", "1", "0"),
+            ("1 + x**2", "-A*t", "(A/2 + x)*u"),
+            ("(1 + x**2)*t", "-A*t**2/2 - exp(-2*A*atan(x))/(2*A)", "(A/2 + x)*t*u"),
+            ("0", "0", "u"),
+        ],
+        f"{BLUMAN_ANCO}, section 4.2.3, wave speed (c)",
+        note="linear; the generators of case (i) with B = D = 1, C = 0 (the integral in X3 "
+        "evaluated for A != 0)",
+    ),
+    pde(
+        "Bluman-Anco (4.64): u_tt = c(x)**2 u_xx, c = (1 + x)**(1 + A/2) (1 - x)**(1 - A/2)",
+        "Derivative(u(x, t), (t, 2)) - (1 + x)**(2 + A)*(1 - x)**(2 - A)*Derivative(u(x, t), (x, 2))",
+        ["x", "t"],
+        INFINITE,
+        [
+            ("0", "1", "0"),
+            ("1 - x**2", "-A*t", "(A/2 - x)*u"),
+            ("(1 - x**2)*t", "-A*t**2/2 - ((1 - x)/(1 + x))**A/(2*A)", "(A/2 - x)*t*u"),
+            ("0", "0", "u"),
+        ],
+        f"{BLUMAN_ANCO}, section 4.2.3, wave speed (d)",
+        note="linear; the generators of case (i) with B = -1, D = 1, C = 0 (the integral in "
+        "X3 evaluated for A != 0)",
+    ),
+    pde(
+        "Bluman-Anco (4.64): u_tt = c(x)**2 u_xx, c = x**2 exp(1/x)",
+        "Derivative(u(x, t), (t, 2)) - x**4*exp(2/x)*Derivative(u(x, t), (x, 2))",
+        ["x", "t"],
+        INFINITE,
+        [
+            ("0", "1", "0"),
+            ("x**2", "t", "(x - 1/2)*u"),
+            ("x**2*t", "t**2/2 + exp(-2/x)/2", "(x - 1/2)*t*u"),
+            ("0", "0", "u"),
+        ],
+        f"{BLUMAN_ANCO}, section 4.2.3, wave speed (e)",
+        note="linear; the generators of case (i) with B = 1, C = D = 0, A = -1",
+    ),
+    pde(
+        "Bluman-Anco (4.88): axisymmetric wave equation u_tt = u_rr + u_r/r",
+        "Derivative(u(r, t), (t, 2)) - Derivative(u(r, t), (r, 2)) - Derivative(u(r, t), r)/r",
+        ["r", "t"],
+        INFINITE,
+        [("r", "t", "0"), ("2*r*t", "r**2 + t**2", "-t*u"), ("0", "0", "u"), ("0", "1", "0")],
+        f"{BLUMAN_ANCO}, Exercise 4.2-7",
+        note="linear: these plus the superposition of solutions",
     ),
 ]
 
@@ -6026,6 +6231,7 @@ CATALOG = (
     + BAUMANN_EXAMPLES
     + HYDON_EXAMPLES
     + HYDON_EXERCISES
+    + BLUMAN_ANCO_EXAMPLES
     + CRC_VOL1
     + PDEBENCH
     + APEBENCH
