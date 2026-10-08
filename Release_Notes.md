@@ -2,7 +2,7 @@
 
 Details are in the issues referenced.
 
-### Not released yet
+### 2.2.0
 
 * `symmetry_algebra` and `LieAlgebra.from_janet_basis`: the Lie algebra of the point
   symmetries from the Janet basis, without solving the determining equations ([#11](https://github.com/tapir442/delierium/issues/11)).
