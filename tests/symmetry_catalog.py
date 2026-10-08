@@ -5516,6 +5516,189 @@ SYMBOLIC_POWERS = [
 
 # Kamke's equations with their symmetry class from Schwarz, Appendix E;
 # generated from the SymPy Kamke test suite, see the module docstring.
+# First order ODEs of Kamke's chapter 1 that are nonlinear in y' and have a
+# finite symmetry algebra (#28), from the SymPy Kamke test suite. Kamke gives
+# no symmetries: the dimension is delierium's, checked independently by the
+# power series solutions of the determining equations around a regular point
+# (F divides pr X F as polynomials in y'; dimensions settle for orders 4-6).
+# Kamke 1.535 is in FIRST_ORDER_ODES; 1.519 (an arbitrary function) and 1.556
+# (sqrt(y'**2 + 1)) cannot be checked that way and are left out.
+KAMKE_1 = "Kamke, chapter 1, from the SymPy Kamke test suite"
+KAMKE_1_NOTE = (
+    "nonlinear in y': a finite algebra; the dimension is delierium's, checked independently "
+    "(power series); the generators are the translations and scalings among the symmetries"
+)
+
+
+def kamke1(number, equation, dimension, generators):
+    return ode(f"Kamke {number}", equation, dimension, generators, KAMKE_1, KAMKE_1_NOTE)
+
+
+KAMKE_FIRST_ORDER = [
+    kamke1(
+        "1.518",
+        "-(-a + y(x))**2*(-b + y(x))**2 + Derivative(y(x), x)**3",
+        3,
+        [("1", "0")],
+    ),
+    kamke1(
+        "1.520",
+        "-y(x) + Derivative(y(x), x)**3 + Derivative(y(x), x)",
+        1,
+        [("1", "0")],
+    ),
+    kamke1(
+        "1.521",
+        "x*Derivative(y(x), x) - y(x) + Derivative(y(x), x)**3",
+        3,
+        [("2*x", "3*y")],
+    ),
+    kamke1(
+        "1.522",
+        "(-x - 5)*Derivative(y(x), x) + y(x) + Derivative(y(x), x)**3",
+        3,
+        [],
+    ),
+    kamke1(
+        "1.523",
+        "-a*x*Derivative(y(x), x) + x**3 + Derivative(y(x), x)**3",
+        1,
+        [("0", "1")],
+    ),
+    kamke1(
+        "1.524",
+        "y(x)**2 - 2*y(x)*Derivative(y(x), x) + Derivative(y(x), x)**3",
+        1,
+        [("1", "0")],
+    ),
+    kamke1(
+        "1.526",
+        "-x**3*y(x)**3 - (x**2 + x*y(x) + y(x)**2)*Derivative(y(x), x)**2 + (x**3*y(x) + x**2*y(x)**2 + x*y(x)**3)*Derivative(y(x), x) + Derivative(y(x), x)**3",
+        0,
+        [],
+    ),
+    kamke1(
+        "1.527",
+        "-x*y(x)**4*Derivative(y(x), x) - y(x)**5 + Derivative(y(x), x)**3",
+        3,
+        [("2*x", "-3*y")],
+    ),
+    kamke1(
+        "1.528",
+        "a*b*x + a*Derivative(y(x), x)**2 + b*y(x) + Derivative(y(x), x)**3",
+        1,
+        [],
+    ),
+    kamke1(
+        "1.529",
+        "x*Derivative(y(x), x)**2 - y(x) + Derivative(y(x), x)**3",
+        0,
+        [],
+    ),
+    kamke1(
+        "1.530",
+        "y(x)**2 - y(x)*Derivative(y(x), x)**2 + Derivative(y(x), x)**3",
+        1,
+        [("1", "0")],
+    ),
+    kamke1(
+        "1.532",
+        "a*Derivative(y(x), x)**3 + b*Derivative(y(x), x)**2 + c*Derivative(y(x), x) - d - y(x)",
+        1,
+        [("1", "0")],
+    ),
+    kamke1(
+        "1.533",
+        "a + x*Derivative(y(x), x)**3 - y(x)*Derivative(y(x), x)**2",
+        3,
+        [("3*x", "2*y")],
+    ),
+    kamke1(
+        "1.534",
+        "4*x*Derivative(y(x), x)**3 - x - 6*y(x)*Derivative(y(x), x)**2 + 3*y(x)",
+        1,
+        [("x", "y")],
+    ),
+    kamke1(
+        "1.536",
+        "b*x*(-a**2 + x**2)*Derivative(y(x), x)**2 + b*x + (-a**2 + x**2)*Derivative(y(x), x)**3 + Derivative(y(x), x)",
+        1,
+        [("0", "1")],
+    ),
+    kamke1(
+        "1.537",
+        "-2*x**5*y(x) + x**3*Derivative(y(x), x)**3 - 3*x**2*y(x)*Derivative(y(x), x)**2 + (x**6 + 3*x*y(x)**2)*Derivative(y(x), x) - y(x)**3",
+        3,
+        [("2*x", "5*y")],
+    ),
+    kamke1(
+        "1.538",
+        "2*(x*Derivative(y(x), x) + y(x))**3 - y(x)*Derivative(y(x), x)",
+        1,
+        [("x", "-y")],
+    ),
+    kamke1(
+        "1.540",
+        "2*x*Derivative(y(x), x) - x + 2*y(x)*Derivative(y(x), x)**3 - y(x)*Derivative(y(x), x)**2",
+        1,
+        [("x", "y")],
+    ),
+    kamke1(
+        "1.541",
+        "2*x*Derivative(y(x), x) + y(x)**2*Derivative(y(x), x)**3 - y(x)",
+        3,
+        [("4*x", "3*y")],
+    ),
+    kamke1(
+        "1.542",
+        "2*x*Derivative(y(x), x) + 16*y(x)**2*Derivative(y(x), x)**3 - y(x)",
+        3,
+        [("4*x", "3*y")],
+    ),
+    kamke1(
+        "1.543",
+        "-x**2*y(x) + x*(x**2 + 1)*Derivative(y(x), x) + x*y(x)**2*Derivative(y(x), x)**3 - y(x)**3*Derivative(y(x), x)**2",
+        3,
+        [],
+    ),
+    kamke1(
+        "1.544",
+        "x**7*y(x)**2*Derivative(y(x), x)**3 + 3*x**5*y(x)**4*Derivative(y(x), x) - x**4*y(x)**5 - (3*x**6*y(x)**3 - 1)*Derivative(y(x), x)**2",
+        3,
+        [("x", "-2*y")],
+    ),
+    kamke1(
+        "1.545",
+        "-(-a + y(x))**3*(-b + y(x))**2 + Derivative(y(x), x)**4",
+        3,
+        [("1", "0")],
+    ),
+    kamke1(
+        "1.546",
+        "3*x + (3*x - 3)*Derivative(y(x), x)**2 - (6*y(x) - 3)*Derivative(y(x), x) + Derivative(y(x), x)**4",
+        0,
+        [],
+    ),
+    kamke1(
+        "1.547",
+        "-4*(x*Derivative(y(x), x) - 2*y(x))**2*y(x) + Derivative(y(x), x)**4",
+        1,
+        [("x", "4*y")],
+    ),
+    kamke1(
+        "1.548",
+        "-(-a + y(x))**4*(-b + y(x))**3 + Derivative(y(x), x)**6",
+        3,
+        [("1", "0")],
+    ),
+    kamke1(
+        "1.549",
+        "-a**2 + x**2*(Derivative(y(x), x)**2 + 1)**3",
+        1,
+        [("0", "1")],
+    ),
+]
+
 KAMKE = [
     # BEGIN KAMKE
     kamke('3.1', '-lambda_*y(x) + Derivative(y(x), (x, 3))', dimension=5),
@@ -6357,5 +6540,6 @@ CATALOG = (
     + SYMMETRY_INFORMED
     + THE_WELL
     + SYMBOLIC_POWERS
+    + KAMKE_FIRST_ORDER
     + KAMKE
 )
