@@ -92,7 +92,20 @@ def scaling_symmetries(
 class _Weights:
     """Weights (linear forms {unknown index: coefficient} in a_1..a_n,
     b_1..b_m) of expressions, collecting the constraints (forms that must
-    vanish)."""
+    vanish).
+
+    With the independent variables x, t and the dependent u, the unknowns
+    are 0: a_x, 1: a_t, 2: b. u_xx scales with b - 2 a_x:
+
+    >>> from sympy import Function, symbols
+    >>> x, t = symbols("x t")
+    >>> u = Function("u")(x, t)
+    >>> w = _Weights([x, t], [u])
+    >>> w.of(u.diff(x, 2))
+    {2: 1, 0: -2}
+    >>> w.constraints
+    []
+    """
 
     def __init__(self, independent: list[Basic], dependent: list[Basic]) -> None:
         self.independent = independent
@@ -100,6 +113,20 @@ class _Weights:
         self.constraints: list[dict[int, Expr]] = []
 
     def of(self, e: Expr) -> dict[int, Expr]:
+        """The weight of e; the terms of a sum must have the same weight,
+        which becomes a constraint. Numbers and parameters have weight 0.
+
+        >>> from sympy import Function, symbols
+        >>> x, t = symbols("x t")
+        >>> u = Function("u")(x, t)
+        >>> w = _Weights([x, t], [u])
+        >>> w.of(3 * x * u**2)
+        {0: 1, 2: 2}
+        >>> w.of(u.diff(t) - u.diff(x, 2))  # one term's weight; u_t ~ u_xx: a_t = 2 a_x
+        {2: 1, 0: -2}
+        >>> w.constraints
+        [{1: -1, 0: 2}]
+        """
         variable = self._of_variable(e)
         if variable is not None:
             return variable
@@ -115,6 +142,20 @@ class _Weights:
         return self._of_power(e) if isinstance(e, Pow) else self._of_function(e)
 
     def _of_power(self, e: Pow) -> dict[int, Expr]:
+        """A constant exponent multiplies the weight of the base; with an
+        exponent depending on the variables, base and exponent must be
+        invariant.
+
+        >>> from sympy import Function, symbols
+        >>> x, t = symbols("x t")
+        >>> u = Function("u")(x, t)
+        >>> w = _Weights([x, t], [u])
+        >>> n = symbols("n")
+        >>> w._of_power(u**n)
+        {2: n}
+        >>> w._of_power(2**u), w.constraints
+        ({}, [{2: 1}])
+        """
         if not e.exp.has(*self.independent, *self.dependent):
             return _scale(self.of(e.base), e.exp)
         self._require(self.of(e.base))  # b**u, u**v: base and exponent invariant
@@ -122,7 +163,19 @@ class _Weights:
         return {}
 
     def _of_variable(self, e: Expr) -> dict[int, Expr] | None:
-        """The weight of a variable or a derivative, else None."""
+        """The weight of a variable or a derivative, else None.
+
+        >>> from sympy import Function, symbols
+        >>> x, t = symbols("x t")
+        >>> u = Function("u")(x, t)
+        >>> w = _Weights([x, t], [u])
+        >>> w._of_variable(t), w._of_variable(u)
+        ({1: 1}, {2: 1})
+        >>> w._of_variable(u.diff(x, t))
+        {2: 1, 1: -1, 0: -1}
+        >>> w._of_variable(x**2) is None
+        True
+        """
         if e in self.independent:
             return {self.independent.index(e): sympify(1)}
         if e in self.dependent:
@@ -135,6 +188,24 @@ class _Weights:
         return None
 
     def _of_function(self, e: Expr) -> dict[int, Expr]:
+        """Abs scales like its argument (for l > 0); the arguments of other
+        functions, also of arbitrary ones and their derivatives, must be
+        invariant: weight 0.
+
+        >>> from sympy import Function, symbols
+        >>> x, t = symbols("x t")
+        >>> u = Function("u")(x, t)
+        >>> w = _Weights([x, t], [u])
+        >>> from sympy import Abs, Integral, exp
+        >>> w._of_function(Abs(u))
+        {2: 1}
+        >>> w._of_function(exp(x / t)), w.constraints
+        ({}, [{0: 1, 1: -1}])
+        >>> w._of_function(Integral(u, x))
+        Traceback (most recent call last):
+        ...
+        NotImplementedError: weight of Integral(u(x, t), x) under scalings
+        """
         if isinstance(e, Abs):
             return self.of(cast(Expr, e.args[0]))  # for l > 0
         if isinstance(e, Derivative):  # k'(u) of an arbitrary k: like k(u)
@@ -146,12 +217,28 @@ class _Weights:
         raise NotImplementedError(f"weight of {e} under scalings")
 
     def _require(self, form: dict[int, Expr]) -> None:
+        """Add the constraint form = 0, unless form vanishes.
+
+        >>> from sympy import Function, symbols
+        >>> x, t = symbols("x t")
+        >>> u = Function("u")(x, t)
+        >>> w = _Weights([x, t], [u])
+        >>> w._require({0: 1, 1: -1})
+        >>> w._require({0: x - x})
+        >>> w.constraints
+        [{0: 1, 1: -1}]
+        """
         form = {k: v for k, v in form.items() if cancel(v) != 0}
         if form:
             self.constraints.append(form)
 
 
 def _add(f: dict[int, Expr], g: dict[int, Expr]) -> dict[int, Expr]:
+    """The sum of two linear forms.
+
+    >>> _add({0: 1, 2: 1}, {0: -2, 1: 3})
+    {0: -1, 2: 1, 1: 3}
+    """
     result = dict(f)
     for k, v in g.items():
         result[k] = result.get(k, 0) + v
@@ -159,12 +246,26 @@ def _add(f: dict[int, Expr], g: dict[int, Expr]) -> dict[int, Expr]:
 
 
 def _scale(f: dict[int, Expr], c: Any) -> dict[int, Expr]:
+    """c times a linear form.
+
+    >>> from sympy import Symbol
+    >>> _scale({0: 1, 2: -2}, Symbol("n"))
+    {0: n, 2: -2*n}
+    """
     return {k: c * v for k, v in f.items()}
 
 
 def _primitive(vector: list[Expr]) -> list[Expr]:
     """vector times a common factor: no denominators, no common content,
-    the first nonzero entry without a minus sign ((x, 0, 2u/n): (n x, 0, 2u))."""
+    the first nonzero entry without a minus sign.
+
+    >>> from sympy import Rational, symbols
+    >>> _primitive([Rational(-1, 3), 0, Rational(2, 3)])
+    [1, 0, -2]
+    >>> n = symbols("n")
+    >>> _primitive([1 / n, 0, 2 / n**2])
+    [n, 0, 2]
+    """
     vector = [together(v) for v in vector]
     denominator = lcm_list([denom(v) for v in vector])
     numerators = [cancel(v * denominator) for v in vector]
