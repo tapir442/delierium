@@ -40,6 +40,7 @@ from sympy import (  # noqa: F401
     log,
     nsimplify,
     numer,
+    powdenest,
     prem,
     sign,
     simplify,
@@ -424,6 +425,9 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     >>> split_jet_coefficients(x * (x * d1 - y) ** r + (x * d1 - y) ** (r - 1) + d1, [y])
     [x, x**2, -x*y(x) + 1, y(x)]
     """
+    # an equation with complex coefficients has complex symmetries: only the
+    # I of trigonometric functions written as exponentials is split off
+    complex_coefficients = expr.has(I)
     jet = {d: Dummy() for d in expr.atoms(Derivative) if d.expr in dep}
     expr = expr.xreplace(jet)
     to_symbol = {d: Symbol(d.name) for d in dep}
@@ -454,7 +458,7 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     coeffs = Poly(expr, *gens, *exp_gens).coeffs() if jet else [expr]
     back = {v: k for k, v in to_symbol.items()}
     result = set()
-    for c in _real_and_imaginary_parts(coeffs):
+    for c in coeffs if complex_coefficients else _real_and_imaginary_parts(coeffs):
         c = _numerator(c).xreplace(back)
         if c != 0:
             if not c.is_Add:
@@ -612,7 +616,8 @@ def _function_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[D
 def _real_and_imaginary_parts(coeffs: Iterable[Expr]) -> list[Expr]:
     """Each coefficient with I (from trigonometric functions written as
     exponentials) split into its real and imaginary part: the infinitesimals
-    and the parameters are real."""
+    and the parameters are real. Not for equations with complex
+    coefficients (split_jet_coefficients)."""
     result = []
     for c in coeffs:
         # expand only where needed: the coefficients can be large
@@ -1229,7 +1234,8 @@ def _determining_system(
 @dataclass
 class VerificationResult:
     """The determining equations with a generator substituted: residues
-    (simplified; a residue that is not 0 may still vanish where
+    (simplified, 0 also where they vanish for positive variables and
+    parameters, i.e. locally; a residue that is not 0 may still vanish where
     simplification fails to show it), and the assumptions under which the
     determining equations hold: the initials of the equations (the
     coefficients of their highest derivatives) are nonzero. True if every
@@ -1324,7 +1330,8 @@ def _simplified_residue(residue: Expr) -> Expr:
     power b**(s + n), s symbolic and n a number, written as G*b**n, G a new
     symbol for b**s. simplify misses (u + mu)**2*(u + mu)**(nu - 1) -
     (u + mu)**(nu + 1); an identity in the symbols G holds for their values
-    too."""
+    too. Last, where the variables and parameters are positive (bases of
+    powers taken positive): there the generator is a (local) symmetry."""
     residue = simplify(residue)
     if residue == 0:
         return residue
@@ -1335,6 +1342,11 @@ def _simplified_residue(residue: Expr) -> Expr:
             n, s = p.exp.as_coeff_Add()
             powers[p] = generators.setdefault((p.base, s), Dummy()) * p.base**n
     if expand(numer(together(residue.xreplace(powers)))) == 0:
+        return sympify(0)
+    # symmetries are local: where the variables and parameters are positive,
+    # Abs(y) = y and ((f*g)**(1/n))**n = f*g (Kamke 1.57, 1.552)
+    positive = {z: Dummy(z.name, positive=True) for z in residue.free_symbols}
+    if simplify(powdenest(residue.xreplace(positive), force=True)) == 0:
         return sympify(0)
     return residue
 
