@@ -42,6 +42,7 @@ from delierium.infinitesimals import (
     _leading_derivative,
     create_infinitesimals,
     determining_condition,
+    determining_janet_basis,
     jet_power_conditions,
     order,
     split_jet_coefficients,
@@ -152,15 +153,15 @@ def group_classification(
 
 
 def symmetry_algebra(
-    eq: Expr,
-    dependent: Basic,
-    independent: Iterable[Basic],
+    equations: Expr | Iterable[Expr],
+    dependent: Basic | Iterable[Basic],
+    independent: Basic | Iterable[Basic],
     sort_order: WeightFunction = Mgrevlex,
 ) -> LieAlgebra:
-    """The Lie algebra of the point symmetries of the scalar differential
-    equation eq = 0 (one dependent variable, e.g. y(x) or u(x, t)), from the
-    Janet basis of its determining equations, without solving them
-    (LieAlgebra.from_janet_basis). The parameters of eq are assumed generic;
+    """The Lie algebra of the point symmetries of a scalar ODE, a system of
+    ODEs or a scalar PDE (equations = 0), from the Janet basis of its
+    determining equations (determining_janet_basis), without solving them
+    (LieAlgebra.from_janet_basis). The parameters are assumed generic;
     ValueError if the algebra is infinite.
 
     y'' = y'**2/y is linearizable: sl(3), simple of dimension 8. Burgers'
@@ -178,8 +179,9 @@ def symmetry_algebra(
     >>> burgers.dimension, burgers.is_solvable(), burgers.derived_series()
     (5, False, [5])
     """
-    janet, _ = _determining_janet_basis(eq, dependent, list(independent), sort_order)
-    return LieAlgebra.from_janet_basis(janet)
+    return LieAlgebra.from_janet_basis(
+        determining_janet_basis(equations, dependent, independent, sort_order)
+    )
 
 
 def _determining_janet_basis(

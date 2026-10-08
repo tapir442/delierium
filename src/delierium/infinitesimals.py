@@ -7,6 +7,7 @@ via prolongation of the vector field and extraction of coefficients.
 
 from collections import OrderedDict
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass, field
 from functools import reduce
 from itertools import combinations, combinations_with_replacement, permutations, product
 from typing import Any, cast
@@ -22,6 +23,7 @@ from sympy import (  # noqa: F401
     Function,
     I,
     Integer,
+    Lambda,
     Poly,
     Pow,
     Rational,
@@ -40,8 +42,10 @@ from sympy import (  # noqa: F401
     numer,
     prem,
     sign,
+    simplify,
     solve,
     symbols,
+    sympify,
     together,
 )
 from sympy.core.function import AppliedUndef
@@ -63,7 +67,9 @@ from delierium.janet_basis import (
 from delierium.matrix_order import Context, Mgrevlex, WeightFunction
 
 __all__ = [
+    "VerificationResult",
     "create_infinitesimals",
+    "determining_janet_basis",
     "is_janet_basis_of_ode",
     "is_janet_basis_of_odes",
     "janet_basis_from_ode",
@@ -72,6 +78,8 @@ __all__ = [
     "overdetermined_system_odes",
     "overdetermined_system_pde",
     "prolongation",
+    "verify_symmetries",
+    "verify_symmetry",
 ]
 
 init_printing()
@@ -1167,6 +1175,168 @@ def _linear_system_ode(
     inf = [f.xreplace({dependent: h_symbol}) for f in inf]
     system = [e.replace(dependent, h_symbol) for e in overdetermined_system]
     return system, list(reversed(inf)), list(reversed(r1)), h_symbol
+
+
+def determining_janet_basis(
+    equations: Expr | Iterable[Expr],
+    dependent: Variables,
+    independent: Variables,
+    sort_order: WeightFunction = Mgrevlex,
+) -> JanetBasis:
+    """The Janet basis of the determining equations of the Lie point
+    symmetries of a scalar ODE, a system of ODEs or a scalar PDE. Its
+    unknown functions are the infinitesimals in the order of the
+    coordinates: the independent variables, then the dependent ones, written
+    as plain symbols (y for y(x)). rank() is the dimension of the symmetry
+    algebra (oo if infinite), LieAlgebra.from_janet_basis its structure.
+
+    The Blasius equation has the translation d/dx and the scaling
+    x d/dx - y d/dy; y' = y has infinitely many symmetries:
+
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> blasius = 2 * diff(y, x, 3) + y * diff(y, x, 2)
+    >>> determining_janet_basis(blasius, y, x).rank()
+    2
+    >>> determining_janet_basis(diff(y, x) - y, y, x).rank()
+    oo
+    """
+    system, functions, variables = _determining_system(equations, dependent, independent)
+    return JanetBasis(system, functions, variables, sort_order=sort_order)
+
+
+def _determining_system(
+    equations: Expr | Iterable[Expr], dependent: Variables, independent: Variables
+) -> tuple[list[Expr], list[Expr], list[Basic]]:
+    """(determining equations, infinitesimals, coordinates) of a scalar ODE,
+    a system of ODEs or a scalar PDE, the dependent variables written as
+    plain symbols, the infinitesimals in the order of the coordinates."""
+    eqs = [equations] if isinstance(equations, Basic) else list(equations)
+    dep = convert_to_iterable(dependent)
+    indep = convert_to_iterable(independent)
+    if len(indep) == 1:
+        system, functions, variables, _ = _linear_system_odes(eqs, dep, indep)
+        return system, functions, variables
+    if len(eqs) == 1 and len(dep) == 1:
+        infinitesimals = create_infinitesimals(dep, indep)
+        plain = {d: Symbol(d.func.__name__) for d in dep}
+        pde = overdetermined_system_pde(eqs[0], dep, indep, infinitesimals=infinitesimals)
+        functions = [infinitesimals[v].xreplace(plain) for v in indep + dep]
+        return [e.xreplace(plain) for e in pde], functions, indep + [plain[d] for d in dep]
+    raise NotImplementedError("determining equations of systems of PDEs (#21)")
+
+
+@dataclass
+class VerificationResult:
+    """The determining equations with a generator substituted: residues
+    (simplified; a residue that is not 0 may still vanish where
+    simplification fails to show it), and the assumptions under which the
+    determining equations hold: the initials of the equations (the
+    coefficients of their highest derivatives) are nonzero. True if every
+    residue is 0."""
+
+    generator: tuple[Expr, ...]
+    residues: list[Expr]
+    assumptions: list[Expr] = field(default_factory=list)
+
+    def __bool__(self) -> bool:
+        return all(r == 0 for r in self.residues)
+
+    def nonzero_residues(self) -> list[Expr]:
+        return [r for r in self.residues if r != 0]
+
+
+def verify_symmetry(
+    equations: Expr | Iterable[Expr],
+    dependent: Variables,
+    independent: Variables,
+    generator: Sequence[Any],
+) -> VerificationResult:
+    """Whether generator is a Lie point symmetry of a scalar ODE, a system
+    of ODEs or a scalar PDE: its components (independent variables first,
+    then the dependent ones as plain symbols, y for y(x)) substituted into
+    the determining equations.
+
+    The Blasius equation: x d/dx - y d/dy is a symmetry, x d/dx + y d/dy is
+    not:
+
+    >>> x, y_ = Symbol('x'), Symbol('y')
+    >>> y = Function('y')(x)
+    >>> blasius = diff(y, x, 3) + y * diff(y, x, 2)
+    >>> bool(verify_symmetry(blasius, y, x, (x, -y_)))
+    True
+    >>> result = verify_symmetry(blasius, y, x, (x, y_))
+    >>> bool(result), result.nonzero_residues()
+    (False, [2*y])
+    """
+    return verify_symmetries(equations, dependent, independent, [generator])[0]
+
+
+def verify_symmetries(
+    equations: Expr | Iterable[Expr],
+    dependent: Variables,
+    independent: Variables,
+    generators: Iterable[Sequence[Any]],
+) -> list[VerificationResult]:
+    """verify_symmetry for several generators, computing the determining
+    equations once."""
+    eqs = [equations] if isinstance(equations, Basic) else list(equations)
+    dep = convert_to_iterable(dependent)
+    indep = convert_to_iterable(independent)
+    system, functions, variables = _determining_system(eqs, dep, indep)
+    assumptions = _initials(eqs, dep, indep)
+    results = []
+    for generator in generators:
+        components = tuple(_exact_numbers(sympify(c)) for c in generator)
+        if len(components) != len(variables):
+            raise ValueError(f"{generator}: one component per coordinate {variables}")
+        values = dict(zip(variables, components, strict=True))
+        solution = {
+            f.func: Lambda(f.args, values[v]) for f, v in zip(functions, variables, strict=True)
+        }
+        residues = [_simplified_residue(e.subs(solution).doit()) for e in system]
+        results.append(VerificationResult(components, residues, assumptions))
+    return results
+
+
+def _initials(eqs: list[Expr], dep: list[Basic], indep: list[Basic]) -> list[Expr]:
+    """The coefficients of the highest derivatives of the equations that are
+    not constants: the determining equations divide by them."""
+    result = []
+    for eq in eqs:
+        eq = _exact_numbers(_canonical_derivatives_of(eq, dep))  # as determining_condition
+        _, highest = order(eq, dep, indep)
+        if not highest:
+            continue
+        leader = _leading_derivative(eq, highest, dep)
+        h = Dummy()
+        try:
+            initial = Poly(numer(together(eq.xreplace({leader: h}))), h).LC()
+        except PolynomialError:
+            continue
+        if not initial.is_number and initial not in result:
+            result.append(initial)
+    return result
+
+
+def _simplified_residue(residue: Expr) -> Expr:
+    """residue simplified, 0 if it vanishes: simplify(), or else with every
+    power b**(s + n), s symbolic and n a number, written as G*b**n, G a new
+    symbol for b**s. simplify misses (u + mu)**2*(u + mu)**(nu - 1) -
+    (u + mu)**(nu + 1); an identity in the symbols G holds for their values
+    too."""
+    residue = simplify(residue)
+    if residue == 0:
+        return residue
+    generators: dict[tuple[Expr, Expr], Dummy] = {}
+    powers = {}
+    for p in residue.atoms(Pow):
+        if not p.exp.is_number:
+            n, s = p.exp.as_coeff_Add()
+            powers[p] = generators.setdefault((p.base, s), Dummy()) * p.base**n
+    if expand(numer(together(residue.xreplace(powers)))) == 0:
+        return sympify(0)
+    return residue
 
 
 def janet_basis_from_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument

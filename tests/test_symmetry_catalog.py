@@ -15,18 +15,14 @@ import dataclasses
 import random
 
 import pytest
-from sympy import Dummy, Lambda, Pow, Symbol, expand, numer, oo, simplify, together
+from sympy import Matrix, Symbol, cancel, oo
 
-from delierium.infinitesimals import (
-    _linear_system_ode,
-    _linear_system_odes,
-    create_infinitesimals,
-    overdetermined_system_ode,
-    overdetermined_system_odes,
-    overdetermined_system_pde,
+from delierium import (
+    LieAlgebra,
+    determining_janet_basis,
+    scaling_symmetries,
+    verify_symmetries,
 )
-from delierium.janet_basis import JanetBasis
-from delierium.lie_algebra import LieAlgebra
 
 from .symmetry_catalog import CATALOG, INFINITE
 
@@ -69,64 +65,18 @@ def entry_param(entry, check):
     return pytest.param(entry, marks=marks, id=entry.name)
 
 
-def determining_equations(entry, infinitesimals):
-    indep, dep = entry.variables()
-    eqs = entry.parsed_equations()
-    if entry.kind == "ode":
-        return overdetermined_system_ode(eqs[0], dep, indep, infinitesimals=infinitesimals)
-    if entry.kind == "odes":
-        return overdetermined_system_odes(eqs, dep, indep, infinitesimals=infinitesimals)
-    return overdetermined_system_pde(eqs[0], dep, indep, infinitesimals=infinitesimals)
-
-
 def janet_basis(entry):
     indep, dep = entry.variables()
-    eqs = entry.parsed_equations()
-    if entry.kind == "ode":
-        system, functions, variables, _ = _linear_system_ode(eqs[0], dep[0], indep[0])
-    elif entry.kind == "odes":
-        system, functions, variables, _ = _linear_system_odes(eqs, dep, indep)
-    else:
-        infinitesimals = create_infinitesimals(dep, indep)
-        plain = {d: Symbol(d.func.__name__) for d in dep}
-        system = [e.xreplace(plain) for e in determining_equations(entry, infinitesimals)]
-        functions = [infinitesimals[v].xreplace(plain) for v in indep + dep]
-        variables = indep + [plain[d] for d in dep]
-    return JanetBasis(system, functions, variables)
-
-
-def vanishes(residue):
-    """residue is zero: simplify(), or else with every power b**(s + n), s
-    symbolic and n a number, written as G*b**n, G a new symbol for b**s. simplify
-    misses (u + mu)**2*(u + mu)**(nu - 1) - (u + mu)**(nu + 1); an identity in
-    the symbols G holds for their values too."""
-    residue = simplify(residue)
-    if residue == 0:
-        return True
-    generators = {}
-    powers = {}
-    for p in residue.atoms(Pow):
-        if not p.exp.is_number:
-            n, s = p.exp.as_coeff_Add()
-            powers[p] = generators.setdefault((p.base, s), Dummy()) * p.base**n
-    return expand(numer(together(residue.xreplace(powers)))) == 0
+    return determining_janet_basis(entry.parsed_equations(), dep, indep)
 
 
 @pytest.mark.parametrize("entry", [entry_param(e, "generators") for e in CATALOG if e.generators])
 def test_generators(entry):
     """Every listed generator solves the determining equations."""
     indep, dep = entry.variables()
-    infinitesimals = create_infinitesimals(dep, indep)
-    system = determining_equations(entry, infinitesimals)
-    plain = {d: Symbol(d.func.__name__) for d in dep}
-    for generator in entry.parsed_generators():
-        values = dict(zip(entry.independent + entry.dependent, generator, strict=True))
-        solution = {
-            f.func: Lambda(tuple(a.xreplace(plain) for a in f.args), values[str(v.xreplace(plain))])
-            for v, f in infinitesimals.items()
-        }
-        residues = [e.xreplace(plain).subs(solution).doit() for e in system]
-        assert all(vanishes(r) for r in residues), (generator, residues)
+    eqs = entry.parsed_equations()
+    for result in verify_symmetries(eqs, dep, indep, entry.parsed_generators()):
+        assert result, (result.generator, result.nonzero_residues())
 
 
 def with_random_parameters(entry):
@@ -209,3 +159,30 @@ def test_algebra_of_the_janet_basis(entry):
 
     given = LieAlgebra(entry.parsed_generators(), coordinates)
     assert invariants(LieAlgebra.from_janet_basis(janet_basis(entry))) == invariants(given)
+
+
+def pure_scaling(generator, coordinates):
+    """The constants c with generator = sum c_i z_i d/dz_i, or None."""
+    factors = [cancel(g / z) for g, z in zip(generator, coordinates, strict=True)]
+    return None if any(f.has(*coordinates) for f in factors) else factors
+
+
+@pytest.mark.parametrize("entry", [entry_param(e, "scalings") for e in CATALOG])
+def test_scaling_symmetries(entry):
+    """#48: the scalings found by linear algebra on the exponents are
+    symmetries, and every listed generator that is a pure scaling lies in
+    their span."""
+    indep, dep = entry.variables()
+    eqs = entry.parsed_equations()
+    scalings = scaling_symmetries(eqs, dep, indep)
+    for result in verify_symmetries(eqs, dep, indep, scalings):
+        assert result, (result.generator, result.nonzero_residues())
+    coordinates = [Symbol(v) for v in entry.independent + entry.dependent]
+    span = Matrix([pure_scaling(g, coordinates) for g in scalings]) if scalings else None
+    for generator in entry.parsed_generators():
+        factors = pure_scaling(generator, coordinates)
+        if factors is None or all(f == 0 for f in factors):
+            continue
+        assert span is not None, generator
+        rank = span.rank(simplify=True)
+        assert span.col_join(Matrix([factors])).rank(simplify=True) == rank, generator
