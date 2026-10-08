@@ -4,12 +4,6 @@
 Lie point symmetries of ordinary and partial differential equations with Python and SymPy,
 using Janet bases.
 
-# Release 1.0.0
-
-Had a hard time debugging and profiling (a Janet base is, after all, a Gröbner base, with all
-its implications during computation), and claude was of great help to find and fix all the
-next-to-last bugs.
-
 delierium computes
 
 * the **determining equations** of the Lie point symmetries of an ODE, a system of ODEs or a
@@ -30,7 +24,7 @@ delierium computes
 
 A catalogue of about 660 equations with known symmetries from the literature checks it
 (see *Tests*). Solving the determining equations for the infinitesimals themselves is not
-part of this release.
+part of it yet ([#9](https://github.com/tapir442/delierium/issues/9)).
 
 # Release notes
 

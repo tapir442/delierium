@@ -77,3 +77,13 @@ Fixed:
 * `import delierium` no longer patches SymPy's `Derivative`.
 * Catalogue: Kamke 1.535, a first order ODE with a finite symmetry algebra ([#28](https://github.com/tapir442/delierium/issues/28)).
 * `kamke.ipynb` is removed ([#2](https://github.com/tapir442/delierium/issues/2)).
+
+### 1.0.0
+
+Had a hard time debugging and profiling (a Janet base is, after all, a Gröbner base, with all
+its implications during computation), and claude was of great help to find and fix all the
+next-to-last bugs.
+
+The determining equations of ODEs, systems of ODEs and scalar PDEs, their Janet bases and
+rank, and pictures; solving the determining equations for the infinitesimals is not part of
+this release.
