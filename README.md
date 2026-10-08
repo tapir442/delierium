@@ -46,6 +46,10 @@ New:
   and Killing form rank as the algebra of the generators. `y'' = y'**2/y` gives sl(3),
   Burgers' equation a perfect 5-dimensional algebra.
 * `LieAlgebra.from_structure_constants(c)`: an abstract Lie algebra.
+* `determining_janet_basis(equations, dependent, independent)`: the Janet basis of the
+  determining equations of an ODE, a system of ODEs or a scalar PDE as a `JanetBasis`, its
+  `rank()` the dimension of the symmetry algebra (#3); the catalogue test uses it.
+  `symmetry_algebra` takes systems of ODEs as well.
 * `LieAlgebra.type()`: the type of an algebra of dimension at most 4 in Lie's classification
   of the complex Lie algebras, with Schwarz's names (section 3.4: `l1`, `l2,1`, ...,
   `l4,17`) and parameters, e.g. `l3,2(c = -1)` for the Euclidean algebra e(2). Decided by
@@ -320,6 +324,28 @@ work the same way for systems of ODEs and for scalar PDEs.
 Every derivative of `X` and `Y` is determined by these four equations, only the values of
 `X` and `Y` themselves are free: the Blasius equation has a two-dimensional Lie algebra of
 point symmetries, `d/dx` and `x d/dx - y d/dy`.
+
+### The dimension and structure of the symmetry algebra
+
+`determining_janet_basis` gives the Janet basis of the determining equations as a
+`JanetBasis` (for an ODE, a system of ODEs or a scalar PDE); its `rank()` is the dimension of
+the symmetry algebra. `symmetry_algebra` computes the structure of the algebra from it,
+without solving for the generators:
+
+    >>> from delierium import determining_janet_basis, symmetry_algebra
+    >>> determining_janet_basis(ode, y, x).rank()
+    2
+    >>> algebra = symmetry_algebra(ode, y, x)
+    >>> algebra.derived_series(), algebra.is_abelian()
+    ([2, 1, 0], False)
+    >>> print(algebra.type())
+    l2,1
+
+`l2,1` is the non-abelian two-dimensional algebra, `[X1, X2] = X1`, in the names of Schwarz.
+A first-order ODE always has infinitely many symmetries:
+
+    >>> determining_janet_basis(diff(y, x) - y**2, y, x).rank()
+    oo
 
 ### Janet bases of linear systems
 

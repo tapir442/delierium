@@ -17,16 +17,14 @@ import random
 import pytest
 from sympy import Dummy, Lambda, Pow, Symbol, expand, numer, oo, simplify, together
 
-from delierium.infinitesimals import (
-    _linear_system_ode,
-    _linear_system_odes,
+from delierium import (
+    LieAlgebra,
     create_infinitesimals,
+    determining_janet_basis,
     overdetermined_system_ode,
     overdetermined_system_odes,
     overdetermined_system_pde,
 )
-from delierium.janet_basis import JanetBasis
-from delierium.lie_algebra import LieAlgebra
 
 from .symmetry_catalog import CATALOG, INFINITE
 
@@ -81,18 +79,7 @@ def determining_equations(entry, infinitesimals):
 
 def janet_basis(entry):
     indep, dep = entry.variables()
-    eqs = entry.parsed_equations()
-    if entry.kind == "ode":
-        system, functions, variables, _ = _linear_system_ode(eqs[0], dep[0], indep[0])
-    elif entry.kind == "odes":
-        system, functions, variables, _ = _linear_system_odes(eqs, dep, indep)
-    else:
-        infinitesimals = create_infinitesimals(dep, indep)
-        plain = {d: Symbol(d.func.__name__) for d in dep}
-        system = [e.xreplace(plain) for e in determining_equations(entry, infinitesimals)]
-        functions = [infinitesimals[v].xreplace(plain) for v in indep + dep]
-        variables = indep + [plain[d] for d in dep]
-    return JanetBasis(system, functions, variables)
+    return determining_janet_basis(entry.parsed_equations(), dep, indep)
 
 
 def vanishes(residue):

@@ -6,7 +6,9 @@ The public interface is what this package exports (``from delierium import
 * determining equations: overdetermined_system_ode, overdetermined_system_odes,
   overdetermined_system_pde, make_infinitesimal, create_infinitesimals,
   prolongation
-* Janet bases: JanetBasis, janet_basis_from_ode, janet_basis_from_odes,
+* Janet bases: JanetBasis, determining_janet_basis (of the determining
+  equations; rank() is the dimension of the symmetry algebra),
+  janet_basis_from_ode, janet_basis_from_odes,
   is_janet_basis_of, is_janet_basis_of_ode, is_janet_basis_of_odes,
   integrability_conditions, JanetType, and the result types LHDP, LHDPList
 * group classification: classify (cases of a linear system with parameters,
@@ -50,6 +52,7 @@ from .derivative_operators import (
 from .helpers import lie_derivative_printer, lie_form, ltf, make_infinitesimal
 from .infinitesimals import (
     create_infinitesimals,
+    determining_janet_basis,
     is_janet_basis_of_ode,
     is_janet_basis_of_odes,
     janet_basis_from_ode,
@@ -93,6 +96,7 @@ __all__ = [
     "adjoint_frechet_derivative",
     "classify",
     "create_infinitesimals",
+    "determining_janet_basis",
     "euler_operator",
     "frechet_derivative",
     "group_classification",

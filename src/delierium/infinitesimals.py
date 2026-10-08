@@ -64,6 +64,7 @@ from delierium.matrix_order import Context, Mgrevlex, WeightFunction
 
 __all__ = [
     "create_infinitesimals",
+    "determining_janet_basis",
     "is_janet_basis_of_ode",
     "is_janet_basis_of_odes",
     "janet_basis_from_ode",
@@ -1167,6 +1168,47 @@ def _linear_system_ode(
     inf = [f.xreplace({dependent: h_symbol}) for f in inf]
     system = [e.replace(dependent, h_symbol) for e in overdetermined_system]
     return system, list(reversed(inf)), list(reversed(r1)), h_symbol
+
+
+def determining_janet_basis(
+    equations: Expr | Iterable[Expr],
+    dependent: Variables,
+    independent: Variables,
+    sort_order: WeightFunction = Mgrevlex,
+) -> JanetBasis:
+    """The Janet basis of the determining equations of the Lie point
+    symmetries of a scalar ODE, a system of ODEs or a scalar PDE. Its
+    unknown functions are the infinitesimals in the order of the
+    coordinates: the independent variables, then the dependent ones, written
+    as plain symbols (y for y(x)). rank() is the dimension of the symmetry
+    algebra (oo if infinite), LieAlgebra.from_janet_basis its structure.
+
+    The Blasius equation has the translation d/dx and the scaling
+    x d/dx - y d/dy; y' = y has infinitely many symmetries:
+
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> blasius = 2 * diff(y, x, 3) + y * diff(y, x, 2)
+    >>> determining_janet_basis(blasius, y, x).rank()
+    2
+    >>> determining_janet_basis(diff(y, x) - y, y, x).rank()
+    oo
+    """
+    eqs = [equations] if isinstance(equations, Basic) else list(equations)
+    dep = convert_to_iterable(dependent)
+    indep = convert_to_iterable(independent)
+    if len(indep) == 1:
+        system, functions, variables, _ = _linear_system_odes(eqs, dep, indep)
+    elif len(eqs) == 1 and len(dep) == 1:
+        infinitesimals = create_infinitesimals(dep, indep)
+        plain = {d: Symbol(d.func.__name__) for d in dep}
+        pde = overdetermined_system_pde(eqs[0], dep, indep, infinitesimals=infinitesimals)
+        system = [e.xreplace(plain) for e in pde]
+        functions = [infinitesimals[v].xreplace(plain) for v in indep + dep]
+        variables = indep + [plain[d] for d in dep]
+    else:
+        raise NotImplementedError("determining equations of systems of PDEs (#21)")
+    return JanetBasis(system, functions, variables, sort_order=sort_order)
 
 
 def janet_basis_from_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument
