@@ -11,6 +11,7 @@ import random
 import time
 from collections import Counter
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
 from itertools import combinations_with_replacement
 from typing import Any
 
@@ -21,6 +22,7 @@ from sympy import (
     Dummy,
     Expr,
     Function,
+    Integral,
     Lambda,
     Matrix,
     Mul,
@@ -30,6 +32,9 @@ from sympy import (
     Rational,
     S,
     Subs,
+    Symbol,
+    classify_ode,
+    dsolve,
     exp,
     expand,
     expand_power_exp,
@@ -43,10 +48,17 @@ from sympy import (
     sympify,
     together,
 )
+from sympy.core.function import AppliedUndef
 
 from delierium.infinitesimals import _simplified_residue
 
-__all__ = ["ansatz_generators", "candidate_functions", "generators_by_ansatz"]
+__all__ = [
+    "Reduced",
+    "ansatz_generators",
+    "candidate_functions",
+    "generators_by_ansatz",
+    "reduce_determining_equations",
+]
 
 
 def _monomials(variables: Sequence[Basic], degree: int) -> list[Expr]:
@@ -129,7 +141,7 @@ def _tracer(trace: bool | int) -> Callable[..., None]:
     return out
 
 
-def ansatz_generators(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
+def ansatz_generators(  # pylint: disable=too-many-arguments,too-many-locals
     system: Sequence[Expr],
     infinitesimals: Sequence[Expr],
     coordinates: Sequence[Basic],
@@ -137,12 +149,17 @@ def ansatz_generators(  # pylint: disable=too-many-arguments,too-many-positional
     functions: Sequence[Expr] = (),
     function_degree: int = 2,
     trace: bool | int = False,
+    *,
+    constants: Sequence[Symbol] = (),
+    result: Sequence[Expr] | None = None,
 ) -> list[tuple[Expr, ...]]:
     """The solutions of the linear determining equations system in the
-    unknown functions infinitesimals (of the coordinates) of the form: linear
-    combinations of the monomials of degree <= degree in the coordinates
-    times the monomials of degree <= function_degree in the functions. A
-    basis of them, each a tuple with one component per infinitesimal.
+    unknown functions infinitesimals (each of some of the coordinates) of
+    the form: linear combinations of the monomials of degree <= degree in
+    their variables times the monomials of degree <= function_degree in the
+    functions of them. A basis of them, each a tuple with one component per
+    infinitesimal; or, with result given (expressions in the unknown
+    functions and the unknown constants), per expression of result.
 
     trace (1 or True): print the size of the ansatz and of the linear
     system, its rank and the number of solutions; 2: also every determining
@@ -159,21 +176,27 @@ def ansatz_generators(  # pylint: disable=too-many-arguments,too-many-positional
     """
     out = _tracer(trace)
     start = time.time()
-    basis: list[Expr] = []
-    for g in _monomials(functions, function_degree):
-        for m in _monomials(coordinates, degree):
-            gm = expand(powsimp(g * m))
-            if gm != 0 and gm not in basis:
-                basis.append(gm)
-    unknowns = [[Dummy() for _ in basis] for _ in infinitesimals]
-    components = [sum(c * m for c, m in zip(cs, basis, strict=True)) for cs in unknowns]
-    substitution = {
-        f.func: Lambda(f.args, c) for f, c in zip(infinitesimals, components, strict=True)
+    bases: dict[Expr, list[Expr]] = {}
+    for f in infinitesimals:
+        variables = [v for v in coordinates if v in f.args]
+        own = [g for g in functions if g.free_symbols <= set(variables)]
+        basis: list[Expr] = []
+        for g in _monomials(own, function_degree):
+            for m in _monomials(variables, degree):
+                gm = expand(powsimp(g * m))
+                if gm != 0 and gm not in basis:
+                    basis.append(gm)
+        bases[f] = basis
+    unknowns = {f: [Dummy() for _ in bases[f]] for f in infinitesimals}
+    components = {
+        f: sum(c * m for c, m in zip(unknowns[f], bases[f], strict=True)) for f in infinitesimals
     }
-    flat = [c for cs in unknowns for c in cs]
+    substitution = {f.func: Lambda(f.args, components[f]) for f in infinitesimals}
+    flat = [c for f in infinitesimals for c in unknowns[f]] + list(constants)
+    sizes = sorted({len(b) for b in bases.values()})
     out(
-        f"ansatz: degree {degree}, functions {list(functions)}, {len(basis)} monomials, "
-        f"{len(flat)} unknowns"
+        f"ansatz: degree {degree}, functions {list(functions)}, "
+        f"{sizes[0] if len(sizes) == 1 else sizes} monomials, {len(flat)} unknowns"
     )
     rows = []
     how: Counter[str] = Counter()
@@ -185,18 +208,24 @@ def ansatz_generators(  # pylint: disable=too-many-arguments,too-many-positional
     matrix = (
         Matrix([[r.coeff(c) for c in flat] for r in rows]) if rows else Matrix.zeros(1, len(flat))
     )
-    result: list[tuple[Expr, ...]] = []
+    targets = (
+        [components[f] for f in infinitesimals]
+        if result is None
+        else [r.subs(substitution).doit() for r in result]
+    )
+    solutions: list[tuple[Expr, ...]] = []
     for vector in matrix.nullspace(simplify=True):
         values = dict(zip(flat, vector, strict=True))
-        result.append(tuple(simplify(sympify(c).xreplace(values)) for c in components))
+        solutions.append(tuple(simplify(sympify(c).xreplace(values)) for c in targets))
     methods = ", ".join(f"{m} {n}" for m, n in sorted(how.items()))
     out(
         f"  {len(system)} equations -> {len(rows)} conditions ({methods}); "
-        f"rank {len(flat) - len(result)} -> {len(result)} solutions ({time.time() - start:.1f} s)"
+        f"rank {len(flat) - len(solutions)} -> {len(solutions)} solutions "
+        f"({time.time() - start:.1f} s)"
     )
-    for g in result:
+    for g in solutions:
         out(f"    {g}", 2)
-    return result
+    return solutions
 
 
 def candidate_functions(
@@ -253,14 +282,21 @@ def generators_by_ansatz(  # pylint: disable=too-many-arguments,too-many-positio
     max_degree: int = 3,
     functions: Sequence[Expr] | None = None,
     trace: bool | int = False,
+    reduce: bool = True,
+    reduction_system: Sequence[Expr] | None = None,
 ) -> list[tuple[Expr, ...]]:
-    """generators by ansatz_generators with increasing degree up to
-    max_degree, until dimension many are found. Without functions given,
-    monomials in the coordinates first, then the families of
-    candidate_functions one by one, and finally those that helped,
-    together. Every generator is checked against the system.
+    """Generators of the solutions of the determining equations system.
 
-    trace (1 or True): print every attempt and decision; 2: also the
+    With reduce (the default), reduce_determining_equations first (of
+    reduction_system if given, e.g. the Janet basis of system): equations of
+    one term are integrated, simple ODEs solved. Then the remaining unknown
+    functions by ansatz_generators with increasing degree up to max_degree,
+    until dimension many are found. Without functions given, monomials
+    first, then the families of candidate_functions one by one, and finally
+    those that helped, together. Every generator is checked against the
+    system; the simplest come first.
+
+    trace (1 or True): print every step and decision; 2: also the
     determining equations with their conditions and the solutions of every
     attempt (see ansatz_generators)."""
     out = _tracer(trace)
@@ -268,8 +304,42 @@ def generators_by_ansatz(  # pylint: disable=too-many-arguments,too-many-positio
         f"solving {len(system)} determining equations for {list(infinitesimals)} "
         f"in {list(coordinates)}, dimension {dimension}"
     )
-    found = _search(system, infinitesimals, coordinates, dimension, max_degree, functions, trace)
-    result = [g for g in found if _satisfies(system, infinitesimals, g)]
+    if reduce:
+        r = reduce_determining_equations(
+            reduction_system if reduction_system is not None else system,
+            infinitesimals,
+            coordinates,
+            trace,
+        )
+
+        def attempt(degree: int, extra: Sequence[Expr]) -> list[tuple[Expr, ...]]:
+            return ansatz_generators(
+                r.system,
+                r.functions,
+                coordinates,
+                degree,
+                extra,
+                trace=trace,
+                constants=r.constants,
+                result=r.infinitesimals,
+            )
+
+        remaining = r.system
+        degrees = max_degree if r.functions else 1
+    else:
+
+        def attempt(degree: int, extra: Sequence[Expr]) -> list[tuple[Expr, ...]]:
+            return ansatz_generators(
+                system, infinitesimals, coordinates, degree, extra, trace=trace
+            )
+
+        remaining = list(system)
+        degrees = max_degree
+    found = _search(attempt, remaining, coordinates, dimension, degrees, functions, trace)
+    result = sorted(
+        (g for g in found if _satisfies(system, infinitesimals, g)),
+        key=lambda g: (sum(sympify(c).count_ops() for c in g), str(g)),
+    )
     for g in found:
         if g not in result:
             out(f"dropped, does not satisfy the determining equations: {g}")
@@ -287,40 +357,43 @@ def _satisfies(
     return all(_simplified_residue(e.subs(substitution).doit()) == 0 for e in system)
 
 
+type _Attempt = Callable[[int, Sequence[Expr]], list[tuple[Expr, ...]]]
+
+
 def _search(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    attempt: _Attempt,
     system: Sequence[Expr],
-    infinitesimals: Sequence[Expr],
     coordinates: Sequence[Basic],
-    dimension: Any = oo,
-    max_degree: int = 3,
-    functions: Sequence[Expr] | None = None,
-    trace: bool | int = False,
+    dimension: Any,
+    max_degree: int,
+    functions: Sequence[Expr] | None,
+    trace: bool | int,
 ) -> list[tuple[Expr, ...]]:
-    """generators by ansatz_generators with increasing degree up to
-    max_degree, until dimension many are found. Without functions given,
-    monomials in the coordinates first, then the families of
-    candidate_functions one by one (those the system points to first, each
-    with increasing degree), and finally those that helped, together."""
+    """attempt (an ansatz of a degree, with functions) with increasing degree
+    up to max_degree, until dimension many are found. Without functions
+    given, monomials first, then the families of candidate_functions one by
+    one (those the system points to first, each with increasing degree),
+    and finally those that helped, together."""
     out = _tracer(trace)
     found: list[tuple[Expr, ...]] = []
     extra = list(functions) if functions is not None else []
     for degree in range(1, max_degree + 1):
-        found = ansatz_generators(system, infinitesimals, coordinates, degree, extra, trace=trace)
+        found = attempt(degree, extra)
         if len(found) >= dimension:
             out(f"-> {len(found)} = dimension: done")
             return found
     if functions is not None:
         out("-> functions given: no further search")
         return found
+    if not system:
+        return found
     out(f"-> {len(found)} < dimension {dimension}: trying functions of the coordinates")
-    return _search_functions(
-        system, infinitesimals, coordinates, dimension, max_degree, found, trace
-    )
+    return _search_functions(attempt, system, coordinates, dimension, max_degree, found, trace)
 
 
 def _search_functions(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+    attempt: _Attempt,
     system: Sequence[Expr],
-    infinitesimals: Sequence[Expr],
     coordinates: Sequence[Basic],
     dimension: Any,
     max_degree: int,
@@ -335,11 +408,9 @@ def _search_functions(  # pylint: disable=too-many-arguments,too-many-positional
         more = found
         # an infinite algebra never stops early: only the highest degree
         for degree in range(1 if dimension != oo else max_degree, max_degree + 1):
-            attempt = ansatz_generators(
-                system, infinitesimals, coordinates, degree, family, trace=trace
-            )
-            if len(attempt) > len(more):
-                more = attempt
+            result = attempt(degree, family)
+            if len(result) > len(more):
+                more = result
             if len(more) >= dimension:
                 break
         if len(more) > len(found):
@@ -352,5 +423,245 @@ def _search_functions(  # pylint: disable=too-many-arguments,too-many-positional
         out("-> no family of functions helps")
         return found
     out(f"-> combining the families that helped: {helpful}")
-    more = ansatz_generators(system, infinitesimals, coordinates, max_degree, helpful, trace=trace)
+    more = attempt(max_degree, helpful)
     return more if len(more) > len(found) else found
+
+
+# --------------------------------------------------------------------------
+# Reduction before the ansatz: integrate the equations with one term,
+# substitute, split, solve simple ODEs.
+
+_FAST_HINTS = (
+    "1st_linear",
+    "nth_linear_constant_coeff_homogeneous",
+    "nth_linear_constant_coeff_undetermined_coefficients",
+    "nth_linear_euler_eq_homogeneous",
+    "nth_linear_euler_eq_nonhomogeneous_undetermined_coefficients",
+    "separable",
+    "nth_algebraic",
+)
+
+
+@dataclass
+class Reduced:
+    """The determining equations after the reduction: the remaining
+    equations in the remaining unknowns (functions of some of the
+    coordinates, and constants), and the infinitesimals in terms of them."""
+
+    system: list[Expr]
+    functions: list[Expr]
+    constants: list[Symbol]
+    infinitesimals: list[Expr]  # the original ones, expressed in the new unknowns
+    steps: list[str] = field(default_factory=list)
+
+
+class _Names:
+    """Fresh names for the new unknown functions F1, F2, ... and constants
+    c1, c2, ..., not used in the system."""
+
+    def __init__(self, system: Sequence[Expr]) -> None:
+        self.used = {str(s) for e in system for s in e.free_symbols} | {
+            a.func.__name__ for e in system for a in e.atoms(AppliedUndef)
+        }
+        self.count = 0
+
+    def fresh(self, prefix: str) -> str:
+        while True:
+            self.count += 1
+            name = f"{prefix}{self.count}"
+            if name not in self.used:
+                self.used.add(name)
+                return name
+
+
+def _one_term(e: Expr, functions: Sequence[Expr]) -> tuple[Expr, dict[Basic, int]] | None:
+    """(g, orders) if e is c * (a derivative of the unknown g) with c free of
+    the unknowns, orders the derivative's order per variable (empty for g
+    itself); None otherwise."""
+    terms = Add.make_args(expand(e))
+    if len(terms) != 1:
+        return None
+    unknown_parts = [f for f in Mul.make_args(terms[0]) if any(f.has(g) for g in functions)]
+    if len(unknown_parts) != 1:
+        return None
+    part = unknown_parts[0]
+    if part in functions:
+        return part, {}
+    if isinstance(part, Derivative) and part.expr in functions:
+        orders: dict[Basic, int] = {}
+        for v, n in part.variable_count:
+            orders[v] = orders.get(v, 0) + int(n)
+        return part.expr, orders
+    return None
+
+
+def _integration(g: Expr, orders: dict[Basic, int], names: _Names) -> tuple[Expr, list[Expr]]:
+    """The general solution of d^orders g = 0: the sum over the variables v
+    of polynomials of degree < orders[v] in v with coefficients new functions
+    of the other arguments of g (constants if there are none)."""
+    args = list(g.args)
+    new: list[Expr] = []
+    solution: Expr = S.Zero
+    for v, n in orders.items():
+        rest = [a for a in args if a != v]
+        for p in range(n):
+            h = Function(names.fresh("F"))(*rest) if rest else Symbol(names.fresh("c"))
+            new.append(h)
+            solution += v**p * h
+    return solution, new
+
+
+def _split_free(e: Expr, functions: Sequence[Expr], coordinates: Sequence[Basic]) -> list[Expr]:
+    """e = 0 split by the coordinates none of its unknowns depends on (as
+    polynomial coefficients, functions of them taken as independent); [e]
+    if it cannot be split."""
+    unknowns = [f for f in functions if e.has(f.func)]
+    occurring = set()
+    for a in e.atoms(AppliedUndef):
+        if a.func in {f.func for f in unknowns}:
+            occurring |= a.free_symbols
+    free = [v for v in coordinates if v not in occurring and e.has(v)]
+    if not free:
+        return [e]
+    numerator = numer(together(e))
+    atoms = [
+        a
+        for a in numerator.atoms(Function, Pow)
+        if a.has(*free)
+        and not a.has(*[f.func for f in unknowns])
+        and not (isinstance(a, Pow) and a.exp.is_Integer and a.base in free)
+    ]
+    replacements = {a: Dummy() for a in sorted(atoms, key=lambda a: -a.count_ops())}
+    polynomial = expand(numerator.xreplace(replacements))
+    gens = [*free, *replacements.values()]
+    try:
+        coefficients = Poly(polynomial, *gens).coeffs()
+    except PolynomialError:
+        return [e]
+    if any(c.has(*gens) for c in coefficients):
+        return [e]
+    return [c for c in coefficients if c != 0]
+
+
+def _substitute(e: Expr, substitution: dict[Any, Lambda]) -> Expr:
+    return expand(numer(together(e.subs(substitution).doit())))
+
+
+def _cleaned(system: Sequence[Expr]) -> list[Expr]:
+    result: list[Expr] = []
+    for e in system:
+        e = expand(numer(together(e)))
+        if e != 0 and e not in result and -e not in result:
+            result.append(e)
+    return result
+
+
+def _ode_solution(
+    e: Expr, functions: Sequence[Expr], names: _Names
+) -> tuple[Expr, Expr, list[Symbol]] | None:
+    """(g, solution, new constants) if e is a linear ODE in a single unknown
+    g of one variable (constants may occur) that a fast dsolve method
+    solves without integrals; None otherwise."""
+    present = [f for f in functions if e.has(f.func)]
+    if len(present) != 1 or len(present[0].args) != 1:
+        return None
+    g = present[0]
+    try:
+        hints = classify_ode(e, g)
+    except (NotImplementedError, ValueError, TypeError):
+        return None
+    for hint in hints:
+        if hint not in _FAST_HINTS:
+            continue
+        try:
+            solution = dsolve(e, g, hint=hint)
+        except (NotImplementedError, ValueError, TypeError):
+            continue
+        if isinstance(solution, list) or solution.rhs.has(Integral):
+            continue
+        rhs = solution.rhs
+        constants = sorted(
+            (s for s in rhs.free_symbols if s.name.startswith("C") and s not in e.free_symbols),
+            key=str,
+        )
+        new = [Symbol(names.fresh("c")) for _ in constants]
+        return g, rhs.xreplace(dict(zip(constants, new, strict=True))), new
+    return None
+
+
+def reduce_determining_equations(  # pylint: disable=too-many-locals
+    system: Sequence[Expr],
+    infinitesimals: Sequence[Expr],
+    coordinates: Sequence[Basic],
+    trace: bool | int = False,
+) -> Reduced:
+    """Integrate the equations of one term (c * d^alpha g = 0), substitute
+    the result in all others and split them by the coordinates their
+    unknowns no longer depend on; repeat, then solve the linear ODEs in one
+    unknown of one variable. Of the equations with one term, those with a
+    derivative in one variable come first, the lowest order first (g_xx = 0
+    before g_xxx = 0, which then vanishes).
+
+    >>> from sympy import Function, symbols, diff
+    >>> x, y = symbols("x y")
+    >>> X, Y = Function("X")(x, y), Function("Y")(x, y)
+    >>> r = reduce_determining_equations([diff(X, y), diff(Y, y, 2), diff(Y, y, 3)], [X, Y], [x, y])
+    >>> r.infinitesimals, r.system
+    ([F1(x), y*F3(x) + F2(x)], [])
+    """
+    out = _tracer(trace)
+    names = _Names(system)
+    functions: list[Expr] = list(infinitesimals)
+    constants: list[Symbol] = []
+    representation: list[Expr] = list(infinitesimals)
+    equations = _cleaned(system)
+    steps: list[str] = []
+
+    def apply(g: Expr, solution: Expr, new: Sequence[Expr]) -> None:
+        nonlocal equations, representation
+        substitution = {g.func: Lambda(g.args, solution)}
+        functions.remove(g)
+        functions.extend(f for f in new if not isinstance(f, Symbol))
+        constants.extend(f for f in new if isinstance(f, Symbol))
+        representation = [
+            _substitute(r, substitution) if r.has(g.func) else r for r in representation
+        ]
+        split: list[Expr] = []
+        for e in equations:
+            e = _substitute(e, substitution) if e.has(g.func) else e
+            split += _split_free(e, functions, coordinates)
+        equations = _cleaned(split)
+
+    while True:
+        candidates = []
+        for e in equations:
+            found = _one_term(e, functions)
+            if found is not None:
+                g, orders = found
+                candidates.append((len(orders), sum(orders.values()), str(e), e, g, orders))
+        if candidates:
+            _, _, _, e, g, orders = min(candidates, key=lambda c: c[:3])
+            if orders:
+                solution, new = _integration(g, orders, names)
+            else:
+                solution, new = S.Zero, []
+            steps.append(f"{e} = 0  ->  {g} = {solution}")
+            out(f"  integrate: {steps[-1]}")
+            apply(g, solution, new)
+            out(f"    {len(equations)} equations left, unknowns {functions + constants}", 2)
+            continue
+        for e in equations:
+            ode = _ode_solution(e, functions, names)
+            if ode is not None:
+                g, solution, new = ode
+                steps.append(f"{e} = 0  ->  {g} = {solution}  (dsolve)")
+                out(f"  solve: {steps[-1]}")
+                apply(g, solution, new)
+                break
+        else:
+            break
+    out(
+        f"reduced: {len(equations)} equations in {functions + constants}; "
+        f"infinitesimals {representation}"
+    )
+    return Reduced(equations, functions, constants, representation, steps)

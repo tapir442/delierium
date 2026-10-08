@@ -119,6 +119,7 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
                 max_degree,
                 functions,
                 trace,
+                reduction_system=[p.expression() for p in self.janet_basis.S],
             )
         return self._generators[key]
 
