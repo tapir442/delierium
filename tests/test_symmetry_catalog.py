@@ -15,7 +15,20 @@ import dataclasses
 import random
 
 import pytest
-from sympy import Matrix, Symbol, cancel, oo
+from sympy import (
+    Derivative,
+    Matrix,
+    Poly,
+    Rational,
+    Symbol,
+    cancel,
+    expand,
+    numer,
+    oo,
+    symbols,
+    together,
+)
+from sympy.polys.matrices import DomainMatrix
 
 from delierium import (
     LieAlgebra,
@@ -24,7 +37,7 @@ from delierium import (
     verify_symmetries,
 )
 
-from .symmetry_catalog import CATALOG, INFINITE
+from .symmetry_catalog import CATALOG, INFINITE, KAMKE_FIRST_ORDER
 
 pytestmark = pytest.mark.slow
 
@@ -186,3 +199,53 @@ def test_scaling_symmetries(entry):
         assert span is not None, generator
         rank = span.rank(simplify=True)
         assert span.col_join(Matrix([factors])).rank(simplify=True) == rank, generator
+
+
+def series_dimensions(F, x, y, p, orders, seed=0):
+    """Dimensions of the truncated power series solutions (xi, eta of degree
+    N around a regular point) of the symmetry condition of F(x, y, p) = 0,
+    p = y', polynomial in p: F divides pr X F as polynomials in p. Only the
+    Taylor coefficients of the pseudo-remainder below degree N are exact, so
+    only those must vanish. Independent of delierium's determining equations;
+    the dimensions settle at that of the symmetry algebra."""
+    rng = random.Random(seed)
+    params = sorted(F.free_symbols - {x, y, p}, key=str)
+    F = numer(together(F.subs({a: Rational(rng.randint(2, 9), rng.randint(2, 5)) for a in params})))
+    X, Y = Symbol("X"), Symbol("Y")
+    while True:
+        x0, y0 = (Rational(rng.randint(1, 9), rng.randint(2, 7)) for _ in range(2))
+        G = expand(F.subs({x: x0 + X, y: y0 + Y}))
+        if Poly(G, p).LC().subs({X: 0, Y: 0}) != 0:
+            break
+    result = []
+    for N in orders:
+        monomials = [X**i * Y**j for i in range(N + 1) for j in range(N + 1 - i)]
+        a, b = symbols(f"a:{len(monomials)}"), symbols(f"b:{len(monomials)}")
+        xi = sum(c * m for c, m in zip(a, monomials, strict=True))
+        eta = sum(c * m for c, m in zip(b, monomials, strict=True))
+        eta1 = eta.diff(X) + (eta.diff(Y) - xi.diff(X)) * p - xi.diff(Y) * p**2
+        remainder = Poly(expand(xi * G.diff(X) + eta * G.diff(Y) + eta1 * G.diff(p)), p).prem(
+            Poly(G, p)
+        )
+        equations = [
+            v
+            for coeff in remainder.all_coeffs()
+            for (i, j), v in Poly(expand(coeff), X, Y).terms()
+            if i + j < N
+        ]
+        unknowns = [*a, *b]
+        rows = [[Poly(e, *unknowns).coeff_monomial(u) for u in unknowns] for e in equations]
+        M = DomainMatrix.from_list_sympy(len(rows), len(unknowns), rows).to_field()
+        result.append(len(unknowns) - M.rank())
+    return result
+
+
+@pytest.mark.parametrize("entry", [pytest.param(e, id=e.name) for e in KAMKE_FIRST_ORDER])
+def test_first_order_finite_algebra(entry):
+    """#28: the finite dimension of first order ODEs nonlinear in y', checked
+    without delierium by power series."""
+    (x,), (yf,) = entry.variables()
+    y, p = Symbol("y"), Symbol("p")
+    [eq] = entry.parsed_equations()
+    F = eq.subs(Derivative(yf, x), p).subs(yf, y)
+    assert series_dimensions(F, x, y, p, (4, 5)) == [entry.dimension] * 2

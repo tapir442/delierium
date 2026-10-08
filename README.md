@@ -78,6 +78,10 @@ New:
   and Kumei's exercises (heat and Laplace equations in space, u_tt = c(u)**2 u_xx, the
   stream function equation, ...) (#50). Three slips in Bluman and Anco are noted at their
   entries.
+* Catalogue: 27 first order ODEs of Kamke's chapter 1 that are nonlinear in `y'` and have a
+  finite symmetry algebra (dimensions 3, 1 and 0), found by the SymPy benchmark; a new test
+  checks their dimension independently of delierium, by power series solutions of the
+  determining equations (#28).
 * Fixed: `adjoint_frechet_derivative` was a placeholder returning the Frechet derivative
   itself; it now computes the adjoint (Baumann (3.22)). Tests of the derivative operators
   with Baumann's explicit results of chapter 3 (#50).
