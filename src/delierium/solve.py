@@ -23,6 +23,7 @@ from collections.abc import Callable, Sequence
 from itertools import combinations_with_replacement
 from typing import Any, cast
 
+import mpmath
 from sympy import (
     Add,
     Basic,
@@ -42,16 +43,19 @@ from sympy import (
     Subs,
     Symbol,
     classify_ode,
+    cos,
     dsolve,
     exp,
     expand,
     expand_power_exp,
     ilcm,
+    lambdify,
     log,
     numer,
     oo,
     powsimp,
     simplify,
+    sin,
     sqrt,
     sympify,
     together,
@@ -68,6 +72,7 @@ __all__ = [
     "candidate_functions",
     "default_steps",
     "integrate_one_term",
+    "linearly_independent",
     "reduce_determining_equations",
     "run_steps",
     "solve_determining_equations",
@@ -242,6 +247,7 @@ def ansatz_generators(  # pylint: disable=too-many-arguments,too-many-locals
     for vector in matrix.nullspace(simplify=True):
         values = dict(zip(flat, vector, strict=True))
         solutions.append(tuple(simplify(sympify(c).xreplace(values)) for c in targets))
+    solutions = linearly_independent(solutions, coordinates)
     methods = ", ".join(f"{m} {n}" for m, n in sorted(how.items()))
     out(
         f"  {len(system)} equations -> {len(rows)} conditions ({methods}); "
@@ -253,19 +259,69 @@ def ansatz_generators(  # pylint: disable=too-many-arguments,too-many-locals
     return solutions
 
 
+def linearly_independent(
+    generators: Sequence[Sequence[Expr]], coordinates: Sequence[Basic], seed: int = 0
+) -> list[tuple[Expr, ...]]:
+    """The generators (tuples of expressions in the coordinates and
+    parameters) that are linearly independent over the constants of the ones
+    before them, in their order: their values (to 60 digits) at random points
+    of the coordinates, with random values of the parameters, as rows of a
+    matrix, those that raise its rank. Functions with relations
+    (sin(x)**2 + cos(x)**2 = 1) make ansatz solutions dependent.
+
+    >>> from sympy import cos, sin, symbols
+    >>> x, a = symbols("x a")
+    >>> linearly_independent([(1, 0), (sin(x) ** 2, 0), (cos(x) ** 2, 0), (a, 0), (0, x)], [x])
+    [(1, 0), (sin(x)**2, 0), (0, x)]
+    """
+    candidates = [tuple(sympify(c) for c in g) for g in generators]
+    symbols = sorted(set().union(*(c.free_symbols for g in candidates for c in g)), key=str)
+    rng = random.Random(seed)
+
+    def value() -> Any:
+        return mpmath.mpf(rng.randint(50, 300)) / 100
+
+    parameters = {v: value() for v in symbols if v not in coordinates}
+    points = [
+        [parameters[v] if v in parameters else value() for v in symbols]
+        for _ in range(len(candidates) + 2)
+    ]
+    kept: list[tuple[Expr, ...]] = []
+    with mpmath.workdps(60):
+        tolerance = mpmath.mpf(10) ** -40
+        basis: list[tuple[int, list[Any]]] = []
+        for g in candidates:
+            try:
+                functions = [lambdify(symbols, c, "mpmath") for c in g]
+                row = [mpmath.mpc(f(*p)) for p in points for f in functions]
+            except (NameError, TypeError, ValueError):  # not numeric (f(x)): keep it
+                kept.append(g)
+                continue
+            size = max((abs(r) for r in row), default=0)
+            for pivot, b in basis:
+                factor = row[pivot] / b[pivot]
+                row = [r - factor * w for r, w in zip(row, b, strict=True)]
+            if max((abs(r) for r in row), default=0) <= tolerance * size:
+                continue  # zero or dependent on the ones before
+            pivot = max(enumerate(row), key=lambda entry: abs(entry[1]))[0]
+            basis.append((pivot, row))
+            kept.append(g)
+    return kept
+
+
 def candidate_functions(
     coordinates: Sequence[Basic], system: Sequence[Expr] = ()
 ) -> list[list[Expr]]:
     """Families of functions that often occur in generators, for each
-    coordinate v: [log v], [sqrt v, 1/v], [exp v, exp(-v)]; with
-    function_degree 2 also their squares and products (log(v)**2,
-    1/sqrt(v), exp(2v), ...). Those the system points to come first: a
-    negative or fractional power of v ([sqrt v, 1/v], and [log v], which
-    integrates 1/v), log(v), exp(c v). Denominators are cleared in the
+    coordinate v: [log v], [sqrt v, 1/v], [exp v, exp(-v)], [sin v, cos v];
+    with function_degree 2 also their squares and products (log(v)**2,
+    1/sqrt(v), exp(2v), sin(v) cos(v), ...). Those the system points to come
+    first: a negative or fractional power of v ([sqrt v, 1/v], and [log v],
+    which integrates 1/v), log(v), exp(c v), sin, cos. Denominators are cleared in the
     determining equations: 1/v shows as a power of v in some terms of an
     equation but not in others."""
     families: list[tuple[int, list[Expr]]] = []
-    atoms: set[Basic] = set().union(*(e.atoms(Pow, log, exp) for e in system))
+    atoms: set[Basic] = set().union(*(e.atoms(Pow, log, exp, sin, cos) for e in system))
     for v in coordinates:
         w = sympify(v)
         powers = _divides_unevenly(w, system) or any(
@@ -274,10 +330,12 @@ def candidate_functions(
         )
         logs = any(isinstance(a, log) and a.has(w) for a in atoms)
         exps = any(isinstance(a, exp) and a.has(w) for a in atoms)
+        trigs = any(isinstance(a, (sin, cos)) and a.has(w) for a in atoms)
         families += [
             (0 if powers or logs else 1, [log(w)]),
             (0 if powers else 1, [sqrt(w), 1 / w]),
             (0 if exps else 1, [exp(w), exp(-w)]),
+            (0 if trigs else 1, [sin(w), cos(w)]),
         ]
     return [family for _, family in sorted(families, key=lambda f: f[0])]
 

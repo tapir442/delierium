@@ -228,7 +228,7 @@ The public interface is what `delierium` exports; `help(delierium)` lists it:
 * the solver of the determining equations: the module `delierium.solve`
   (`solve_determining_equations`, `SolverState`, `default_steps`, `integrate_one_term`,
   `solve_linear_ode`, `ansatz`, `run_steps`, `reduce_determining_equations`,
-  `ansatz_generators`, `candidate_functions`)
+  `ansatz_generators`, `candidate_functions`, `linearly_independent`)
 * determining equations: `overdetermined_system_ode`, `overdetermined_system_odes`,
   `overdetermined_system_pde`, `prolongation`, `make_infinitesimal`, `create_infinitesimals`,
   `determining_janet_basis`; checks: `verify_symmetry`, `verify_symmetries`

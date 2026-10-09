@@ -1,10 +1,10 @@
 """Tests for delierium.solve: generators by an ansatz (#9)"""
 
 import pytest
-from sympy import Function, diff, exp, sqrt, symbols
+from sympy import Function, cos, diff, exp, sin, sqrt, symbols
 
 from delierium import lie_symmetries
-from delierium.solve import ansatz_generators, candidate_functions
+from delierium.solve import ansatz_generators, candidate_functions, linearly_independent
 
 
 def complete_and_verified(equation, dependent, independent):
@@ -180,3 +180,18 @@ def test_kamke_6_170_no_error():
     s = lie_symmetries(x * y * diff(y, x, 2) + x * diff(y, x) ** 2 + a * y * diff(y, x) + f, y, x)
     generators = s.generators()
     assert generators and all(s.verify(generators))
+
+
+def test_harmonic_oscillator_needs_sin_cos():
+    """y'' + y = 0: sl(3) with sin, cos, sin(2x), ...; exactly 8 generators
+    although sin(x)**2 + cos(x)**2 = 1 makes ansatz solutions dependent."""
+    x = symbols("x")
+    y = Function("y")(x)
+    ok, generators = complete_and_verified(diff(y, x, 2) + y, y, x)
+    assert ok and (0, sin(x)) in generators
+
+
+def test_linearly_independent():
+    x, y, a = symbols("x y a")
+    generators = [(1, 0), (sin(x) ** 2, y), (cos(x) ** 2, -y), (a, 0), (0, x * y), (0, 0)]
+    assert linearly_independent(generators, [x, y]) == [(1, 0), (sin(x) ** 2, y), (0, x * y)]
