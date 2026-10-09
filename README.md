@@ -218,6 +218,24 @@ not change the state. A step of your own may also replace the ansatz at the end.
 `reduce_determining_equations` runs the default steps without the ansatz and returns the
 state, what remains to be solved; `ansatz_generators` is the ansatz alone.
 
+### Invariants and canonical coordinates of a generator
+
+For a given generator, `invariants` solves its characteristic system,
+`canonical_coordinates` gives the invariants `r` and `s` with `X s = 1` (in `(r, s)` the
+generator is the translation `d/ds`), and `differential_invariants` the invariants of its
+prolongation up to a given order, for ODEs and PDEs: for a scalar ODE `r, ds/dr, d²s/dr², ...`,
+in which an invariant ODE has one order less. The general scaling, where SymPy's `pdsolve`
+gives up:
+
+    >>> from delierium import canonical_coordinates, differential_invariants, invariants
+    >>> a, b, u = symbols("a b u")
+    >>> x = Symbol("x")
+    >>> print(canonical_coordinates((a * x, b * u), [x, u]))
+    ([u/x**(b/a)], log(x)/a)
+    >>> y = Function("y")(x)
+    >>> print(differential_invariants((0, Symbol("y")), y, x, 1))
+    [x, Derivative(y(x), x)/y(x)]
+
 ### Janet bases of linear systems
 
 `JanetBasis` takes a list of linear homogeneous PDEs, the unknown functions and the
@@ -281,6 +299,7 @@ The public interface is what `delierium` exports; `help(delierium)` lists it:
   `overdetermined_system_pde`, `prolongation`, `make_infinitesimal`, `create_infinitesimals`,
   `determining_janet_basis`; checks: `verify_symmetry`, `verify_symmetries`
 * symmetry algebras: `symmetry_algebra`, `LieAlgebra` (`type()`, ...), `scaling_symmetries`
+* a given generator: `invariants`, `canonical_coordinates`, `differential_invariants`
 * group classification: `group_classification`, `classify`; `thomas_decomposition`
 * Janet bases: `JanetBasis` (with `rank`, `parametric_derivatives`, `principal_derivatives`,
   `type`, `assumed_nonzero`, `parameter_conditions`, `representation`),
