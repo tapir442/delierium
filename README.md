@@ -127,6 +127,49 @@ coordinates if needed); `complete` tells whether there are as many as the dimens
     >>> generators, s.complete(generators)
     ([(1, 0), (-x, y)], True)
 
+### Solving the determining equations
+
+`delierium.solve` applies a list of steps to a `SolverState` (the remaining equations, the
+unknown functions and constants, the infinitesimals in terms of them). `default_steps(max_degree,
+functions)` are `integrate_one_term` (`c * d^alpha g = 0`), `solve_linear_ode` (by `dsolve`)
+and `ansatz` (monomials of degree `<= max_degree`, times `functions`, by default from
+`candidate_functions`). `trace=True` prints every step, `trace=2` also their details:
+
+    >>> generators = s.generators(trace=True)
+    solving 4 determining equations for [X(y, x), Y(y, x)] in [x, y], dimension 2
+      integrate: Derivative(X(y, x), y) = 0  ->  X(y, x) = F1(x)
+      integrate: Derivative(Y(y, x), x) = 0  ->  Y(y, x) = F2(y)
+      solve: y*Derivative(F2(y), y) - F2(y) = 0  ->  F2(y) = c3*y  (dsolve)
+      solve: c3 + Derivative(F1(x), x) = 0  ->  F1(x) = -c3*x + c4  (dsolve)
+    ansatz: degree 1, functions [], [] monomials, 2 unknowns
+      0 equations -> 0 conditions (); rank 0 -> 2 solutions (... s)
+    -> 2 = dimension: done
+    result: 2 generators of dimension 2, complete
+
+`solve_determining_equations(system, infinitesimals, coordinates, dimension, steps)` works on
+any linear system. A step is a function of the state that returns whether it changed it; it
+changes it by `state.substitute(unknown, solution, new)` (new unknowns from
+`fresh_function`, `fresh_constant`) or by setting `state.generators`, which ends the solver:
+
+    >>> from sympy import symbols
+    >>> from delierium.solve import default_steps, solve_determining_equations
+    >>> x, y = symbols("x y")
+    >>> X, Y = Function("X")(x, y), Function("Y")(x, y)
+    >>> system = [diff(X, y), diff(Y, x), diff(X, x) + Y / y, diff(Y, y) - Y / y]
+    >>> def report(state):
+    ...     print(len(state.system), "equations")
+    ...     return False
+    >>> solve_determining_equations(system, [X, Y], [x, y], 2, [report, *default_steps()])
+    4 equations
+    3 equations
+    2 equations
+    1 equations
+    0 equations
+    [(1, 0), (-x, y)]
+
+`reduce_determining_equations` stops before the ansatz and returns the state: what remains
+to be solved. `ansatz_generators` is the ansatz alone.
+
 ### Janet bases of linear systems
 
 `JanetBasis` takes a list of linear homogeneous PDEs, the unknown functions and the
@@ -182,6 +225,10 @@ The public interface is what `delierium` exports; `help(delierium)` lists it:
 
 * everything at once: `lie_symmetries` (determining equations, Janet basis, dimension,
   assumptions, algebra, `verify()`, `generators()`)
+* the solver of the determining equations: the module `delierium.solve`
+  (`solve_determining_equations`, `SolverState`, `default_steps`, `integrate_one_term`,
+  `solve_linear_ode`, `ansatz`, `run_steps`, `reduce_determining_equations`,
+  `ansatz_generators`, `candidate_functions`)
 * determining equations: `overdetermined_system_ode`, `overdetermined_system_odes`,
   `overdetermined_system_pde`, `prolongation`, `make_infinitesimal`, `create_infinitesimals`,
   `determining_janet_basis`; checks: `verify_symmetry`, `verify_symmetries`
