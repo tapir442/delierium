@@ -2,7 +2,7 @@
 
 Details are in the issues referenced.
 
-### Unreleased
+### 2.3.0
 
 * `lie_symmetries`: determining equations, Janet basis, dimension, algebra and generators in
   one call ([#10](https://github.com/tapir442/delierium/issues/10)).
