@@ -99,6 +99,17 @@ def _identity_coefficients(
     conditions, so the solutions remain solutions. Where e is no
     polynomial in them, its values at random points."""
     e = sympify(expand_power_exp(expand(e)))
+    # functions of the coordinates that are no unknowns (an arbitrary f(x) of
+    # the equation, its derivatives) first, so that v = s**L does not reach
+    # into them
+    opaque = {
+        a: Dummy()
+        for a in sorted(
+            (a for a in e.atoms(AppliedUndef, Derivative, Subs) if a.has(*coordinates)),
+            key=lambda a: -a.count_ops(),
+        )
+    }
+    e = e.xreplace(opaque)
     variables: list[Basic] = []
     for v in coordinates:
         exponents = [p.exp for p in e.atoms(Pow) if p.base == v and p.exp.is_Rational]
@@ -127,7 +138,7 @@ def _identity_coefficients(
     ]
     replacements = {a: Dummy() for a in sorted(atoms, key=lambda a: -a.count_ops())}
     polynomial = expand(numerator.xreplace(replacements))
-    generators = [*variables, *replacements.values()]
+    generators = [*variables, *opaque.values(), *replacements.values()]
     try:
         coefficients = Poly(polynomial, *generators).coeffs()
         if not any(c.has(*generators) for c in coefficients):
@@ -499,14 +510,14 @@ def _ode_solution(
     g = present[0]
     try:
         hints = classify_ode(e, g)
-    except (NotImplementedError, ValueError, TypeError):
+    except (NotImplementedError, ValueError, TypeError, IndexError):
         return None
     for hint in hints:
         if hint not in _FAST_HINTS:
             continue
         try:
             solution = dsolve(e, g, hint=hint)
-        except (NotImplementedError, ValueError, TypeError):
+        except (NotImplementedError, ValueError, TypeError, IndexError):
             continue
         if isinstance(solution, list) or solution.rhs.has(Integral):
             continue

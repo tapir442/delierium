@@ -157,3 +157,26 @@ def test_step_that_always_changes_stops():
     state = SolverState([diff(X, x, 2)], [X], [x])
     run_steps(state, [lambda s: True], max_iterations=5)
     assert state.history[-1] == "stopped after 5 steps"
+
+
+def test_root_of_coordinate_with_arbitrary_function():
+    """A root of x next to an arbitrary f(x) and its derivative: x = s**2 is
+    not substituted into Derivative(f(x), x) (Kamke 6.170)."""
+    from delierium.solve import _identity_coefficients  # pylint: disable=import-outside-toplevel
+
+    x, a, b = symbols("x a b")
+    f = Function("f")(x)
+    e = a * sqrt(x) + b * diff(f, x) + a * f
+    conditions, method = _identity_coefficients(e, [x], [a, b])
+    assert method == "split" and set(conditions) == {a, b}
+
+
+def test_kamke_6_170_no_error():
+    """x y y'' + x y'**2 + a y y' + f(x) = 0 with f arbitrary: the generators
+    found satisfy the determining equations."""
+    x, a = symbols("x a")
+    y = Function("y")(x)
+    f = Function("f")(x)
+    s = lie_symmetries(x * y * diff(y, x, 2) + x * diff(y, x) ** 2 + a * y * diff(y, x) + f, y, x)
+    generators = s.generators()
+    assert generators and all(s.verify(generators))
