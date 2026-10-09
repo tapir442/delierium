@@ -2,6 +2,17 @@
 
 Details are in the issues referenced.
 
+### Unreleased
+
+* `lie_symmetries`: determining equations, Janet basis, dimension, algebra and generators in
+  one call ([#10](https://github.com/tapir442/delierium/issues/10)).
+* `delierium.solve`: generators by an extensible solver, a list of steps, user steps
+  included ([#9](https://github.com/tapir442/delierium/issues/9)); 410 of the 499 finite catalogue entries complete.
+* Fixed: `group_classification` with roots of the parameters ([#83](https://github.com/tapir442/delierium/issues/83)); determining
+  equations when the highest derivative is inside an arbitrary function ([#84](https://github.com/tapir442/delierium/issues/84)).
+* The public functions check their arguments; `euler_operator(dependent, independent)`
+  (`depend`, `independ` deprecated).
+
 ### 2.2.0
 
 * `symmetry_algebra` and `LieAlgebra.from_janet_basis`: the Lie algebra of the point

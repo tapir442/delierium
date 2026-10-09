@@ -88,3 +88,15 @@ def test_adjoint_frechet_derivative():
     W = Function("w")
     [[a]] = adjoint_frechet_derivative([diff(u, x, 2) + u * diff(u, x)], [U], [x], [W])
     assert simplify(a - (diff(W(x), x, 2) - u * diff(W(x), x))) == 0
+
+
+def test_euler_operator_deprecated_keywords():
+    """depend and independ are the former names of dependent and independent."""
+    t = symbols("t")
+    u = Function("u")
+    density = diff(u(t), t) ** 2
+    expected = euler_operator(density, dependent=[u], independent=t)
+    with pytest.warns(DeprecationWarning):
+        assert euler_operator(density, depend=[u], independ=t) == expected
+    with pytest.raises(TypeError):
+        euler_operator(density, [u], t, dependant=[u])

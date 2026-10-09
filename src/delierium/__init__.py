@@ -3,6 +3,9 @@
 The public interface is what this package exports (``from delierium import
 ...``):
 
+* everything at once: lie_symmetries (a LieSymmetries object: determining
+  equations, Janet basis, dimension, assumptions, algebra, verify(), and
+  generators() by an ansatz, see delierium.solve)
 * determining equations: overdetermined_system_ode, overdetermined_system_odes,
   overdetermined_system_pde, make_infinitesimal, create_infinitesimals,
   prolongation; verify_symmetry, verify_symmetries (a given generator
@@ -79,6 +82,7 @@ from .lie_algebra import LieAlgebra, NotClosedError, VectorField
 from .lie_algebra_types import LieAlgebraType
 from .matrix_order import Context, Mgrevlex, Mgrlex, Mlex
 from .scaling import scaling_symmetries
+from .symmetries import LieSymmetries, lie_symmetries
 from .thomas import SimpleSystem, thomas_decomposition
 
 __version__ = _version("delierium")
@@ -92,6 +96,7 @@ __all__ = [
     "LHDPList",
     "LieAlgebra",
     "LieAlgebraType",
+    "LieSymmetries",
     "Mgrevlex",
     "Mgrlex",
     "Mlex",
@@ -115,6 +120,7 @@ __all__ = [
     "janet_basis_from_odes",
     "lie_derivative_printer",
     "lie_form",
+    "lie_symmetries",
     "ltf",
     "make_infinitesimal",
     "overdetermined_system_ode",

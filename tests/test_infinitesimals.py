@@ -15,12 +15,14 @@ from sympy import (
     Rational,
     Symbol,
     cancel,
+    diff,
     im,
     oo,
     re,
     sign,
     simplify,
     sin,
+    symbols,
 )
 from sympy.core.function import AppliedUndef
 
@@ -29,6 +31,7 @@ from delierium.infinitesimals import (
     _linear_system_odes,
     canonical_derivatives,
     create_infinitesimals,
+    determining_janet_basis,
     is_janet_basis_of_odes,
     janet_basis_from_odes,
     overdetermined_system_ode,
@@ -657,3 +660,23 @@ def test_lambert_w_residues():
     generators = [(0, exp(W**2 / 2 + W)), (0, Y), (exp(-x + W), 0)]
     assert all(verify_symmetries(eq, y, x, generators))
     assert not verify_symmetry(eq, y, x, (1, Y))
+
+
+def test_highest_derivative_in_an_arbitrary_function():
+    """u_t + F(u_xx) = 0 cannot be solved for u_xx, but for u_t (#84):
+    translations, u -> u + c x and the scaling (x, 2t, 2u)."""
+    x, t, u_ = symbols("x t u")
+    u = Function("u")(x, t)
+    eq = diff(u, t) + Function("F")(diff(u, x, 2))
+    assert determining_janet_basis(eq, u, [x, t]).rank() == 5
+    generators = [(1, 0, 0), (0, 1, 0), (0, 0, 1), (0, 0, x), (x, 2 * t, 2 * u_)]
+    assert all(verify_symmetries(eq, u, [x, t], generators))
+
+
+def test_general_evolution_equation():
+    """u_t = F(x, u, u_x, u_xx) (Baumann 5.4.3): only d/dt (#84)."""
+    x, t = symbols("x t")
+    u = Function("u")(x, t)
+    eq = diff(u, t) - Function("F")(x, u, diff(u, x), diff(u, x, 2))
+    assert determining_janet_basis(eq, u, [x, t]).rank() == 1
+    assert verify_symmetry(eq, u, [x, t], (0, 1, 0))

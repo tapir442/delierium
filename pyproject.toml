@@ -180,8 +180,8 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
 [[tool.mypy.overrides]]
-# sympy has no type annotations (no py.typed marker)
-module = ["line_profiler.*", "IPython.*", "sympy.*"]
+# sympy and mpmath have no type annotations (no py.typed marker)
+module = ["line_profiler.*", "IPython.*", "sympy.*", "mpmath.*"]
 ignore_missing_imports = true
 
 # --------------------------------------------------------------------------

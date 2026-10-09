@@ -28,6 +28,7 @@ from sympy import (
     I,
     Poly,
     PolynomialError,
+    Pow,
     default_sort_key,
     factor_list,
     nan,
@@ -36,9 +37,11 @@ from sympy import (
     together,
     zoo,
 )
+from sympy.solvers.solvers import unrad
 
 from delierium.helpers import finish_substitution
 from delierium.infinitesimals import (
+    _checked_arguments,
     _leading_derivative,
     create_infinitesimals,
     determining_condition,
@@ -138,6 +141,7 @@ def group_classification(
     (n = -1 is linearizable by a hodograph transformation.)
     """
     independent = list(independent)
+    _checked_arguments(eq, dependent, independent)
     variables = [*independent, sp_symbol(dependent)]
 
     def build(rule: dict[Basic, Expr]) -> tuple[JanetBasis, list[list[Expr]]]:
@@ -295,7 +299,7 @@ def _solutions(condition: Sequence[Expr]) -> list[tuple[dict[Basic, Expr], list[
     assumptions. In a simple system the initial of each equation and its
     discriminant do not vanish, so the roots are distinct and the solutions
     disjoint."""
-    polys = [numer(together(e)).expand() for e in condition]
+    polys = [_without_radicals(numer(together(e)).expand()) for e in condition]
     polys = [f for f in polys if f != 0]
     if not polys:
         return [({}, [])]
@@ -310,6 +314,19 @@ def _solutions(condition: Sequence[Expr]) -> list[tuple[dict[Basic, Expr], list[
             ]
             results.append((solution, assumed))
     return results
+
+
+def _without_radicals(e: Expr) -> Expr:
+    """e = 0 as a polynomial equation: a condition can contain roots of the
+    parameters once a parameter was solved for (sqrt(-kappa*lambda) = 0,
+    #83); unrad squares them away, sqrt(f) = 0 gives f = 0."""
+    if not any(p.exp.is_Rational and not p.exp.is_Integer for p in e.atoms(Pow)):
+        return e
+    try:
+        result = unrad(e)
+    except NotImplementedError:
+        return e
+    return e if result is None or result[1] else numer(together(result[0])).expand()
 
 
 def _solve_triangular(equations: list[Expr], variables: list[Basic]) -> list[dict[Basic, Expr]]:

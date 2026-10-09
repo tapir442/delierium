@@ -225,7 +225,7 @@ def _simplify_coefficients(e: Basic) -> Basic:
 
 
 class LHDP:
-    """Linear Homogenious Differential Polynomial."""
+    """Linear Homogeneous Differential Polynomial."""
 
     # those of the leading term, set by normalize
     order: Order
@@ -1071,7 +1071,7 @@ class JanetBasis:
     ) -> None:
         """
         Parameters:
-            * List of homogenous PDE's
+            * List of homogeneous PDE's
             * List of dependent variables, i.e. the functions to searched for
             * List of variables
             * sort order, default is grevlex
