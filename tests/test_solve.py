@@ -4,7 +4,13 @@ import pytest
 from sympy import Function, cos, diff, exp, sin, sqrt, symbols
 
 from delierium import lie_symmetries
-from delierium.solve import ansatz_generators, candidate_functions, linearly_independent
+from delierium.solve import (
+    SolverState,
+    ansatz_generators,
+    candidate_functions,
+    linearly_independent,
+    solve_euler_ode,
+)
 
 
 def complete_and_verified(equation, dependent, independent):
@@ -195,3 +201,35 @@ def test_linearly_independent():
     x, y, a = symbols("x y a")
     generators = [(1, 0), (sin(x) ** 2, y), (cos(x) ** 2, -y), (a, 0), (0, x * y), (0, 0)]
     assert linearly_independent(generators, [x, y]) == [(1, 0), (sin(x) ** 2, y), (0, x * y)]
+
+
+def test_euler_ode_with_symbolic_exponents():
+    """c y'**2 + (a y + b) y'' = 0 (Kamke 6.168): Euler equations in a y + b
+    with roots 1 + c/a, -c/a of the indicial polynomial; powers of a y + b
+    with exponents differing by integers are not independent functions."""
+    x, a, b, c = symbols("x a b c")
+    y = Function("y")(x)
+    ok, generators = complete_and_verified(c * diff(y, x) ** 2 + (a * y + b) * diff(y, x, 2), y, x)
+    assert ok and len(generators) == 8
+
+
+def test_solve_euler_ode_step():
+    """x**2 g'' - 2 g = 0 for g(x, y): g = F1(y)/x + x**2 F2(y)."""
+    x, y = symbols("x y")
+    g = Function("g")(x, y)
+    state = SolverState([x**2 * diff(g, x, 2) - 2 * g], [g], [x, y])
+    assert solve_euler_ode(state)
+    f1, f2 = state.functions
+    assert not state.system and f1.args == f2.args == (y,)
+    assert state.infinitesimals == [f1 / x + x**2 * f2]
+
+
+def test_exponentials_with_a_parameter():
+    """a y y' + b y**2 + y y'' - y'**2 = 0 (Kamke 6.117): dsolve gives a
+    Piecewise in a and, by another hint, exp(a*(C1 + x)), not linear in C1;
+    the generators need exp(a x) and exp(-a x)."""
+    x, y_, a, b = symbols("x y a b")
+    y = Function("y")(x)
+    equation = a * y * diff(y, x) + b * y**2 + y * diff(y, x, 2) - diff(y, x) ** 2
+    ok, generators = complete_and_verified(equation, y, x)
+    assert ok and (0, y_ * exp(-a * x)) in generators

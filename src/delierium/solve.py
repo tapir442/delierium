@@ -8,6 +8,8 @@ your own and add it to the list. The default steps:
 * integrate_one_term: an equation c * d^alpha g = 0 is integrated, the
   result substituted, the equations split again;
 * solve_linear_ode: a linear ODE in one unknown of one variable by dsolve;
+* solve_euler_ode: a linear ODE of Euler type, sum c_k (alpha v + beta)**(k + m)
+  d^k g/dv^k = 0, also with symbolic roots of the indicial polynomial;
 * ansatz: the remaining unknowns as linear combinations of monomials in
   their variables and in some functions of them (log x, sqrt(t), exp(t),
   ...): the equations become a linear system for the coefficients, whose
@@ -35,6 +37,7 @@ from sympy import (
     Lambda,
     Matrix,
     Mul,
+    Piecewise,
     Poly,
     PolynomialError,
     Pow,
@@ -42,18 +45,23 @@ from sympy import (
     S,
     Subs,
     Symbol,
+    cancel,
     classify_ode,
     cos,
+    diff,
     dsolve,
     exp,
     expand,
     expand_power_exp,
+    factor_list,
+    ff,
     ilcm,
     lambdify,
     log,
     numer,
     oo,
     powsimp,
+    roots,
     simplify,
     sin,
     sqrt,
@@ -76,6 +84,7 @@ __all__ = [
     "reduce_determining_equations",
     "run_steps",
     "solve_determining_equations",
+    "solve_euler_ode",
     "solve_linear_ode",
 ]
 
@@ -90,6 +99,59 @@ def _monomials(variables: Sequence[Basic], degree: int) -> list[Expr]:
             if m not in result:
                 result.append(m)
     return result
+
+
+def _common_powers(e: Expr, variables: Sequence[Basic]) -> tuple[Expr, list[Symbol]]:
+    """e with the powers B**(n + s) of a base B in the variables, n rational
+    and s symbolic, written as B**n * D**k with one new symbol D = B**u per
+    base and family of commensurable s (s = k u, k an integer): SymPy merges
+    B**2 * B**(c/a) into B**(2 + c/a), which would otherwise be a function
+    independent of B**(1 + c/a). The new symbols."""
+    families: dict[tuple[Basic, Expr], list[tuple[Pow, Expr, Expr]]] = {}
+    for a in e.atoms(Pow):
+        if a.exp.is_Rational or not a.base.has(*variables):
+            continue
+        n, symbolic = expand(a.exp).as_coeff_Add()
+        if symbolic == 0:
+            continue
+        key = next(
+            (k for k in families if k[0] == a.base and (symbolic / k[1]).is_Rational),
+            (a.base, symbolic),
+        )
+        families.setdefault(key, []).append((a, n, symbolic))
+    replacements: dict[Basic, Expr] = {}
+    new: list[Symbol] = []
+    for (_, part), members in families.items():
+        unit = part / ilcm(1, 1, *[Rational(m[2] / part).q for m in members])
+        d = Dummy()
+        new.append(d)
+        for a, n, symbolic in members:
+            replacements[a] = a.base**n * d ** int(symbolic / unit)
+    return e.xreplace(replacements), new
+
+
+def _common_exponentials(
+    e: Expr, v: Basic, coordinates: Sequence[Basic]
+) -> tuple[Expr, list[Symbol]]:
+    """e with the exponentials exp(q*v), q symbolic (exp(a*x)), written as
+    D**k with one new symbol D = exp(u*v) per family of commensurable q
+    (q = k u, k an integer). The new symbols."""
+    families: dict[Expr, list[tuple[exp, Expr]]] = {}
+    for a in e.atoms(exp):
+        q = cancel(a.args[0] / v)
+        if q.is_Rational or q.has(*coordinates) or q.has(v):
+            continue
+        key = next((k for k in families if (q / k).is_Rational), q)
+        families.setdefault(key, []).append((a, q))
+    replacements: dict[Basic, Expr] = {}
+    new: list[Symbol] = []
+    for part, members in families.items():
+        unit = part / ilcm(1, 1, *[Rational(q / part).q for _, q in members])
+        d = Dummy(positive=True)
+        new.append(d)
+        for a, q in members:
+            replacements[a] = d ** int(q / unit)
+    return e.xreplace(replacements), new
 
 
 def _identity_coefficients(
@@ -132,6 +194,9 @@ def _identity_coefficients(
         if replaced != e:
             variables.append(e_v)
             e = replaced
+        e, exponentials = _common_exponentials(e, v, coordinates)
+        variables += exponentials
+    e, powers = _common_powers(e, variables)
     numerator: Basic = numer(together(e))
     if numerator == 0:
         return [], "vanishes"
@@ -143,7 +208,7 @@ def _identity_coefficients(
     ]
     replacements = {a: Dummy() for a in sorted(atoms, key=lambda a: -a.count_ops())}
     polynomial = expand(numerator.xreplace(replacements))
-    generators = [*variables, *opaque.values(), *replacements.values()]
+    generators = [*variables, *powers, *opaque.values(), *replacements.values()]
     try:
         coefficients = Poly(polynomial, *generators).coeffs()
         if not any(c.has(*generators) for c in coefficients):
@@ -209,7 +274,7 @@ def ansatz_generators(  # pylint: disable=too-many-arguments,too-many-locals
     bases: dict[Expr, list[Expr]] = {}
     for f in infinitesimals:
         variables = [v for v in coordinates if v in f.args]
-        own = [g for g in functions if g.free_symbols <= set(variables)]
+        own = [g for g in functions if g.free_symbols & set(coordinates) <= set(variables)]
         basis: list[Expr] = []
         for g in _monomials(own, function_degree):
             for m in _monomials(variables, degree):
@@ -317,7 +382,8 @@ def candidate_functions(
     with function_degree 2 also their squares and products (log(v)**2,
     1/sqrt(v), exp(2v), sin(v) cos(v), ...). Those the system points to come
     first: a negative or fractional power of v ([sqrt v, 1/v], and [log v],
-    which integrates 1/v), log(v), exp(c v), sin, cos. Denominators are cleared in the
+    which integrates 1/v), log(v), exp(c v), sin, cos; with exp(a v) in the
+    system, a symbolic, also [exp(a v), exp(-a v)]. Denominators are cleared in the
     determining equations: 1/v shows as a power of v in some terms of an
     equation but not in others."""
     families: list[tuple[int, list[Expr]]] = []
@@ -331,6 +397,16 @@ def candidate_functions(
         logs = any(isinstance(a, log) and a.has(w) for a in atoms)
         exps = any(isinstance(a, exp) and a.has(w) for a in atoms)
         trigs = any(isinstance(a, (sin, cos)) and a.has(w) for a in atoms)
+        rates: list[Expr] = []  # exp(a*v), a symbolic: a common unit of the a
+        for q in {cancel(a.args[0] / w) for a in atoms if isinstance(a, exp)}:
+            if q.is_Rational or q.has(*coordinates):
+                continue
+            k = next((k for k, r in enumerate(rates) if (q / r).is_Rational), None)
+            if k is None:
+                rates.append(q)
+            else:
+                rates[k] = rates[k] / Rational(q / rates[k]).q
+        families += [(0, [exp(q * w), exp(-q * w)]) for q in sorted(rates, key=str)]
         families += [
             (0 if powers or logs else 1, [log(w)]),
             (0 if powers else 1, [sqrt(w), 1 / w]),
@@ -523,7 +599,8 @@ def _split_free(e: Expr, functions: Sequence[Expr], coordinates: Sequence[Basic]
     free = [v for v in coordinates if v not in occurring and e.has(v)]
     if not free:
         return [e]
-    numerator = numer(together(e))
+    common, powers = _common_powers(e, free)
+    numerator = numer(together(common))
     atoms = [
         a
         for a in numerator.atoms(Function, Pow)
@@ -533,7 +610,7 @@ def _split_free(e: Expr, functions: Sequence[Expr], coordinates: Sequence[Basic]
     ]
     replacements = {a: Dummy() for a in sorted(atoms, key=lambda a: -a.count_ops())}
     polynomial = expand(numerator.xreplace(replacements))
-    gens = [*free, *replacements.values()]
+    gens = [*free, *powers, *replacements.values()]
     try:
         coefficients = Poly(polynomial, *gens).coeffs()
     except PolynomialError:
@@ -579,11 +656,16 @@ def _ode_solution(
             continue
         if isinstance(solution, list) or solution.rhs.has(Integral):
             continue
-        rhs = solution.rhs
+        # generic parameters: the first case of a Piecewise (a != 0)
+        rhs = solution.rhs.replace(lambda a: isinstance(a, Piecewise), lambda a: a.args[0].expr)
         constants = sorted(
             (s for s in rhs.free_symbols if s.name.startswith("C") and s not in e.free_symbols),
             key=str,
         )
+        # the equation is linear: its solutions are linear in the constants,
+        # but a hint may hide them (exp(a*(C1 + x)) from separable)
+        if any(diff(rhs, c).has(*constants) for c in constants):
+            continue
         new = [state.fresh_constant() for _ in constants]
         return g, rhs.xreplace(dict(zip(constants, new, strict=True))), new
     return None
@@ -710,6 +792,87 @@ def solve_linear_ode(state: SolverState) -> bool:
     return False
 
 
+def _ode_coefficients(
+    e: Expr, functions: Sequence[Expr]
+) -> tuple[Expr, Basic, dict[int, Expr]] | None:
+    """(g, v, {k: p_k}) if e = sum_k p_k d^k g/dv^k for a single unknown g
+    with derivatives in v only (other arguments of g are parameters); None
+    otherwise."""
+    present = [f for f in functions if e.has(f.func)]
+    if len(present) != 1:
+        return None
+    g = present[0]
+    derivatives = [d for d in e.atoms(Derivative) if d.expr == g]
+    variables = {v for d in derivatives for v, _ in d.variable_count}
+    if len(variables) != 1 or any(a.func == g.func and a != g for a in e.atoms(AppliedUndef)):
+        return None
+    v = variables.pop()
+    order = max(dict(d.variable_count)[v] for d in derivatives)
+    terms = {k: Dummy() for k in range(order + 1)}
+    replaced = expand(e).xreplace({d: terms[dict(d.variable_count)[v]] for d in derivatives})
+    try:
+        poly = Poly(replaced.xreplace({g: terms[0]}), *terms.values())
+    except PolynomialError:
+        return None
+    if poly.total_degree() != 1 or poly.coeff_monomial(1) != 0:
+        return None
+    return g, v, {k: poly.coeff_monomial(t) for k, t in terms.items()}
+
+
+def _indicial_roots(coefficients: dict[int, Expr], v: Basic) -> tuple[Expr, dict[Expr, int]] | None:
+    """(L, roots) if sum_k p_k d^k g/dv^k is of Euler type, p_k = c_k
+    L**(k + m) with L = alpha v + beta and the c_k free of v: the roots of
+    its indicial polynomial with multiplicity, all of them; None
+    otherwise."""
+    order = max(coefficients)
+    try:
+        _, factors = factor_list(coefficients[order], v)
+    except PolynomialError:
+        return None
+    linear = [(f, m) for f, m in factors if f.has(v)]
+    if len(linear) != 1 or Poly(linear[0][0], v).degree() != 1:
+        return None
+    base, multiplicity = linear[0]
+    alpha = Poly(base, v).LC()
+    r = Dummy("r")
+    indicial = S.Zero
+    for k, p in coefficients.items():
+        c = cancel(p / base ** (k + multiplicity - order))
+        if c.has(v):
+            return None
+        indicial += c * alpha**k * ff(r, k)
+    found = roots(Poly(expand(indicial), r))
+    return (base, found) if sum(found.values()) == order else None
+
+
+def solve_euler_ode(state: SolverState) -> bool:
+    """A step: an equation that is a linear homogeneous ODE of Euler type in
+    one variable v for a single unknown g, sum_k c_k L**(k + m) d^k g/dv^k
+    = 0 with L = alpha v + beta (other arguments of g are parameters):
+    g = sum of L**r log(L)**j with new unknown functions of the other
+    arguments as coefficients, for the roots r of the indicial polynomial
+    (symbolic too, (a y + b)**(c/a)) and j below their multiplicity."""
+    for e in state.system:
+        ode = _ode_coefficients(e, state.functions)
+        euler = None if ode is None else _indicial_roots(ode[2], ode[1])
+        if ode is None or euler is None:
+            continue
+        g, v, _ = ode
+        base, found = euler
+        others = [a for a in g.args if a != v]
+        solution: Expr = S.Zero
+        new: list[Expr] = []
+        for r, multiplicity in sorted(found.items(), key=lambda item: str(item[0])):
+            for j in range(multiplicity):
+                h = state.fresh_function(others)
+                new.append(h)
+                solution += h * expand(base ** expand(r)) * log(base) ** j
+        state.log(f"  euler: {e} = 0  ->  {g} = {solution}")
+        state.substitute(g, solution, new)
+        return True
+    return False
+
+
 def ansatz(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> Step:
     """A step that ends the solver: the remaining unknown functions as linear
     combinations of monomials in their variables (and functions of them,
@@ -745,8 +908,9 @@ def ansatz(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> Step
 
 
 def default_steps(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> list[Step]:
-    """integrate_one_term, solve_linear_ode, ansatz(max_degree, functions)."""
-    return [integrate_one_term, solve_linear_ode, ansatz(max_degree, functions)]
+    """integrate_one_term, solve_linear_ode, solve_euler_ode,
+    ansatz(max_degree, functions)."""
+    return [integrate_one_term, solve_linear_ode, solve_euler_ode, ansatz(max_degree, functions)]
 
 
 def run_steps(state: SolverState, steps: Sequence[Step], max_iterations: int = 1000) -> None:
@@ -855,8 +1019,8 @@ def reduce_determining_equations(
     coordinates: Sequence[Basic],
     trace: bool | int = False,
 ) -> SolverState:
-    """The state after integrate_one_term and solve_linear_ode, without the
-    ansatz: what remains to be solved.
+    """The state after integrate_one_term, solve_linear_ode and
+    solve_euler_ode, without the ansatz: what remains to be solved.
 
     >>> from sympy import Function, symbols, diff
     >>> x, y = symbols("x y")
@@ -866,7 +1030,7 @@ def reduce_determining_equations(
     ([F1(x), y*F3(x) + F2(x)], [])
     """
     state = SolverState(system, infinitesimals, coordinates, trace=trace)
-    run_steps(state, [integrate_one_term, solve_linear_ode])
+    run_steps(state, [integrate_one_term, solve_linear_ode, solve_euler_ode])
     state.log(
         f"reduced: {len(state.system)} equations in {state.functions + state.constants}; "
         f"infinitesimals {state.infinitesimals}"

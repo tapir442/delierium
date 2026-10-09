@@ -129,11 +129,46 @@ coordinates if needed); `complete` tells whether there are as many as the dimens
 
 ### Solving the determining equations
 
-`delierium.solve` applies a list of steps to a `SolverState` (the remaining equations, the
-unknown functions and constants, the infinitesimals in terms of them). `default_steps(max_degree,
-functions)` are `integrate_one_term` (`c * d^alpha g = 0`), `solve_linear_ode` (by `dsolve`)
-and `ansatz` (monomials of degree `<= max_degree`, times `functions`, by default from
-`candidate_functions`). `trace=True` prints every step, `trace=2` also their details:
+`generators()` calls the solver of `delierium.solve`. It is extensible: the solver is a list
+of steps, each a plain Python function, and you can write your own steps and put them into
+the list.
+
+The solver works on a `SolverState`:
+
+* `state.system`: the remaining linear equations (each `= 0`)
+* `state.functions`, `state.constants`: the remaining unknown functions and constants
+* `state.infinitesimals`: the infinitesimals in terms of these unknowns
+* `state.coordinates`, `state.dimension`: of the symmetry algebra
+* `state.generators`: `None` until a step finds them
+
+A step is a function `step(state) -> bool` that returns whether it changed the state. It
+changes the state in one of two ways:
+
+* `state.substitute(unknown, solution, new)`: replaces an unknown function or constant by
+  `solution`, in the equations and the infinitesimals, and splits the equations again; `new`
+  are the new unknowns in `solution`, made with `state.fresh_function(arguments)` and
+  `state.fresh_constant()`
+* `state.generators = [...]`: the generators; this ends the solver
+
+and reports what it did with `state.log(message)`. `run_steps` applies the first step that
+changes the state, then starts again from the first one, until a step sets the generators or
+none changes the state. If then no equations and unknown functions are left, the generators
+are those of the remaining constants. Every generator is checked against the determining
+equations.
+
+The default steps, `default_steps(max_degree, functions)`, in this order:
+
+* `integrate_one_term`: an equation `c * d^alpha g = 0`, `g` a polynomial in the
+  variables of `alpha` with new unknown functions as coefficients
+* `solve_linear_ode`: a linear ODE in one unknown of one variable, by `dsolve`
+* `solve_euler_ode`: a linear ODE of Euler type in `alpha v + beta`, also with symbolic
+  exponents, `(a y + b)**(c/a)`
+* `ansatz`: the remaining unknowns as linear combinations of monomials of degree
+  `<= max_degree` in their variables and in `functions` (by default the families of
+  `candidate_functions`: `log v`, `sqrt v`, `exp v`, `sin v`, ...); this step ends the
+  solver
+
+`trace=True` prints every step, `trace=2` also their details:
 
     >>> generators = s.generators(trace=True)
     solving 4 determining equations for [X(y, x), Y(y, x)] in [x, y], dimension 2
@@ -146,29 +181,42 @@ and `ansatz` (monomials of degree `<= max_degree`, times `functions`, by default
     -> 2 = dimension: done
     result: 2 generators of dimension 2, complete
 
-`solve_determining_equations(system, infinitesimals, coordinates, dimension, steps)` works on
-any linear system. A step is a function of the state that returns whether it changed it; it
-changes it by `state.substitute(unknown, solution, new)` (new unknowns from
-`fresh_function`, `fresh_constant`) or by setting `state.generators`, which ends the solver:
+A step of your own: an unknown that occurs in an equation without derivatives is eliminated
+by it. `solve_determining_equations(system, infinitesimals, coordinates, dimension, steps)`
+works on any linear system; `generators(steps=...)` takes the same list:
 
-    >>> from sympy import symbols
+    >>> from sympy import Derivative, symbols
     >>> from delierium.solve import default_steps, solve_determining_equations
+    >>> def eliminate(state):
+    ...     for e in state.system:
+    ...         for g in state.functions:
+    ...             if e.has(g) and not any(d.expr == g for d in e.atoms(Derivative)):
+    ...                 coefficient = e.diff(g)
+    ...                 if coefficient != 0 and not coefficient.has(g):
+    ...                     solution = -e.subs(g, 0) / coefficient
+    ...                     state.log(f"  eliminate: {g} = {solution}")
+    ...                     state.substitute(g, solution)
+    ...                     return True
+    ...     return False
     >>> x, y = symbols("x y")
     >>> X, Y = Function("X")(x, y), Function("Y")(x, y)
-    >>> system = [diff(X, y), diff(Y, x), diff(X, x) + Y / y, diff(Y, y) - Y / y]
-    >>> def report(state):
-    ...     print(len(state.system), "equations")
-    ...     return False
-    >>> solve_determining_equations(system, [X, Y], [x, y], 2, [report, *default_steps()])
-    4 equations
-    3 equations
-    2 equations
-    1 equations
-    0 equations
-    [(1, 0), (-x, y)]
+    >>> system = [X - y * diff(Y, y), diff(Y, x), diff(Y, y, 2)]
+    >>> steps = [eliminate, *default_steps()]
+    >>> solve_determining_equations(system, [X, Y], [x, y], 2, steps, trace=True)
+    solving 3 determining equations for [X(x, y), Y(x, y)] in [x, y], dimension 2
+      eliminate: X(x, y) = y*Derivative(Y(x, y), y)
+      integrate: Derivative(Y(x, y), x) = 0  ->  Y(x, y) = F1(y)
+      integrate: Derivative(F1(y), (y, 2)) = 0  ->  F1(y) = c2 + c3*y
+    ansatz: degree 1, functions [], [] monomials, 2 unknowns
+      0 equations -> 0 conditions (); rank 0 -> 2 solutions (... s)
+    -> 2 = dimension: done
+    result: 2 generators of dimension 2, complete
+    [(0, 1), (y, y)]
 
-`reduce_determining_equations` stops before the ansatz and returns the state: what remains
-to be solved. `ansatz_generators` is the ansatz alone.
+The position in the list matters: a step comes into play only when the steps before it do
+not change the state. A step of your own may also replace the ansatz at the end.
+`reduce_determining_equations` runs the default steps without the ansatz and returns the
+state, what remains to be solved; `ansatz_generators` is the ansatz alone.
 
 ### Janet bases of linear systems
 
@@ -227,8 +275,8 @@ The public interface is what `delierium` exports; `help(delierium)` lists it:
   assumptions, algebra, `verify()`, `generators()`)
 * the solver of the determining equations: the module `delierium.solve`
   (`solve_determining_equations`, `SolverState`, `default_steps`, `integrate_one_term`,
-  `solve_linear_ode`, `ansatz`, `run_steps`, `reduce_determining_equations`,
-  `ansatz_generators`, `candidate_functions`, `linearly_independent`)
+  `solve_linear_ode`, `solve_euler_ode`, `ansatz`, `run_steps`,
+  `reduce_determining_equations`, `ansatz_generators`, `candidate_functions`, `linearly_independent`)
 * determining equations: `overdetermined_system_ode`, `overdetermined_system_odes`,
   `overdetermined_system_pde`, `prolongation`, `make_infinitesimal`, `create_infinitesimals`,
   `determining_janet_basis`; checks: `verify_symmetry`, `verify_symmetries`
