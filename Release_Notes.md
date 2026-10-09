@@ -2,6 +2,11 @@
 
 Details are in the issues referenced.
 
+### Unreleased
+
+* `invariants`, `canonical_coordinates`, `differential_invariants` of a given generator
+  ([#42](https://github.com/tapir442/delierium/issues/42)).
+
 ### 2.3.0
 
 * `lie_symmetries`: determining equations, Janet basis, dimension, algebra and generators in

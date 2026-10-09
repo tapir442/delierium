@@ -12,7 +12,7 @@ symbol (y_x, u_xt, ...) and the dependent variable itself becomes a
 symbol, so that e.g. X_y is an ordinary partial derivative of X(x, y).
 """
 
-from sympy import Derivative, Function, Symbol, expand
+from sympy import Derivative, Function, Symbol, diff, expand
 
 from delierium.helpers import make_infinitesimal
 from delierium.infinitesimals import prolongation
@@ -206,3 +206,10 @@ def test_heat_equation():
     x, t, u = pde_setup()
     r = prolong(D(u, t) - D(u, x, x), u, [x, t])
     assert_equal(r, eta_t() - eta_xx())
+
+
+def test_plain_numbers_as_infinitesimals():
+    """An infinitesimal given as a Python int (the translation (1, 0))."""
+    x = Symbol("x")
+    y = Function("y")(x)
+    assert prolongation(diff(y, x), {x: 1, y: 0}, [y], [x]) == 0

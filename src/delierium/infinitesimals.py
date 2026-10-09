@@ -327,7 +327,9 @@ def prolongation(
     >>> print(ltf(r.expand(), [U], [Xi, T], printer=False))
     -T_t*u_t - T_u*u_t**2 + U_t + U_u*u_t - X_t*u_x - X_u*u_t*u_x
     """
-    infinitesimals = OrderedDict((k, finish_substitution(v)) for k, v in infinitesimals.items())
+    infinitesimals = OrderedDict(
+        (k, finish_substitution(sympify(v))) for k, v in infinitesimals.items()
+    )
     dummies: OrderedDict[Basic, Symbol] = OrderedDict()
     etas = prolonged_infinitesimals(dep, indep, infinitesimals, order(expr, dep, indep)[0])
     for func, eta in etas.items():

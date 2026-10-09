@@ -22,6 +22,8 @@ The public interface is what this package exports (``from delierium import
 * symmetry algebras: symmetry_algebra (the Lie algebra of the point
   symmetries of a differential equation, from its determining equations
   without solving them)
+* a given generator: invariants, canonical_coordinates (X = d/ds in them),
+  differential_invariants (reduction of order of an ODE)
 * algebraic Thomas decomposition: thomas_decomposition (polynomial equations
   and inequations split into simple systems with disjoint solutions),
   SimpleSystem
@@ -70,6 +72,7 @@ from .infinitesimals import (
     verify_symmetries,
     verify_symmetry,
 )
+from .invariants import canonical_coordinates, differential_invariants, invariants
 from .janet_basis import (
     LHDP,
     JanetBasis,
@@ -106,13 +109,16 @@ __all__ = [
     "VerificationResult",
     "__version__",
     "adjoint_frechet_derivative",
+    "canonical_coordinates",
     "classify",
     "create_infinitesimals",
     "determining_janet_basis",
+    "differential_invariants",
     "euler_operator",
     "frechet_derivative",
     "group_classification",
     "integrability_conditions",
+    "invariants",
     "is_janet_basis_of",
     "is_janet_basis_of_ode",
     "is_janet_basis_of_odes",
