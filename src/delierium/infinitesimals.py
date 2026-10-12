@@ -38,6 +38,7 @@ from sympy import (  # noqa: F401
     expand,
     expand_log,
     fraction,
+    gcd,
     ilcm,
     init_printing,
     log,
@@ -649,21 +650,29 @@ def _exp_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]
     """Replace the exponentials depending on the jet variables by powers of
     new generators, one per family exp(k*a), k a positive integer."""
     exps = sorted((e for e in expr.atoms(exp) if e.has(*jet)), key=default_sort_key)
-    bases: list = []  # (exponent, generator)
-    repl = {}
+    families: list[tuple[Expr, list[tuple[Expr, Rational]]]] = []  # (argument, [(exp, ratio)])
     for e in exps:
-        for arg, gen in bases:
+        for arg, members in families:
             ratio = cancel(e.args[0] / arg)
             if ratio.is_Rational:
-                if not (ratio.is_Integer and ratio > 0):
-                    raise NotImplementedError(f"{e} is exp({ratio}*({arg}))")
-                repl[e] = gen**ratio
+                members.append((e, ratio))
                 break
         else:
-            gen = Dummy()
-            bases.append((e.args[0], gen))
-            repl[e] = gen
-    return expr.xreplace(repl), [gen for _, gen in bases]
+            families.append((e.args[0], [(e, Rational(1))]))
+    # the generator of a family is exp of the gcd of its arguments: exp(2 a)
+    # sorted before exp(a) gives exp(a) and exp(a)**2
+    gens = []
+    repl = {}
+    for arg, members in families:
+        unit = reduce(gcd, [r for _, r in members])
+        gen = Dummy()
+        gens.append(gen)
+        for e, ratio in members:
+            k = ratio / unit
+            if not k > 0:
+                raise NotImplementedError(f"{e} is exp({k}*({unit * arg}))")
+            repl[e] = gen**k
+    return expr.xreplace(repl), gens
 
 
 def canonical_derivatives(expr: Expr, dep: Iterable[Expr]) -> Expr:
