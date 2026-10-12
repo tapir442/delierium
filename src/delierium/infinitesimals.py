@@ -519,12 +519,13 @@ def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dumm
     groups: list[tuple[Expr, Expr, list[Expr]]] = []  # (base, reference part, members)
     for p in pows:
         _, s = p.exp.expand().as_coeff_Add()
+        b = cancel(p.base)  # the base in lowest terms, as in _algebraic_generators
         for base, s0, members in groups:
-            if base == p.base and cancel(s / s0).is_Rational:
+            if base == b and cancel(s / s0).is_Rational:
                 members.append(p)
                 break
         else:
-            groups.append((p.base, s, [p]))
+            groups.append((b, s, [p]))
     repl = {}
     gens = []
     for base, s0, members in groups:
@@ -563,9 +564,13 @@ def _algebraic_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[
         ),
         key=default_sort_key,
     )
+    # one generator per base in lowest terms: solving for the highest
+    # derivative brings the same base as one fraction, (u u2 - 2 u1**2)/u**6
+    # beside u2/u**5 - 2 u1**2/u**6, and independent generators for both
+    # would split the condition wrongly
     bases: dict[Expr, list[Expr]] = {}
     for p in pows:
-        bases.setdefault(p.base, []).append(p)
+        bases.setdefault(cancel(p.base), []).append(p)
     repl = {}
     gens, relations = [], []
     for base, members in bases.items():
@@ -611,8 +616,15 @@ def _function_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[D
         outer = [a for a in candidates if not any(a != b and b.has(a) for b in candidates)]
         if not outer:
             return expr, gens
-        repl = {a: Dummy() for a in sorted(outer, key=default_sort_key)}
-        gens.extend(repl.values())
+        # one generator per function of arguments in lowest terms, as for
+        # the bases in _algebraic_generators: log((u u2 - 2 u1**2)/u**6) is
+        # log(u2/u**5 - 2 u1**2/u**6)
+        by_key: dict[Expr, Dummy] = {}
+        repl = {}
+        for a in sorted(outer, key=default_sort_key):
+            key = a.func(*map(cancel, a.args)) if isinstance(a, Function) else a
+            repl[a] = by_key.setdefault(key, Dummy())
+        gens.extend(by_key.values())
         expr = expr.xreplace(repl)
 
 

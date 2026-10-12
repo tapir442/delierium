@@ -126,6 +126,10 @@ PDEBENCH_SOURCE = (
     "Takamoto et al., PDEBench: An Extensive Benchmark for Scientific Machine Learning, "
     "NeurIPS 2022, arXiv:2210.07182, appendix D"
 )
+BGL_SOURCE = (
+    "Basarab-Horwath, Gungor, Lahno, Symmetry classification of third-order nonlinear "
+    "evolution equations, arXiv:0802.0367 (2008)"
+)
 # Arrigo's exercises ask for the symmetries without giving them
 ARRIGO_EXERCISE = (
     "the book gives no answer: dimension and generators are delierium's, the generators "
@@ -5514,6 +5518,128 @@ SYMBOLIC_POWERS = [
     ),
 ]
 
+# Group classification of u_t = F(t, x, u, u_x, u_xx) u_xxx + G(...): the
+# invariant equations without arbitrary functions (section 5.3, p. 48, with
+# the constants f0, g0; the Schwarzian KdV, p. 21) and the KdV-type
+# realizations of A4.8 (p. 69) with constant f, g. Generators as given there
+# unless noted; the dimensions are delierium's (the paper does not claim the
+# algebras maximal for constant f, g). _BGL_S is u_x**-2 {u; x}, _BGL_SIGMA
+# the sigma of the realization <2x d_x - u d_u, -x**2 d_x + xu d_u, d_x>
+# (p. 47; misprinted u**-6 u_xx - 2 u**-6 u_x**2 on p. 48), _BGL_H the
+# factor of f0 in G there.
+_BGL_U1 = "Derivative(u(x, t), x)"
+_BGL_U2 = "Derivative(u(x, t), (x, 2))"
+_BGL_U3 = "Derivative(u(x, t), (x, 3))"
+_BGL_S = f"({_BGL_U3}/{_BGL_U1}**3 - 3*{_BGL_U2}**2/(2*{_BGL_U1}**4))"
+_BGL_SIGMA = f"(u(x, t)**(-5)*{_BGL_U2} - 2*u(x, t)**(-6)*{_BGL_U1}**2)"
+_BGL_H = f"(12*u(x, t)**(-8)*{_BGL_U1}**3 - 9*u(x, t)**(-7)*{_BGL_U1}*{_BGL_U2})"
+_BGL_SL2_X = [("1", "0", "0"), ("x", "0", "0"), ("x**2", "0", "0")]
+_BGL_SL2_XU = [("1", "0", "0"), ("2*x", "0", "-u"), ("-x**2", "0", "x*u")]
+
+BASARAB_HORWATH_GUNGOR_LAHNO = [
+    pde(
+        "BGL Schwarzian KdV: u_t = u_xxx - 3 u_xx**2/(2 u_x)",
+        f"Derivative(u(x, t), t) - {_BGL_U3} + 3*{_BGL_U2}**2/(2*{_BGL_U1})",
+        ("x", "t"),
+        6,
+        [
+            ("0", "0", "1"),
+            ("0", "0", "u"),
+            ("0", "0", "u**2"),
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("x", "3*t", "0"),
+        ],
+        f"{BGL_SOURCE}, section 3.3, p. 21",
+    ),
+    pde(
+        "BGL 5.3-1: u_t = f0 u_x**-2 {u; x} + g0",
+        f"Derivative(u(x, t), t) - f0*{_BGL_S} - g0",
+        ("x", "t"),
+        6,
+        [*_BGL_SL2_X, ("0", "1", "0"), ("0", "0", "1"), ("0", "3*t", "u + 2*g0*t")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 1",
+        note="the paper gives sl(2) + <d_t, d_u>; u -> u - g0 t removes g0, the scaling "
+        "t d_t + u/3 d_u of p. 48 (end of 5.3) becomes the sixth generator",
+    ),
+    pde(
+        "BGL 5.3-2: u_t = f0 u**2 u_x**-2 {u; x} + g0",
+        f"Derivative(u(x, t), t) - f0*u(x, t)**2*{_BGL_S} - g0",
+        ("x", "t"),
+        5,
+        [*_BGL_SL2_X, ("0", "1", "0"), ("0", "t", "u")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 2",
+    ),
+    pde(
+        "BGL 5.3-3: u_t = f0 t**2 u_x**-2 {u; x} + g0",
+        f"Derivative(u(x, t), t) - f0*t**2*{_BGL_S} - g0",
+        ("x", "t"),
+        6,
+        [*_BGL_SL2_X, ("0", "0", "1"), ("0", "t", "u"), ("0", "t**(-2)", "g0/t**2")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 3",
+        note="the paper gives sl(2) + <d_u, t d_t + u d_u>; the sixth generator (found by "
+        "delierium) is d_tau for u -> u - g0 t, tau = t**3/3, which maps it to 5.3-1",
+    ),
+    pde(
+        "BGL 5.3-4: sl(2) + <d_t, u d_u>",
+        f"Derivative(u(x, t), t) - f0*u(x, t)**(-6)*{_BGL_SIGMA}**Rational(-3, 2)*{_BGL_U3} "
+        f"- g0*u(x, t) - f0*{_BGL_H}*{_BGL_SIGMA}**Rational(-3, 2)",
+        ("x", "t"),
+        5,
+        [*_BGL_SL2_XU, ("0", "1", "0"), ("0", "0", "u")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 4",
+    ),
+    pde(
+        "BGL 5.3-5: sl(2) + <d_t, t d_t + c u d_u>",
+        f"Derivative(u(x, t), t) - f0*u(x, t)**(-6)*{_BGL_SIGMA}**((1 - 6*c)/(4*c))*{_BGL_U3} "
+        f"- g0*u(x, t)*{_BGL_SIGMA}**(1/(4*c)) - f0*{_BGL_H}*{_BGL_SIGMA}**((1 - 6*c)/(4*c))",
+        ("x", "t"),
+        5,
+        [*_BGL_SL2_XU, ("0", "1", "0"), ("0", "t", "c*u")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 5",
+    ),
+    pde(
+        "BGL 5.3-6: sl(2) + <t u d_u, -t d_t>",
+        f"Derivative(u(x, t), t) - f0*u(x, t)**(-6)*{_BGL_SIGMA}**Rational(-3, 2)*{_BGL_U3}/t "
+        f"- (u(x, t)*(g0 - log({_BGL_SIGMA})/4) + f0*{_BGL_H}*{_BGL_SIGMA}**Rational(-3, 2))/t",
+        ("x", "t"),
+        5,
+        [*_BGL_SL2_XU, ("0", "0", "t*u"), ("0", "t", "0")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 6",
+        note="G as printed is garbled (u - log(sigma)/4 + g0); u (g0 - log(sigma)/4) is "
+        "the G of the extension by t u d_u on p. 42 with g = g0/t",
+    ),
+    pde(
+        "BGL 5.3-7: sl(2) + <t d_t, u d_u>",
+        f"Derivative(u(x, t), t) - f0*u(x, t)**(-6)*{_BGL_SIGMA}**Rational(-3, 2)*{_BGL_U3}/t "
+        f"- (g0*u(x, t) + f0*{_BGL_H}*{_BGL_SIGMA}**Rational(-3, 2))/t",
+        ("x", "t"),
+        5,
+        [*_BGL_SL2_XU, ("0", "0", "u"), ("0", "t", "0")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 7",
+        note="the paper labels it <t d_t, t u d_u> like equation 6, but t u d_u is no symmetry; "
+        "t -> log(t) maps it to 5.3-4",
+    ),
+    pde(
+        "BGL A4.8: u_t = u_x**(-3q - 2) u_xxx + u u_x",
+        f"Derivative(u(x, t), t) - {_BGL_U1}**(-3*q - 2)*{_BGL_U3} - u(x, t)*{_BGL_U1}",
+        ("x", "t"),
+        4,
+        [("1", "0", "0"), ("0", "1", "0"), ("t", "0", "-1"), ("(1 + q)*x", "t", "q*u")],
+        f"{BGL_SOURCE}, section 6.4, p. 69, f = 1, g = 0",
+        note="the KdV equation is q = -2/3",
+    ),
+    pde(
+        "BGL A4.8: u_t = u_x**-2 u_xxx + u u_x + kappa u_x log(u_x)",
+        f"Derivative(u(x, t), t) - {_BGL_U1}**(-2)*{_BGL_U3} - u(x, t)*{_BGL_U1} "
+        f"- kappa*{_BGL_U1}*log({_BGL_U1})",
+        ("x", "t"),
+        4,
+        [("1", "0", "0"), ("0", "1", "0"), ("t", "0", "-1"), ("x", "t", "kappa")],
+        f"{BGL_SOURCE}, section 6.4, p. 70, f = 1, g = 0",
+    ),
+]
+
 # Kamke's equations with their symmetry class from Schwarz, Appendix E;
 # generated from the SymPy Kamke test suite, see the module docstring.
 # First order ODEs of Kamke's chapter 1 that are nonlinear in y' and have a
@@ -6540,6 +6666,7 @@ CATALOG = (
     + SYMMETRY_INFORMED
     + THE_WELL
     + SYMBOLIC_POWERS
+    + BASARAB_HORWATH_GUNGOR_LAHNO
     + KAMKE_FIRST_ORDER
     + KAMKE
 )
