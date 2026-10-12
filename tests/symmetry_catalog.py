@@ -6399,6 +6399,15 @@ HASHEMI_BALEANU = [
         f"{HASHEMI_BALEANU_SOURCE}, section 1.1.2",
         note="f(t) d/dx + f'(t) d/du for every f (exp, sin: instances)",
     ),
+    pde(
+        "MEE circular rod: u_tt - c**2 u_xx - c**2/2 (u**2)_xx - n u_xxtt = 0",
+        "Derivative(u(x, t), (t, 2)) - c**2*Derivative(u(x, t), (x, 2)) - c**2*u(x, t)*Derivative(u(x, t), (x, 2)) - c**2*Derivative(u(x, t), x)**2 - n*Derivative(u(x, t), (t, 2), (x, 2))",
+        ("x", "t"),
+        3,
+        [("0", "1", "0"), ("1", "0", "0"), ("0", "-t/2", "u + 1")],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.3",
+        note="the book's N is n; c, n != 0",
+    ),
 ]
 
 # Kamke's equations with their symmetry class from Schwarz, Appendix E;
