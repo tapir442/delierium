@@ -150,6 +150,9 @@ GLZ_SOURCE = (
     "Gungor, Lahno, Zhdanov, Symmetry classification of KdV-type nonlinear evolution equations, "
     "J. Math. Phys. 45 (2004) 2280, arXiv:nlin/0201063"
 )
+HASHEMI_BALEANU_SOURCE = (
+    "Hashemi, Baleanu, Lie Symmetry Analysis of Fractional Differential Equations, CRC Press (2020)"
+)
 NBM_SOURCE = (
     "Nadjafikhah, Bakhshandeh Chamazkoti, Mahdipour-Shirayeh, A symmetry classification for a "
     "class of (2 + 1)-nonlinear wave equation, arXiv:0907.4858 (2009)"
@@ -6335,6 +6338,17 @@ NADJAFIKHAH = [
     ),
 ]
 
+HASHEMI_BALEANU = [
+    pde(
+        "Fornberg-Whitham equation: u_t - u_xxt + u_x + u u_x = u u_xxx + 3 u_x u_xx",
+        "Derivative(u(x, t), t) - Derivative(u(x, t), (x, 2), t) + Derivative(u(x, t), x) + u(x, t)*Derivative(u(x, t), x) - 3*Derivative(u(x, t), x)*Derivative(u(x, t), (x, 2)) - u(x, t)*Derivative(u(x, t), (x, 3))",
+        ("x", "t"),
+        3,
+        [("0", "1", "0"), ("1", "0", "0"), ("t", "0", "1")],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.1",
+    ),
+]
+
 # Kamke's equations with their symmetry class from Schwarz, Appendix E;
 # generated from the SymPy Kamke test suite, see the module docstring.
 # First order ODEs of Kamke's chapter 1 that are nonlinear in y' and have a
@@ -7368,6 +7382,7 @@ CATALOG = (
     + ZHDANOV_2005
     + GUNGOR_LAHNO_ZHDANOV
     + NADJAFIKHAH
+    + HASHEMI_BALEANU
     + KAMKE_FIRST_ORDER
     + KAMKE
 )
