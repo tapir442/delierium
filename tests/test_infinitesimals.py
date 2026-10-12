@@ -716,3 +716,15 @@ def test_general_evolution_equation():
     eq = diff(u, t) - Function("F")(x, u, diff(u, x), diff(u, x, 2))
     assert determining_janet_basis(eq, u, [x, t]).rank() == 1
     assert verify_symmetry(eq, u, [x, t], (0, 1, 0))
+
+
+def test_parameter_set_to_zero_in_a_derivative():
+    """Setting k = 0 in (k u**-4 u_x)_x leaves Derivative(0, x), which order()
+    took for a derivative of a dependent variable (found by the BLAD check)."""
+    x, t, k = symbols("x t k")
+    u = Function("u")(x, t)
+    wave = Derivative(u, t, 2) - Derivative(k * u**-4 * Derivative(u, x), x)
+    assert determining_janet_basis(wave.subs(k, 0), u, [x, t]).rank() == oo
+    y = Function("y")(x)
+    ode = Derivative(y, x, 2) + Derivative(k * y**2, x)
+    assert determining_janet_basis(ode.subs(k, 0), y, x).rank() == 8
