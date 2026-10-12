@@ -6406,6 +6406,24 @@ HASHEMI_BALEANU = [
         3,
         [("0", "1", "0"), ("1", "0", "0"), ("0", "-t/2", "u + 1")],
         f"{HASHEMI_BALEANU_SOURCE}, section 1.1.3",
+        note="the usual form with (u**2)_xx; the book's equation has (u_xx)**2 (next entry), "
+        "its seven generators are not symmetries of this one; the book's N is n; c, n != 0",
+    ),
+    pde(
+        "MEE circular rod: u_tt - c**2 u_xx - c**2/2 u_xx**2 - n u_xxtt = 0",
+        "Derivative(u(x, t), (t, 2)) - c**2*Derivative(u(x, t), (x, 2)) - c**2*Derivative(u(x, t), (x, 2))**2/2 - n*Derivative(u(x, t), (t, 2), (x, 2))",
+        ("x", "t"),
+        7,
+        [
+            ("1", "0", "0"),
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "x"),
+            ("0", "0", "t"),
+            ("0", "0", "t*x"),
+            ("0", "t", "-(c**2*t**2 + 2*u + x**2)"),
+        ],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.3",
         note="the book's N is n; c, n != 0",
     ),
 ]
