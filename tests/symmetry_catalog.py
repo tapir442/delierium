@@ -6416,6 +6416,16 @@ HASHEMI_BALEANU = [
         f"{HASHEMI_BALEANU_SOURCE}, section 1.1.3",
         note="the book's N is n; c, n != 0",
     ),
+    pde(
+        "Hashemi, Baleanu 1.1.4: u_t + a1 u u_x - a2 u_xx + a3 u_xxx + a4 u_xxxx = 0",
+        "Derivative(u(x, t), t) + a1*u(x, t)*Derivative(u(x, t), x) - a2*Derivative(u(x, t), (x, 2)) + a3*Derivative(u(x, t), (x, 3)) + a4*Derivative(u(x, t), (x, 4))",
+        ("x", "t"),
+        3,
+        [("0", "1", "0"), ("1", "0", "0"), ("a1*t", "0", "1")],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.4",
+        note="a1, a3, a4 != 0, 8 a2 a4 + 3 a3**2 != 0 are no extensions; a2 = a4 = 0 (KdV), "
+        "a2 = a3 = 0: 4, a3 = a4 = 0 (Burgers): 5, a1 = 0: infinite",
+    ),
 ]
 
 # Kamke's equations with their symmetry class from Schwarz, Appendix E;
