@@ -16,7 +16,9 @@ from sympy import (
     Symbol,
     cancel,
     diff,
+    exp,
     im,
+    log,
     oo,
     re,
     sign,
@@ -605,6 +607,40 @@ def test_exponent_with_a_parameter_in_a_denominator():
     system = [e.xreplace(plain) for e in overdetermined_system_pde(pde, [u], [x, t], inf)]
     functions = [inf[v].xreplace(plain) for v in (x, t, u)]
     assert JanetBasis(system, functions, [x, t, Symbol("u")]).rank() == 3
+
+
+def test_root_and_log_of_one_base_in_two_forms():
+    """Solving for u_xxx brings sigma = u_xx/u**5 - 2 u_x**2/u**6 as one
+    fraction beside the sigma as written; as different bases of sigma**(-3/2)
+    and log(sigma) they split into too many determining equations (rank 2
+    instead of 5). Basarab-Horwath, Gungor, Lahno (2008), p. 48, equation 6."""
+    x, t, f0, g0 = symbols("x t f0 g0")
+    X, T, U = symbols("x t u")
+    u = Function("u")(x, t)
+    u1, u2, u3 = (Derivative(u, (x, k)) for k in (1, 2, 3))
+    sigma = u2 / u**5 - 2 * u1**2 / u**6
+    h = 12 * u1**3 / u**8 - 9 * u1 * u2 / u**7
+    s = sigma ** Rational(-3, 2)
+    pde = Derivative(u, t) - f0 * s * u3 / (t * u**6) - (u * (g0 - log(sigma) / 4) + f0 * h * s) / t
+    generators = [(2 * X, 0, -U), (-(X**2), 0, X * U), (1, 0, 0), (0, 0, T * U), (0, T, 0)]
+    assert all(verify_symmetries(pde, u, [x, t], generators))
+    assert determining_janet_basis(pde, u, [x, t]).rank() == 5
+
+
+def test_exp_of_one_argument_sorted_after_its_multiple():
+    """exp(2 u_x) sorts before exp(u_x): both are powers of exp(u_x), not
+    exp(u_x) = exp(2 u_x)**(1/2). Bihlo, Dos Santos Cardoso-Bihlo,
+    Popovych (2011), table 1, case 12."""
+    x, t, delta, eps2 = symbols("x t delta eps2")
+    X, T, U = symbols("x t u")
+    u = Function("u")(x, t)
+    ux = Derivative(u, x)
+    pde = (
+        Derivative(u, (t, 2)) - delta * exp(2 * ux) * Derivative(u, (x, 2)) - exp(ux) - 2 * eps2 * x
+    )
+    generators = [(0, 1, 0), (0, 0, 1), (0, 0, T), (X, 0, U + X), (1, 0, eps2 * T**2)]
+    assert all(verify_symmetries(pde, u, [x, t], generators))
+    assert determining_janet_basis(pde, u, [x, t]).rank() == 5
 
 
 def test_verify_symmetry():

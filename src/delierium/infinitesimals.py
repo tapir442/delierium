@@ -38,6 +38,7 @@ from sympy import (  # noqa: F401
     expand,
     expand_log,
     fraction,
+    gcd,
     ilcm,
     init_printing,
     log,
@@ -519,12 +520,13 @@ def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dumm
     groups: list[tuple[Expr, Expr, list[Expr]]] = []  # (base, reference part, members)
     for p in pows:
         _, s = p.exp.expand().as_coeff_Add()
+        b = cancel(p.base)  # the base in lowest terms, as in _algebraic_generators
         for base, s0, members in groups:
-            if base == p.base and cancel(s / s0).is_Rational:
+            if base == b and cancel(s / s0).is_Rational:
                 members.append(p)
                 break
         else:
-            groups.append((p.base, s, [p]))
+            groups.append((b, s, [p]))
     repl = {}
     gens = []
     for base, s0, members in groups:
@@ -563,9 +565,13 @@ def _algebraic_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[
         ),
         key=default_sort_key,
     )
+    # one generator per base in lowest terms: solving for the highest
+    # derivative brings the same base as one fraction, (u u2 - 2 u1**2)/u**6
+    # beside u2/u**5 - 2 u1**2/u**6, and independent generators for both
+    # would split the condition wrongly
     bases: dict[Expr, list[Expr]] = {}
     for p in pows:
-        bases.setdefault(p.base, []).append(p)
+        bases.setdefault(cancel(p.base), []).append(p)
     repl = {}
     gens, relations = [], []
     for base, members in bases.items():
@@ -611,8 +617,15 @@ def _function_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[D
         outer = [a for a in candidates if not any(a != b and b.has(a) for b in candidates)]
         if not outer:
             return expr, gens
-        repl = {a: Dummy() for a in sorted(outer, key=default_sort_key)}
-        gens.extend(repl.values())
+        # one generator per function of arguments in lowest terms, as for
+        # the bases in _algebraic_generators: log((u u2 - 2 u1**2)/u**6) is
+        # log(u2/u**5 - 2 u1**2/u**6)
+        by_key: dict[Expr, Dummy] = {}
+        repl = {}
+        for a in sorted(outer, key=default_sort_key):
+            key = a.func(*map(cancel, a.args)) if isinstance(a, Function) else a
+            repl[a] = by_key.setdefault(key, Dummy())
+        gens.extend(by_key.values())
         expr = expr.xreplace(repl)
 
 
@@ -637,21 +650,29 @@ def _exp_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]
     """Replace the exponentials depending on the jet variables by powers of
     new generators, one per family exp(k*a), k a positive integer."""
     exps = sorted((e for e in expr.atoms(exp) if e.has(*jet)), key=default_sort_key)
-    bases: list = []  # (exponent, generator)
-    repl = {}
+    families: list[tuple[Expr, list[tuple[Expr, Rational]]]] = []  # (argument, [(exp, ratio)])
     for e in exps:
-        for arg, gen in bases:
+        for arg, members in families:
             ratio = cancel(e.args[0] / arg)
             if ratio.is_Rational:
-                if not (ratio.is_Integer and ratio > 0):
-                    raise NotImplementedError(f"{e} is exp({ratio}*({arg}))")
-                repl[e] = gen**ratio
+                members.append((e, ratio))
                 break
         else:
-            gen = Dummy()
-            bases.append((e.args[0], gen))
-            repl[e] = gen
-    return expr.xreplace(repl), [gen for _, gen in bases]
+            families.append((e.args[0], [(e, Rational(1))]))
+    # the generator of a family is exp of the gcd of its arguments: exp(2 a)
+    # sorted before exp(a) gives exp(a) and exp(a)**2
+    gens = []
+    repl = {}
+    for arg, members in families:
+        unit = reduce(gcd, [r for _, r in members])
+        gen = Dummy()
+        gens.append(gen)
+        for e, ratio in members:
+            k = ratio / unit
+            if not k > 0:
+                raise NotImplementedError(f"{e} is exp({k}*({unit * arg}))")
+            repl[e] = gen**k
+    return expr.xreplace(repl), gens
 
 
 def canonical_derivatives(expr: Expr, dep: Iterable[Expr]) -> Expr:

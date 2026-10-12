@@ -126,6 +126,37 @@ PDEBENCH_SOURCE = (
     "Takamoto et al., PDEBench: An Extensive Benchmark for Scientific Machine Learning, "
     "NeurIPS 2022, arXiv:2210.07182, appendix D"
 )
+BGL_SOURCE = (
+    "Basarab-Horwath, Gungor, Lahno, Symmetry classification of third-order nonlinear "
+    "evolution equations, arXiv:0802.0367 (2008)"
+)
+JADAUN_KUMAR_SOURCE = (
+    "Jadaun, Kumar, Lie symmetry analysis for similarity reduction and solutions of "
+    "(3 + 1)-dimensional Calogero-Bogoyavlenskii-Schiff equation, arXiv:1703.08256 (2017)"
+)
+BCP_SOURCE = (
+    "Bihlo, Dos Santos Cardoso-Bihlo, Popovych, Complete group classification of a class of "
+    "nonlinear wave equations, arXiv:1106.4801 (2011)"
+)
+VBP_SOURCE = (
+    "Vaneeva, Bihlo, Popovych, Generalization of the algebraic method of group classification "
+    "with application to nonlinear wave and elliptic equations, arXiv:2002.08939 (2020)"
+)
+ZHDANOV_SOURCE = (
+    "Zhdanov, Group classification of the general evolution equation: local and quasilocal "
+    "symmetries, arXiv:nlin/0510003 (2005)"
+)
+GLZ_SOURCE = (
+    "Gungor, Lahno, Zhdanov, Symmetry classification of KdV-type nonlinear evolution equations, "
+    "J. Math. Phys. 45 (2004) 2280, arXiv:nlin/0201063"
+)
+HASHEMI_BALEANU_SOURCE = (
+    "Hashemi, Baleanu, Lie Symmetry Analysis of Fractional Differential Equations, CRC Press (2020)"
+)
+NBM_SOURCE = (
+    "Nadjafikhah, Bakhshandeh Chamazkoti, Mahdipour-Shirayeh, A symmetry classification for a "
+    "class of (2 + 1)-nonlinear wave equation, arXiv:0907.4858 (2009)"
+)
 # Arrigo's exercises ask for the symmetries without giving them
 ARRIGO_EXERCISE = (
     "the book gives no answer: dimension and generators are delierium's, the generators "
@@ -5514,6 +5545,889 @@ SYMBOLIC_POWERS = [
     ),
 ]
 
+# Group classification of u_t = F(t, x, u, u_x, u_xx) u_xxx + G(...): the
+# invariant equations without arbitrary functions (section 5.3, p. 48, with
+# the constants f0, g0; the Schwarzian KdV, p. 21) and the KdV-type
+# realizations of A4.8 (p. 69) with constant f, g. Generators as given there
+# unless noted; the dimensions are delierium's (the paper does not claim the
+# algebras maximal for constant f, g). _BGL_S is u_x**-2 {u; x}, _BGL_SIGMA
+# the sigma of the realization <2x d_x - u d_u, -x**2 d_x + xu d_u, d_x>
+# (p. 47; misprinted u**-6 u_xx - 2 u**-6 u_x**2 on p. 48), _BGL_H the
+# factor of f0 in G there.
+_BGL_U1 = "Derivative(u(x, t), x)"
+_BGL_U2 = "Derivative(u(x, t), (x, 2))"
+_BGL_U3 = "Derivative(u(x, t), (x, 3))"
+_BGL_S = f"({_BGL_U3}/{_BGL_U1}**3 - 3*{_BGL_U2}**2/(2*{_BGL_U1}**4))"
+_BGL_SIGMA = f"(u(x, t)**(-5)*{_BGL_U2} - 2*u(x, t)**(-6)*{_BGL_U1}**2)"
+_BGL_H = f"(12*u(x, t)**(-8)*{_BGL_U1}**3 - 9*u(x, t)**(-7)*{_BGL_U1}*{_BGL_U2})"
+_BGL_SL2_X = [("1", "0", "0"), ("x", "0", "0"), ("x**2", "0", "0")]
+_BGL_SL2_XU = [("1", "0", "0"), ("2*x", "0", "-u"), ("-x**2", "0", "x*u")]
+
+BASARAB_HORWATH_GUNGOR_LAHNO = [
+    pde(
+        "BGL Schwarzian KdV: u_t = u_xxx - 3 u_xx**2/(2 u_x)",
+        f"Derivative(u(x, t), t) - {_BGL_U3} + 3*{_BGL_U2}**2/(2*{_BGL_U1})",
+        ("x", "t"),
+        6,
+        [
+            ("0", "0", "1"),
+            ("0", "0", "u"),
+            ("0", "0", "u**2"),
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("x", "3*t", "0"),
+        ],
+        f"{BGL_SOURCE}, section 3.3, p. 21",
+    ),
+    pde(
+        "BGL 5.3-1: u_t = f0 u_x**-2 {u; x} + g0",
+        f"Derivative(u(x, t), t) - f0*{_BGL_S} - g0",
+        ("x", "t"),
+        6,
+        [*_BGL_SL2_X, ("0", "1", "0"), ("0", "0", "1"), ("0", "3*t", "u + 2*g0*t")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 1",
+        note="the paper gives sl(2) + <d_t, d_u>; u -> u - g0 t removes g0, the scaling "
+        "t d_t + u/3 d_u of p. 48 (end of 5.3) becomes the sixth generator",
+    ),
+    pde(
+        "BGL 5.3-2: u_t = f0 u**2 u_x**-2 {u; x} + g0",
+        f"Derivative(u(x, t), t) - f0*u(x, t)**2*{_BGL_S} - g0",
+        ("x", "t"),
+        5,
+        [*_BGL_SL2_X, ("0", "1", "0"), ("0", "t", "u")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 2",
+    ),
+    pde(
+        "BGL 5.3-3: u_t = f0 t**2 u_x**-2 {u; x} + g0",
+        f"Derivative(u(x, t), t) - f0*t**2*{_BGL_S} - g0",
+        ("x", "t"),
+        6,
+        [*_BGL_SL2_X, ("0", "0", "1"), ("0", "t", "u"), ("0", "t**(-2)", "g0/t**2")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 3",
+        note="the paper gives sl(2) + <d_u, t d_t + u d_u>; the sixth generator (found by "
+        "delierium) is d_tau for u -> u - g0 t, tau = t**3/3, which maps it to 5.3-1",
+    ),
+    pde(
+        "BGL 5.3-4: sl(2) + <d_t, u d_u>",
+        f"Derivative(u(x, t), t) - f0*u(x, t)**(-6)*{_BGL_SIGMA}**Rational(-3, 2)*{_BGL_U3} "
+        f"- g0*u(x, t) - f0*{_BGL_H}*{_BGL_SIGMA}**Rational(-3, 2)",
+        ("x", "t"),
+        5,
+        [*_BGL_SL2_XU, ("0", "1", "0"), ("0", "0", "u")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 4",
+    ),
+    pde(
+        "BGL 5.3-5: sl(2) + <d_t, t d_t + c u d_u>",
+        f"Derivative(u(x, t), t) - f0*u(x, t)**(-6)*{_BGL_SIGMA}**((1 - 6*c)/(4*c))*{_BGL_U3} "
+        f"- g0*u(x, t)*{_BGL_SIGMA}**(1/(4*c)) - f0*{_BGL_H}*{_BGL_SIGMA}**((1 - 6*c)/(4*c))",
+        ("x", "t"),
+        5,
+        [*_BGL_SL2_XU, ("0", "1", "0"), ("0", "t", "c*u")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 5",
+    ),
+    pde(
+        "BGL 5.3-6: sl(2) + <t u d_u, -t d_t>",
+        f"Derivative(u(x, t), t) - f0*u(x, t)**(-6)*{_BGL_SIGMA}**Rational(-3, 2)*{_BGL_U3}/t "
+        f"- (u(x, t)*(g0 - log({_BGL_SIGMA})/4) + f0*{_BGL_H}*{_BGL_SIGMA}**Rational(-3, 2))/t",
+        ("x", "t"),
+        5,
+        [*_BGL_SL2_XU, ("0", "0", "t*u"), ("0", "t", "0")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 6",
+        note="G as printed is garbled (u - log(sigma)/4 + g0); u (g0 - log(sigma)/4) is "
+        "the G of the extension by t u d_u on p. 42 with g = g0/t",
+    ),
+    pde(
+        "BGL 5.3-7: sl(2) + <t d_t, u d_u>",
+        f"Derivative(u(x, t), t) - f0*u(x, t)**(-6)*{_BGL_SIGMA}**Rational(-3, 2)*{_BGL_U3}/t "
+        f"- (g0*u(x, t) + f0*{_BGL_H}*{_BGL_SIGMA}**Rational(-3, 2))/t",
+        ("x", "t"),
+        5,
+        [*_BGL_SL2_XU, ("0", "0", "u"), ("0", "t", "0")],
+        f"{BGL_SOURCE}, section 5.3, p. 48, equation 7",
+        note="the paper labels it <t d_t, t u d_u> like equation 6, but t u d_u is no symmetry; "
+        "t -> log(t) maps it to 5.3-4",
+    ),
+    pde(
+        "BGL A4.8: u_t = u_x**(-3q - 2) u_xxx + u u_x",
+        f"Derivative(u(x, t), t) - {_BGL_U1}**(-3*q - 2)*{_BGL_U3} - u(x, t)*{_BGL_U1}",
+        ("x", "t"),
+        4,
+        [("1", "0", "0"), ("0", "1", "0"), ("t", "0", "-1"), ("(1 + q)*x", "t", "q*u")],
+        f"{BGL_SOURCE}, section 6.4, p. 69, f = 1, g = 0",
+        note="the KdV equation is q = -2/3",
+    ),
+    pde(
+        "BGL A4.8: u_t = u_x**-2 u_xxx + u u_x + kappa u_x log(u_x)",
+        f"Derivative(u(x, t), t) - {_BGL_U1}**(-2)*{_BGL_U3} - u(x, t)*{_BGL_U1} "
+        f"- kappa*{_BGL_U1}*log({_BGL_U1})",
+        ("x", "t"),
+        4,
+        [("1", "0", "0"), ("0", "1", "0"), ("t", "0", "-1"), ("x", "t", "kappa")],
+        f"{BGL_SOURCE}, section 6.4, p. 70, f = 1, g = 0",
+    ),
+]
+
+JADAUN_KUMAR = [
+    pde(
+        "(3+1)-dimensional Calogero-Bogoyavlenskii-Schiff equation, potential form",
+        "Derivative(u(x, y, z, t), x, t) + a*Derivative(u(x, y, z, t), x)*Derivative(u(x, y, z, t), x, y) + b*Derivative(u(x, y, z, t), y)*Derivative(u(x, y, z, t), x, x) + c*Derivative(u(x, y, z, t), x)*Derivative(u(x, y, z, t), x, z) + d*Derivative(u(x, y, z, t), z)*Derivative(u(x, y, z, t), x, x) + Derivative(u(x, y, z, t), x, x, x, y) + Derivative(u(x, y, z, t), x, x, x, z)",
+        ("x", "y", "z", "t"),
+        INFINITE,
+        [
+            ("x", "0", "0", "2*t", "-u"),
+            ("0", "0", "0", "1", "0"),
+            ("0", "a*t/c", "t", "0", "x/c"),
+            ("-x", "2*y", "2*z", "0", "u"),
+            ("0", "0", "1", "0", "0"),
+            ("0", "1", "0", "0", "0"),
+            ("t**3", "0", "0", "0", "3*t**2*y/b"),
+            ("0", "0", "0", "0", "sin(z - d*y/b)*exp(t)"),
+        ],
+        f"{JADAUN_KUMAR_SOURCE}, eqs. (2), (16), (17)",
+        note="plus lambda(t) d/dx + lambda'(t) y/b d/du and gamma(z - d y/b, t) d/du, "
+        "lambda, gamma arbitrary (last two generators: instances); the paper's (16) "
+        "has xi3 = 2 c3 t, (17) the correct t; generic a, b, c, d",
+    ),
+]
+
+BIHLO_CARDOSO_POPOVYCH = [
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 7: u_tt = (delta exp(2 x) u_x**(2 p)) u_xx + nu exp(2 x) u_x**(2 p + 1)",
+        "Derivative(u(x, t), (t, 2)) - (delta*exp(2*x)*Derivative(u(x, t), x)**(2*p))*Derivative(u(x, t), (x, 2)) - (nu*exp(2*x)*Derivative(u(x, t), x)**(2*p + 1))",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("p", "0", "-u"),
+            ("-1", "t", "0"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 7",
+        note="p != 0, -2, nu (p + 1) != delta",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 8: u_tt = (delta x**2 exp(2 u_x)) u_xx + nu x exp(2 u_x)",
+        "Derivative(u(x, t), (t, 2)) - (delta*x**2*exp(2*Derivative(u(x, t), x)))*Derivative(u(x, t), (x, 2)) - (nu*x*exp(2*Derivative(u(x, t), x)))",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("x", "0", "u"),
+            ("0", "t", "-x"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 8",
+        note="nu != delta",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 10: u_tt = delta u_xx + exp(-u_x)",
+        "Derivative(u(x, t), (t, 2)) - (delta)*Derivative(u(x, t), (x, 2)) - (exp(-Derivative(u(x, t), x)))",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("1", "0", "0"),
+            ("x", "t", "u + x"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 10",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 11: u_tt = (delta exp(2 u_x)) u_xx + 2 u_x",
+        "Derivative(u(x, t), (t, 2)) - (delta*exp(2*Derivative(u(x, t), x)))*Derivative(u(x, t), (x, 2)) - (2*Derivative(u(x, t), x))",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("1", "0", "0"),
+            ("2*x", "t", "2*u + x + t**2"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 11",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 12: u_tt = (delta exp(2 u_x)) u_xx + exp(u_x) + 2 eps2 x",
+        "Derivative(u(x, t), (t, 2)) - (delta*exp(2*Derivative(u(x, t), x)))*Derivative(u(x, t), (x, 2)) - (exp(Derivative(u(x, t), x)) + 2*eps2*x)",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("x", "0", "u + x"),
+            ("1", "0", "eps2*t**2"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 12",
+        note="eps2 = +-1",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 13: u_tt = (delta exp(2 u_x)) u_xx + exp(q u_x)",
+        "Derivative(u(x, t), (t, 2)) - (delta*exp(2*Derivative(u(x, t), x)))*Derivative(u(x, t), (x, 2)) - (exp(q*Derivative(u(x, t), x)))",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("1", "0", "0"),
+            ("(2 - q)*x", "(1 - q)*t", "(2 - q)*u + x"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 13",
+        note="q != 0",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 14: u_tt = (delta u_x**(2 p)) u_xx + u_x**q",
+        "Derivative(u(x, t), (t, 2)) - (delta*Derivative(u(x, t), x)**(2*p))*Derivative(u(x, t), (x, 2)) - (Derivative(u(x, t), x)**q)",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("1", "0", "0"),
+            ("(1 + 2*p - q)*x", "(1 + p - q)*t", "(2 + 2*p - q)*u"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 14",
+        note="q != 0, (p, q) != (-1, -1), (-2, -3)",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 15: u_tt = (delta u_x**(2 p)) u_xx + eps u_x**(p + 1/2) + 2 x",
+        "Derivative(u(x, t), (t, 2)) - (delta*Derivative(u(x, t), x)**(2*p))*Derivative(u(x, t), (x, 2)) - (eps*Derivative(u(x, t), x)**(p + Rational(1, 2)) + 2*x)",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("1", "0", "t**2"),
+            ("(1 + 2*p)*x", "t", "(3 + 2*p)*u"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 15",
+        note="eps in {0, 1}, eps = 0 if p = -1/2",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 16: u_tt = (delta u_x**(2 p)) u_xx + 2 log(u_x)",
+        "Derivative(u(x, t), (t, 2)) - (delta*Derivative(u(x, t), x)**(2*p))*Derivative(u(x, t), (x, 2)) - (2*log(Derivative(u(x, t), x)))",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("1", "0", "0"),
+            ("(1 + 2*p)*x", "(1 + p)*t", "2*(1 + p)*u + t**2"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 16",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 17: u_tt = delta/u_x u_xx + 2 log(u_x) + 2 x",
+        "Derivative(u(x, t), (t, 2)) - (delta/Derivative(u(x, t), x))*Derivative(u(x, t), (x, 2)) - (2*log(Derivative(u(x, t), x)) + 2*x)",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("1", "0", "t**2"),
+            ("0", "t", "2*(u + t**2)"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 17",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 18: u_tt = (delta u_x**(-4)) u_xx + u_x**(-3)",
+        "Derivative(u(x, t), (t, 2)) - (delta*Derivative(u(x, t), x)**(-4))*Derivative(u(x, t), (x, 2)) - (Derivative(u(x, t), x)**(-3))",
+        ("x", "t"),
+        6,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("0", "2*t", "u"),
+            ("0", "t**2", "t*u"),
+            ("1", "0", "0"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 18",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 19: u_tt = (delta u_x**(-4)) u_xx + nu u_x**(-3)/x",
+        "Derivative(u(x, t), (t, 2)) - (delta*Derivative(u(x, t), x)**(-4))*Derivative(u(x, t), (x, 2)) - (nu*Derivative(u(x, t), x)**(-3)/x)",
+        ("x", "t"),
+        6,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("0", "2*t", "u"),
+            ("0", "t**2", "t*u"),
+            ("2*x", "0", "u"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 19",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 20: u_tt = (delta u_x**(2 p)) u_xx",
+        "Derivative(u(x, t), (t, 2)) - (delta*Derivative(u(x, t), x)**(2*p))*Derivative(u(x, t), (x, 2)) - (0)",
+        ("x", "t"),
+        6,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("1", "0", "0"),
+            ("x", "t", "u"),
+            ("0", "p*t", "-u"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 20",
+        note="p != -2, 0",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 21: u_tt = (delta exp(2 u_x)) u_xx",
+        "Derivative(u(x, t), (t, 2)) - (delta*exp(2*Derivative(u(x, t), x)))*Derivative(u(x, t), (x, 2)) - (0)",
+        ("x", "t"),
+        6,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("1", "0", "0"),
+            ("x", "t", "u"),
+            ("0", "t", "-x"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 21",
+    ),
+    pde(
+        "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 22: u_tt = (delta u_x**(-4)) u_xx",
+        "Derivative(u(x, t), (t, 2)) - (delta*Derivative(u(x, t), x)**(-4))*Derivative(u(x, t), (x, 2)) - (0)",
+        ("x", "t"),
+        7,
+        [
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "t"),
+            ("0", "2*t", "u"),
+            ("0", "t**2", "t*u"),
+            ("1", "0", "0"),
+            ("2*x", "0", "u"),
+        ],
+        f"{BCP_SOURCE}, table 1, case 22",
+    ),
+]
+
+VANEEVA_BIHLO_POPOVYCH = [
+    pde(
+        "Vaneeva, Bihlo, Popovych 9: u_tt = (eps exp(x) u**p) u_xx + nu exp(x) u**(p + 1)",
+        "Derivative(u(x, t), (t, 2)) - (eps*exp(x)*u(x, t)**p)*Derivative(u(x, t), (x, 2)) - (nu*exp(x)*u(x, t)**(p + 1))",
+        ("x", "t"),
+        3,
+        [
+            ("0", "1", "0"),
+            ("p", "0", "-u"),
+            ("-2", "t", "0"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 9",
+        note="p, nu != 0",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 10: u_tt = (eps x**2 exp(u)) u_xx + nu exp(u)",
+        "Derivative(u(x, t), (t, 2)) - (eps*x**2*exp(u(x, t)))*Derivative(u(x, t), (x, 2)) - (nu*exp(u(x, t)))",
+        ("x", "t"),
+        3,
+        [
+            ("0", "1", "0"),
+            ("x", "0", "0"),
+            ("0", "t", "-2"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 10",
+        note="nu != 0",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 12: u_tt = (eps exp(u)) u_xx + eps1 exp(q u)",
+        "Derivative(u(x, t), (t, 2)) - (eps*exp(u(x, t)))*Derivative(u(x, t), (x, 2)) - (eps1*exp(q*u(x, t)))",
+        ("x", "t"),
+        3,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("(q - 1)*x", "q*t", "-2"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 12",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 13: u_tt = (eps u**p) u_xx + eps1 u**q",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**p)*Derivative(u(x, t), (x, 2)) - (eps1*u(x, t)**q)",
+        ("x", "t"),
+        3,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("(1 + p - q)*x", "(1 - q)*t", "2*u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 13",
+        note="p != 0",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 14a: u_tt = (eps u**(-4)) u_xx + eps1 u**(-3)",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**(-4))*Derivative(u(x, t), (x, 2)) - (eps1*u(x, t)**(-3))",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("0", "2*t", "u"),
+            ("0", "t**2", "t*u"),
+            ("1", "0", "0"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 14a",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 14b: u_tt = (eps u**(-4)) u_xx + eps1 u**(-3) + u",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**(-4))*Derivative(u(x, t), (x, 2)) - (eps1*u(x, t)**(-3) + u(x, t))",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("0", "exp(2*t)", "exp(2*t)*u"),
+            ("0", "exp(-2*t)", "-exp(-2*t)*u"),
+            ("1", "0", "0"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 14b",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 14c: u_tt = (eps u**(-4)) u_xx + eps1 u**(-3) - u",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**(-4))*Derivative(u(x, t), (x, 2)) - (eps1*u(x, t)**(-3) - u(x, t))",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("0", "cos(2*t)", "-sin(2*t)*u"),
+            ("0", "sin(2*t)", "cos(2*t)*u"),
+            ("1", "0", "0"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 14c",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 14d: u_tt = (eps u**4) u_xx + eps1 u",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**4)*Derivative(u(x, t), (x, 2)) - (eps1*u(x, t))",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("2*x", "0", "u"),
+            ("x**2", "0", "x*u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 14d",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 15a: u_tt = (eps u**(-4)) u_xx + nu u**(-3)/x**2",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**(-4))*Derivative(u(x, t), (x, 2)) - (nu*u(x, t)**(-3)/x**2)",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("0", "2*t", "u"),
+            ("0", "t**2", "t*u"),
+            ("2*x", "0", "-u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 15a",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 15b: u_tt = (eps u**(-4)) u_xx + nu u**(-3)/x**2 + u",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**(-4))*Derivative(u(x, t), (x, 2)) - (nu*u(x, t)**(-3)/x**2 + u(x, t))",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("0", "exp(2*t)", "exp(2*t)*u"),
+            ("0", "exp(-2*t)", "-exp(-2*t)*u"),
+            ("2*x", "0", "-u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 15b",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 15c: u_tt = (eps u**(-4)) u_xx + nu u**(-3)/x**2 - u",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**(-4))*Derivative(u(x, t), (x, 2)) - (nu*u(x, t)**(-3)/x**2 - u(x, t))",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("0", "cos(2*t)", "-sin(2*t)*u"),
+            ("0", "sin(2*t)", "cos(2*t)*u"),
+            ("2*x", "0", "-u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 15c",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 16: u_tt = (eps u**p) u_xx",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**p)*Derivative(u(x, t), (x, 2)) - (0)",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("x", "t", "0"),
+            ("p*x", "0", "2*u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 16",
+        note="p != 0, 4, -4",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 17: u_tt = (eps exp(u)) u_xx",
+        "Derivative(u(x, t), (t, 2)) - (eps*exp(u(x, t)))*Derivative(u(x, t), (x, 2)) - (0)",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("x", "t", "0"),
+            ("x", "0", "2"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 17",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 18a: u_tt = eps u_xx + eps1 u**q",
+        "Derivative(u(x, t), (t, 2)) - (eps)*Derivative(u(x, t), (x, 2)) - (eps1*u(x, t)**q)",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("eps*t", "x", "0"),
+            ("(q - 1)*x", "(q - 1)*t", "-2*u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 18a",
+        note="q != 0, 1; the paper's t d/dx + eps x d/dt is eps t d/dx + x d/dt for eps = +-1",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 18b: u_tt = 1 u_xx + eps1 u**q exp(-2 x)",
+        "Derivative(u(x, t), (t, 2)) - (1)*Derivative(u(x, t), (x, 2)) - (eps1*u(x, t)**q*exp(-2*x))",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("exp(x + t)", "exp(x + t)", "0"),
+            ("-exp(x - t)", "exp(x - t)", "0"),
+            ("q - 1", "0", "2*u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 18b",
+        note="q != 0, 1",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 18c: u_tt = -1 u_xx + eps1 u**q exp(-2 x)",
+        "Derivative(u(x, t), (t, 2)) - (-1)*Derivative(u(x, t), (x, 2)) - (eps1*u(x, t)**q*exp(-2*x))",
+        ("x", "t"),
+        4,
+        [
+            ("0", "1", "0"),
+            ("-exp(x)*sin(t)", "exp(x)*cos(t)", "0"),
+            ("exp(x)*cos(t)", "exp(x)*sin(t)", "0"),
+            ("q - 1", "0", "2*u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 18c",
+        note="q != 0, 1",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 19a: u_tt = (eps u**(-4)) u_xx",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**(-4))*Derivative(u(x, t), (x, 2)) - (0)",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "2*t", "u"),
+            ("0", "t**2", "t*u"),
+            ("1", "0", "0"),
+            ("2*x", "0", "-u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 19a",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 19b: u_tt = (eps u**(-4)) u_xx + u",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**(-4))*Derivative(u(x, t), (x, 2)) - (u(x, t))",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "exp(2*t)", "exp(2*t)*u"),
+            ("0", "exp(-2*t)", "-exp(-2*t)*u"),
+            ("1", "0", "0"),
+            ("2*x", "0", "-u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 19b",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 19c: u_tt = (eps u**(-4)) u_xx + -u",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**(-4))*Derivative(u(x, t), (x, 2)) - (-u(x, t))",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("0", "cos(2*t)", "-sin(2*t)*u"),
+            ("0", "sin(2*t)", "cos(2*t)*u"),
+            ("1", "0", "0"),
+            ("2*x", "0", "-u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 19c",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 19d: u_tt = (eps u**4) u_xx",
+        "Derivative(u(x, t), (t, 2)) - (eps*u(x, t)**4)*Derivative(u(x, t), (x, 2)) - (0)",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("x", "t", "0"),
+            ("2*x", "0", "u"),
+            ("x**2", "0", "x*u"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 19d",
+    ),
+    pde(
+        "Vaneeva, Bihlo, Popovych 20: u_tt = eps u_xx + eps1 exp(u)",
+        "Derivative(u(x, t), (t, 2)) - (eps)*Derivative(u(x, t), (x, 2)) - (eps1*exp(u(x, t)))",
+        ("x", "t"),
+        INFINITE,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("eps*t", "x", "0"),
+            ("x", "t", "-2"),
+            ("2*eps*t*x", "eps*t**2 + x**2", "-4*eps*t"),
+        ],
+        f"{VBP_SOURCE}, table 1, case 20",
+        note="tau d/dt + xi d/dx - 2 tau_t d/du, tau_t = xi_x, xi_t = eps tau_x: three of them",
+    ),
+]
+
+ZHDANOV_2005 = [
+    pde(
+        "Zhdanov 2005, dimension 5: u_t = u**(-4) u_xx - 2 u**(-5) u_x**2",
+        "Derivative(u(x, t), t) - u(x, t)**(-4)*Derivative(u(x, t), (x, 2)) + 2*u(x, t)**(-5)*Derivative(u(x, t), x)**2",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("x/2", "t", "0"),
+            ("-2*x", "0", "u"),
+            ("-x**2", "0", "x*u"),
+        ],
+        f"{ZHDANOV_SOURCE}, p. 4",
+        note="the paper gives no generators: delierium's",
+    ),
+    pde(
+        "Zhdanov 2005, dimension 5: u_t = u_xx + u u_x/x - u**2/x**2 - 2 u/x**2",
+        "Derivative(u(x, t), t) - Derivative(u(x, t), (x, 2)) - u(x, t)*Derivative(u(x, t), x)/x + u(x, t)**2/x**2 + 2*u(x, t)/x**2",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("x", "2*t", "0"),
+            ("1", "0", "(u + 2)/x"),
+            ("-t*x", "-t**2", "x**2"),
+            ("t", "0", "(t*u + 2*t - x**2)/x"),
+        ],
+        f"{ZHDANOV_SOURCE}, p. 4",
+        note="the paper gives no generators: delierium's",
+    ),
+    pde(
+        "Zhdanov 2005: u_t = u_x**(-2) u_xx + 1/u_x",
+        "Derivative(u(x, t), t) - Derivative(u(x, t), x)**(-2)*Derivative(u(x, t), (x, 2)) - 1/Derivative(u(x, t), x)",
+        ("x", "t"),
+        INFINITE,
+        [
+            ("0", "0", "1"),
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("0", "2*t", "u"),
+            ("u/2", "0", "t"),
+            ("t/2 + u**2/4", "t**2", "t*u"),
+            ("exp(x)", "0", "0"),
+            ("u*exp(x)", "0", "0"),
+        ],
+        f"{ZHDANOV_SOURCE}, p. 4",
+        note="listed with a five-dimensional algebra; x <-> u and v = -log w map it to the heat equation w_t = w_uu: infinite (generators: delierium's)",
+    ),
+]
+
+GUNGOR_LAHNO_ZHDANOV = [
+    pde(
+        "Gungor, Lahno, Zhdanov (4.11): u_t = u_xxx - 3/2 u_xx**2/u_x + lam u_x/x**2",
+        "Derivative(u(x, t), t) - Derivative(u(x, t), (x, 3)) + Rational(3, 2)*Derivative(u(x, t), (x, 2))**2/Derivative(u(x, t), x) - lam*Derivative(u(x, t), x)/x**2",
+        ("x", "t"),
+        5,
+        [
+            ("0", "1", "0"),
+            ("x/3", "t", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "u"),
+            ("0", "0", "u**2"),
+        ],
+        f"{GLZ_SOURCE}, theorem 4.3, (4.11)",
+    ),
+]
+
+NADJAFIKHAH = [
+    pde(
+        "Nadjafikhah et al.: u_tt = exp(u) (u_xx + u_yy)",
+        "Derivative(u(x, y, t), (t, 2)) - exp(u(x, y, t))*(Derivative(u(x, y, t), (x, 2)) + Derivative(u(x, y, t), (y, 2)))",
+        ("x", "y", "t"),
+        INFINITE,
+        [
+            ("x", "y", "0", "2"),
+            ("1", "0", "0", "0"),
+            ("0", "1", "0", "0"),
+            ("0", "0", "t", "-2"),
+            ("0", "0", "1", "0"),
+            ("y", "-x", "0", "0"),
+            ("x**2 - y**2", "2*x*y", "0", "4*x"),
+        ],
+        f"{NBM_SOURCE}, case (i), (42)",
+        note="the paper's five generators miss the rotation y d/dx - x d/dy and the conformal maps of (x, y) (the last generator: z**2): infinite",
+    ),
+    pde(
+        "Nadjafikhah et al.: u_tt = u**k (u_xx + u_yy)",
+        "Derivative(u(x, y, t), (t, 2)) - u(x, y, t)**k*(Derivative(u(x, y, t), (x, 2)) + Derivative(u(x, y, t), (y, 2)))",
+        ("x", "y", "t"),
+        6,
+        [
+            ("x", "y", "0", "2*u/k"),
+            ("1", "0", "0", "0"),
+            ("0", "1", "0", "0"),
+            ("0", "0", "t", "-2*u/k"),
+            ("0", "0", "1", "0"),
+            ("y", "-x", "0", "0"),
+        ],
+        f"{NBM_SOURCE}, case (ii), (57)",
+        note="the paper's five generators miss the rotation y d/dx - x d/dy; k = -4 has one more",
+    ),
+    pde(
+        "Nadjafikhah et al.: u_tt = u**(-4) (u_xx + u_yy)",
+        "Derivative(u(x, y, t), (t, 2)) - u(x, y, t)**(-4)*(Derivative(u(x, y, t), (x, 2)) + Derivative(u(x, y, t), (y, 2)))",
+        ("x", "y", "t"),
+        7,
+        [
+            ("x", "y", "0", "-u/2"),
+            ("1", "0", "0", "0"),
+            ("0", "1", "0", "0"),
+            ("0", "0", "t", "u/2"),
+            ("0", "0", "1", "0"),
+            ("y", "-x", "0", "0"),
+            ("0", "0", "t**2", "t*u"),
+        ],
+        f"{NBM_SOURCE}, case (ii), (57)",
+        note="not in the paper: t**2 d/dt + t u d/du as for u_tt = u**(-4) u_xx",
+    ),
+    pde(
+        "Nadjafikhah et al.: u_tt = u**4 (u_xx + u_yy)",
+        "Derivative(u(x, y, t), (t, 2)) - u(x, y, t)**4*(Derivative(u(x, y, t), (x, 2)) + Derivative(u(x, y, t), (y, 2)))",
+        ("x", "y", "t"),
+        6,
+        [
+            ("x", "y", "0", "u/2"),
+            ("1", "0", "0", "0"),
+            ("0", "1", "0", "0"),
+            ("0", "0", "t", "-u/2"),
+            ("0", "0", "1", "0"),
+            ("y", "-x", "0", "0"),
+        ],
+        f"{NBM_SOURCE}, case (ii), (57)",
+        note="u_tt = u**4 u_xx has x**2 d/dx + x u d/du, the plane has no such extension",
+    ),
+]
+
+HASHEMI_BALEANU = [
+    pde(
+        "Fornberg-Whitham equation: u_t - u_xxt + u_x + u u_x = u u_xxx + 3 u_x u_xx",
+        "Derivative(u(x, t), t) - Derivative(u(x, t), (x, 2), t) + Derivative(u(x, t), x) + u(x, t)*Derivative(u(x, t), x) - 3*Derivative(u(x, t), x)*Derivative(u(x, t), (x, 2)) - u(x, t)*Derivative(u(x, t), (x, 3))",
+        ("x", "t"),
+        3,
+        [("0", "1", "0"), ("1", "0", "0"), ("t", "0", "1")],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.1",
+    ),
+    pde(
+        "mGVE (D = d/dt + u d/dx): (D**2 u + p u**2/2 + be u)_x + q D u = 0",
+        "be*Derivative(u(x, t), x) + p*u(x, t)*Derivative(u(x, t), x) + q*u(x, t)*Derivative(u(x, t), x) + q*Derivative(u(x, t), t) + u(x, t)**2*Derivative(u(x, t), (x, 3)) + 4*u(x, t)*Derivative(u(x, t), x)*Derivative(u(x, t), (x, 2)) + 2*u(x, t)*Derivative(u(x, t), t, (x, 2)) + Derivative(u(x, t), t)*Derivative(u(x, t), (x, 2)) + Derivative(u(x, t), x)**3 + 3*Derivative(u(x, t), x)*Derivative(u(x, t), t, x) + Derivative(u(x, t), (t, 2), x)",
+        ("x", "t"),
+        3,
+        [("0", "1", "0"), ("1", "0", "0"), ("be*t + p*x/2", "-p*t/2", "be + p*u")],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.2",
+        note="p = 0, q = 0, be = 0, p = 2 q: no extension except p = be = 0 and p = q = 0",
+    ),
+    pde(
+        "mGVE, p = be = 0: (D**2 u)_x + q D u = 0",
+        "q*u(x, t)*Derivative(u(x, t), x) + q*Derivative(u(x, t), t) + u(x, t)**2*Derivative(u(x, t), (x, 3)) + 4*u(x, t)*Derivative(u(x, t), x)*Derivative(u(x, t), (x, 2)) + 2*u(x, t)*Derivative(u(x, t), t, (x, 2)) + Derivative(u(x, t), t)*Derivative(u(x, t), (x, 2)) + Derivative(u(x, t), x)**3 + 3*Derivative(u(x, t), x)*Derivative(u(x, t), t, x) + Derivative(u(x, t), (t, 2), x)",
+        ("x", "t"),
+        4,
+        [("0", "1", "0"), ("1", "0", "0"), ("t", "0", "1"), ("x", "-t", "2*u")],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.2",
+        note="q != 0",
+    ),
+    pde(
+        "mGVE, p = q = 0: (D**2 u + be u)_x = 0",
+        "be*Derivative(u(x, t), x) + u(x, t)**2*Derivative(u(x, t), (x, 3)) + 4*u(x, t)*Derivative(u(x, t), x)*Derivative(u(x, t), (x, 2)) + 2*u(x, t)*Derivative(u(x, t), t, (x, 2)) + Derivative(u(x, t), t)*Derivative(u(x, t), (x, 2)) + Derivative(u(x, t), x)**3 + 3*Derivative(u(x, t), x)*Derivative(u(x, t), t, x) + Derivative(u(x, t), (t, 2), x)",
+        ("x", "t"),
+        INFINITE,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("t", "0", "1"),
+            ("x", "0", "u"),
+            ("exp(t)", "0", "exp(t)"),
+            ("sin(t)", "0", "cos(t)"),
+        ],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.2",
+        note="f(t) d/dx + f'(t) d/du for every f (exp, sin: instances); be != 0",
+    ),
+    pde(
+        "mGVE, p = q = be = 0: (D**2 u)_x = 0",
+        "u(x, t)**2*Derivative(u(x, t), (x, 3)) + 4*u(x, t)*Derivative(u(x, t), x)*Derivative(u(x, t), (x, 2)) + 2*u(x, t)*Derivative(u(x, t), t, (x, 2)) + Derivative(u(x, t), t)*Derivative(u(x, t), (x, 2)) + Derivative(u(x, t), x)**3 + 3*Derivative(u(x, t), x)*Derivative(u(x, t), t, x) + Derivative(u(x, t), (t, 2), x)",
+        ("x", "t"),
+        INFINITE,
+        [
+            ("0", "1", "0"),
+            ("1", "0", "0"),
+            ("t", "0", "1"),
+            ("x", "0", "u"),
+            ("x", "t", "0"),
+            ("t*x", "t**2/2", "x"),
+            ("exp(t)", "0", "exp(t)"),
+            ("sin(t)", "0", "cos(t)"),
+        ],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.2",
+        note="f(t) d/dx + f'(t) d/du for every f (exp, sin: instances)",
+    ),
+    pde(
+        "MEE circular rod: u_tt - c**2 u_xx - c**2/2 u_xx**2 - n u_xxtt = 0",
+        "Derivative(u(x, t), (t, 2)) - c**2*Derivative(u(x, t), (x, 2)) - c**2*Derivative(u(x, t), (x, 2))**2/2 - n*Derivative(u(x, t), (t, 2), (x, 2))",
+        ("x", "t"),
+        7,
+        [
+            ("1", "0", "0"),
+            ("0", "1", "0"),
+            ("0", "0", "1"),
+            ("0", "0", "x"),
+            ("0", "0", "t"),
+            ("0", "0", "t*x"),
+            ("0", "t", "-(c**2*t**2 + 2*u + x**2)"),
+        ],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.3",
+        note="the book's N is n; c, n != 0",
+    ),
+    pde(
+        "Hashemi, Baleanu 1.1.4: u_t + a1 u u_x - a2 u_xx + a3 u_xxx + a4 u_xxxx = 0",
+        "Derivative(u(x, t), t) + a1*u(x, t)*Derivative(u(x, t), x) - a2*Derivative(u(x, t), (x, 2)) + a3*Derivative(u(x, t), (x, 3)) + a4*Derivative(u(x, t), (x, 4))",
+        ("x", "t"),
+        3,
+        [("0", "1", "0"), ("1", "0", "0"), ("a1*t", "0", "1")],
+        f"{HASHEMI_BALEANU_SOURCE}, section 1.1.4",
+        note="a1, a3, a4 != 0, 8 a2 a4 + 3 a3**2 != 0 are no extensions; a2 = a4 = 0 (KdV), "
+        "a2 = a3 = 0: 4, a3 = a4 = 0 (Burgers): 5, a1 = 0: infinite",
+    ),
+]
+
 # Kamke's equations with their symmetry class from Schwarz, Appendix E;
 # generated from the SymPy Kamke test suite, see the module docstring.
 # First order ODEs of Kamke's chapter 1 that are nonlinear in y' and have a
@@ -6540,6 +7454,14 @@ CATALOG = (
     + SYMMETRY_INFORMED
     + THE_WELL
     + SYMBOLIC_POWERS
+    + BASARAB_HORWATH_GUNGOR_LAHNO
+    + JADAUN_KUMAR
+    + BIHLO_CARDOSO_POPOVYCH
+    + VANEEVA_BIHLO_POPOVYCH
+    + ZHDANOV_2005
+    + GUNGOR_LAHNO_ZHDANOV
+    + NADJAFIKHAH
+    + HASHEMI_BALEANU
     + KAMKE_FIRST_ORDER
     + KAMKE
 )
