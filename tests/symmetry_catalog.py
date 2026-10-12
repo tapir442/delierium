@@ -130,6 +130,10 @@ BGL_SOURCE = (
     "Basarab-Horwath, Gungor, Lahno, Symmetry classification of third-order nonlinear "
     "evolution equations, arXiv:0802.0367 (2008)"
 )
+JADAUN_KUMAR_SOURCE = (
+    "Jadaun, Kumar, Lie symmetry analysis for similarity reduction and solutions of "
+    "(3 + 1)-dimensional Calogero-Bogoyavlenskii-Schiff equation, arXiv:1703.08256 (2017)"
+)
 # Arrigo's exercises ask for the symmetries without giving them
 ARRIGO_EXERCISE = (
     "the book gives no answer: dimension and generators are delierium's, the generators "
@@ -5640,6 +5644,29 @@ BASARAB_HORWATH_GUNGOR_LAHNO = [
     ),
 ]
 
+JADAUN_KUMAR = [
+    pde(
+        "(3+1)-dimensional Calogero-Bogoyavlenskii-Schiff equation, potential form",
+        "Derivative(u(x, y, z, t), x, t) + a*Derivative(u(x, y, z, t), x)*Derivative(u(x, y, z, t), x, y) + b*Derivative(u(x, y, z, t), y)*Derivative(u(x, y, z, t), x, x) + c*Derivative(u(x, y, z, t), x)*Derivative(u(x, y, z, t), x, z) + d*Derivative(u(x, y, z, t), z)*Derivative(u(x, y, z, t), x, x) + Derivative(u(x, y, z, t), x, x, x, y) + Derivative(u(x, y, z, t), x, x, x, z)",
+        ("x", "y", "z", "t"),
+        INFINITE,
+        [
+            ("x", "0", "0", "2*t", "-u"),
+            ("0", "0", "0", "1", "0"),
+            ("0", "a*t/c", "t", "0", "x/c"),
+            ("-x", "2*y", "2*z", "0", "u"),
+            ("0", "0", "1", "0", "0"),
+            ("0", "1", "0", "0", "0"),
+            ("t**3", "0", "0", "0", "3*t**2*y/b"),
+            ("0", "0", "0", "0", "sin(z - d*y/b)*exp(t)"),
+        ],
+        f"{JADAUN_KUMAR_SOURCE}, eqs. (2), (16), (17)",
+        note="plus lambda(t) d/dx + lambda'(t) y/b d/du and gamma(z - d y/b, t) d/du, "
+        "lambda, gamma arbitrary (last two generators: instances); the paper's (16) "
+        "has xi3 = 2 c3 t, (17) the correct t; generic a, b, c, d",
+    ),
+]
+
 # Kamke's equations with their symmetry class from Schwarz, Appendix E;
 # generated from the SymPy Kamke test suite, see the module docstring.
 # First order ODEs of Kamke's chapter 1 that are nonlinear in y' and have a
@@ -6667,6 +6694,7 @@ CATALOG = (
     + THE_WELL
     + SYMBOLIC_POWERS
     + BASARAB_HORWATH_GUNGOR_LAHNO
+    + JADAUN_KUMAR
     + KAMKE_FIRST_ORDER
     + KAMKE
 )
