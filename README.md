@@ -236,6 +236,19 @@ gives up:
     >>> print(differential_invariants((0, Symbol("y")), y, x, 1))
     [x, Derivative(y(x), x)/y(x)]
 
+### Similarity reduction
+
+`similarity_reduction` reduces a PDE (or a system) by a given generator: the invariant
+solutions `u = F(zeta)` satisfy a PDE in one independent variable less, for two variables an
+ODE. KdV by its travelling waves:
+
+    >>> from delierium import similarity_reduction
+    >>> c, t = symbols("c t")
+    >>> u = Function("u")(x, t)
+    >>> r = similarity_reduction(diff(u, t) + u * diff(u, x) + diff(u, x, 3), (c, 1, 0), u, [x, t])
+    >>> print(r.ansatz, r.equations)
+    [Eq(u(x, t), F(-c*t + x))] [-c*Derivative(F(zeta), zeta) + F(zeta)*Derivative(F(zeta), zeta) + Derivative(F(zeta), (zeta, 3))]
+
 ### Janet bases of linear systems
 
 `JanetBasis` takes a list of linear homogeneous PDEs, the unknown functions and the
@@ -299,7 +312,8 @@ The public interface is what `delierium` exports; `help(delierium)` lists it:
   `overdetermined_system_pde`, `prolongation`, `make_infinitesimal`, `create_infinitesimals`,
   `determining_janet_basis`; checks: `verify_symmetry`, `verify_symmetries`
 * symmetry algebras: `symmetry_algebra`, `LieAlgebra` (`type()`, ...), `scaling_symmetries`
-* a given generator: `invariants`, `canonical_coordinates`, `differential_invariants`
+* a given generator: `invariants`, `canonical_coordinates`, `differential_invariants`,
+  `similarity_reduction`
 * group classification: `group_classification`, `classify`; `thomas_decomposition`
 * Janet bases: `JanetBasis` (with `rank`, `parametric_derivatives`, `principal_derivatives`,
   `type`, `assumed_nonzero`, `parameter_conditions`, `representation`),

@@ -23,7 +23,9 @@ The public interface is what this package exports (``from delierium import
   symmetries of a differential equation, from its determining equations
   without solving them)
 * a given generator: invariants, canonical_coordinates (X = d/ds in them),
-  differential_invariants (reduction of order of an ODE)
+  differential_invariants (reduction of order of an ODE), similarity_reduction
+  (a PDE in one independent variable less, the invariant solutions),
+  SimilarityReduction
 * algebraic Thomas decomposition: thomas_decomposition (polynomial equations
   and inequations split into simple systems with disjoint solutions),
   SimpleSystem
@@ -84,6 +86,7 @@ from .janet_basis import (
 from .lie_algebra import LieAlgebra, NotClosedError, VectorField
 from .lie_algebra_types import LieAlgebraType
 from .matrix_order import Context, Mgrevlex, Mgrlex, Mlex
+from .reduction import SimilarityReduction, similarity_reduction
 from .scaling import scaling_symmetries
 from .symmetries import LieSymmetries, lie_symmetries
 from .thomas import SimpleSystem, thomas_decomposition
@@ -104,6 +107,7 @@ __all__ = [
     "Mgrlex",
     "Mlex",
     "NotClosedError",
+    "SimilarityReduction",
     "SimpleSystem",
     "VectorField",
     "VerificationResult",
@@ -134,6 +138,7 @@ __all__ = [
     "overdetermined_system_pde",
     "prolongation",
     "scaling_symmetries",
+    "similarity_reduction",
     "symmetry_algebra",
     "thomas_decomposition",
     "variational_derivative",
