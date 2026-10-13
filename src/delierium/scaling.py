@@ -108,6 +108,14 @@ class _Weights:
     """
 
     def __init__(self, independent: list[Basic], dependent: list[Basic]) -> None:
+        """The variables; no constraints yet.
+
+        >>> from sympy import Function, symbols
+        >>> x, t = symbols("x t")
+        >>> w = _Weights([x, t], [Function("u")(x, t)])
+        >>> w.independent, w.constraints
+        ([x, t], [])
+        """
         self.independent = independent
         self.dependent = dependent
         self.constraints: list[dict[int, Expr]] = []

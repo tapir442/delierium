@@ -103,7 +103,13 @@ def rk4(
 
 
 def _numbers(expr: Expr | str, keep: Iterable[Basic], values: Values) -> Expr:
-    """expr with the values substituted and every other symbol not in keep 1."""
+    """expr with the values substituted and every other symbol not in keep 1.
+
+    >>> from sympy import symbols
+    >>> x, a, b = symbols("x a b")
+    >>> _numbers(a * x + b, [x], {"a": 2})
+    2*x + 1
+    """
     e = sympify(expr).subs({sympify(k): sympify(v) for k, v in (values or {}).items()})
     return e.subs(dict.fromkeys(e.free_symbols - set(keep), 1))
 
@@ -116,7 +122,14 @@ def field_functions(
     values: Values = None,
 ) -> list[FieldFunction]:
     """The components of the generator along the coordinates axes, as numpy
-    functions of these two coordinates; the other coordinates are fixed."""
+    functions of these two coordinates; the other coordinates are fixed.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> fx, fy = field_functions(("-y", "x"), [x, y])
+    >>> fx(np.array([1.0, 2.0]), np.array([3.0, 4.0])), fy(np.array([1.0]), np.array([0.0]))
+    (array([-3., -4.]), array([1.]))
+    """
     a, b = (coordinates[i] for i in axes)
     rest = {c: fixed for i, c in enumerate(coordinates) if i not in axes}
 
@@ -139,7 +152,16 @@ def draw_field(  # pylint: disable=too-many-arguments,too-many-positional-argume
     title: str | None = None,
 ) -> None:
     """Draw the generator, projected onto the coordinates axes, as streamlines
-    colored by its length."""
+    colored by its length.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> fig, ax = plt.subplots()
+    >>> draw_field(ax, ("x", "y"), [x, y])
+    >>> ax.get_xlabel(), ax.get_ylabel(), ax.get_title().count("partial")
+    ('x', 'y', 2)
+    >>> plt.close(fig)
+    """
     fx, fy = field_functions(generator, coordinates, axes, fixed, values)
     X, Y = np.meshgrid(np.linspace(box[0], box[1], n), np.linspace(box[2], box[3], n))
     with np.errstate(all="ignore"):
@@ -175,7 +197,14 @@ def flow(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     steps: int = 60,
 ) -> np.ndarray:
     """The points (2 x N, in the coordinates axes) moved by eps along the flow
-    of the generator, computed numerically from its vector field."""
+    of the generator, computed numerically from its vector field.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> np.round(flow(("1", "0"), [x, y], np.array([[0.0], [1.0]]), 0.5), 6)
+    array([[0.5],
+           [1. ]])
+    """
     if eps == 0:
         return points
     fx, fy = field_functions(generator, coordinates, axes, fixed, values)
@@ -195,7 +224,17 @@ def ode_solutions(  # pylint: disable=too-many-arguments,too-many-positional-arg
     """Solution curves (2 x N arrays of x and y) of the scalar ODE ode = 0 for
     y = y(x), through random points of the box, with random values of the
     higher derivatives there; [] if it cannot be solved for its highest
-    derivative."""
+    derivative.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> curves = ode_solutions(y.diff(x) - y, y, count=2)
+    >>> len(curves), curves[0].shape
+    (2, (2, 602))
+    >>> ode_solutions(y, y)
+    []
+    """
     x = y.args[0]
     n = max((len(d.variables) for d in ode.atoms(Derivative) if d.expr == y), default=0)
     if n == 0:
@@ -237,7 +276,15 @@ def vector_fields(
     values: Values = None,
     columns: int = 4,
 ) -> Figure:
-    """A figure with one panel per generator, with the curves (red) on top."""
+    """A figure with one panel per generator, with the curves (red) on top.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> fig = vector_fields([("1", "0"), ("-y", "x")], [x, y])
+    >>> len(fig.axes)
+    2
+    >>> plt.close(fig)
+    """
     columns = min(len(generators), columns)
     rows = -(-len(generators) // columns)
     fig, panels = plt.subplots(rows, columns, squeeze=False, figsize=(4 * columns, 3.8 * rows))
@@ -264,7 +311,15 @@ def animate_flow(  # pylint: disable=too-many-arguments,too-many-positional-argu
 ) -> FuncAnimation:
     """An animation of the curves moved by the flow of the generator, for
     eps from -eps to eps; show it in Jupyter with
-    HTML(animation.to_jshtml())."""
+    HTML(animation.to_jshtml()).
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> line = np.array([[0.0, 1.0], [1.0, 1.0]])
+    >>> animation = animate_flow(("-y", "x"), [x, y], [line], frames=3)
+    >>> type(animation).__name__
+    'FuncAnimation'
+    """
     fig, ax = plt.subplots(figsize=(5, 5), dpi=60)
     draw_field(ax, generator, coordinates, box, axes, fixed, values, n=30)
     drawn = [ax.plot([], [], color="C3", lw=2)[0] for _ in curves]
@@ -288,7 +343,16 @@ def animate_flow(  # pylint: disable=too-many-arguments,too-many-positional-argu
 def _orders(
     janet: "JanetBasis", derivatives: Iterable[Basic]
 ) -> set[tuple[Basic, tuple[int, ...]]]:
-    """The derivatives as (function, orders by the context's variables)."""
+    """The derivatives as (function, orders by the context's variables).
+
+    >>> from sympy import Function, symbols
+    >>> from delierium import JanetBasis
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> janet = JanetBasis([z.diff(x, 2), z.diff(y)], [z], [x, y])
+    >>> sorted(_orders(janet, [z.diff(x), z]), key=str)
+    [(z(x, y), (0, 0)), (z(x, y), (1, 0))]
+    """
     context = janet.context
     return {
         (d.expr, tuple(context.order_of_derivative(d)))
@@ -309,6 +373,15 @@ def staircase(
     one row per order 0, 1, 2 in the third variable (0 in the others).
 
     names renames variables in the labels, e.g. {"H": "y"}.
+
+    >>> from sympy import Function, symbols
+    >>> from delierium import JanetBasis
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> fig = staircase(JanetBasis([z.diff(x, 2), z.diff(y)], [z], [x, y]))
+    >>> fig.axes[0].get_title(), fig._suptitle.get_text()
+    ('z', 'dimension 2')
+    >>> plt.close(fig)
     """
     names = {str(k): str(v) for k, v in (names or {}).items()}
     variables = [names.get(str(v), str(v)) for v in janet.context.independent]

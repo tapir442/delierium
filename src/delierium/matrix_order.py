@@ -107,6 +107,13 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
     ) -> None:
         """sorting : (in)dependent [i] > (in)dependent [i+i]
         which means: descending
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> f, g = Function("f")(x, y), Function("g")(x, y)
+        >>> ctx = Context([f, g], [x, y])
+        >>> ctx.dependent, ctx.independent, ctx.fraction_free
+        ((f(x, y), g(x, y)), (x, y), False)
         """
         self.independent = tuple(independent)
         self.dependent = tuple(dependent)
@@ -131,7 +138,16 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
     def _gt(self, v1: Sequence[int], v2: Sequence[int]) -> bool:
         """v1 ranks above v2: the first nonzero entry of the weight matrix
         times v1 - v2 is positive. v1, v2 are comparison vectors (see
-        janet_basis.ComparisonVector); equal ones are not greater."""
+        janet_basis.ComparisonVector); equal ones are not greater.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> ctx = Context([Function("f")(x, y)], [x, y])
+        >>> ctx._gt((2, 0, 0), (1, 1, 0)), ctx._gt((1, 1, 0), (2, 0, 0))
+        (True, False)
+        >>> ctx._gt((1, 0, 0), (1, 0, 0))
+        False
+        """
         difference = [a - b for a, b in zip(v1, v2, strict=True)]
         for row in self._weight:
             if entry := sum(w * d for w, d in zip(row, difference, strict=True)):
@@ -139,7 +155,15 @@ class Context:  # pylint: disable=too-few-public-methods,too-many-instance-attri
         return False
 
     def _is_dependent(self, f: Basic) -> bool:
-        """Check if 'f' is in the list of dependent variables."""
+        """Check if 'f' is in the list of dependent variables.
+
+        >>> from sympy import Function, symbols
+        >>> x = symbols("x")
+        >>> f = Function("f")(x)
+        >>> ctx = Context([f], [x])
+        >>> ctx._is_dependent(f), ctx._is_dependent(x)
+        (True, False)
+        """
         return f in self.dependent
 
     def _order_of_derivative(self, e: Basic) -> list[int]:

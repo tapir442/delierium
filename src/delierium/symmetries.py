@@ -52,6 +52,15 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
         independent: Variables,
         sort_order: WeightFunction = Mgrevlex,
     ) -> None:
+        """The determining equations; everything else on first access.
+
+        >>> from sympy import Function, Symbol
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
+        >>> s = LieSymmetries(y.diff(x, 3) + y * y.diff(x, 2), y, x)
+        >>> s.coordinates, s.infinitesimals
+        ([x, y], [X(y, x), Y(y, x)])
+        """
         self.equations = [equations] if isinstance(equations, Basic) else list(equations)
         self.dependent = convert_to_iterable(dependent)
         self.independent = convert_to_iterable(independent)
@@ -66,20 +75,57 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
 
     @cached_property
     def janet_basis(self) -> JanetBasis:
+        """The Janet basis of the determining equations.
+
+        >>> from sympy import Function, Symbol
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
+        >>> s = LieSymmetries(y.diff(x, 3) + y * y.diff(x, 2), y, x)
+        >>> s.janet_basis.rank()
+        2
+        """
         return JanetBasis(
             self.determining_equations, self.infinitesimals, self.coordinates, self.sort_order
         )
 
     @property
     def dimension(self) -> Any:
+        """The dimension of the symmetry algebra, oo if infinite.
+
+        >>> from sympy import Function, Symbol
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
+        >>> s = LieSymmetries(y.diff(x, 3) + y * y.diff(x, 2), y, x)
+        >>> s.dimension
+        2
+        """
         return self.janet_basis.rank()
 
     @property
     def is_finite(self) -> bool:
+        """Whether the symmetry algebra is finite-dimensional.
+
+        >>> from sympy import Function, Symbol
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
+        >>> s = LieSymmetries(y.diff(x, 3) + y * y.diff(x, 2), y, x)
+        >>> s.is_finite
+        True
+        """
         return bool(self.dimension != oo)
 
     @cached_property
     def assumptions(self) -> list[Expr]:
+        """The expressions assumed nonzero: the initials of the equations and the
+        factors the Janet basis divides by.
+
+        >>> from sympy import Function, Symbol
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
+        >>> s = LieSymmetries(y.diff(x, 3) + y * y.diff(x, 2), y, x)
+        >>> s.assumptions
+        [y]
+        """
         result = _initials(self.equations, self.dependent, self.independent)
         for e in self.janet_basis.assumed_nonzero():
             if e not in result:
@@ -88,11 +134,27 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
 
     @property
     def parameter_conditions(self) -> list[list[Expr]]:
+        """The special parameter values the Janet basis excludes.
+
+        >>> from sympy import Function, symbols
+        >>> x, a = symbols("x a")
+        >>> y = Function("y")(x)
+        >>> LieSymmetries(y.diff(x, 2) + a * y.diff(x) ** 2, y, x).parameter_conditions
+        [[a]]
+        """
         return self.janet_basis.parameter_conditions()
 
     @cached_property
     def algebra(self) -> LieAlgebra:
-        """ValueError if the algebra is infinite."""
+        """ValueError if the algebra is infinite.
+
+        >>> from sympy import Function, Symbol
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
+        >>> s = LieSymmetries(y.diff(x, 3) + y * y.diff(x, 2), y, x)
+        >>> s.algebra.type().name
+        'l2,1'
+        """
         return LieAlgebra.from_janet_basis(self.janet_basis)
 
     def generators(
@@ -110,7 +172,15 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
         functions, by default log, sqrt, exp of them). All of them if as
         many as the dimension are found (complete()); for an infinite
         algebra the ones of this form. trace (1 or True) prints every step,
-        2 also their details."""
+        2 also their details.
+
+        >>> from sympy import Function, Symbol
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
+        >>> s = LieSymmetries(y.diff(x, 3) + y * y.diff(x, 2), y, x)
+        >>> s.generators()
+        [(1, 0), (-x, y)]
+        """
         key = (max_degree, None if functions is None else tuple(functions))
         if key not in self._generators or trace or steps is not None:
             result = solve_determining_equations(
@@ -129,15 +199,40 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
 
     def complete(self, generators: Sequence[Sequence[Any]]) -> bool:
         """Whether generators span the whole (finite) algebra: as many as
-        the dimension (they are linearly independent by construction)."""
+        the dimension (they are linearly independent by construction).
+
+        >>> from sympy import Function, Symbol
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
+        >>> s = LieSymmetries(y.diff(x, 3) + y * y.diff(x, 2), y, x)
+        >>> s.complete([(1, 0)]), s.complete(s.generators())
+        (False, True)
+        """
         return self.is_finite and len(generators) == self.dimension
 
     def verify(self, generators: Sequence[Sequence[Any]]) -> list[VerificationResult]:
         """verify_symmetries for the generators, each a tuple with one
-        component per coordinate."""
+        component per coordinate.
+
+        >>> from sympy import Function, Symbol
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
+        >>> s = LieSymmetries(y.diff(x, 3) + y * y.diff(x, 2), y, x)
+        >>> [bool(r) for r in s.verify([(1, 0), (0, 1)])]
+        [True, False]
+        """
         return verify_symmetries(self.equations, self.dependent, self.independent, generators)
 
     def __repr__(self) -> str:
+        """The equations and the dimension.
+
+        >>> from sympy import Function, Symbol
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
+        >>> s = LieSymmetries(y.diff(x, 3) + y * y.diff(x, 2), y, x)
+        >>> s
+        LieSymmetries([y(x)*Derivative(y(x), (x, 2)) + Derivative(y(x), (x, 3))], dimension 2)
+        """
         return f"LieSymmetries({self.equations}, dimension {self.dimension})"
 
 

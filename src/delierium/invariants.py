@@ -61,7 +61,14 @@ _FAST_HINTS = (
 def _local(field: VectorField) -> tuple[VectorField, dict[Basic, Basic]]:
     """The field in new symbols, the coordinates positive and the parameters
     real (locally, near a generic point: sqrt(y**2) = y, x**(b/a) without
-    re and im), and the map back."""
+    re and im), and the map back.
+
+    >>> from sympy import symbols
+    >>> x, y, a = symbols("x y a")
+    >>> local, back = _local(VectorField([a * x, y], [x, y]))
+    >>> local.coordinates[0].is_positive, sorted(back.values(), key=str)
+    (True, [a, x, y])
+    """
     parameters = set().union(*(c.free_symbols for c in field.coefficients)) - set(field.coordinates)
     new: dict[Basic, Basic] = {z: Dummy(str(z), positive=True) for z in field.coordinates}
     new |= {p: Dummy(str(p), real=True) for p in parameters}
@@ -72,6 +79,17 @@ def _local(field: VectorField) -> tuple[VectorField, dict[Basic, Basic]]:
 
 
 def _field(generator: Generator, coordinates: Sequence[Basic] | None) -> VectorField:
+    """The generator as a VectorField, checked.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> _field((-y, x), [x, y])
+    -y*D(x) + x*D(y)
+    >>> _field((0, 0), [x, y])
+    Traceback (most recent call last):
+    ...
+    ValueError: the zero generator has no invariants
+    """
     if isinstance(generator, VectorField):
         if coordinates is not None and tuple(coordinates) != generator.coordinates:
             raise ValueError("coordinates differ from those of the VectorField")
@@ -88,7 +106,13 @@ def _is_zero(e: Expr) -> bool:
     """e == 0 on a region: by simplify, else at two or more of 24 random
     points with positive coordinates. A canonical coordinate may hold only
     on a region, asinh(x/sqrt(t**2 - x**2)) for t > x, or on a branch of a
-    root; the wrong branch fails everywhere."""
+    root; the wrong branch fails everywhere.
+
+    >>> from sympy import sqrt, symbols
+    >>> x, t = symbols("x t")
+    >>> _is_zero(sqrt(x**2) - x), _is_zero(x - t)
+    (True, False)
+    """
     e = simplify(e)
     if e == 0:
         return True
@@ -111,6 +135,15 @@ class _Characteristics:  # pylint: disable=too-few-public-methods
     on its characteristics."""
 
     def __init__(self, field: VectorField) -> None:
+        """The characteristic system of the field, solved: invariants, the
+        coordinates on the characteristics.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y", positive=True)
+        >>> c = _Characteristics(VectorField([x, 2 * y], [x, y]))
+        >>> c.k, c.invariants
+        (x, {y: y/x**2})
+        """
         self.field = field
         self.coordinates = list(field.coordinates)
         xi = dict(zip(self.coordinates, field.coefficients, strict=True))
@@ -134,7 +167,14 @@ class _Characteristics:  # pylint: disable=too-few-public-methods
 
     def _solve(self, z: Basic, rate: Expr) -> bool:
         """dz/dz_k = rate, with the solved coordinates substituted: an
-        invariant and z on the characteristics."""
+        invariant and z on the characteristics.
+
+        >>> from sympy import symbols
+        >>> x, y, u = symbols("x y u", positive=True)
+        >>> c = _Characteristics(VectorField([1, 0, u], [x, y, u]))
+        >>> c.invariants[u], c.on_curve[u].has(x)
+        (u*exp(-x), True)
+        """
         rate = rate.subs(self.on_curve)
         # coordinates with xi = 0 are constant on the characteristics
         others = (set(self.coordinates) - {z, self.k} - self.fixed) & rate.free_symbols
@@ -168,7 +208,14 @@ class _Characteristics:  # pylint: disable=too-few-public-methods
 def _solutions(ode: Eq, g: Expr) -> Iterator[list[Eq]]:
     """The solutions of ode by dsolve: by its default, then by each of the
     fast hints that apply (lie_group or the power series may not end, or
-    take all memory)."""
+    take all memory).
+
+    >>> from sympy import Derivative, Eq, Function, symbols
+    >>> x = symbols("x")
+    >>> f = Function("f")(x)
+    >>> next(_solutions(Eq(Derivative(f, x), f / x), f))
+    [Eq(f(x), C1*x)]
+    """
     hints: list[str] = ["default"]
     with suppress(NotImplementedError, ValueError, RecursionError):
         hints += [h for h in classify_ode(ode, g) if h in _FAST_HINTS]
@@ -235,13 +282,25 @@ def canonical_coordinates(
 
 def _generic(e: Expr) -> Expr:
     """e with every Piecewise replaced by its first case: generic values of
-    the parameters (A**2*B**2 != 0)."""
+    the parameters (A**2*B**2 != 0).
+
+    >>> from sympy import Piecewise, Ne, symbols
+    >>> x, a = symbols("x a")
+    >>> _generic(Piecewise((x / a, Ne(a, 0)), (x, True)))
+    x/a
+    """
     return e.replace(lambda a: isinstance(a, Piecewise), lambda a: a.args[0].expr)
 
 
 def _cases(e: Expr) -> list[Expr]:
     """e for generic parameters, then with each case of an outer Piecewise
-    (asin, or -I*acosh where its argument exceeds 1)."""
+    (asin, or -I*acosh where its argument exceeds 1).
+
+    >>> from sympy import Piecewise, symbols
+    >>> x = symbols("x")
+    >>> _cases(Piecewise((x, x > 1), (-x, True)) + 1)
+    [x + 1, 1 - x]
+    """
     pieces = [a for a in e.atoms(Piecewise) if not any(a in b.args for b in e.atoms(Piecewise))]
     cases = [_generic(e)]
     for piece in pieces[:1]:
@@ -328,7 +387,16 @@ def _new_independent(
     candidates: Sequence[Expr], variables: Sequence[Symbol], functions: Sequence[Expr]
 ) -> tuple[list[Expr], Matrix]:
     """p of the candidates with independent total derivatives, those free of
-    the dependent functions first, and their Jacobian J_ij = D_i xi_j."""
+    the dependent functions first, and their Jacobian J_ij = D_i xi_j.
+
+    >>> from sympy import Function, symbols
+    >>> x, t = symbols("x t")
+    >>> u = Function("u")(x, t)
+    >>> _new_independent([u, t / x**2, x], [x, t], [u])
+    ([t/x**2, x], Matrix([
+    [-2*t/x**3, 1],
+    [   x**(-2), 0]]))
+    """
     choices = sorted(
         combinations(candidates, len(variables)),
         key=lambda chosen: sum(xi.has(*functions) for xi in chosen),

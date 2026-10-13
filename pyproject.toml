@@ -89,14 +89,14 @@ source-exclude = [
 # --------------------------------------------------------------------------
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tests", "README.md"]
+testpaths = ["tests", "README.md", "src/delierium"]
 filterwarnings = [
     # `from sympy import *` drags sympy's `test` runner into test modules
     "ignore:cannot collect 'test' because it is not a function:pytest.PytestCollectionWarning",
 ]
 addopts = [
     "-ra", "--strict-markers", "--strict-config", "--import-mode=importlib",
-    "--doctest-glob=README.md",
+    "--doctest-glob=README.md", "--doctest-modules",
     # the catalogue checks take over a minute (15 s with -n auto): run them
     # with `pytest -m slow`
     "-m", "not slow",
@@ -207,7 +207,8 @@ generated-members = ["sympy.*"]
 
 [tool.pylint.format]
 max-line-length = 100
-max-module-lines = 2000
+# every function and method has a doctest: the docstrings make the modules long
+max-module-lines = 2600
 
 [tool.pylint.basic]
 # single letters and short math names are fine here

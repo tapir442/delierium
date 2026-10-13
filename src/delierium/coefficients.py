@@ -116,6 +116,14 @@ class _FieldState:
     """
 
     def __init__(self) -> None:
+        """An empty field: no generators yet.
+
+        >>> from sympy import Rational, S, cos, sin, symbols
+        >>> x = symbols("x")
+        >>> state = _FieldState()
+        >>> state.keys, state.symbols
+        ({}, ())
+        """
         self.keys: dict[AtomKey, int] = {}  # (b, rest) -> L
         self.symbols: tuple = ()  # the generators as expressions, in field order
         self.field = FracField((Symbol("_delierium_dummy"),), ZZ)
@@ -131,17 +139,43 @@ class _FieldState:
 
     @staticmethod
     def generator(key: AtomKey, L: int) -> Expr:
+        """The generator b**(rest/L) of key = (b, rest).
+
+        >>> from sympy import Rational, S, cos, sin, symbols
+        >>> x = symbols("x")
+        >>> state = _FieldState()
+        >>> _FieldState.generator((x, S.One), 2)
+        sqrt(x)
+        """
         base, rest = key
         return Pow(base, rest / L)
 
     def element_of(self, key: AtomKey, c: Rational) -> FracElement:
-        """The atom b**(c*rest) as an element of the current field."""
+        """The atom b**(c*rest) as an element of the current field.
+
+        >>> from sympy import Rational, S, cos, sin, symbols
+        >>> x = symbols("x")
+        >>> state = _FieldState()
+        >>> state.extend([((x, S.One), Rational(1, 2))])
+        True
+        >>> state.element_of((x, S.One), Rational(3, 2)).as_expr()
+        x**(3/2)
+        """
         L = self.keys[key]
         g = self.field.gens[self.index[self.generator(key, L)]]
         return g ** int(c * L)
 
     def extend(self, atoms: Iterable[tuple[AtomKey, Rational]]) -> bool:
-        """Make every (key, c) in atoms representable; True if the field changed."""
+        """Make every (key, c) in atoms representable; True if the field changed.
+
+        >>> from sympy import Rational, S, cos, sin, symbols
+        >>> x = symbols("x")
+        >>> state = _FieldState()
+        >>> state.extend([((x, S.One), Rational(1, 2))]), state.symbols
+        (True, (sqrt(x),))
+        >>> state.extend([((x, S.One), 1)])  # x = sqrt(x)**2 is representable
+        False
+        """
         changed = False
         # in a fixed order: the order of the generators is the variable order
         # of the polynomial ring, and the cost of the gcds depends on it (a
@@ -161,7 +195,16 @@ class _FieldState:
         return changed
 
     def _rebuild(self) -> None:
-        """The generators, the field and the relations from self.keys."""
+        """The generators, the field and the relations from self.keys.
+
+        >>> from sympy import Rational, S, cos, sin, symbols
+        >>> x = symbols("x")
+        >>> state = _FieldState()
+        >>> state.keys[(x, S.One)] = 2
+        >>> state._rebuild()
+        >>> state.symbols, state.index
+        ((sqrt(x),), {sqrt(x): 0})
+        """
         self.symbols = tuple(self.generator(k, L) for k, L in self.keys.items())
         self.index = {g: i for i, g in enumerate(self.symbols)}
         self.field = FracField(self.symbols or (Symbol("_delierium_dummy"),), ZZ)
@@ -169,7 +212,17 @@ class _FieldState:
 
     def drop_generators(self, generators: Iterable[Expr]) -> None:
         """Remove generators replaced by others (a finer trigonometric base):
-        the elements that contain them are converted again when lifted."""
+        the elements that contain them are converted again when lifted.
+
+        >>> from sympy import Rational, S, cos, sin, symbols
+        >>> x = symbols("x")
+        >>> state = _FieldState()
+        >>> state.extend([((sin(x), S.One), 1), ((cos(x), S.One), 1)])
+        True
+        >>> state.drop_generators([sin(x)])
+        >>> state.symbols
+        (cos(x),)
+        """
         gone = {(g, S.One) for g in generators} & set(self.keys)
         if not gone:
             return
@@ -179,6 +232,17 @@ class _FieldState:
         self.dgen = {k: v for k, v in self.dgen.items() if (k[0], S.One) not in gone}
 
     def _relations(self) -> list[tuple[int, int, int]]:
+        """The pairs (cos, sin) and (cosh, sinh) among the generators:
+        (index of cos, index of sin, sign).
+
+        >>> from sympy import Rational, S, cos, sin, symbols
+        >>> x = symbols("x")
+        >>> state = _FieldState()
+        >>> state.extend([((sin(x), S.One), 1), ((cos(x), S.One), 1)])
+        True
+        >>> state.symbols, state._relations()
+        ((sin(x), cos(x)), [(1, 0, 1)])
+        """
         relations = []
         for g, i in self.index.items():
             for c, s, sign in ((cos, sin, 1), (cosh, sinh, -1)):
@@ -191,7 +255,16 @@ class _FieldState:
         cos**(2q + r) written as cos**r (1 - sign*sin**2)**q (unique: the
         relations are a Groebner basis, the pairs being disjoint): 0 iff f is.
         Directly on the terms: PolyElement.rem searches the leading term anew
-        for every step, quadratic in the number of terms (#61)."""
+        for every step, quadratic in the number of terms (#61).
+
+        >>> from sympy import Rational, S, cos, sin, symbols
+        >>> x = symbols("x")
+        >>> state = _FieldState()
+        >>> state.extend([((sin(x), S.One), 1), ((cos(x), S.One), 1)])
+        True
+        >>> state.reduce_numerator(state.field.from_expr(cos(x) ** 2 + sin(x) ** 2 - 1))
+        0
+        """
         numer = f.numer
         if not self.relations or f.field is not self.field:
             return numer
@@ -218,7 +291,11 @@ _current: ContextVar[_FieldState | None] = ContextVar("delierium_coefficient_fie
 
 
 def _state() -> _FieldState:
-    """The field of the running computation."""
+    """The field of the running computation.
+
+    >>> type(_state()).__name__
+    '_FieldState'
+    """
     return _current.get() or _default
 
 
@@ -250,7 +327,13 @@ def fresh_field() -> Iterator[None]:
 
 def _is_transcendental_atom(e: Basic) -> bool:
     """Symbols, E, pi and applied functions: no algebraic relation with
-    anything else the field contains."""
+    anything else the field contains.
+
+    >>> from sympy import Function, exp, sqrt, symbols
+    >>> x = symbols("x")
+    >>> [_is_transcendental_atom(e) for e in (x, Function("f")(x), exp(x), sqrt(2))]
+    [True, True, False, False]
+    """
     return (
         e.is_Symbol
         or e in (S.Exp1, S.Pi)
@@ -260,7 +343,17 @@ def _is_transcendental_atom(e: Basic) -> bool:
 
 
 def _atom_key(e: Basic) -> tuple[AtomKey, Rational]:
-    """(key, c) with e == b**(c*rest) for key == (b, rest), or _UnsupportedError."""
+    """(key, c) with e == b**(c*rest) for key == (b, rest), or _UnsupportedError.
+
+    >>> from sympy import Rational, exp, sqrt, symbols
+    >>> x, y, n = symbols("x y n")
+    >>> _atom_key(x ** Rational(3, 2)), _atom_key(exp(2 * x)), _atom_key(y**n)
+    (((x, 1), 3/2), ((E, x), 2), ((y, n), 1))
+    >>> _atom_key(sqrt(2))
+    Traceback (most recent call last):
+    ...
+    delierium.coefficients._UnsupportedError: sqrt(2)
+    """
     if isinstance(e, (Pow, ExpBase)):
         base, exp = e.as_base_exp()
         c, rest = exp.as_coeff_Mul(rational=True)
@@ -277,7 +370,13 @@ def _atom_key(e: Basic) -> tuple[AtomKey, Rational]:
 
 
 def _split_exponent(e: Basic) -> list[Expr] | None:
-    """b**(e1 + e2 + ...) as the factors b**e1, b**e2, ..., or None."""
+    """b**(e1 + e2 + ...) as the factors b**e1, b**e2, ..., or None.
+
+    >>> from sympy import symbols
+    >>> x, y, n = symbols("x y n")
+    >>> _split_exponent(y ** (n - 1)), _split_exponent(x**2)
+    ([1/y, y**n], None)
+    """
     if isinstance(e, (Pow, ExpBase)):
         base, exp = e.as_base_exp()
         if exp.is_Add:
@@ -286,6 +385,15 @@ def _split_exponent(e: Basic) -> list[Expr] | None:
 
 
 def _collect_atoms(e: Basic, atoms: set[tuple[AtomKey, Rational]]) -> None:
+    """Add the (key, c) of the atoms of e to atoms.
+
+    >>> from sympy import exp, sqrt, symbols
+    >>> x = symbols("x")
+    >>> atoms = set()
+    >>> _collect_atoms(x**2 * exp(3 * x) + sqrt(x), atoms)
+    >>> sorted(atoms, key=str)
+    [((E, x), 3), ((x, 1), 1), ((x, 1), 1/2)]
+    """
     if e.is_Rational:
         return
     factors = _split_exponent(e)
@@ -303,6 +411,15 @@ def _collect_atoms(e: Basic, atoms: set[tuple[AtomKey, Rational]]) -> None:
 
 
 def _convert(e: Basic, field: FracField) -> FracElement:  # pylint: disable=too-many-return-statements
+    """e as an element of field (whose generators it has).
+
+    >>> from sympy import symbols
+    >>> x = symbols("x")
+    >>> with fresh_field():
+    ...     field = _to_field(x).field
+    ...     _convert(x**2 / 2, field).as_expr()
+    x**2/2
+    """
     if e.is_Integer:
         return field(int(e))
     if e.is_Rational:
@@ -342,6 +459,13 @@ _QUOTIENTS: dict[Any, Callable[[Expr], Expr]] = {
 
 
 def _rational_gcd(a: Rational, b: Rational) -> Rational:
+    """The greatest common divisor of two rationals: the largest g with a/g
+    and b/g integers.
+
+    >>> from sympy import Rational
+    >>> _rational_gcd(Rational(2, 3), Rational(1, 2))
+    1/6
+    """
     return Rational(gcd(a.p * b.q, b.p * a.q), a.q * b.q)
 
 
@@ -351,7 +475,14 @@ def _trigonometric_normal(e: Expr) -> Expr:
     divisor of all multiples k of u the field has seen. So sin(2 x) and
     sin(x) cos(x) are in the same generators, related by cos**2 + sin**2 = 1,
     while sin(4 pi x) alone stays one generator. A finer g drops the old
-    generators from the field; elements containing them are converted again."""
+    generators from the field; elements containing them are converted again.
+
+    >>> from sympy import sin, symbols, tan
+    >>> x = symbols("x")
+    >>> with fresh_field():
+    ...     _trigonometric_normal(tan(x)), _trigonometric_normal(sin(2 * x) + sin(x))
+    (sin(x)/cos(x), 2*sin(x)*cos(x) + sin(x))
+    """
     e = e.replace(lambda f: type(f) in _QUOTIENTS, lambda f: _QUOTIENTS[type(f)](f.args[0]))
     state = _state()
     atoms = []
@@ -378,6 +509,14 @@ def _trigonometric_normal(e: Expr) -> Expr:
 def _prepare(e: Any) -> Expr:
     # b**(n - 1) -> b**n/b, exp(x + 1) -> E*exp(x), so that the field sees
     # the same generators whatever form the powers come in
+    """e for the field: floats as rationals, trigonometric functions in sin and
+    cos of common arguments, sums in exponents as products.
+
+    >>> from sympy import exp, symbols
+    >>> x, y, n = symbols("x y n")
+    >>> _prepare(0.25 * x), _prepare(exp(x + 1)), _prepare(y ** (n - 1))
+    (x/4, E*exp(x), y**(n - 1))
+    """
     e = sympify(e)
     # a float is taken for the simplest rational within its precision (0.1
     # -> 1/10, not the binary approximation; 1.66666666666667 -> 5/3): the
@@ -393,7 +532,14 @@ def _prepare(e: Any) -> Expr:
 
 @profile_if_enabled
 def _to_field(e: Expr) -> FracElement:
-    """e (prepared) as an element of the current field, or _UnsupportedError."""
+    """e (prepared) as an element of the current field, or _UnsupportedError.
+
+    >>> from sympy import exp, symbols
+    >>> x = symbols("x")
+    >>> with fresh_field():
+    ...     _to_field(x**2 + exp(x)).as_expr(), _state().symbols
+    (x**2 + exp(x), (exp(x), x))
+    """
     atoms: set[tuple[AtomKey, Rational]] = set()
     _collect_atoms(e, atoms)
     state = _state()
@@ -402,7 +548,16 @@ def _to_field(e: Expr) -> FracElement:
 
 
 def _lift(f: FracElement) -> FracElement:
-    """f as an element of the current field."""
+    """f as an element of the current field.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> with fresh_field():
+    ...     f = _to_field(x)
+    ...     _ = _to_field(y)  # the field grows
+    ...     _lift(f).field is _state().field, _lift(f).as_expr()
+    (True, x)
+    """
     field = _state().field
     if f.field is field:
         return f
@@ -432,6 +587,14 @@ class Coeff:
     _canonical: bool
 
     def __init__(self, e: "Coeff | Basic | int" = 0) -> None:
+        """e in the field, or as a SymPy expression if the field cannot represent
+        it (sqrt(2), I).
+
+        >>> from sympy import sqrt, symbols
+        >>> x = symbols("x")
+        >>> Coeff(x / (x**2 + x)).is_field, Coeff(sqrt(2) * x).is_field
+        (True, False)
+        """
         if isinstance(e, Coeff):
             self.f, self._expr, self._canonical = e.f, e._expr, e._canonical
             return
@@ -446,6 +609,13 @@ class Coeff:
 
     @classmethod
     def _new(cls, f: FracElement | None = None, expr: Expr | None = None) -> "Coeff":
+        """A Coeff from a field element or an expression, unchecked.
+
+        >>> from sympy import sqrt, symbols
+        >>> x = symbols("x")
+        >>> Coeff._new(expr=sqrt(2) * x).as_expr()
+        sqrt(2)*x
+        """
         new = object.__new__(cls)
         new.f = f
         new._expr = expr
@@ -453,7 +623,13 @@ class Coeff:
         return new
 
     def canonical(self) -> "Coeff":
-        """self, with an expression brought into canonical form."""
+        """self, with an expression brought into canonical form.
+
+        >>> from sympy import sqrt, symbols
+        >>> x = symbols("x")
+        >>> Coeff(sqrt(2) * (x + 1) ** 2 - sqrt(2) * x**2).canonical().as_expr()
+        2*sqrt(2)*x + sqrt(2)
+        """
         if not self._canonical:
             self._expr = cancel(self._expr)
             self._canonical = True
@@ -461,19 +637,51 @@ class Coeff:
 
     @property
     def is_field(self) -> bool:
+        """Whether the coefficient is an element of the field.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> a.is_field
+        True
+        """
         return self.f is not None
 
     def as_expr(self) -> Expr:
+        """The coefficient as a SymPy expression.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> a.as_expr()
+        1/(x + 1)
+        """
         if self._expr is None:
             self._expr = self.f.as_expr()
         return self._expr
 
     def _field_element(self) -> FracElement:
+        """The field element, lifted into the current field.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> a._field_element().as_expr()
+        1/(x + 1)
+        """
         f = self.f = _lift(self.f)
         return f
 
     def _common_field_elements(self, other: "Coeff") -> tuple[FracElement, FracElement]:
-        """self and other as elements of the same (current) field."""
+        """self and other as elements of the same (current) field.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> p, q = a._common_field_elements(b)
+        >>> p.field is q.field
+        True
+        """
         a = self._field_element()
         b = other._field_element()
         if a.field is not b.field:  # lifting b has grown the field
@@ -481,6 +689,15 @@ class Coeff:
         return a, b
 
     def _binary(self, other: CoeffLike, op: Callable[[Any, Any], Any]) -> "Coeff":
+        """op(self, other) in the field, or as expressions.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> import operator
+        >>> a._binary(b, operator.mul)
+        x/(x + 1)
+        """
         if not isinstance(other, Coeff):
             other = Coeff(other)
         if self.f is not None and other.f is not None:
@@ -488,35 +705,100 @@ class Coeff:
         return Coeff._new(expr=op(self.as_expr(), other.as_expr()))
 
     def __add__(self, other: CoeffLike) -> "Coeff":
+        """self + other.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> a + b
+        (x**2 + x + 1)/(x + 1)
+        """
         return self._binary(other, operator.add)
 
     __radd__ = __add__
 
     def __sub__(self, other: CoeffLike) -> "Coeff":
+        """self - other.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> a - b
+        (-x**2 - x + 1)/(x + 1)
+        """
         return self._binary(other, operator.sub)
 
     def __rsub__(self, other: CoeffLike) -> "Coeff":
+        """other - self.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> 1 - a
+        x/(x + 1)
+        """
         return self._binary(other, lambda a, b: b - a)
 
     def __mul__(self, other: CoeffLike) -> "Coeff":
+        """self * other.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> a * b
+        x/(x + 1)
+        """
         return self._binary(other, operator.mul)
 
     __rmul__ = __mul__
 
     def __truediv__(self, other: CoeffLike) -> "Coeff":
+        """self / other.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> a / b
+        1/(x**2 + x)
+        """
         return self._binary(other, operator.truediv)
 
     def __pow__(self, n: int) -> "Coeff":
+        """self**n.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> a**2
+        1/(x**2 + 2*x + 1)
+        """
         if self.f is not None:
             return Coeff._new(f=self._field_element() ** n)
         return Coeff._new(expr=self._expr**n)
 
     def __neg__(self) -> "Coeff":
+        """-self.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> -a
+        -1/(x + 1)
+        """
         if self.f is not None:
             return Coeff._new(f=-self.f)
         return Coeff._new(expr=-self._expr)
 
     def __bool__(self) -> bool:
+        """Whether the coefficient is nonzero (modulo cos**2 + sin**2 = 1).
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> from sympy import cos, sin
+        >>> bool(a), bool(Coeff(0)), bool(Coeff(cos(x) ** 2 + sin(x) ** 2 - 1))
+        (True, False, False)
+        """
         if self.f is not None:
             # zero modulo cos**2 + sin**2 - 1 is zero (#61): only here and in
             # comparisons, the arithmetic stays in the field (reducing every
@@ -525,6 +807,15 @@ class Coeff:
         return self.canonical()._expr != 0
 
     def __eq__(self, other: object) -> bool:
+        """Equality, exact also modulo cos**2 + sin**2 = 1; other may be an int or
+        an expression.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> a == Coeff(1 / (x + 1)), Coeff(1) == 1, a == b
+        (True, True, False)
+        """
         if not isinstance(other, Coeff):
             if isinstance(other, int) and self.f is not None:
                 f = self.f
@@ -543,21 +834,51 @@ class Coeff:
         return not self - other
 
     def __hash__(self) -> int:
+        """The hash of the canonical expression: equal coefficients, equal hashes.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> hash(a) == hash(Coeff(1 / (x + 1)))
+        True
+        """
         return hash(self.canonical().as_expr())
 
     def __str__(self) -> str:
+        """The coefficient printed as an expression.
+
+        >>> from sympy import symbols
+        >>> x = symbols("x")
+        >>> a, b = Coeff(x / (x**2 + x)), Coeff(x)
+        >>> str(a)
+        '1/(x + 1)'
+        """
         return str(self.as_expr())
 
     __repr__ = __str__
 
     @profile_if_enabled
     def diff(self, *variables: Basic) -> "Coeff":
+        """The derivative by the variables, one after the other.
+
+        >>> from sympy import exp, symbols
+        >>> x, y = symbols("x y")
+        >>> Coeff(x**2 * y).diff(x, y)
+        2*x
+        """
         result = self
         for v in variables:
             result = result._diff(v)
         return result
 
     def _diff(self, v: Basic) -> "Coeff":
+        """d/dv, in the field: the chain rule over the generators depending on v.
+
+        >>> from sympy import exp, symbols
+        >>> x = symbols("x")
+        >>> Coeff(x * exp(x))._diff(x)
+        x*exp(x) + exp(x)
+        """
         if self.f is None:
             return Coeff._new(expr=self._expr.diff(v))
         f = self._field_element()
@@ -589,6 +910,13 @@ class Coeff:
         return Coeff._new(f=result)
 
     def xreplace(self, rule: dict) -> Expr:
+        """The expression with the rule applied.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> Coeff(x * y).xreplace({x: 2})
+        2*y
+        """
         return self.as_expr().xreplace(rule)
 
 

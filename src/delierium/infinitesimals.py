@@ -129,6 +129,12 @@ def order(  # pylint: disable=unused-argument
     and the set of derivatives attaining that order.
 
     `dep` and `indep` must already be lists (see convert_to_iterable).
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> order(y.diff(x, 3) + y.diff(x) ** 2, [y], [x])
+    (3, {Derivative(y(x), (x, 3))})
     """
     max_order = 0
     max_deriv: set[Expr] = set()
@@ -635,7 +641,13 @@ def _real_and_imaginary_parts(coeffs: Iterable[Expr]) -> list[Expr]:
     """Each coefficient with I (from trigonometric functions written as
     exponentials) split into its real and imaginary part: the infinitesimals
     and the parameters are real. Not for equations with complex
-    coefficients (split_jet_coefficients)."""
+    coefficients (split_jet_coefficients).
+
+    >>> from sympy import I, symbols
+    >>> a, x = symbols("a x")
+    >>> _real_and_imaginary_parts([3 + 2 * I * a, x])
+    [3, 2*a, x]
+    """
     result = []
     for c in coeffs:
         # expand only where needed: the coefficients can be large
@@ -650,7 +662,14 @@ def _real_and_imaginary_parts(coeffs: Iterable[Expr]) -> list[Expr]:
 
 def _exp_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]]:
     """Replace the exponentials depending on the jet variables by powers of
-    new generators, one per family exp(k*a), k a positive integer."""
+    new generators, one per family exp(k*a), k a positive integer.
+
+    >>> from sympy import Symbol, exp, symbols
+    >>> a = symbols("a")
+    >>> e, (g,) = _exp_generators(exp(a) + exp(2 * a), [a])
+    >>> e.subs(g, Symbol("E"))
+    E**2 + E
+    """
     exps = sorted((e for e in expr.atoms(exp) if e.has(*jet)), key=default_sort_key)
     families: list[tuple[Expr, list[tuple[Expr, Rational]]]] = []  # (argument, [(exp, ratio)])
     for e in exps:
@@ -769,7 +788,13 @@ def _local_signs(expr: Expr) -> Expr:
 
 
 def convert_to_iterable(item: Variables) -> list[Any]:
-    """item as a list: a single variable becomes [item]."""
+    """item as a list: a single variable becomes [item].
+
+    >>> from sympy import symbols
+    >>> x, t = symbols("x t")
+    >>> convert_to_iterable(x), convert_to_iterable((x, t))
+    ([x], [x, t])
+    """
     return list(item) if isinstance(item, Iterable) else [item]
 
 
@@ -862,6 +887,19 @@ def _algebraic_in_highest_derivative(
     polynomial in h. As for equations polynomial in h (prem below), this is
     the condition for the whole equation, i.e. both signs of the root, not
     one branch. None if eq is not of this form.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> from sympy import Dummy, sqrt
+    >>> a, h = symbols("a"), Dummy("h")
+    >>> eq = a * x * sqrt(y.diff(x) ** 2 + 1) + x * y.diff(x) - y  # Kamke 1.558
+    >>> r = prolongation(eq, create_infinitesimals([y], [x]), [y], [x])
+    >>> condition = _algebraic_in_highest_derivative(eq.xreplace({y.diff(x): h}), r, y.diff(x), h)
+    >>> condition.has(sqrt(y.diff(x) ** 2 + 1))
+    False
+    >>> _algebraic_in_highest_derivative(h**2 + 1, r, y.diff(x), h) is None
+    True
     """
     roots = {
         p.base
@@ -902,7 +940,19 @@ def _on_lower_derivative(eq: Expr, r: Expr, dep: list[Expr], highest_term: Expr)
     """r on eq = 0 when eq cannot be solved for its highest derivative but is
     linear in a lower one, e.g. u_t + F(u_xx) = 0 for u_t (#84): that
     derivative and its derivatives in r are replaced by the solution and its
-    total derivatives. None if there is no such derivative."""
+    total derivatives. None if there is no such derivative.
+
+    >>> from sympy import Function, symbols
+    >>> x, t = symbols("x t")
+    >>> u = Function("u")(x, t)
+    >>> F = Function("F")
+    >>> eq = u.diff(t) + F(u.diff(x, 2))  # u_t = -F(u_xx), #84
+    >>> _on_lower_derivative(
+    ...     eq, u.diff(t, x) + u.diff(t), [u], u.diff(x, 2)
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    -F(Derivative(u(x, t), (x, 2))) - Derivative(F(Derivative(u(x, t), (x, 2))),
+    Derivative(u(x, t), (x, 2)))*Derivative(u(x, t), (x, 3))
+    """
     candidates = sorted(
         (d for d in eq.atoms(Derivative) if d != highest_term and d.expr in dep),
         key=lambda d: (-len(d.variables), default_sort_key(d)),
@@ -930,7 +980,14 @@ def _on_lower_derivative(eq: Expr, r: Expr, dep: list[Expr], highest_term: Expr)
 
 
 def _derivative_of(e: Derivative, d: Derivative) -> bool:
-    """e is d or one of its derivatives."""
+    """e is d or one of its derivatives.
+
+    >>> from sympy import Function, symbols
+    >>> x, t = symbols("x t")
+    >>> u = Function("u")(x, t)
+    >>> _derivative_of(u.diff(x, 2, t), u.diff(x)), _derivative_of(u.diff(t), u.diff(x))
+    (True, False)
+    """
     if e.expr != d.expr:
         return False
     rest = list(e.variables)
@@ -952,6 +1009,12 @@ def determining_condition(
     the determining equations (compute_overdetermined_system_of_infinitesimals).
 
     infinitesimals : dict{Function/Symbol : new name}
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> determining_condition(y.diff(x), y, x)  # y' = 0
+    Derivative(Y(y(x), x), x)
     """
     dep = convert_to_iterable(dep)
     indep = convert_to_iterable(indep)
@@ -1061,7 +1124,14 @@ def _determining_equations(
     eq: Expr, dependent: Variables, independent: Variables, infinitesimals: InfinitesimalNames
 ) -> list[Expr]:
     """The determining equations of the scalar equation eq, for
-    overdetermined_system_ode and overdetermined_system_pde."""
+    overdetermined_system_ode and overdetermined_system_pde.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> len(_determining_equations(y.diff(x, 2), y, x, None))
+    4
+    """
     _checked_arguments(eq, dependent, independent)
     result = compute_overdetermined_system_of_infinitesimals(
         eq, dependent, independent, infinitesimals=infinitesimals
@@ -1129,6 +1199,14 @@ def _ode_system_reduction(
     """Solve a system of ODEs for one leading derivative per equation and
     return the function that replaces every leading derivative, and every
     derivative of it, by its value on the solutions of the system.
+
+    >>> from sympy import Function, symbols
+    >>> t = symbols("t")
+    >>> x1, x2 = Function("x1")(t), Function("x2")(t)
+    >>> oscillator = [x1.diff(t) - x2, x2.diff(t) + x1]
+    >>> reduce = _ode_system_reduction(oscillator, [x1, x2], t)
+    >>> reduce(x1.diff(t, 2))
+    -x1(t)
     """
     rhs = _solved_form(eqs, dep, t)
 
@@ -1161,6 +1239,13 @@ def _solved_form(
     The leading derivative of an equation is one of its highest
     derivatives; different equations need leaders of different dependent
     variables, and every equation has to be linear in its leader.
+
+    >>> from sympy import Function, symbols
+    >>> t = symbols("t")
+    >>> x1, x2 = Function("x1")(t), Function("x2")(t)
+    >>> oscillator = [x1.diff(t) - x2, x2.diff(t) + x1]
+    >>> _solved_form(oscillator, [x1, x2], t)
+    {x1(t): (1, x2(t)), x2(t): (1, -x1(t))}
     """
     candidates = [sorted(order(eq, dep, [t])[1], key=default_sort_key) for eq in eqs]
     for leaders in product(*candidates):
@@ -1184,7 +1269,21 @@ def _check_termination(
     (by order, then by the dependent variable) in which every reducible
     derivative on the right-hand side of an equation is lower than its
     leader: then every replacement brings in lower derivatives only, also
-    after differentiation."""
+    after differentiation.
+
+    >>> from sympy import Function, symbols
+    >>> t = symbols("t")
+    >>> x1, x2 = Function("x1")(t), Function("x2")(t)
+    >>> oscillator = [x1.diff(t) - x2, x2.diff(t) + x1]
+    >>> from sympy import Derivative
+    >>> def reducible(e):
+    ...     return list(e.atoms(Derivative))
+    >>> _check_termination({x1: (1, x2), x2: (1, -x1)}, reducible)
+    >>> _check_termination({x1: (1, x2.diff(t)), x2: (1, x1.diff(t))}, reducible)
+    Traceback (most recent call last):
+    ...
+    NotImplementedError: the reduction of the system by its equations may not terminate
+    """
 
     def is_orderly_ranking(variables: Sequence[Expr]) -> bool:
         rank = {f: i for i, f in enumerate(variables)}
@@ -1248,6 +1347,13 @@ def _linear_system_ode(
     variable y(x) is replaced by the symbol H, so the infinitesimals become
     functions of (H, x). (After splitting, the determining equations no
     longer contain derivatives of y.)
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> system, functions, variables, H = _linear_system_ode(y.diff(x, 2), y, x)
+    >>> functions, variables, H
+    ([X(H, x), Y(H, x)], [x, H], H)
     """
     infinitesimals = create_infinitesimals([dependent], [independent], infinitesimals)
     overdetermined_system = overdetermined_system_ode(
@@ -1297,7 +1403,15 @@ def _checked_arguments(
     independent variables are distinct symbols, the dependent variables
     functions of them (y(x), not y), every equation (Eq(a, b) is a - b)
     contains a derivative of a dependent variable, only with respect to the
-    independent ones. ValueError otherwise."""
+    independent ones. ValueError otherwise.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> from sympy import Eq
+    >>> _checked_arguments(Eq(y.diff(x), y), y, x)
+    ([-y(x) + Derivative(y(x), x)], [y(x)], [x])
+    """
     eqs = [equations] if isinstance(equations, (Basic, int, float)) else list(equations)
     eqs = [e.lhs - e.rhs if isinstance(e, Equality) else sympify(e) for e in eqs]
     dep = convert_to_iterable(dependent)
@@ -1310,6 +1424,15 @@ def _checked_arguments(
 
 
 def _check_independent(indep: list[Any]) -> None:
+    """ValueError unless the independent variables are distinct symbols.
+
+    >>> from sympy import symbols
+    >>> x = symbols("x")
+    >>> _check_independent([x, x])
+    Traceback (most recent call last):
+    ...
+    ValueError: the independent variables [x, x] are not distinct
+    """
     if not indep:
         raise ValueError("no independent variables")
     for v in indep:
@@ -1320,6 +1443,16 @@ def _check_independent(indep: list[Any]) -> None:
 
 
 def _check_dependent(dep: list[Any], indep: list[Any]) -> None:
+    """ValueError unless the dependent variables are functions of the
+    independent ones.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> _check_dependent([y], [x])  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+    ...
+    ValueError: the dependent variable y is not a function of ...: write y(x)
+    """
     if not dep:
         raise ValueError("no dependent variables")
     for d in dep:
@@ -1337,6 +1470,18 @@ def _check_dependent(dep: list[Any], indep: list[Any]) -> None:
 
 
 def _check_equation(e: Expr, dep: list[Any], indep: list[Any]) -> None:
+    """ValueError unless e contains a derivative of a dependent variable by
+    independent ones.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> _check_equation(y.diff(x), [y], [x])
+    >>> _check_equation(y + 1, [y], [x])
+    Traceback (most recent call last):
+    ...
+    ValueError: y(x) + 1 contains no derivative of the dependent variables [y(x)]
+    """
     if e == 0:
         raise ValueError("an equation is 0")
     derivatives = [a for a in e.atoms(Derivative) if a.expr in dep]
@@ -1356,7 +1501,15 @@ def _determining_system(
 ) -> tuple[list[Expr], list[Expr], list[Basic]]:
     """(determining equations, infinitesimals, coordinates) of a scalar ODE,
     a system of ODEs or a scalar PDE, the dependent variables written as
-    plain symbols, the infinitesimals in the order of the coordinates."""
+    plain symbols, the infinitesimals in the order of the coordinates.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> system, functions, coordinates = _determining_system(y.diff(x, 2), y, x)
+    >>> len(system), functions, coordinates
+    (4, [X(y, x), Y(y, x)], [x, y])
+    """
     eqs, dep, indep = _checked_arguments(equations, dependent, independent)
     if len(indep) == 1:
         system, functions, variables, _ = _linear_system_odes(eqs, dep, indep)
@@ -1385,9 +1538,27 @@ class VerificationResult:
     assumptions: list[Expr] = field(default_factory=list)
 
     def __bool__(self) -> bool:
+        """Whether every residue vanishes: the generator is a symmetry.
+
+        >>> from sympy import Function, symbols
+        >>> x = symbols("x")
+        >>> y = Function("y")(x)
+        >>> translation, other = verify_symmetries(y.diff(x, 2), y, x, [(1, 0), (0, x**2)])
+        >>> bool(translation), bool(other)
+        (True, False)
+        """
         return all(r == 0 for r in self.residues)
 
     def nonzero_residues(self) -> list[Expr]:
+        """The residues that do not vanish.
+
+        >>> from sympy import Function, symbols
+        >>> x = symbols("x")
+        >>> y = Function("y")(x)
+        >>> (result,) = verify_symmetries(y.diff(x, 2), y, x, [(0, x**2)])
+        >>> result.nonzero_residues()
+        [2]
+        """
         return [r for r in self.residues if r != 0]
 
 
@@ -1424,7 +1595,14 @@ def verify_symmetries(
     generators: Iterable[Sequence[Any]],
 ) -> list[VerificationResult]:
     """verify_symmetry for several generators, computing the determining
-    equations once."""
+    equations once.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> [bool(r) for r in verify_symmetries(y.diff(x, 2), y, x, [(1, 0), (0, x**2)])]
+    [True, False]
+    """
     eqs = [equations] if isinstance(equations, Basic) else list(equations)
     dep = convert_to_iterable(dependent)
     indep = convert_to_iterable(independent)
@@ -1446,7 +1624,14 @@ def verify_symmetries(
 
 def _initials(eqs: list[Expr], dep: list[Basic], indep: list[Basic]) -> list[Expr]:
     """The coefficients of the highest derivatives of the equations that are
-    not constants: the determining equations divide by them."""
+    not constants: the determining equations divide by them.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> _initials([x * y.diff(x, 2) + y, y.diff(x) - 1], [y], [x])
+    [x]
+    """
     result = []
     for eq in eqs:
         eq = _exact_numbers(_canonical_derivatives_of(eq, dep))  # as determining_condition
@@ -1470,7 +1655,15 @@ def _simplified_residue(residue: Expr) -> Expr:
     symbol for b**s. simplify misses (u + mu)**2*(u + mu)**(nu - 1) -
     (u + mu)**(nu + 1); an identity in the symbols G holds for their values
     too. Last, where the variables and parameters are positive (bases of
-    powers taken positive): there the generator is a (local) symmetry."""
+    powers taken positive): there the generator is a (local) symmetry.
+
+    >>> from sympy import sqrt, symbols
+    >>> x, u, mu, nu = symbols("x u mu nu")
+    >>> _simplified_residue((u + mu) ** 2 * (u + mu) ** (nu - 1) - (u + mu) ** (nu + 1))
+    0
+    >>> _simplified_residue(sqrt(x**2) - x), _simplified_residue(x - 1)
+    (0, x - 1)
+    """
     residue = simplify(residue)
     if residue == 0:
         return residue
@@ -1494,7 +1687,16 @@ def _simplified_residue(residue: Expr) -> Expr:
 def _lambert_w_rewritten(expr: Expr) -> Expr:
     """expr with the identities of W = LambertW(z), W exp(W) = z (principal
     branch, z > 0): log(W) = log(z) - W, exp(W) = z/W, logarithms of
-    products expanded (positive arguments). Kamke 1.565 (#77)."""
+    products expanded (positive arguments). Kamke 1.565 (#77).
+
+    >>> from sympy import LambertW, exp, log, symbols
+    >>> x = symbols("x")
+    >>> (
+    ...     _lambert_w_rewritten(log(LambertW(x)) + LambertW(x) - log(x)),
+    ...     _lambert_w_rewritten(exp(LambertW(x))),
+    ... )
+    (0, x/LambertW(x))
+    """
     if not expr.has(LambertW):
         return expr
     expr = expand_log(expr, force=True)
@@ -1518,6 +1720,14 @@ def janet_basis_from_ode(  # pylint: disable=keyword-arg-before-vararg,unused-ar
     *args: object,
     **kw: object,
 ) -> LHDPList:
+    """The Janet basis of the determining equations of the ODE, in y(x).
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> len(janet_basis_from_ode(y.diff(x, 2), y, x))
+    6
+    """
     system, inf, r1, h_symbol = _linear_system_ode(ode, dependent, independent, infinitesimals)
     janet = JanetBasis(system, inf, r1, sort_order=sort_order)
     return _back_substituted(janet, {h_symbol: dependent}, sort_order)
@@ -1527,7 +1737,16 @@ def _back_substituted(
     janet: JanetBasis, back: Mapping[Basic, Basic], sort_order: WeightFunction
 ) -> LHDPList:
     """The elements of a Janet basis as LHDPs, with the symbols standing for
-    the dependent variables replaced back by them (back: symbol -> function)."""
+    the dependent variables replaced back by them (back: symbol -> function).
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> system, functions, variables, H = _linear_system_ode(y.diff(x, 2), y, x)
+    >>> basis = _back_substituted(JanetBasis(system, functions, variables), {H: y}, Mgrevlex)
+    >>> basis[-1]
+    D(Y(y(x), x), (x, 2))
+    """
 
     def back_substitute(e: Expr) -> Expr:
         return e.xreplace(back)
@@ -1570,6 +1789,14 @@ def _linear_system_odes(
     infinitesimals become functions of (t, x, y, ...). Infinitesimals and
     variables are ordered as for a single ODE: the independent variable
     first.
+
+    >>> from sympy import Function, symbols
+    >>> t = symbols("t")
+    >>> x1, x2 = Function("x1")(t), Function("x2")(t)
+    >>> oscillator = [x1.diff(t) - x2, x2.diff(t) + x1]
+    >>> system, functions, variables, to_symbol = _linear_system_odes(oscillator, [x1, x2], t)
+    >>> functions, variables
+    ([T(x1, x2, t), X1(x1, x2, t), X2(x1, x2, t)], [t, x1, x2])
     """
     dep = convert_to_iterable(dependent)
     indep = convert_to_iterable(independent)
@@ -1771,7 +1998,11 @@ def is_janet_basis_of_odes(
 def _ranked[T](
     ordering: Iterable[Any] | None, default: list[T], key: Callable[[Any], Any]
 ) -> list[T]:
-    """default, rearranged like ordering; the entries are matched by key."""
+    """default, rearranged like ordering; the entries are matched by key.
+
+    >>> _ranked(["b", "a"], [("a", 1), ("b", 2)], key=lambda z: z[0]), _ranked(None, [1], key=str)
+    ([('b', 2), ('a', 1)], [1])
+    """
     if ordering is None:
         return default
     by_key = {key(item): item for item in default}
