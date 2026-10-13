@@ -701,7 +701,8 @@ def _canonical_derivatives_of(expr: Expr, dep: Variables) -> Expr:
 
     Derivatives of expressions in the dependent variables, as in an equation
     in divergence form, are evaluated: (u**2 u_x)_x becomes
-    2 u u_x**2 + u**2 u_xx.
+    2 u u_x**2 + u**2 u_xx. So are derivatives of expressions without an
+    unknown function, as Derivative(0, x) after a parameter is set to 0.
 
     >>> from sympy import sin
     >>> x, t = Symbol('x'), Symbol('t')
@@ -712,7 +713,9 @@ def _canonical_derivatives_of(expr: Expr, dep: Variables) -> Expr:
     u(x, t)**2*Derivative(u(x, t), (x, 2)) + 2*u(x, t)*Derivative(u(x, t), x)**2
     """
     dep = convert_to_iterable(dep)
-    derivatives = [d for d in expr.atoms(Derivative) if d.expr.has(*dep)]
+    derivatives = [
+        d for d in expr.atoms(Derivative) if d.expr.has(*dep) or not d.expr.atoms(AppliedUndef)
+    ]
     return expr.xreplace({d: d.doit(simplify=False) for d in derivatives})
 
 
