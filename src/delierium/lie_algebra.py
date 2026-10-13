@@ -84,13 +84,27 @@ class VectorField:
     """
 
     def __init__(self, coefficients: Sequence[Any], coordinates: Sequence[Symbol]) -> None:
+        """The coefficients, one per coordinate.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> VectorField([-y, x], [x, y]).coefficients
+        (-y, x)
+        """
         if len(coefficients) != len(coordinates):
             raise ValueError("one coefficient per coordinate")
         self.coefficients = tuple(sympify(c) for c in coefficients)
         self.coordinates = tuple(coordinates)
 
     def __call__(self, f: Any) -> Expr:
-        """X applied to the function f of the coordinates."""
+        """X applied to the function f of the coordinates.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> X = VectorField([-y, x], [x, y])
+        >>> X(x**2 + y**2), X(x)
+        (0, -y)
+        """
         f = sympify(f)
         return sum(
             (c * f.diff(z) for c, z in zip(self.coefficients, self.coordinates, strict=True)),
@@ -115,9 +129,23 @@ class VectorField:
         )
 
     def is_zero(self) -> bool:
+        """Whether all coefficients vanish.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> VectorField([0, x - x], [x, y]).is_zero(), VectorField([1, 0], [x, y]).is_zero()
+        (True, False)
+        """
         return all(simplify(c) == 0 for c in self.coefficients)
 
     def __repr__(self) -> str:
+        """The field as a sum of c*D(z).
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> VectorField([-y, 1], [x, y]), VectorField([0, 0], [x, y])
+        (-y*D(x) + D(y), 0)
+        """
         terms = [
             f"{'' if c == 1 else ('-' if c == -1 else f'{c}*')}D({z})"
             for c, z in zip(self.coefficients, self.coordinates, strict=True)
@@ -153,10 +181,26 @@ class _RationalAtPoints:
     """
 
     def __init__(self, coordinates: Sequence[Symbol]) -> None:
+        """No new symbols yet.
+
+        >>> from sympy import exp, sin, symbols
+        >>> x, a = symbols("x a")
+        >>> r = _RationalAtPoints([x])
+        >>> r.coordinates, r.symbols
+        ({x}, {})
+        """
         self.coordinates = set(coordinates)
         self.symbols: dict[tuple[Any, ...], Symbol] = {}
 
     def symbol(self, *key: Any) -> Symbol:
+        """The new symbol for key, the same one for the same key.
+
+        >>> from sympy import exp, sin, symbols
+        >>> x, a = symbols("x a")
+        >>> r = _RationalAtPoints([x])
+        >>> r.symbol("t", x), r.symbol("t", x) is r.symbol("t", x)
+        (_t_x, True)
+        """
         if key not in self.symbols:
             self.symbols[key] = Dummy("_".join(map(str, key)))
         return self.symbols[key]
@@ -164,7 +208,14 @@ class _RationalAtPoints:
     def split(self, q: Expr) -> tuple[Expr, Expr, Expr] | None:
         """(k, c, m) with q = k + c m, k a number, c an integer, m free of
         the coordinates and with a positive leading coefficient (so that
-        x**(1 - a) and x**(2 - a) share the symbol of x**a), or None."""
+        x**(1 - a) and x**(2 - a) share the symbol of x**a), or None.
+
+        >>> from sympy import exp, sin, symbols
+        >>> x, a = symbols("x a")
+        >>> r = _RationalAtPoints([x])
+        >>> r.split(1 + 2 * a), r.split(1 - a), r.split(x + 1)
+        ((1, 2, a), (1, -1, a), None)
+        """
         k, rest = q.as_coeff_Add()
         c, m = rest.as_coeff_Mul()
         if not c.is_Integer or m.is_Number or m.free_symbols & self.coordinates:
@@ -174,6 +225,15 @@ class _RationalAtPoints:
         return k, c, m
 
     def __call__(self, e: Expr) -> Expr:
+        """e with sin, cos, exp and powers of the coordinates rational in new
+        symbols: sin(x) by tan(x/2), exp(q x) by a power of exp(x).
+
+        >>> from sympy import exp, sin, symbols
+        >>> x, a = symbols("x a")
+        >>> r = _RationalAtPoints([x])
+        >>> r(exp(2 * x) + sin(x))
+        2*_t_x/(_t_x**2 + 1) + _w_x_1**2
+        """
         if not e.has(TrigonometricFunction, HyperbolicFunction, exp_, Pow):
             return e
         e = e.replace(lambda f: isinstance(f, HyperbolicFunction), lambda f: f.rewrite(exp_))
@@ -200,7 +260,14 @@ class _RationalAtPoints:
         return e
 
     def _exponent_of(self, g: Expr, z: Symbol) -> Expr | None:
-        """q for g = exp(q z), q an integer or k + c m, else None."""
+        """q for g = exp(q z), q an integer or k + c m, else None.
+
+        >>> from sympy import exp, sin, symbols
+        >>> x, a = symbols("x a")
+        >>> r = _RationalAtPoints([x])
+        >>> r._exponent_of(exp(3 * x), x), r._exponent_of(exp(x**2), x)
+        (3, None)
+        """
         if not isinstance(g, exp_):
             return None
         q = g.args[0] / z
@@ -209,6 +276,14 @@ class _RationalAtPoints:
         return q
 
     def _exponential(self, g: Expr, z: Symbol) -> Expr:
+        """exp(q z) as a power of a new symbol (times exp(k z)).
+
+        >>> from sympy import exp, sin, symbols
+        >>> x, a = symbols("x a")
+        >>> r = _RationalAtPoints([x])
+        >>> r._exponential(exp(3 * x), x), r._exponential(exp((1 + a) * x), x)
+        (_w_x_1**3, _w_x_a*exp(x))
+        """
         q = self._exponent_of(g, z)
         assert q is not None
         if q.is_Integer:
@@ -217,6 +292,14 @@ class _RationalAtPoints:
         return exp_(k * z) * self.symbol("w", z, m) ** c
 
     def _power(self, g: Expr, z: Symbol) -> Expr:
+        """z**(k + c m) as z**k times a power of a new symbol.
+
+        >>> from sympy import exp, sin, symbols
+        >>> x, a = symbols("x a")
+        >>> r = _RationalAtPoints([x])
+        >>> r._power(x ** (1 + a), x)
+        _p_x_a*x
+        """
         k, c, m = self.split(g.exp)  # type: ignore[misc]
         return z**k * self.symbol("p", z, m) ** c
 
@@ -247,6 +330,14 @@ class LieAlgebra:
     """
 
     def __init__(self, generators: Sequence[Any], coordinates: Sequence[Symbol]) -> None:
+        """The generators as VectorFields, the basis symbols X1, X2, ...
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.dimension, aff.basis_symbols
+        (2, [X1, X2])
+        """
         self.coordinates = tuple(coordinates)
         self.generators = [
             g if isinstance(g, VectorField) else VectorField(g, self.coordinates)
@@ -366,7 +457,14 @@ class LieAlgebra:
     def structure_constants(self) -> list[list[list[Expr]]]:
         """c[i][j][k] with [X_i, X_j] = sum_k c[i][j][k] X_k; NotClosedError
         if a commutator is not a constant linear combination of the
-        generators."""
+        generators.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.structure_constants
+        [[[0, 0], [1, 0]], [[-1, 0], [0, 0]]]
+        """
         r = self.dimension
         c: list[list[list[Expr]]] = [[[sympify(0)] * r for _ in range(r)] for _ in range(r)]
         for i in range(r):
@@ -383,7 +481,14 @@ class LieAlgebra:
 
         The identity v = sum_k a_k X_k at random points of the coordinates
         determines the a_k (the X_k being independent); the result is
-        verified exactly on the vector fields."""
+        verified exactly on the vector fields.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff._coordinates_of(VectorField([-1, 0], [x, y]))
+        [-1, 0]
+        """
         r = self.dimension
         if r == 0 or v.is_zero():
             return [sympify(0)] * r
@@ -401,7 +506,14 @@ class LieAlgebra:
         transcendental numbers left at the points (sin(a*5/3), exp(3*a/2),
         ...) are replaced by new symbols, so that the linear algebra is over
         rational functions (fast); a relation between them that this loses
-        can only make a solution fail the exact check."""
+        can only make a solution fail the exact check.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff._solve_at_points(VectorField([2 * x, 2 * y], [x, y]), exact=True)
+        [0, 2]
+        """
         r, n = self.dimension, len(self.coordinates)
         coefficients = [
             [*(g.coefficients[m] for g in self.generators), v.coefficients[m]] for m in range(n)
@@ -438,6 +550,15 @@ class LieAlgebra:
         return [e.xreplace(back) for e in a]
 
     def _is_combination(self, v: VectorField, a: Sequence[Expr]) -> bool:
+        """Whether v = sum_k a_k X_k exactly.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> v = VectorField([-1, 0], [x, y])
+        >>> aff._is_combination(v, [-1, 0]), aff._is_combination(v, [1, 0])
+        (True, False)
+        """
         return all(
             simplify(
                 v.coefficients[m]
@@ -448,12 +569,29 @@ class LieAlgebra:
         )
 
     def commutator_table(self) -> Matrix:
-        """[X_i, X_j] in terms of the basis symbols X1, X2, ..."""
+        """[X_i, X_j] in terms of the basis symbols X1, X2, ...
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.commutator_table()
+        Matrix([
+        [  0, X1],
+        [-X1,  0]])
+        """
         r, c, X = self.dimension, self.structure_constants, self.basis_symbols
         return Matrix(r, r, lambda i, j: sum((c[i][j][k] * X[k] for k in range(r)), sympify(0)))
 
     def _span_of_brackets(self, left: Matrix, right: Matrix) -> Matrix:
-        """A basis (rows, coordinates in X_1..X_r) of [span(left), span(right)]."""
+        """A basis (rows, coordinates in X_1..X_r) of [span(left), span(right)].
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> from sympy import eye
+        >>> aff._span_of_brackets(eye(2), eye(2))
+        Matrix([[1, 0]])
+        """
         r, c = self.dimension, self.structure_constants
         vectors = [
             [sum(u[i] * w[j] * c[i][j][k] for i in range(r) for j in range(r)) for k in range(r)]
@@ -463,7 +601,14 @@ class LieAlgebra:
         return _row_basis(vectors, r)
 
     def derived_series(self) -> list[int]:
-        """Dimensions of g, [g, g], [[g, g], [g, g]], ... until it is stable."""
+        """Dimensions of g, [g, g], [[g, g], [g, g]], ... until it is stable.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.derived_series()
+        [2, 1, 0]
+        """
         current = Matrix.eye(self.dimension) if self.dimension else zeros(0, 0)
         dims = [self.dimension]
         while current.rows:
@@ -475,7 +620,14 @@ class LieAlgebra:
         return dims
 
     def lower_central_series(self) -> list[int]:
-        """Dimensions of g, [g, g], [g, [g, g]], ... until it is stable."""
+        """Dimensions of g, [g, g], [g, [g, g]], ... until it is stable.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.lower_central_series()
+        [2, 1]
+        """
         g = Matrix.eye(self.dimension) if self.dimension else zeros(0, 0)
         current = g
         dims = [self.dimension]
@@ -488,17 +640,52 @@ class LieAlgebra:
         return dims
 
     def is_abelian(self) -> bool:
+        """Whether all commutators vanish.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.is_abelian(), LieAlgebra([[1, 0], [0, 1]], [x, y]).is_abelian()
+        (False, True)
+        """
         return all(e == 0 for e in self.commutator_table())
 
     def is_solvable(self) -> bool:
+        """Whether the derived series ends in 0.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.is_solvable()
+        True
+        """
         return self.derived_series()[-1] == 0
 
     def is_nilpotent(self) -> bool:
+        """Whether the lower central series ends in 0.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.is_nilpotent()
+        False
+        """
         return self.lower_central_series()[-1] == 0
 
     def center(self) -> Matrix:
         """A basis (rows, in X_1..X_r) of the center: the a with
-        sum_i a_i c_ij^k = 0 for all j, k."""
+        sum_i a_i c_ij^k = 0 for all j, k.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.center()
+        Matrix(0, 2, [])
+        >>> LieAlgebra([[1, 0], [0, 1]], [x, y]).center()
+        Matrix([
+        [1, 0],
+        [0, 1]])
+        """
         r, c = self.dimension, self.structure_constants
         conditions = Matrix([[c[i][j][k] for i in range(r)] for j in range(r) for k in range(r)])
         if not r:
@@ -509,7 +696,16 @@ class LieAlgebra:
         return Matrix([list(v) for v in null]) if null else zeros(0, r)
 
     def killing_form(self) -> Matrix:
-        """K_ij = trace(ad X_i ad X_j), (ad X_i)_kj = c_ij^k."""
+        """K_ij = trace(ad X_i ad X_j), (ad X_i)_kj = c_ij^k.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.killing_form()
+        Matrix([
+        [0, 0],
+        [0, 1]])
+        """
         r, c = self.dimension, self.structure_constants
         ad = [Matrix(r, r, lambda k, j, i=i: c[i][j][k]) for i in range(r)]
         return Matrix(r, r, lambda i, j: cancel((ad[i] * ad[j]).trace()))
@@ -532,7 +728,14 @@ class LieAlgebra:
         return lie_algebra_type(self)
 
     def is_semisimple(self) -> bool:
-        """Cartan's criterion: the Killing form is nondegenerate."""
+        """Cartan's criterion: the Killing form is nondegenerate.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> aff = LieAlgebra([[1, 0], [x, y]], [x, y])  # d/dx, x d/dx + y d/dy
+        >>> aff.is_semisimple()
+        False
+        """
         return self.dimension > 0 and simplify(self.killing_form().det()) != 0
 
 
@@ -540,7 +743,14 @@ def _derivative_key(
     e: Expr, functions: list[Expr], coordinates: list[Symbol]
 ) -> tuple[int, tuple[int, ...]]:
     """(index of the function, multi-index over the coordinates) of a
-    derivative of one of the functions, or of the function itself."""
+    derivative of one of the functions, or of the function itself.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> f = Function("f")(x, y)
+    >>> _derivative_key(f.diff(x, 2, y), [f], [x, y]), _derivative_key(f, [f], [x, y])
+    ((0, (2, 1)), (0, (0, 0)))
+    """
     if isinstance(e, Derivative):
         counts = dict(e.variable_count)
         return functions.index(e.expr), tuple(int(counts.get(z, 0)) for z in coordinates)
@@ -552,7 +762,17 @@ def _normal_forms(
 ) -> dict[tuple[int, tuple[int, ...]], list[Expr]]:
     """For each unknown function a and multi-index alpha in indices: the
     coefficients of the normal form of d^alpha f_a modulo janet in the
-    parametric derivatives (whose keys are keys)."""
+    parametric derivatives (whose keys are keys).
+
+    >>> from sympy import Function, symbols
+    >>> from delierium import JanetBasis
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+    >>> forms = _normal_forms(janet, [(0, (0, 0))], [(0, 0), (1, 0), (2, 0)])
+    >>> forms
+    {(0, (0, 0)): [1], (0, (1, 0)): [x], (0, (2, 0)): [x**2 + 1]}
+    """
     functions, coordinates = list(janet.context.dependent), list(janet.context.independent)
     t = [Dummy(f"t{k}") for k in range(len(keys))]
     result = {}
@@ -577,7 +797,19 @@ def _jets_at_point(
     """normal_forms at point, or else at the first point with small
     coordinates (integers first, then fractions: sin(4*pi*x) vanishes at
     every integer x) where they are finite and the factors the Janet basis
-    assumes nonzero do not vanish."""
+    assumes nonzero do not vanish.
+
+    >>> from sympy import Function, symbols
+    >>> from delierium import JanetBasis
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+    >>> forms = _normal_forms(janet, [(0, (0, 0))], [(0, 0), (1, 0), (2, 0)])
+    >>> _jets_at_point(forms, [x, y], [], None)
+    {(0, (0, 0)): [1], (0, (1, 0)): [0], (0, (2, 0)): [1]}
+    >>> _jets_at_point(forms, [x, y], [x], None)
+    {(0, (0, 0)): [1], (0, (1, 0)): [1], (0, (2, 0)): [2]}
+    """
     if point is not None:
         candidates: Iterable[tuple[Any, ...]] = [tuple(point)]
     else:
@@ -604,12 +836,30 @@ def _jets_at_point(
 
 
 def _vanishes_or_pole(f: Expr, at: dict[Symbol, Expr]) -> bool:
+    """Whether f vanishes or has a pole at the point.
+
+    >>> from sympy import symbols
+    >>> x = symbols("x")
+    >>> (
+    ...     _vanishes_or_pole(1 / x, {x: 0}),
+    ...     _vanishes_or_pole(x, {x: 0}),
+    ...     _vanishes_or_pole(x - 1, {x: 2}),
+    ... )
+    (True, True, False)
+    """
     value = f.subs(at)
     value = value if value.is_number else cancel(value)
     return value == 0 or value.has(zoo, nan, oo)
 
 
 def _row_basis(vectors: list[list[Expr]], r: int) -> Matrix:
+    """A basis of the span of the vectors (rows in reduced echelon form).
+
+    >>> _row_basis([[1, 2], [2, 4], [0, 1]], 2), _row_basis([], 2)
+    (Matrix([
+    [1, 0],
+    [0, 1]]), Matrix(0, 2, []))
+    """
     if not vectors:
         return zeros(0, r)
     reduced, pivots = Matrix(vectors).rref(simplify=True)
@@ -624,7 +874,13 @@ def _values_at_points(
     a pole (y = x for 1/(y - x)) are skipped. The variables are taken at
     perfect L-th powers, L the lcm of the denominators of the rational
     exponents: then u**(-4/3) and the like are rational there, not new
-    algebraic numbers."""
+    algebraic numbers.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> _values_at_points([[x, 1 / (x - y)]], [x, y], 2)
+    [[8/5, 10/11], [9/5, 5/3]]
+    """
     rng = random.Random(0)
     exponents = [
         e.exp

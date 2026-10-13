@@ -91,7 +91,13 @@ __all__ = [
 
 def _monomials(variables: Sequence[Basic], degree: int) -> list[Expr]:
     """The distinct products of at most degree of the variables; with
-    functions among them some coincide (sqrt(t)**2 = t, exp(t)*exp(-t) = 1)."""
+    functions among them some coincide (sqrt(t)**2 = t, exp(t)*exp(-t) = 1).
+
+    >>> from sympy import sqrt, symbols
+    >>> x, y = symbols("x y")
+    >>> _monomials([x, y], 2), _monomials([sqrt(x), x], 2)
+    ([1, x, y, x**2, x*y, y**2], [1, sqrt(x), x, x**(3/2), x**2])
+    """
     result: list[Expr] = [S.One]
     for d in range(1, degree + 1):
         for c in combinations_with_replacement(variables, d):
@@ -106,7 +112,14 @@ def _common_powers(e: Expr, variables: Sequence[Basic]) -> tuple[Expr, list[Symb
     and s symbolic, written as B**n * D**k with one new symbol D = B**u per
     base and family of commensurable s (s = k u, k an integer): SymPy merges
     B**2 * B**(c/a) into B**(2 + c/a), which would otherwise be a function
-    independent of B**(1 + c/a). The new symbols."""
+    independent of B**(1 + c/a). The new symbols.
+
+    >>> from sympy import symbols
+    >>> x, a = symbols("x a")
+    >>> e, (d,) = _common_powers(x ** (2 + a) + x ** (1 + a), [x])
+    >>> e.subs(d, x**a)
+    x**2*x**a + x*x**a
+    """
     families: dict[tuple[Basic, Expr], list[tuple[Pow, Expr, Expr]]] = {}
     for a in e.atoms(Pow):
         if a.exp.is_Rational or not a.base.has(*variables):
@@ -135,7 +148,14 @@ def _common_exponentials(
 ) -> tuple[Expr, list[Symbol]]:
     """e with the exponentials exp(q*v), q symbolic (exp(a*x)), written as
     D**k with one new symbol D = exp(u*v) per family of commensurable q
-    (q = k u, k an integer). The new symbols."""
+    (q = k u, k an integer). The new symbols.
+
+    >>> from sympy import exp, symbols
+    >>> x, a = symbols("x a")
+    >>> e, (d,) = _common_exponentials(exp(a * x) + exp(2 * a * x), x, [x])
+    >>> e.subs(d, symbols("D"))
+    D**2 + D
+    """
     families: dict[Expr, list[tuple[exp, Expr]]] = {}
     for a in e.atoms(exp):
         q = cancel(a.args[0] / v)
@@ -164,7 +184,15 @@ def _identity_coefficients(
     powers of exp(v), so that they are not taken as independent. Treating
     related functions (log(v), u**a) as independent can only give more
     conditions, so the solutions remain solutions. Where e is no
-    polynomial in them, its values at random points."""
+    polynomial in them, its values at random points.
+
+    >>> from sympy import exp, symbols
+    >>> x, a, b = symbols("x a b")
+    >>> _identity_coefficients(a * x**2 + b * x + a - b, [x], [a, b])
+    ([a, b, a - b], 'split')
+    >>> _identity_coefficients(a * exp(x) + b * exp(2 * x), [x], [a, b])
+    ([b, a], 'split')
+    """
     e = sympify(expand_power_exp(expand(e)))
     # functions of the coordinates that are no unknowns (an arbitrary f(x) of
     # the equation, its derivatives) first, so that v = s**L does not reach
@@ -226,7 +254,13 @@ def _identity_coefficients(
 
 
 def _tracer(trace: bool | int) -> Callable[..., None]:
-    """A function printing its arguments if trace is at least its level."""
+    """A function printing its arguments if trace is at least its level.
+
+    >>> out = _tracer(1)
+    >>> out("shown")
+    shown
+    >>> out("only with trace=2", 2)
+    """
     level = int(trace)
 
     def out(message: str, at: int = 1) -> None:
@@ -385,7 +419,15 @@ def candidate_functions(
     which integrates 1/v), log(v), exp(c v), sin, cos; with exp(a v) in the
     system, a symbolic, also [exp(a v), exp(-a v)]. Denominators are cleared in the
     determining equations: 1/v shows as a power of v in some terms of an
-    equation but not in others."""
+    equation but not in others.
+
+    >>> from sympy import exp, symbols
+    >>> x, a = symbols("x a")
+    >>> candidate_functions([x])
+    [[log(x)], [sqrt(x), 1/x], [exp(x), exp(-x)], [sin(x), cos(x)]]
+    >>> candidate_functions([x], [exp(a * x)])[0]
+    [exp(a*x), exp(-a*x)]
+    """
     families: list[tuple[int, list[Expr]]] = []
     atoms: set[Basic] = set().union(*(e.atoms(Pow, log, exp, sin, cos) for e in system))
     for v in coordinates:
@@ -418,7 +460,14 @@ def candidate_functions(
 
 def _divides_unevenly(v: Basic, system: Sequence[Expr]) -> bool:
     """Whether in an equation of the system v divides some terms but not all:
-    the equation divided by v has a pole at v = 0."""
+    the equation divided by v has a pole at v = 0.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> _divides_unevenly(x, [x * X + 1]), _divides_unevenly(x, [x * X + x])
+    (True, False)
+    """
     for e in system:
         powers = set()
         for term in Add.make_args(expand(e)):
@@ -436,6 +485,14 @@ def _divides_unevenly(v: Basic, system: Sequence[Expr]) -> bool:
 def _satisfies(
     system: Sequence[Expr], infinitesimals: Sequence[Expr], generator: Sequence[Expr]
 ) -> bool:
+    """Whether the generator (one component per infinitesimal) solves the system.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> _satisfies([X.diff(x, 2)], [X], [1 + x]), _satisfies([X.diff(x, 2)], [X], [x**2])
+    (True, False)
+    """
     substitution = {
         f.func: Lambda(f.args, c) for f, c in zip(infinitesimals, generator, strict=True)
     }
@@ -458,7 +515,16 @@ def _search(  # pylint: disable=too-many-arguments,too-many-positional-arguments
     up to max_degree, until dimension many are found. Without functions
     given, monomials first, then the families of candidate_functions one by
     one (those the system points to first, each with increasing degree),
-    and finally those that helped, together."""
+    and finally those that helped, together.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> def attempt(degree, extra):
+    ...     return ansatz_generators([X.diff(x, 2)], [X], [x], degree, extra)
+    >>> _search(attempt, [X.diff(x, 2)], [x], 2, 3, None, False)
+    [(1,), (x,)]
+    """
     out = _tracer(trace)
     found: list[tuple[Expr, ...]] = []
     extra = list(functions) if functions is not None else []
@@ -486,7 +552,16 @@ def _search_functions(  # pylint: disable=too-many-arguments,too-many-positional
     trace: bool | int,
 ) -> list[tuple[Expr, ...]]:
     """The families of candidate_functions one by one, each with increasing
-    degree, then those that helped together."""
+    degree, then those that helped together.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> def attempt(degree, extra):
+    ...     return ansatz_generators([X.diff(x) - X], [X], [x], degree, extra)
+    >>> _search_functions(attempt, [X.diff(x) - X], [x], 1, 1, [], False)
+    [(exp(x),)]
+    """
     out = _tracer(trace)
     helpful: list[Expr] = []
     for family in candidate_functions(coordinates, system):
@@ -531,12 +606,26 @@ class _Names:
     c1, c2, ..., not used in the system."""
 
     def __init__(self, system: Sequence[Expr]) -> None:
+        """The names already used in the system.
+
+        >>> from sympy import Function, Symbol, symbols
+        >>> x = symbols("x")
+        >>> sorted(_Names([Function("F1")(x) + Symbol("c1")]).used)
+        ['F1', 'c1', 'x']
+        """
         self.used = {str(s) for e in system for s in e.free_symbols} | {
             a.func.__name__ for e in system for a in e.atoms(AppliedUndef)
         }
         self.count = 0
 
     def fresh(self, prefix: str) -> str:
+        """A new name: prefix and a number, not used before.
+
+        >>> from sympy import Function, Symbol, symbols
+        >>> names = _Names([Function("F1")(symbols("x")) + Symbol("c1")])
+        >>> names.fresh("F"), names.fresh("c"), names.fresh("F")
+        ('F2', 'c3', 'F4')
+        """
         while True:
             self.count += 1
             name = f"{prefix}{self.count}"
@@ -551,7 +640,19 @@ def _one_term(
     """(g, orders) if e is c * (a derivative of the unknown g) with c free of
     the unknowns (functions and constants: c3 * g' = 0 does not give g' = 0),
     orders the derivative's order per variable (empty for g itself); None
-    otherwise."""
+    otherwise.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> c1 = symbols("c1")
+    >>> (
+    ...     _one_term(3 * X.diff(x, 2), [X]),
+    ...     _one_term(X.diff(x) + X, [X]),
+    ...     _one_term(c1 * X, [X], [c1]),
+    ... )
+    ((X(x), {x: 2}), None, None)
+    """
     terms = Add.make_args(expand(e))
     if len(terms) != 1 or terms[0].has(*constants):
         return None
@@ -574,7 +675,15 @@ def _integration(
 ) -> tuple[Expr, list[Expr]]:
     """The general solution of d^orders g = 0: the sum over the variables v
     of polynomials of degree < orders[v] in v with coefficients new functions
-    of the other arguments of g (constants if there are none)."""
+    of the other arguments of g (constants if there are none).
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> Y = Function("Y")(x, y)
+    >>> state = SolverState([Y.diff(x, 2)], [Y], [x, y])
+    >>> _integration(Y, {x: 2}, state)
+    (x*F2(y) + F1(y), [F1(y), F2(y)])
+    """
     args = list(g.args)
     new: list[Expr] = []
     solution: Expr = S.Zero
@@ -590,7 +699,16 @@ def _integration(
 def _split_free(e: Expr, functions: Sequence[Expr], coordinates: Sequence[Basic]) -> list[Expr]:
     """e = 0 split by the coordinates none of its unknowns depends on (as
     polynomial coefficients, functions of them taken as independent); [e]
-    if it cannot be split."""
+    if it cannot be split.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> Y = Function("Y")(x, y)
+    >>> state = SolverState([Y.diff(x, 2)], [Y], [x, y])
+    >>> G = Function("G")(x)
+    >>> _split_free(G * y + G.diff(x), [G], [x, y]), _split_free(x * Y + Y, [Y], [x, y])
+    ([G(x), Derivative(G(x), x)], [x*Y(x, y) + Y(x, y)])
+    """
     unknowns = [f for f in functions if e.has(f.func)]
     occurring = set()
     for a in e.atoms(AppliedUndef):
@@ -621,10 +739,25 @@ def _split_free(e: Expr, functions: Sequence[Expr], coordinates: Sequence[Basic]
 
 
 def _substitute(e: Expr, substitution: dict[Any, Lambda]) -> Expr:
+    """e with the substitution, its numerator expanded.
+
+    >>> from sympy import Function, Lambda, symbols
+    >>> x = symbols("x")
+    >>> X = Function("X")(x)
+    >>> _substitute(X.diff(x) / x, {X.func: Lambda(x, x**2)})
+    2
+    """
     return expand(numer(together(e.subs(substitution).doit())))
 
 
 def _cleaned(system: Sequence[Expr]) -> list[Expr]:
+    """The numerators of the equations, without zeros and duplicates (up to sign).
+
+    >>> from sympy import symbols
+    >>> x = symbols("x")
+    >>> _cleaned([2 * x, -2 * x, 0, x / (x + 1)])
+    [2*x, x]
+    """
     result: list[Expr] = []
     for e in system:
         e = expand(numer(together(e)))
@@ -638,7 +771,15 @@ def _ode_solution(
 ) -> tuple[Expr, Expr, list[Symbol]] | None:
     """(g, solution, new constants) if e is a linear ODE in a single unknown
     g of one variable (constants may occur) that a fast dsolve method
-    solves without integrals; None otherwise."""
+    solves without integrals; None otherwise.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> state = SolverState([X.diff(x) - X], [X], [x])
+    >>> _ode_solution(X.diff(x) - X, [X], state)
+    (X(x), c1*exp(x), [c1])
+    """
     present = [f for f in functions if e.has(f.func)]
     if len(present) != 1 or len(present[0].args) != 1:
         return None
@@ -699,6 +840,15 @@ class SolverState:  # pylint: disable=too-many-instance-attributes
         dimension: Any = oo,
         trace: bool | int = False,
     ) -> None:
+        """The system (cleaned), its unknowns and the infinitesimals in them.
+
+        >>> from sympy import Function, symbols
+        >>> x, y, a, b = symbols("x y a b")
+        >>> X = Function("X")(x)
+        >>> state = SolverState([X.diff(x, 2)], [X], [x], dimension=2)
+        >>> state.system, state.functions, state.generators
+        ([Derivative(X(x), (x, 2))], [X(x)], None)
+        """
         self.system: list[Expr] = _cleaned(system)
         self.functions: list[Expr] = list(infinitesimals)
         self.constants: list[Symbol] = []
@@ -712,26 +862,61 @@ class SolverState:  # pylint: disable=too-many-instance-attributes
         self._names = _Names(system)
 
     def log(self, message: str, level: int = 1) -> None:
-        """Record message (level 1) and print it if trace is at least level."""
+        """Record message (level 1) and print it if trace is at least level.
+
+        >>> from sympy import Function, symbols
+        >>> x, y, a, b = symbols("x y a b")
+        >>> X = Function("X")(x)
+        >>> state = SolverState([X.diff(x, 2)], [X], [x])
+        >>> state.log("a step")
+        >>> state.history
+        ['a step']
+        """
         if level <= 1:
             self.history.append(message)
         self._out(message, level)
 
     def fresh_function(self, arguments: Sequence[Basic]) -> Expr:
         """A new unknown function of arguments (a new constant if there are
-        none); substitute() adds it to the unknowns."""
+        none); substitute() adds it to the unknowns.
+
+        >>> from sympy import Function, symbols
+        >>> x, y, a, b = symbols("x y a b")
+        >>> X = Function("X")(x)
+        >>> state = SolverState([X.diff(x, 2)], [X], [x])
+        >>> state.fresh_function([x]), state.fresh_function([])
+        (F1(x), c2)
+        """
         if not arguments:
             return self.fresh_constant()
         return Function(self._names.fresh("F"))(*arguments)  # pylint: disable=not-callable
 
     def fresh_constant(self) -> Symbol:
+        """A new unknown constant.
+
+        >>> from sympy import Function, symbols
+        >>> x, y, a, b = symbols("x y a b")
+        >>> X = Function("X")(x)
+        >>> SolverState([X.diff(x, 2)], [X], [x]).fresh_constant()
+        c1
+        """
         return Symbol(self._names.fresh("c"))
 
     def substitute(self, unknown: Expr, solution: Expr, new: Sequence[Expr] = ()) -> None:
         """Replace the unknown (a function or a constant) by solution, an
         expression in the new unknowns new (from fresh_function,
         fresh_constant), in the equations and the infinitesimals; split the
-        equations again by the coordinates their unknowns do not depend on."""
+        equations again by the coordinates their unknowns do not depend on.
+
+        >>> from sympy import Function, symbols
+        >>> x, y, a, b = symbols("x y a b")
+        >>> X = Function("X")(x)
+        >>> state = SolverState([X.diff(x, 2)], [X], [x])
+        >>> F1 = state.fresh_function([x])
+        >>> state.substitute(X, x * F1, [F1])
+        >>> state.system, state.functions, state.infinitesimals
+        ([x*Derivative(F1(x), (x, 2)) + 2*Derivative(F1(x), x)], [F1(x)], [x*F1(x)])
+        """
         if unknown in self.functions:
             self.functions.remove(unknown)
             substitution: dict[Any, Any] = {unknown.func: Lambda(unknown.args, solution)}
@@ -759,7 +944,15 @@ def integrate_one_term(state: SolverState) -> bool:
     of the unknowns): g is a polynomial of degree < alpha_v in each variable
     v of alpha with new unknown functions of the other arguments as
     coefficients. Derivatives in one variable come before mixed ones, the
-    lowest order first (g_xx = 0 before g_xxx = 0, which then vanishes)."""
+    lowest order first (g_xx = 0 before g_xxx = 0, which then vanishes).
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> state = SolverState([X.diff(x, 2)], [X], [x])
+    >>> integrate_one_term(state), state.infinitesimals, state.constants
+    (True, [c1 + c2*x], [c1, c2])
+    """
     candidates = []
     for e in state.system:
         found = _one_term(e, state.functions, state.constants)
@@ -781,7 +974,15 @@ def solve_linear_ode(state: SolverState) -> bool:
     """A step: an equation that is a linear ODE in a single unknown function
     of one variable (constants may occur), solved by a fast method of dsolve
     without integrals; its constants of integration become new unknown
-    constants."""
+    constants.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> state = SolverState([X.diff(x) - X], [X], [x])
+    >>> solve_linear_ode(state), state.infinitesimals
+    (True, [c1*exp(x)])
+    """
     for e in state.system:
         ode = _ode_solution(e, state.functions, state)
         if ode is not None:
@@ -797,7 +998,14 @@ def _ode_coefficients(
 ) -> tuple[Expr, Basic, dict[int, Expr]] | None:
     """(g, v, {k: p_k}) if e = sum_k p_k d^k g/dv^k for a single unknown g
     with derivatives in v only (other arguments of g are parameters); None
-    otherwise."""
+    otherwise.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> _ode_coefficients(x**2 * X.diff(x, 2) + x * X.diff(x) - X, [X])
+    (X(x), x, {0: -1, 1: x, 2: x**2})
+    """
     present = [f for f in functions if e.has(f.func)]
     if len(present) != 1:
         return None
@@ -823,7 +1031,13 @@ def _indicial_roots(coefficients: dict[int, Expr], v: Basic) -> tuple[Expr, dict
     """(L, roots) if sum_k p_k d^k g/dv^k is of Euler type, p_k = c_k
     L**(k + m) with L = alpha v + beta and the c_k free of v: the roots of
     its indicial polynomial with multiplicity, all of them; None
-    otherwise."""
+    otherwise.
+
+    >>> from sympy import symbols
+    >>> x = symbols("x")
+    >>> _indicial_roots({2: x**2, 1: x, 0: -1}, x)
+    (x, {-1: 1, 1: 1})
+    """
     order = max(coefficients)
     try:
         _, factors = factor_list(coefficients[order], v)
@@ -851,7 +1065,15 @@ def solve_euler_ode(state: SolverState) -> bool:
     = 0 with L = alpha v + beta (other arguments of g are parameters):
     g = sum of L**r log(L)**j with new unknown functions of the other
     arguments as coefficients, for the roots r of the indicial polynomial
-    (symbolic too, (a y + b)**(c/a)) and j below their multiplicity."""
+    (symbolic too, (a y + b)**(c/a)) and j below their multiplicity.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> state = SolverState([x**2 * X.diff(x, 2) - 2 * X], [X], [x])
+    >>> solve_euler_ode(state), state.infinitesimals
+    (True, [c1/x + c2*x**2])
+    """
     for e in state.system:
         ode = _ode_coefficients(e, state.functions)
         euler = None if ode is None else _indicial_roots(ode[2], ode[1])
@@ -877,7 +1099,17 @@ def ansatz(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> Step
     """A step that ends the solver: the remaining unknown functions as linear
     combinations of monomials in their variables (and functions of them,
     see candidate_functions) by ansatz_generators, with increasing degree up
-    to max_degree until dimension many generators are found."""
+    to max_degree until dimension many generators are found.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> state = SolverState([X.diff(x, 2)], [X], [x], dimension=2)
+    >>> ansatz(2)(state)
+    True
+    >>> state.generators
+    [(1,), (x,)]
+    """
 
     def step(state: SolverState) -> bool:
         def attempt(degree: int, extra: Sequence[Expr]) -> list[tuple[Expr, ...]]:
@@ -909,14 +1141,27 @@ def ansatz(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> Step
 
 def default_steps(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> list[Step]:
     """integrate_one_term, solve_linear_ode, solve_euler_ode,
-    ansatz(max_degree, functions)."""
+    ansatz(max_degree, functions).
+
+    >>> [step.__name__ for step in default_steps()]
+    ['integrate_one_term', 'solve_linear_ode', 'solve_euler_ode', 'ansatz(max_degree=3)']
+    """
     return [integrate_one_term, solve_linear_ode, solve_euler_ode, ansatz(max_degree, functions)]
 
 
 def run_steps(state: SolverState, steps: Sequence[Step], max_iterations: int = 1000) -> None:
     """Apply the steps: the first one that changes the state, then again from
     the first one; until a step sets the generators or none changes the
-    state."""
+    state.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> state = SolverState([X.diff(x, 2)], [X], [x], dimension=2)
+    >>> run_steps(state, default_steps())
+    >>> state.generators
+    [(1,), (x,)]
+    """
     for _ in range(max_iterations):
         if state.generators is not None:
             return
@@ -1000,7 +1245,17 @@ def solve_determining_equations(  # pylint: disable=too-many-arguments,too-many-
 
 def _from_constants(state: SolverState) -> list[tuple[Expr, ...]]:
     """Without equations and unknown functions left: one generator per
-    remaining constant."""
+    remaining constant.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a, b = symbols("x y a b")
+    >>> X = Function("X")(x)
+    >>> state = SolverState([X.diff(x, 2)], [X], [x])
+    >>> integrate_one_term(state)
+    True
+    >>> _from_constants(state)
+    [(1,), (x,)]
+    """
     if state.system or state.functions:
         state.log("no generators: equations or unknown functions left")
         return []
