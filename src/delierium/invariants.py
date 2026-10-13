@@ -41,6 +41,7 @@ from sympy import (
     sympify,
 )
 
+from delierium.helpers import generic_case, plain_symbol
 from delierium.lie_algebra import VectorField
 
 __all__ = ["canonical_coordinates", "differential_invariants", "invariants"]
@@ -189,7 +190,7 @@ class _Characteristics:  # pylint: disable=too-few-public-methods
                 constant = [e for e in solve(s.subs(g, z), c1) if not e.has(Integral)]
                 if not constant:
                     continue
-                invariant = simplify(_generic(constant[0]).subs(self.constants))
+                invariant = simplify(generic_case(constant[0]).subs(self.constants))
                 # dsolve may be wrong (its factorable hint): check X I = 0
                 if not _is_zero(self.field(invariant)):
                     continue
@@ -280,18 +281,6 @@ def canonical_coordinates(
     raise NotImplementedError(f"no canonical coordinate s found for {field}")
 
 
-def _generic(e: Expr) -> Expr:
-    """e with every Piecewise replaced by its first case: generic values of
-    the parameters (A**2*B**2 != 0).
-
-    >>> from sympy import Piecewise, Ne, symbols
-    >>> x, a = symbols("x a")
-    >>> _generic(Piecewise((x / a, Ne(a, 0)), (x, True)))
-    x/a
-    """
-    return e.replace(lambda a: isinstance(a, Piecewise), lambda a: a.args[0].expr)
-
-
 def _cases(e: Expr) -> list[Expr]:
     """e for generic parameters, then with each case of an outer Piecewise
     (asin, or -I*acosh where its argument exceeds 1).
@@ -302,9 +291,9 @@ def _cases(e: Expr) -> list[Expr]:
     [x + 1, 1 - x]
     """
     pieces = [a for a in e.atoms(Piecewise) if not any(a in b.args for b in e.atoms(Piecewise))]
-    cases = [_generic(e)]
+    cases = [generic_case(e)]
     for piece in pieces[:1]:
-        cases += [_generic(e.xreplace({piece: case.expr})) for case in piece.args[1:]]
+        cases += [generic_case(e.xreplace({piece: case.expr})) for case in piece.args[1:]]
     return cases
 
 
@@ -353,7 +342,7 @@ def differential_invariants(
         raise ValueError("order must be >= 0")
     functions = [dependent] if isinstance(dependent, Expr) else list(dependent)
     variables = [independent] if isinstance(independent, Symbol) else list(independent)
-    names = [Symbol(f.func.__name__) for f in functions]
+    names = [plain_symbol(f) for f in functions]
     r, s = canonical_coordinates(generator, [*variables, *names])
     on_jets = dict(zip(names, functions, strict=True))
     r = [e.subs(on_jets) for e in r]

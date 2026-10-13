@@ -26,8 +26,6 @@ from sympy import (
     Dummy,
     Expr,
     I,
-    Poly,
-    PolynomialError,
     Pow,
     default_sort_key,
     factor_list,
@@ -39,15 +37,14 @@ from sympy import (
 )
 from sympy.solvers.solvers import unrad
 
-from delierium.helpers import finish_substitution
+from delierium.helpers import finish_substitution, plain_symbol
 from delierium.infinitesimals import (
     _checked_arguments,
-    _leading_derivative,
+    _initial,
     create_infinitesimals,
     determining_condition,
     determining_janet_basis,
     jet_power_conditions,
-    order,
     split_jet_coefficients,
 )
 from delierium.janet_basis import LHDP, JanetBasis, nonzero_factors, split_assumptions
@@ -163,7 +160,7 @@ def group_classification(
     """
     independent = list(independent)
     _checked_arguments(eq, dependent, independent)
-    variables = [*independent, sp_symbol(dependent)]
+    variables = [*independent, plain_symbol(dependent)]
 
     def build(rule: dict[Basic, Expr]) -> tuple[JanetBasis, list[list[Expr]]]:
         special = eq.subs(rule)
@@ -225,7 +222,7 @@ def _determining_janet_basis(
     8
     """
     infinitesimals = create_infinitesimals([dependent], independent)
-    plain = {dependent: sp_symbol(dependent)}
+    plain = {dependent: plain_symbol(dependent)}
     functions = [infinitesimals[v].xreplace(plain) for v in [*independent, dependent]]
     condition = determining_condition(eq, [dependent], independent, infinitesimals)
     system = [
@@ -250,32 +247,13 @@ def _initial_conditions(eq: Expr, dependent: Basic, independent: list[Basic]) ->
     >>> _initial_conditions(y.diff(x, 2) + a * y, y, [x])
     []
     """
-    _, highest = order(eq, [dependent], independent)
-    if not highest:
-        return []
-    leader = _leading_derivative(eq, highest, [dependent])
-    h = Dummy()
-    try:
-        initial = Poly(numer(together(eq.xreplace({leader: h}))), h).LC()
-    except PolynomialError:
+    initial = _initial(eq, [dependent], independent)
+    if initial is None:
         return []
     # the jet variables and the dependent variable are variables as well
     variables = {d: Dummy() for d in initial.atoms(Derivative)} | {dependent: Dummy()}
     initial = initial.xreplace(variables)
     return split_assumptions(nonzero_factors([initial]), [*independent, *variables.values()])[0]
-
-
-def sp_symbol(f: Basic) -> Basic:
-    """The plain symbol for the dependent variable f, e.g. u for u(x, t).
-
-    >>> from sympy import Function, symbols
-    >>> x, t = symbols("x t")
-    >>> sp_symbol(Function("u")(x, t))
-    u
-    """
-    from sympy import Symbol  # pylint: disable=import-outside-toplevel
-
-    return Symbol(f.func.__name__)
 
 
 def _classify(

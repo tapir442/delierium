@@ -29,7 +29,6 @@ from sympy import (
     Matrix,
     Mul,
     Pow,
-    Symbol,
     cancel,
     denom,
     gcd_list,
@@ -38,6 +37,8 @@ from sympy import (
     together,
 )
 from sympy.core.function import AppliedUndef
+
+from delierium.helpers import plain_symbol
 
 __all__ = ["scaling_symmetries"]
 
@@ -62,6 +63,7 @@ def scaling_symmetries(
 
     The porous medium equation u_t = (u**n u_x)_x for generic n: two scalings.
 
+    >>> from sympy import Symbol
     >>> n = Symbol("n")
     >>> for g in scaling_symmetries(u.diff(t) - (u**n * u.diff(x)).diff(x), u, [x, t]):
     ...     print(g)
@@ -81,7 +83,7 @@ def scaling_symmetries(
     basis = (
         Matrix(rows).nullspace() if rows else [Matrix.eye(unknowns)[:, k] for k in range(unknowns)]
     )
-    coordinates = [*indep, *(Symbol(d.func.__name__) for d in dep)]
+    coordinates = [*indep, *(plain_symbol(d) for d in dep)]
     result = []
     for vector in basis:
         vector = _primitive([cancel(v) for v in vector])
