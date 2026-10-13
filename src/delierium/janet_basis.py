@@ -63,7 +63,14 @@ _AssumptionCache = tuple[list[Expr], tuple[list[list[Expr]], list[Expr]]]
 @profile_if_enabled
 def function_marker(dependent: Sequence[Basic], func: Basic) -> list[int]:
     """The function part of a comparison vector: 1 at the position of func
-    among the dependent functions, 0 elsewhere."""
+    among the dependent functions, 0 elsewhere.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> z, w = Function("z")(x), Function("w")(x)
+    >>> function_marker([z, w], w)
+    [0, 1]
+    """
     iv = [0] * len(dependent)
     if func in dependent:
         iv[dependent.index(func)] = 1
@@ -74,7 +81,18 @@ def function_marker(dependent: Sequence[Basic], func: Basic) -> list[int]:
 def compute_order(
     derivative: Basic, independent: Sequence[Basic], comp_order: Callable[[Basic], Order]
 ) -> Order:
-    """Computes the monomial tuple from the derivative part."""
+    """Computes the monomial tuple from the derivative part.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> (
+    ...     compute_order(z.diff(x, 2, y), [x, y], ctx.order_of_derivative),
+    ...     compute_order(z, [x, y], None),
+    ... )
+    ([2, 1], [0, 0])
+    """
     if derivative.is_Derivative:
         return comp_order(derivative)
     # the unknown itself, e.g. the term w in w + 2 y z_x: order 0
@@ -92,6 +110,16 @@ class _Dterm:
 
     @profile_if_enabled
     def __init__(self, coeff: CoeffLike, derivative: Expr, context: Context) -> None:
+        """A term coeff * derivative: its function, order and comparison vector.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t.coeff, t.function, t.order, t.comparison_vector
+        (x, z(x, y), [1, 0], (1, 0, 1))
+        """
         self.coeff = coeff if isinstance(coeff, Coeff) else Coeff(coeff)
         self.derivative = derivative
         self.context = context
@@ -105,7 +133,17 @@ class _Dterm:
 
     def copy(self) -> "_Dterm":
         """Shallow copy; coefficients are changed in place elsewhere, so
-        a _Dterm must not be shared between differential polynomials."""
+        a _Dterm must not be shared between differential polynomials.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> c = t.copy()
+        >>> c is t, c == t
+        (False, True)
+        """
         new = object.__new__(_Dterm)
         for slot in self.__slots__:
             setattr(new, slot, getattr(self, slot))
@@ -113,6 +151,16 @@ class _Dterm:
 
     @profile_if_enabled
     def expression(self) -> Expr:
+        """The term as a SymPy expression.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t.expression()
+        x*Derivative(z(x, y), x)
+        """
         return self.coeff.as_expr() * self.derivative
 
     @profile_if_enabled
@@ -132,12 +180,31 @@ class _Dterm:
         return tuple(self.order + iv)
 
     def __str__(self) -> str:
+        """The term printed, D for Derivative.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> str(t), str(_Dterm(1, z, ctx))
+        ('(x) * D(z(x, y), x)', 'z(x, y)')
+        """
         result = f"{self.derivative}" if self.coeff == 1 else f"({self.coeff}) * {self.derivative}"
         return result.replace("Derivative", "D")
 
     @profile_if_enabled
     def _compute_order(self) -> Order:
-        """computes the monomial tuple from the derivative part"""
+        """computes the monomial tuple from the derivative part
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t._compute_order()
+        [1, 0]
+        """
         return compute_order(
             self.derivative, self.context.independent, self.context.order_of_derivative
         )
@@ -163,6 +230,16 @@ class _Dterm:
 
     @profile_if_enabled
     def __eq__(self, other: object) -> bool:
+        """Equal derivative and coefficient.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t == _Dterm(x, z.diff(x), ctx), t == _Dterm(2, z.diff(x), ctx)
+        (True, False)
+        """
         if not isinstance(other, _Dterm):
             return NotImplemented
         return self is other or (
@@ -170,6 +247,16 @@ class _Dterm:
         )
 
     def show(self, rich: bool = True) -> str | Basic:
+        """The term in Lie's notation (rich) or as str.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t.show(rich=False), t.show()
+        ('(x) * D(z(x, y), x)', x*z_x)
+        """
         if not rich:
             return str(self)
         return ltf(
@@ -178,6 +265,16 @@ class _Dterm:
 
     @profile_if_enabled
     def diff(self, *variables: Basic) -> list["_Dterm"]:
+        """The derivative by the variables, a list of terms (product rule).
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> [str(d) for d in t.diff(x)]
+        ['D(z(x, y), x)', '(x) * D(z(x, y), (x, 2))']
+        """
         if len(variables) > 1:
             # the product rule below holds for one variable only; for
             # several, differentiate one after the other (Leibniz rule)
@@ -201,6 +298,16 @@ class _Dterm:
         # only the derivative: equal terms have equal comparison vectors, and
         # a coefficient has no cheap hash that agrees with its == (#61:
         # cos**2 + sin**2 - 1 == 0); a tuple of ints, the same in every run
+        """The hash of the comparison vector only.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> hash(t) == hash(_Dterm(2, z.diff(x), ctx))
+        True
+        """
         return hash(self.comparison_vector)
 
 
@@ -240,6 +347,17 @@ class LHDP:
         dterms: Iterable[_Dterm] = (),
         assumptions: Iterable[Expr] = frozenset(),
     ) -> None:
+        """The linear homogeneous differential polynomial e (or the terms
+        dterms), normalized: monic, x assumed nonzero for dividing by it.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> p, p.assumptions
+        (D(z(x, y), x) + (-1/x) * z(x, y), frozenset({x}))
+        """
         self.context = context
         self.terms: list[_Dterm] = []
         self.multipliers: list[int] = []
@@ -265,11 +383,34 @@ class LHDP:
             self.normalize()
 
     def _assume(self, factor: Coeff) -> None:
-        """Record that this equation was divided or multiplied by factor."""
+        """Record that this equation was divided or multiplied by factor.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> from delierium.coefficients import Coeff
+        >>> p._assume(Coeff(y))
+        >>> sorted(p.assumptions, key=str)
+        [x, y]
+        """
         self.assumptions |= {factor.as_expr()}
 
     @profile_if_enabled
     def _init(self, e: Basic) -> None:
+        """The terms of e, the coefficients of equal derivatives collected.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP.__new__(LHDP)
+        >>> p.context = ctx
+        >>> p._init(z.diff(x) + 2 * z.diff(x) - z)
+        >>> [str(t) for t in p.terms]
+        ['(-1) * z(x, y)', '(3) * D(z(x, y), x)']
+        """
         if e == 0:
             # an equation that vanishes only after simplify() (#38): no terms
             self.terms = []
@@ -284,16 +425,58 @@ class LHDP:
         ]
 
     def expression(self) -> Expr:
+        """The polynomial as a SymPy expression.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> p.expression()
+        Derivative(z(x, y), x) - z(x, y)/x
+        """
         return sum(t.expression() for t in self.terms)
 
     def leading_derivative(self) -> Expr:
+        """The highest derivative.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> p.leading_derivative()
+        Derivative(z(x, y), x)
+        """
         return self.terms[0].derivative
 
     def leading_function(self) -> Expr:
+        """The function of the highest derivative.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> p.leading_function()
+        z(x, y)
+        """
         return self.terms[0].function
 
     def make_monic(self) -> None:
-        """Divide by the leading coefficient."""
+        """Divide by the leading coefficient.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> ctx.defer_normalize = True
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> ctx.defer_normalize = False
+        >>> p.make_monic()
+        >>> p, p.assumptions
+        (D(z(x, y), x) + (-1/x) * z(x, y), frozenset({x}))
+        """
         coeff = self.terms[0].coeff
         self.terms[0].coeff = ONE
         if coeff != ONE:
@@ -303,6 +486,21 @@ class LHDP:
 
     @profile_if_enabled
     def normalize(self) -> None:
+        """Monic (or with coprime coefficients in a fraction free context).
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> ctx.defer_normalize = True
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> ctx.defer_normalize = False
+        >>> p
+        (x) * D(z(x, y), x) + (-1) * z(x, y)
+        >>> p.normalize()
+        >>> p
+        D(z(x, y), x) + (-1/x) * z(x, y)
+        """
         if self.terms:
             scaled = (
                 primitive([t.coeff for t in self.terms]) if self.context.fraction_free else None
@@ -321,16 +519,49 @@ class LHDP:
         self._set_leading()
 
     def _set_leading(self) -> None:
+        """order, function and comparison vector of the leading term.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> p.terms = p.terms[1:]
+        >>> p._set_leading()
+        >>> p.order, p.function
+        ([0, 0], z(x, y))
+        """
         if self.terms:
             self.order = self.terms[0].order
             self.function = self.terms[0].function
             self.comparison_vector = self.terms[0].comparison_vector
 
     def __bool__(self) -> bool:
+        """Whether the polynomial has terms (is nonzero).
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> bool(p), bool(_vanished(ctx, []))
+        (True, False)
+        """
         return len(self.terms) > 0
 
     @profile_if_enabled
     def __lt__(self, other: "LHDP") -> bool:
+        """Ranked lower: by the first terms that differ.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> q = LHDP(z.diff(y), ctx)
+        >>> q < p, p < q
+        (True, False)
+        """
         for a, b in zip(self.terms, other.terms, strict=False):
             if a != b:
                 return a < b
@@ -338,6 +569,16 @@ class LHDP:
 
     @profile_if_enabled
     def __eq__(self, other: object) -> bool:
+        """The same terms.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> p == LHDP(x * z.diff(x) - z, ctx), p == LHDP(z.diff(y), ctx)
+        (True, False)
+        """
         if not isinstance(other, LHDP):
             return False
         if self is other:
@@ -347,6 +588,19 @@ class LHDP:
         return all(a == b for a, b in zip(self.terms, other.terms, strict=True))
 
     def show(self, rich: bool = True, short: bool = False) -> str:  # pylint: disable=unused-argument
+        """Display the terms in Lie's notation (rich), or return them as str.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> p.show(rich=False)
+        'D(z(x, y), x) + (-1/x) * z(x, y)'
+        >>> p.show()
+        [z_x, -z/x]
+        ''
+        """
         if not rich:
             return str(self)
         res = ""
@@ -357,6 +611,16 @@ class LHDP:
 
     @profile_if_enabled
     def diff(self, *args: Basic) -> "LHDP":
+        """The derivative by the variables, a new LHDP with the same assumptions.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> p.diff(y)
+        D(z(x, y), x, y) + (-1/x) * D(z(x, y), y)
+        """
         new_dterms: dict[ComparisonVector, _Dterm] = {}
         for dterm in self.terms:
             for new_dterm in dterm.diff(*args):
@@ -372,6 +636,16 @@ class LHDP:
         )
 
     def __str__(self) -> str:
+        """The terms, and the multipliers and nonmultipliers if set.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> str(p)
+        'D(z(x, y), x) + (-1/x) * z(x, y)'
+        """
         m = [self.context.independent[i] for i in self.multipliers]
         n = [self.context.independent[i] for i in self.nonmultipliers]
         result = " + ".join([str(t) for t in self.terms])
@@ -380,11 +654,31 @@ class LHDP:
         return result
 
     def __repr__(self) -> str:
+        """As str.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> p
+        D(z(x, y), x) + (-1/x) * z(x, y)
+        """
         return str(self)
 
     def __hash__(self) -> int:
         # the derivatives of the terms, see _Dterm.__hash__; not cached, the
         # coefficients change in place
+        """The hash of the derivatives of the terms.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> hash(p) == hash(LHDP(z.diff(x) - z / x, ctx))
+        True
+        """
         return hash(tuple(t.comparison_vector for t in self.terms))
 
 
@@ -432,6 +726,19 @@ def analyze_term(context: Context, term: Expr) -> tuple[Expr, Expr]:
 def reorder(  # pylint: disable=unused-argument
     S: Iterable[LHDP], context: Context, ascending: bool = False
 ) -> list[LHDP]:
+    """S sorted, the highest leading derivative first unless ascending.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> p = LHDP(x * z.diff(x) - z, ctx)
+    >>> q = LHDP(z.diff(y), ctx)
+    >>> reorder([q, p], ctx)
+    [D(z(x, y), x) + (-1/x) * z(x, y), D(z(x, y), y)]
+    >>> reorder([p, q], ctx, ascending=True)
+    [D(z(x, y), y), D(z(x, y), x) + (-1/x) * z(x, y)]
+    """
     return sorted(S, reverse=not ascending)
 
 
@@ -444,14 +751,34 @@ def reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP | None:
     After each reduction all of S is tried again: a term may become
     reducible by an element tried before (#54). The intermediate results
     are not normalized (in a fraction free context the gcd of all
-    coefficients each time), only the result."""
+    coefficients each time), only the result.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> q = LHDP(z.diff(y), ctx)
+    >>> reduce_by_system(LHDP(z.diff(x, y) + z.diff(y), ctx), [q], ctx) is None
+    True
+    >>> reduce_by_system(LHDP(z.diff(x) + z.diff(y), ctx), [q], ctx)
+    D(z(x, y), x)
+    """
     reduced = _reduce_by_system(e, S, context)
     return reduced if reduced else None
 
 
 def _reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP:
     """reduce_by_system, but an e that reduces to zero gives an empty LHDP
-    (falsy) with the assumptions its vanishing depends on."""
+    (falsy) with the assumptions its vanishing depends on.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> zero = _reduce_by_system(LHDP(z.diff(x, y) + z.diff(y), ctx), [LHDP(z.diff(y), ctx)], ctx)
+    >>> bool(zero), zero.assumptions
+    (False, frozenset())
+    """
     original = e
     deferred, context.defer_normalize = context.defer_normalize, True
     try:
@@ -554,7 +881,16 @@ def _subtract_derivative(e1: LHDP, e2: LHDP, factor: Coeff, variables: Sequence[
 
 def _vanished(context: Context, assumptions: Iterable[Expr]) -> LHDP:
     """The zero equation an equation reduced to, with the assumptions its
-    vanishing depends on; falsy like every LHDP without terms."""
+    vanishing depends on; falsy like every LHDP without terms.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> zero = _vanished(ctx, [x])
+    >>> bool(zero), zero.assumptions
+    (False, frozenset({x}))
+    """
     zero = LHDP.__new__(LHDP)
     zero.context = context
     zero.terms, zero.multipliers, zero.nonmultipliers = [], [], []
@@ -570,7 +906,18 @@ def _subtract_terms(
 ) -> None:
     """remaining -= factor * dterms, the terms keyed by comparison vector:
     a term is added, its coefficient changed in place, or, if it cancels,
-    removed (so no term of remaining is 0 that was not before)."""
+    removed (so no term of remaining is 0 that was not before).
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> from delierium.coefficients import Coeff
+    >>> remaining = {t.comparison_vector: t for t in LHDP(z.diff(x) + z, ctx).terms}
+    >>> _subtract_terms(remaining, LHDP(z.diff(x) - z, ctx).terms, Coeff(1), ctx)
+    >>> [str(t) for t in remaining.values()]
+    ['(2) * z(x, y)']
+    """
     scaled = factor != ONE
     for dterm in dterms:
         subtrahend = dterm.coeff * factor if scaled else dterm.coeff
@@ -587,7 +934,15 @@ def _subtract_terms(
 @profile_if_enabled
 def _variables_of(context: Context, dif: Sequence[int]) -> list[Basic]:
     """The independent variables, each repeated as often as dif says
-    (an exponent vector): the variables to differentiate by."""
+    (an exponent vector): the variables to differentiate by.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> _variables_of(ctx, [2, 1])
+    [x, x, y]
+    """
     variables: list[Basic] = []
     for v, d in zip(context.independent, dif, strict=False):
         if d != 0:
@@ -597,6 +952,15 @@ def _variables_of(context: Context, dif: Sequence[int]) -> list[Basic]:
 
 @profile_if_enabled
 def _reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
+    """e1 reduced by e2 as far as possible (no normalization).
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> _reduce(LHDP(z.diff(x, y) - z, ctx), LHDP(z.diff(y), ctx), ctx)
+    z(x, y)
+    """
     while True:
         new_e1 = _reduce_inner(e1, e2, context)
         if not new_e1:
@@ -608,12 +972,33 @@ def _reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
 
 @profile_if_enabled
 def autoreduce(S: Iterable[LHDP], context: Context) -> list[LHDP]:
+    """S autoreduced: no element is reducible by the others (ascending).
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> a = LHDP(z.diff(x) - z, ctx)
+    >>> b = LHDP(z.diff(x) + z.diff(y) - z, ctx)
+    >>> autoreduce([a, b], ctx)
+    [D(z(x, y), y), D(z(x, y), x) + (-1) * z(x, y)]
+    """
     return _autoreduce(S, context)[0]
 
 
 def _autoreduce(S: Iterable[LHDP], context: Context) -> tuple[list[LHDP], list[LHDP]]:
     """autoreduce, and the equations it dropped (reduced to zero, or equal
-    to one kept), for their assumptions."""
+    to one kept), for their assumptions.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> a = LHDP(z.diff(x) - z, ctx)
+    >>> b = LHDP(z.diff(x) + z.diff(y) - z, ctx)
+    >>> _autoreduce([a, b, LHDP(z.diff(x) - z, ctx)], ctx)
+    ([D(z(x, y), y), D(z(x, y), x) + (-1) * z(x, y)], [])
+    """
     dropped: list[LHDP] = []
     equations = list(S)
     i = 0
@@ -639,6 +1024,11 @@ def _autoreduce(S: Iterable[LHDP], context: Context) -> tuple[list[LHDP], list[L
 
 
 def vec_degree(v: int, m: Sequence[int]) -> int:
+    """The degree of the monomial m in the variable v.
+
+    >>> vec_degree(1, (2, 3))
+    3
+    """
     return m[v]
 
 
@@ -764,7 +1154,11 @@ def _in_janet_class(
     nonmultipliers: Iterable[int],
 ) -> bool:
     """monom lies in the Janet class of base: it is base multiplied by
-    multiplier variables only (Schwarz, p. 383)."""
+    multiplier variables only (Schwarz, p. 383).
+
+    >>> _in_janet_class((2, 1), (1, 1), [0], [1]), _in_janet_class((2, 2), (1, 1), [0], [1])
+    (True, False)
+    """
     return all(monom[i] >= base[i] for i in multipliers) and all(
         monom[i] == base[i] for i in nonmultipliers
     )
@@ -778,6 +1172,13 @@ def complete(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     nonmultipliers, the derivative by that variable is added unless its
     leading monomial already lies in the Janet class of some element.
     Repeat until nothing is missing. The result is not sorted.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> sorted(map(str, complete([LHDP(z.diff(x, 2), ctx), LHDP(z.diff(y), ctx)], ctx)))
+    ['D(z(x, y), (x, 2))', 'D(z(x, y), x, y)', 'D(z(x, y), y)']
     """
     result = set(S)
     variables = range(len(context.independent))
@@ -843,6 +1244,13 @@ def minimize(S: list[LHDP], context: Context) -> tuple[list[LHDP], list[LHDP]]:
     basis. Then every tail is reduced by the basis (not in a fraction free
     context, where reductions multiply by leading coefficients). If S lacks
     one of the leading derivatives, S is returned unchanged.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+    >>> minimize(janet.S, janet.context)
+    ([D(z(x, y), y), D(z(x, y), x) + (-x) * z(x, y)], [])
     """
     n = len(context.independent)
     kept: list[LHDP] = []
@@ -879,7 +1287,15 @@ def _reduce_tail(e: LHDP, basis: list[LHDP], context: Context) -> LHDP:
     """e with every term but the leading one reduced by the basis (monic).
 
     The terms are lower than e's leading derivative, so e itself never
-    reduces them and the leading term stays; e is not rescaled."""
+    reduces them and the leading term stays; e is not rescaled.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> _reduce_tail(LHDP(z.diff(x, 2) + z.diff(y), ctx), [LHDP(z.diff(y), ctx)], ctx)
+    D(z(x, y), (x, 2))
+    """
     while True:
         for term in e.terms[1:]:
             g = next(
@@ -971,7 +1387,16 @@ def complete_system(S: Iterable[LHDP], context: Context) -> list[LHDP]:
 @profile_if_enabled
 def integrability_conditions_by_function(S: Iterable[LHDP], context: Context) -> Iterator[LHDP]:
     """The integrability conditions of S, computed separately for the
-    elements of each leading function."""
+    elements of each leading function.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> S = [LHDP(z.diff(x) - z, ctx), LHDP(z.diff(y) - x * z, ctx)]
+    >>> list(integrability_conditions_by_function(S, ctx))
+    [D(z(x, y), x) + (-1/x) * D(z(x, y), y) + (1/x) * z(x, y)]
+    """
     s = bucket(S, key=lambda d: d.leading_function())
     return flatten(_integrability_conditions_of_function(s[k], context) for k in s)
 
@@ -982,7 +1407,16 @@ def _integrability_pairs(
 ) -> Iterator[tuple[LHDP, Basic, LHDP, list[Basic]]]:
     """(ei, n, ej, m): the derivative of ei by its nonmultiplier n and the
     derivative of ej by the variables m (ej's multipliers only) have the
-    same leading derivative."""
+    same leading derivative.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> S = [LHDP(z.diff(x) - z, ctx), LHDP(z.diff(y) - x * z, ctx)]
+    >>> [(n, m) for _, n, _, m in _integrability_pairs(S, ctx)]
+    [(x, [y])]
+    """
     result = list(S)
     if len(result) == 1:
         return
@@ -1018,6 +1452,17 @@ def _integrability_pairs(
 
 @profile_if_enabled
 def _integrability_conditions_of_function(S: Iterable[LHDP], context: Context) -> list[LHDP]:
+    """The integrability conditions of S, elements of one leading function:
+    the differences of the pairs of _integrability_pairs.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> S = [LHDP(z.diff(x) - z, ctx), LHDP(z.diff(y) - x * z, ctx)]
+    >>> _integrability_conditions_of_function(S, ctx)
+    [D(z(x, y), x) + (-1/x) * D(z(x, y), y) + (1/x) * z(x, y)]
+    """
     result = []
     for ei, n, ej, m in _integrability_pairs(S, context):
         result.append(_difference(ei.diff(n), ej.diff(*m) if m else ej, context))
@@ -1028,7 +1473,18 @@ def _multiplicative_derivative(ei: Any, n: Basic, ej: Any, context: Context) -> 
     """The variables (with repetitions) by which ej's leading derivative has to
     be differentiated to become the derivative of ei's leading derivative by
     its nonmultiplier n, using only ej's multipliers, each of them any number
-    of times; None if that is impossible."""
+    of times; None if that is impossible.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> S = [LHDP(z.diff(x) - z, ctx), LHDP(z.diff(y) - x * z, ctx)]
+    >>> ei = _MultiplierClass([1, 0], S[0], [x], [y])
+    >>> ej = _MultiplierClass([0, 1], S[1], [x, y], [])
+    >>> _multiplicative_derivative(ei, y, ej, ctx)
+    [x]
+    """
     raised = list(ei.monom)
     raised[context.independent.index(n)] += 1
     difference = [a - b for a, b in zip(raised, ej.monom, strict=True)]
@@ -1043,7 +1499,15 @@ def _difference(d1: LHDP, d2: LHDP, context: Context) -> LHDP:
     """lc2 * d1 - lc1 * d2 as an LHDP, lc1 and lc2 their leading coefficients
     (1 unless the context is fraction free), so that the leading derivatives
     cancel; an empty LHDP if it vanishes, with the assumptions of d1 and d2
-    (and lc1, lc2). d1's terms are modified."""
+    (and lc1, lc2). d1's terms are modified.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> _difference(LHDP(z.diff(x, y) - z.diff(y), ctx), LHDP(z.diff(x, y) - x * z, ctx), ctx)
+    D(z(x, y), y) + (-x) * z(x, y)
+    """
     lc1, lc2 = d1.terms[0].coeff, d2.terms[0].coeff
     assumptions = d1.assumptions | d2.assumptions
     if lc1 != lc2:
@@ -1190,6 +1654,15 @@ class JanetBasis:
         sort_order: WeightFunction,
         fraction_free: bool,
     ) -> None:
+        """The Janet basis of S: the elements made, completed and minimized.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+        >>> janet.S
+        [D(z(x, y), y), D(z(x, y), x) + (-x) * z(x, y)]
+        """
         self.context = context = Context(dependent, independent, sort_order)
         context.fraction_free = fraction_free
         # one equation, or several (list, tuple, sympy Tuple, Matrix)
@@ -1208,7 +1681,16 @@ class JanetBasis:
 
     def _complete(self, context: Context) -> None:
         """Autoreduce, complete and add the reduced integrability conditions
-        until there is no new one, or S does not change."""
+        until there is no new one, or S does not change.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+        >>> janet._complete(janet.context)
+        >>> janet.S
+        [D(z(x, y), y), D(z(x, y), x) + (-x) * z(x, y)]
+        """
         old: list[LHDP] = []
         while old != self.S:
             old = self.S[:]
@@ -1310,7 +1792,15 @@ class JanetBasis:
     def _assumptions(self) -> _AssumptionCache:
         """(assumed_nonzero, split_assumptions of it), computed once: the
         assumptions of the basis elements and of the equations dropped on
-        the way (#31)."""
+        the way (#31).
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+        >>> janet._assumptions()
+        ([x], ([], [x]))
+        """
         if self._assumed is None:
             factors = nonzero_factors(
                 set().union(*(e.assumptions for e in [*self.S, *self._dropped]))
@@ -1348,18 +1838,42 @@ class JanetBasis:
     def singular_loci(self) -> list[Expr]:
         """The factors of assumed_nonzero that vanish only on points, curves,
         ... of the independent variables, never identically: the Janet basis
-        does not hold there, but everywhere else."""
+        does not hold there, but everywhere else.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+        >>> janet.singular_loci()
+        [x]
+        """
         return self._assumptions()[1][1]
 
     def type(self) -> "JanetType":
         """The type of the Janet basis: leading derivatives, parametric
         derivatives, dimension of the solution space and, where Schwarz
-        tabulates it, his name of the type, see janet_type."""
+        tabulates it, his name of the type, see janet_type.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+        >>> janet.type().dimension
+        1
+        """
         return janet_type(self.S, self.context)
 
     def combination(self, terms: Iterable[tuple[Expr, Sequence[Basic], int]]) -> Expr:
         """sum of c * (j-th basis element differentiated by variables) for
-        the terms (c, variables, j) of representation."""
+        the terms (c, variables, j) of representation.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+        >>> janet.combination([(2, (x,), 0)])
+        2*Derivative(z(x, y), x, y)
+        """
         result = sp.S.Zero
         for c, variables, j in terms:
             b = self.S[j].expression()
@@ -1369,7 +1883,17 @@ class JanetBasis:
     def show(  # pylint: disable=unused-argument
         self, rich: bool = True, short: bool = False, heading: str = ""
     ) -> None:
-        """Print the Janet basis with leading derivative first."""
+        """Print the Janet basis with leading derivative first.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+        >>> janet.show(heading="z_y = 0, z_x = x z")
+        z_y = 0, z_x = x z
+        [z_y]
+        [z_x, -x*z]
+        """
         if heading:
             print(heading)
         for e in self.S:
@@ -1453,7 +1977,15 @@ class JanetBasis:
 
     def _classified_derivatives(self, max_order: int) -> list[tuple[Expr, bool]]:
         """(derivative, is principal) for every derivative of every unknown
-        function of total order up to max_order, highest ranked first."""
+        function of total order up to max_order, highest ranked first.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> janet = JanetBasis([z.diff(x) - x * z, z.diff(y)], [z], [x, y])
+        >>> janet._classified_derivatives(1)
+        [(Derivative(z(x, y), x), True), (Derivative(z(x, y), y), True), (z(x, y), False)]
+        """
         context = self.context
         lead = [(b.function, tuple(b.order)) for b in self.S]
         terms: list[tuple[_Dterm, bool]] = []
@@ -1474,7 +2006,14 @@ class JanetBasis:
 
 def nonzero_factors(coefficients: Iterable[Coeff | Expr]) -> list[Expr]:
     """The irreducible nonconstant factors of the numerators of coefficients
-    (Coeff or expressions), each once, up to sign, sorted."""
+    (Coeff or expressions), each once, up to sign, sorted.
+
+    >>> from sympy import symbols
+    >>> from delierium.coefficients import Coeff
+    >>> x, y = symbols("x y")
+    >>> nonzero_factors([Coeff(x**2 - 1), -2 * y, Coeff(3)])
+    [y, x - 1, x + 1]
+    """
     result: set[Expr] = set()
     for c in coefficients:
         if isinstance(c, Coeff) and c.is_field:
@@ -1553,29 +2092,94 @@ class LHDPList(list[LHDP]):
     def __init__(
         self, items: Iterable[LHDP] = (), assumptions: Callable[[], Assumptions] | None = None
     ) -> None:
+        """The items; assumptions computes (assumed_nonzero, parameter_conditions,
+        singular_loci) when first used.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> basis = LHDPList([p], lambda: ([x], [], [x]))
+        >>> list(basis), basis._assumptions is not None
+        ([D(z(x, y), x) + (-1/x) * z(x, y)], True)
+        """
         super().__init__(items)
         self._assumptions = assumptions
 
     @functools.cached_property
     def _computed(self) -> Assumptions:
+        """(assumed_nonzero, parameter_conditions, singular_loci), computed once.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> basis = LHDPList([p], lambda: ([x], [], [x]))
+        >>> basis._computed, LHDPList([p])._computed
+        (([x], [], [x]), ([], [], []))
+        """
         return self._assumptions() if self._assumptions else ([], [], [])
 
     @property
     def assumed_nonzero(self) -> list[Expr]:
+        """The factors assumed nonzero in computing the list.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> basis = LHDPList([p], lambda: ([x], [], [x]))
+        >>> basis.assumed_nonzero
+        [x]
+        """
         return self._computed[0]
 
     @property
     def parameter_conditions(self) -> list[list[Expr]]:
+        """The assumptions on the parameters, see JanetBasis.parameter_conditions.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> basis = LHDPList([p], lambda: ([x], [], [x]))
+        >>> basis.parameter_conditions
+        []
+        """
         return self._computed[1]
 
     @property
     def singular_loci(self) -> list[Expr]:
+        """The assumptions that vanish only on points, curves, ...
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> ctx = Context([z], [x, y])
+        >>> p = LHDP(x * z.diff(x) - z, ctx)
+        >>> basis = LHDPList([p], lambda: ([x], [], [x]))
+        >>> basis.singular_loci
+        [x]
+        """
         return self._computed[2]
 
 
 def _divisor(t: _Dterm, S: Sequence[LHDP]) -> int | None:
     """Index of an element of S whose leading derivative t's derivative is a
-    derivative of, or None."""
+    derivative of, or None.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> S = [LHDP(z.diff(y), ctx)]
+    >>> _divisor(_Dterm(1, z.diff(x, y), ctx), S), _divisor(_Dterm(1, z.diff(x), ctx), S)
+    (0, None)
+    """
     for j, b in enumerate(S):
         if b.function == t.function and all(a >= c for a, c in zip(t.order, b.order, strict=True)):
             return j
@@ -1590,7 +2194,16 @@ def _reduce_with_cofactors(
     terms[(variables, j)] is the coefficient (a Coeff) of S[j] differentiated
     by variables, remaining the irreducible terms by comparison vector, and
     e = sum of the terms + remaining. Nothing is normalized, so the
-    coefficients are those of e itself."""
+    coefficients are those of e itself.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> terms, remaining = _reduce_with_cofactors(z.diff(x, y) + z, [LHDP(z.diff(y), ctx)], ctx)
+    >>> terms, [str(t) for t in remaining.values()]
+    (OrderedDict({((x,), 0): 1}), ['z(x, y)'])
+    """
     e = e.simplify().expand()
     if e == 0:
         return OrderedDict(), {}
@@ -1617,7 +2230,11 @@ def _reduce_with_cofactors(
 
 
 def _leader_set(*leaders: str) -> frozenset[tuple[int, tuple[int, int]]]:
-    """{(function, (x-order, y-order))} from names like "2yy" (z2_yy) or "1"."""
+    """{(function, (x-order, y-order))} from names like "2yy" (z2_yy) or "1".
+
+    >>> sorted(_leader_set("2yy", "1x"))
+    [(1, (1, 0)), (2, (0, 2))]
+    """
     return frozenset((int(name[0]), (name.count("x"), name.count("y"))) for name in leaders)
 
 
@@ -1750,6 +2367,15 @@ def janet_type(S: Iterable[LHDP], context: Context) -> JanetType:
 
 
 def _derivative(f: Expr, orders: Sequence[int], context: Context) -> Expr:
+    """The derivative of f of the given orders (f itself for all 0).
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> z = Function("z")(x, y)
+    >>> ctx = Context([z], [x, y])
+    >>> _derivative(z, (2, 0), ctx), _derivative(z, (0, 0), ctx)
+    (Derivative(z(x, y), (x, 2)), z(x, y))
+    """
     variables = [(v, k) for v, k in zip(context.independent, orders, strict=True) if k]
     return Derivative(f, *variables) if variables else f
 

@@ -207,7 +207,8 @@ generated-members = ["sympy.*"]
 
 [tool.pylint.format]
 max-line-length = 100
-max-module-lines = 2000
+# every function and method has a doctest: the docstrings make the modules long
+max-module-lines = 2600
 
 [tool.pylint.basic]
 # single letters and short math names are fine here
