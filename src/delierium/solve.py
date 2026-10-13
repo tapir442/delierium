@@ -69,7 +69,7 @@ from sympy import (
 )
 from sympy.core.function import AppliedUndef
 
-from delierium.helpers import generic_case
+from delierium.helpers import commensurable_families, generic_case
 from delierium.infinitesimals import _simplified_residue
 
 __all__ = [
@@ -120,26 +120,20 @@ def _common_powers(e: Expr, variables: Sequence[Basic]) -> tuple[Expr, list[Symb
     >>> e.subs(d, x**a)
     x**2*x**a + x*x**a
     """
-    families: dict[tuple[Basic, Expr], list[tuple[Pow, Expr, Expr]]] = {}
+    parts = []
     for a in e.atoms(Pow):
         if a.exp.is_Rational or not a.base.has(*variables):
             continue
-        n, symbolic = expand(a.exp).as_coeff_Add()
-        if symbolic == 0:
-            continue
-        key = next(
-            (k for k in families if k[0] == a.base and (symbolic / k[1]).is_Rational),
-            (a.base, symbolic),
-        )
-        families.setdefault(key, []).append((a, n, symbolic))
+        symbolic = expand(a.exp).as_coeff_Add()[1]
+        if symbolic != 0:
+            parts.append((a, a.base, symbolic))
     replacements: dict[Basic, Expr] = {}
     new: list[Symbol] = []
-    for (_, part), members in families.items():
-        unit = part / ilcm(1, 1, *[Rational(m[2] / part).q for m in members])
+    for _, _, members in commensurable_families(parts):
         d = Dummy()
         new.append(d)
-        for a, n, symbolic in members:
-            replacements[a] = a.base**n * d ** int(symbolic / unit)
+        for a, k in members:
+            replacements[a] = a.base ** expand(a.exp).as_coeff_Add()[0] * d**k
     return e.xreplace(replacements), new
 
 
@@ -156,21 +150,18 @@ def _common_exponentials(
     >>> e.subs(d, symbols("D"))
     D**2 + D
     """
-    families: dict[Expr, list[tuple[exp, Expr]]] = {}
+    parts = []
     for a in e.atoms(exp):
         q = cancel(a.args[0] / v)
-        if q.is_Rational or q.has(*coordinates) or q.has(v):
-            continue
-        key = next((k for k in families if (q / k).is_Rational), q)
-        families.setdefault(key, []).append((a, q))
+        if not (q.is_Rational or q.has(*coordinates) or q.has(v)):
+            parts.append((a, v, q))
     replacements: dict[Basic, Expr] = {}
     new: list[Symbol] = []
-    for part, members in families.items():
-        unit = part / ilcm(1, 1, *[Rational(q / part).q for _, q in members])
+    for _, _, members in commensurable_families(parts):
         d = Dummy(positive=True)
         new.append(d)
-        for a, q in members:
-            replacements[a] = d ** int(q / unit)
+        for a, k in members:
+            replacements[a] = d**k
     return e.xreplace(replacements), new
 
 

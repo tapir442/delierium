@@ -43,7 +43,7 @@ from sympy import (
 )
 from sympy.core.function import AppliedUndef
 
-from delierium.helpers import plain_symbol
+from delierium.helpers import numeric_value, plain_symbol, random_point
 from delierium.invariants import Generator, invariants
 
 __all__ = ["SimilarityReduction", "similarity_reduction"]
@@ -316,14 +316,10 @@ def _free_of_numerically(e: Expr, symbols: list[Dummy]) -> bool:
     rng = random.Random(0)
     others = sorted(e.free_symbols - set(symbols), key=str)
     for _ in range(3):
-        point = {v: sympify(rng.randint(11, 97)) / 10 for v in others}
-        values = []
-        for _ in range(2):
-            at = point | {v: sympify(rng.randint(11, 97)) / 10 for v in symbols}
-            try:
-                values.append(complex(e.xreplace(at).evalf(30)))
-            except TypeError:  # not numeric: an arbitrary function
-                return False
+        point = random_point(others, rng)
+        values = [numeric_value(e, point | random_point(symbols, rng)) for _ in range(2)]
+        if values[0] is None or values[1] is None:
+            return False
         if abs(values[0] - values[1]) > 1e-10 * max(1.0, abs(values[0])):
             return False
     return True

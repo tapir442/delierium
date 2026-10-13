@@ -31,6 +31,7 @@ from sympy import (  # noqa: F401
     Poly,
     Pow,
     Rational,
+    S,
     Subs,
     Symbol,
     cancel,
@@ -64,6 +65,7 @@ from sympy.polys.rings import PolyElement, sring
 from sympy.polys.rings import ring as sring_ring
 
 from delierium.helpers import (
+    commensurable_families,
     finish_substitution,
     func_diff,
     make_infinitesimal,
@@ -841,35 +843,19 @@ def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dumm
     >>> e == g**2 * p + g**-2 + g
     True
     """
-    pows = sorted(
-        (p for p in expr.atoms(Pow) if p.base.has(*jet) and not p.exp.is_number),
-        key=default_sort_key,
-    )
-    # group the symbolic parts of the exponents by base, rational multiples
-    # of one another in one group
-    groups: list[tuple[Expr, Expr, list[Expr]]] = []  # (base, reference part, members)
-    for p in pows:
-        _, s = p.exp.expand().as_coeff_Add()
-        b = cancel(p.base)  # the base in lowest terms, as in _algebraic_generators
-        for base, s0, members in groups:
-            if base == b and cancel(s / s0).is_Rational:
-                members.append(p)
-                break
-        else:
-            groups.append((b, s, [p]))
+    parts = [
+        (p, cancel(p.base), p.exp.expand().as_coeff_Add()[1])
+        for p in expr.atoms(Pow)
+        if p.base.has(*jet) and not p.exp.is_number
+    ]
     repl = {}
     gens = []
-    for base, s0, members in groups:
-        # the unit s0/L makes every symbolic part an integer multiple of it
-        ratios = [cancel(p.exp.expand().as_coeff_Add()[1] / s0) for p in members]
-        unit = s0 / reduce(ilcm, (r.q for r in ratios), 1)
-        if unit.could_extract_minus_sign():  # G = b**(n/2), not b**(-n/2)
-            unit = -unit
+    for base, unit, members in commensurable_families(parts):
+        flip = -1 if unit.could_extract_minus_sign() else 1  # G = b**(n/2), not b**(-n/2)
         gen = Dummy()
         gens.append(gen)
-        for p in members:
-            n, s = p.exp.expand().as_coeff_Add()
-            repl[p] = gen ** cancel(s / unit) * base**n
+        for p, k in members:
+            repl[p] = gen ** (flip * k) * base ** p.exp.expand().as_coeff_Add()[0]
     return expr.xreplace(repl), gens
 
 
@@ -992,28 +978,15 @@ def _exp_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]
     >>> e.subs(g, Symbol("E"))
     E**2 + E
     """
-    exps = sorted((e for e in expr.atoms(exp) if e.has(*jet)), key=default_sort_key)
-    families: list[tuple[Expr, list[tuple[Expr, Rational]]]] = []  # (argument, [(exp, ratio)])
-    for e in exps:
-        for arg, members in families:
-            ratio = cancel(e.args[0] / arg)
-            if ratio.is_Rational:
-                members.append((e, ratio))
-                break
-        else:
-            families.append((e.args[0], [(e, Rational(1))]))
-    # the generator of a family is exp of the gcd of its arguments: exp(2 a)
-    # sorted before exp(a) gives exp(a) and exp(a)**2
+    parts = [(e, S.One, e.args[0]) for e in expr.atoms(exp) if e.has(*jet)]
     gens = []
     repl = {}
-    for arg, members in families:
-        unit = reduce(gcd, [r for _, r in members])
+    for _, unit, members in commensurable_families(parts):
         gen = Dummy()
         gens.append(gen)
-        for e, ratio in members:
-            k = ratio / unit
+        for e, k in members:
             if not k > 0:
-                raise NotImplementedError(f"{e} is exp({k}*({unit * arg}))")
+                raise NotImplementedError(f"{e} is exp({k}*({unit}))")
             repl[e] = gen**k
     return expr.xreplace(repl), gens
 

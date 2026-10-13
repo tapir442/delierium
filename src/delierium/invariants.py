@@ -38,10 +38,9 @@ from sympy import (
     integrate,
     simplify,
     solve,
-    sympify,
 )
 
-from delierium.helpers import generic_case, plain_symbol
+from delierium.helpers import generic_case, numeric_value, plain_symbol, random_point
 from delierium.lie_algebra import VectorField
 
 __all__ = ["canonical_coordinates", "differential_invariants", "invariants"]
@@ -121,10 +120,8 @@ def _is_zero(e: Expr) -> bool:
     symbols = sorted(e.free_symbols, key=str)
     zeros = 0
     for _ in range(24):
-        point = {s: sympify(rng.randint(11, 97)) / 10 for s in symbols}
-        try:
-            value = complex(e.xreplace(point).evalf(30))
-        except TypeError:  # not numeric: an arbitrary function
+        value = numeric_value(e, random_point(symbols, rng))
+        if value is None:
             return False
         zeros += abs(value) < 1e-12
     return zeros >= 2
