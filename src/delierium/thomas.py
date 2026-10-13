@@ -44,6 +44,13 @@ class SimpleSystem:
     variables: list[Symbol] = field(repr=False)
 
     def __str__(self) -> str:
+        """The equations and inequations, the lowest leader first.
+
+        >>> from sympy import symbols
+        >>> a, b = symbols("a b")
+        >>> [str(s) for s in thomas_decomposition([a * b], variables=[a, b])]
+        ['{b = 0}', '{a = 0, b != 0}']
+        """
         parts = [(e, "= 0") for e in self.equations] + [(e, "!= 0") for e in self.inequations]
         rank = {v: i for i, v in enumerate(self.variables)}
         parts.sort(key=lambda p: min((rank[v] for v in p[0].free_symbols), default=len(rank)))
@@ -98,7 +105,16 @@ def thomas_decomposition(
 
 
 def _system_key(system: list[tuple[Pol, bool]], ring: "_Ring") -> tuple:
-    """Generic systems first: fewer equations, then by leader and degree."""
+    """Generic systems first: fewer equations, then by leader and degree.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> generic = [(ring.check(y), False)]
+    >>> special = [(ring.check(x - 1), True), (ring.check(y), False)]
+    >>> _system_key(generic, ring) < _system_key(special, ring)
+    True
+    """
     eqs = [p for p, is_eq in system if is_eq]
     return (
         len(eqs),
@@ -111,6 +127,15 @@ class _Ring:
     """Leaders, initials and pseudo division with respect to the ranking."""
 
     def __init__(self, variables: list[Symbol]) -> None:
+        """The polynomial ring over the integers in the variables, the first the
+        highest.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring.variables, ring.rank
+        ([x, y], {x: 2, y: 1})
+        """
         self.variables = variables
         self.rank = {v: len(variables) - i for i, v in enumerate(variables)}
         self.ring = PolyRing(variables, ZZ) if variables else None
@@ -119,6 +144,19 @@ class _Ring:
         self._subresultant = cache(self._compute_subresultant)
 
     def check(self, e: Basic) -> Pol:
+        """e as a polynomial of the ring, denominators and content removed;
+        ValueError if it is none.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring.check(x / 2 - y)
+        x - 2*y
+        >>> ring.check(x + symbols("z"))
+        Traceback (most recent call last):
+        ...
+        ValueError: x + z: symbols [z] are not among the variables
+        """
         e = expand(S(e))
         if not e.free_symbols <= set(self.rank):
             unknown = sorted(e.free_symbols - set(self.rank), key=str)
@@ -133,41 +171,108 @@ class _Ring:
         return self.primitive(self.ring.from_expr(poly.as_expr()))
 
     def ld(self, p: Pol) -> Symbol | None:
-        """The leader, None for a constant."""
+        """The leader, None for a constant.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring.ld(ring.check(x**2 * y - y)), ring.ld(ring.check(y)), ring.ld(ring.check(1))
+        (x, y, None)
+        """
         for v in self.variables:
             if p.degree(self.gen[v]) > 0:
                 return v
         return None
 
     def rank_key(self, p: Pol) -> int:
+        """The rank of the leader, 0 for a constant.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> (
+        ...     ring.rank_key(ring.check(x * y)),
+        ...     ring.rank_key(ring.check(y)),
+        ...     ring.rank_key(ring.check(1)),
+        ... )
+        (2, 1, 0)
+        """
         x = self.ld(p)
         return self.rank[x] if x is not None else 0
 
     @staticmethod
     def sort_key(p: Pol) -> tuple:
+        """A total order of the polynomials: by their terms.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> _Ring.sort_key(ring.check(x - 1)) < _Ring.sort_key(ring.check(x + 1))
+        True
+        """
         return tuple(p.terms())
 
     def mdeg(self, p: Pol, x: Symbol | None = None) -> int:
+        """The degree in the leader (or in x).
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> p = ring.check(x**2 * y - y)
+        >>> ring.mdeg(p), ring.mdeg(p, y)
+        (2, 1)
+        """
         x = x or self.ld(p)
         return max(p.degree(self.gen[x]), 0) if x is not None else 0
 
     def init(self, p: Pol, x: Symbol | None = None) -> Pol:
+        """The initial: the leading coefficient in the leader (or in x).
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> p = ring.check(x**2 * y - y)
+        >>> ring.init(p), ring.init(p, y)
+        (y, x**2 - 1)
+        """
         x = x or self.ld(p)
         return p.coeff_wrt(self.gen[x], self.mdeg(p, x)) if x is not None else p
 
     def factors(self, p: Pol) -> list[Pol]:
         """The distinct irreducible nonconstant factors of p over the
-        rationals, the lowest leader first (the content before the rest)."""
+        rationals, the lowest leader first (the content before the rest).
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring.factors(ring.check(x**2 * y - y))
+        [y, x - 1, x + 1]
+        """
         distinct = {self.primitive(f) for f, _ in p.factor_list()[1]}
         return sorted(distinct, key=lambda f: (self.rank_key(f), self.mdeg(f), self.sort_key(f)))
 
     def primitive(self, p: Pol) -> Pol:
-        """p without its integer content (same zeros), a nonzero constant 1."""
+        """p without its integer content (same zeros), a nonzero constant 1.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring.primitive(ring.check(2 * x + 4)), ring.primitive(ring.check(6))
+        (x + 2, 1)
+        """
         if p.is_ground:
             return p.ring.one if p != 0 else p.ring.zero
         return p.primitive()[1]
 
     def prem(self, p: Pol, q: Pol, x: Symbol) -> Pol:
+        """The pseudo-remainder of p by q in x, primitive.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring.prem(ring.check(x**2), ring.check(x - y), x)
+        y**2
+        """
         return self.primitive(p.ring(p.prem(q, self.gen[x])))  # may be an int
 
     def pquo(self, p: Pol, q: Pol, x: Symbol) -> Pol:
@@ -175,19 +280,49 @@ class _Ring:
 
         From prem and an exact division: SymPy's PolyElement.pquo (1.14) is
         wrong for every variable but the ring's first (pquo(a**2, a, a) gives
-        a + 2)."""
+        a + 2).
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring.pquo(ring.check(x**2), ring.check(x - y), x)
+        x + y
+        """
         g = self.gen[x]
         m = self.init(q, x) ** (self.mdeg(p, x) - self.mdeg(q, x) + 1)
         return self.primitive((m * p - p.ring(p.prem(q, g))).exquo(q))
 
     def diff(self, p: Pol, x: Symbol) -> Pol:
+        """dp/dx, primitive.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring.diff(ring.check(x**2 * y - y), x)
+        x*y
+        """
         return self.primitive(p.diff(self.gen[x]))
 
     def without_leading_term(self, q: Pol, x: Symbol) -> Pol:
+        """q without its leading term in x.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring.without_leading_term(ring.check(x**2 * y - y), x)
+        -y
+        """
         return self.primitive(q - self.init(q, x) * self.gen[x] ** self.mdeg(q, x))
 
     def content_free(self, p: Pol, x: Symbol) -> Pol:
-        """p divided by the gcd of its coefficients as a polynomial in x."""
+        """p divided by the gcd of its coefficients as a polynomial in x.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring.content_free(ring.check(x * y + y), x)
+        x + 1
+        """
         g = self.gen[x]
         content = p.ring.zero
         for d in range(self.mdeg(p, x) + 1):
@@ -199,7 +334,15 @@ class _Ring:
     def prs(self, p: Pol, q: Pol, x: Symbol, i: int) -> tuple[Pol, Pol]:
         """(PRS_i, res_i) of p and q, deg p > deg q (Definition 2.13):
         PRS_i the regular subresultant of degree i (0 if there is none),
-        res_i its initial, the principal subresultant coefficient."""
+        res_i its initial, the principal subresultant coefficient.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> q = ring.check(x**2 - y)
+        >>> ring.prs(q, ring.diff(q, x), x, 0)
+        (-y, -y)
+        """
         dp, dq = self.mdeg(p, x), self.mdeg(q, x)
         zero = p.ring.zero
         if i == dp:
@@ -221,7 +364,14 @@ class _Ring:
         subresultants by polynomial factors where the sequence is defective
         (degree gaps), e.g. a spurious factor 9 z + 1 in the resultant of
         y**6 z**4 + ... - 27 z**3 and its derivative in y, which made the
-        decomposition lose the solutions at z = -1/9."""
+        decomposition lose the solutions at z = -1/9.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> ring._compute_subresultant(ring.check(x**3 - y), ring.check(x**2 - 1), x, 0)
+        y**2 - 1
+        """
         g = self.gen[x]
         m, n = self.mdeg(p, x), self.mdeg(q, x)
         rows = [g**k * p for k in range(n - j - 1, -1, -1)]
@@ -240,13 +390,43 @@ class _System:
     a queue of equations and inequations still to be treated."""
 
     def __init__(self, triangular: dict, queue: list) -> None:
+        """triangular: leader -> (polynomial, is an equation); queue: what is
+        still to be inserted.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> system = _System({x: (ring.check(x**2 - y), True)}, [(ring.check(y), False)])
+        >>> system.triangular, system.queue
+        ({x: (x**2 - y, True)}, [(y, False)])
+        """
         self.triangular: dict[Symbol, tuple[Pol, bool]] = triangular
         self.queue: list[tuple[Pol, bool]] = queue
 
     def copy(self) -> "_System":
+        """A copy whose dict and queue are independent.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> system = _System({x: (ring.check(x**2 - y), True)}, [])
+        >>> other = system.copy()
+        >>> other.queue.append((ring.check(y), True))
+        >>> system.queue
+        []
+        """
         return _System(dict(self.triangular), list(self.queue))
 
     def equation(self, x: Symbol) -> Pol | None:
+        """The equation of leader x, None if there is none.
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> system = _System({x: (ring.check(x**2 - y), True)}, [])
+        >>> system.equation(x), system.equation(y)
+        (x**2 - y, None)
+        """
         entry = self.triangular.get(x)
         return entry[0] if entry and entry[1] else None
 
@@ -263,7 +443,15 @@ class _System:
         multiply by powers of the lower initials, whose coefficients would
         grow over the levels (1419 digits for a two-equation input). Where
         the initial is invertible modulo the lower equations, the polynomial
-        is made monic first (25 digits instead of 1419 there)."""
+        is made monic first (25 digits instead of 1419 there).
+
+        >>> from sympy import symbols
+        >>> x, y = symbols("x y")
+        >>> ring = _Ring([x, y])  # x > y
+        >>> system = _System({x: (ring.check(y * x - 1), True), y: (ring.check(y - 2), True)}, [])
+        >>> system.normalized(ring)
+        [(2*x - 1, True), (y - 2, True)]
+        """
         lowest_first = sorted(self.triangular, key=ring.rank.__getitem__)
         done: dict[Symbol, tuple[Pol, bool]] = {}
         equations: list[Expr] = []  # the normalized equations below the current leader
@@ -285,7 +473,14 @@ def _monic_normal_form(p: Pol, x: Symbol, equations: list[Expr], ring: _Ring) ->
     monic in x first if its initial has an inverse f modulo them (an element
     t - f of the basis of the equations and t init - 1), the denominators
     cleared. f init = 1 on the solutions of the lower equations, so f does
-    not vanish there: the zeros, the initial and square-freeness stay."""
+    not vanish there: the zeros, the initial and square-freeness stay.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> _monic_normal_form(ring.check(y * x - 1), x, [y - 2], ring)
+    2*x - 1
+    """
     variables = ring.variables
     expr = p.as_expr()
     init = ring.init(p, x).as_expr()
@@ -306,7 +501,15 @@ def _monic_normal_form(p: Pol, x: Symbol, equations: list[Expr], ring: _Ring) ->
 
 def _reduce(system: _System, p: Pol, ring: _Ring) -> Pol:
     """p pseudo-reduced modulo the equations of the candidate simple
-    system, with an initial that does not reduce to 0 (Algorithm 2.6)."""
+    system, with an initial that does not reduce to 0 (Algorithm 2.6).
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> system = _System({y: (ring.check(y - 2), True)}, [])
+    >>> _reduce(system, ring.check(y**2 - 4), ring), _reduce(system, ring.check(x * y - x), ring)
+    (0, x*y - x)
+    """
     q = p
     x = ring.ld(q)
     while (
@@ -327,7 +530,15 @@ def _reduce_fully(system: _System, p: Pol, ring: _Ring) -> Pol:
     pseudo-reduction of the whole polynomial, i.e. a multiplication by a
     power of an initial, which does not vanish on the solutions, and the
     subtraction of a multiple of the equation. Without it the coefficients
-    grow with every step (degree 500 in z modulo 9 z + 1 = 0)."""
+    grow with every step (degree 500 in z modulo 9 z + 1 = 0).
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> system = _System({y: (ring.check(y - 2), True)}, [])
+    >>> _reduce_fully(system, ring.check(x * y**2 + x), ring)
+    x
+    """
     q = _reduce(system, p, ring)
     x = ring.ld(q)
     if x is None:
@@ -348,7 +559,15 @@ def _reduce_fully(system: _System, p: Pol, ring: _Ring) -> Pol:
 
 def _split(system: _System, p: Pol) -> tuple[_System, _System]:
     """(system with p != 0, system with p = 0) (Algorithm 2.11); the first
-    is system itself."""
+    is system itself.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> system, other = _split(_System({}, []), ring.check(x))
+    >>> system.queue, other.queue
+    ([(x, False)], [(x, True)])
+    """
     other = system.copy()
     system.queue.append((p, False))
     other.queue.append((p, True))
@@ -357,7 +576,16 @@ def _split(system: _System, p: Pol) -> tuple[_System, _System]:
 
 def _init_split(system: _System, q: tuple[Pol, bool], ring: _Ring) -> _System:
     """Algorithm 2.12: system gets init(q) != 0; returned the system with
-    init(q) = 0 and q back in its queue."""
+    init(q) = 0 and q back in its queue.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> system = _System({}, [])
+    >>> other = _init_split(system, (ring.check(y * x - 1), True), ring)
+    >>> system.queue, other.queue
+    ([(y, False)], [(y, True), (x*y - 1, True)])
+    """
     _, other = _split(system, ring.init(q[0]))
     other.queue.append(q)
     return other
@@ -365,7 +593,16 @@ def _init_split(system: _System, q: tuple[Pol, bool], ring: _Ring) -> _System:
 
 def _res_split(system: _System, p: Pol, q: Pol, x: Symbol, ring: _Ring) -> tuple[int, _System]:
     """Algorithm 2.18: the quasi fibre cardinality i of p and q (deg p >
-    deg q) and the i-th fibration split (system gets res_i != 0)."""
+    deg q) and the i-th fibration split (system gets res_i != 0).
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> system = _System({}, [])
+    >>> i, other = _res_split(system, ring.check(x**2 - y), ring.check(2 * x), x, ring)
+    >>> i, system.queue, other.queue
+    (0, [(-y, False)], [(-y, True)])
+    """
     i = 0
     while True:
         _, res = ring.prs(p, q, x, i)
@@ -377,7 +614,16 @@ def _res_split(system: _System, p: Pol, q: Pol, x: Symbol, ring: _Ring) -> tuple
 
 def _res_split_gcd(system: _System, q: Pol, x: Symbol, ring: _Ring) -> tuple[_System, Pol]:
     """Algorithm 2.19: the conditional gcd of the equation of leader x
-    and the equation q."""
+    and the equation q.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> system = _System({x: (ring.check(x**2 - 1), True)}, [])
+    >>> other, gcd = _res_split_gcd(system, ring.check(x - 1), x, ring)
+    >>> gcd
+    x - 1
+    """
     p = system.equation(x)
     assert p is not None
     i, other = _res_split(system, p, q, x, ring)
@@ -393,7 +639,17 @@ def _res_split_divide(
     If deg p <= deg q, the gcd is that of p and prem(q, p); but the system
     split off gets q itself back, not prem(q, p) as in the paper: the two
     are equivalent where p = 0, not where p is an inequation (Decompose,
-    line 35: x - y != 0, x - 1 != 0 would lose y = 1)."""
+    line 35: x - y != 0, x - 1 != 0 would lose y = 1).
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> other, quotient = _res_split_divide(
+    ...     _System({}, []), ring.check(x**2 - 1), (ring.check(x - 1), False), x, ring
+    ... )
+    >>> quotient
+    x + 1
+    """
     reduced = q[0]
     if ring.mdeg(p, x) <= ring.mdeg(reduced, x):
         reduced = ring.prem(reduced, p, x)
@@ -406,7 +662,15 @@ def _res_split_divide(
 def _res_split_square_free(
     system: _System, p: tuple[Pol, bool], x: Symbol, ring: _Ring
 ) -> tuple[_System, Pol]:
-    """Algorithm 2.21: the conditional square-free part of p."""
+    """Algorithm 2.21: the conditional square-free part of p.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> other, part = _res_split_square_free(_System({}, []), (ring.check(x**2), True), x, ring)
+    >>> part
+    x
+    """
     derivative = ring.diff(p[0], x)
     i, other = _res_split(system, p[0], derivative, x, ring)
     part = ring.pquo(p[0], ring.prs(p[0], derivative, x, i)[0], x) if i > 0 else p[0]
@@ -416,7 +680,15 @@ def _res_split_square_free(
 
 def _select(queue: list[tuple[Pol, bool]], ring: _Ring) -> tuple[Pol, bool]:
     """Equations first, the lowest leader first; an inequation only if no
-    equation of the same or a lower leader waits (Definition 2.22)."""
+    equation of the same or a lower leader waits (Definition 2.22).
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> queue = [(ring.check(y), False), (ring.check(x - 1), True), (ring.check(y - 1), True)]
+    >>> _select(queue, ring), queue
+    ((y - 1, True), [(y, False), (x - 1, True)])
+    """
     equations = [q for q in queue if q[1]]
     candidates = equations or queue
     chosen = min(candidates, key=lambda q: (ring.rank_key(q[0]), ring.sort_key(q[0])))
@@ -426,7 +698,15 @@ def _select(queue: list[tuple[Pol, bool]], ring: _Ring) -> tuple[Pol, bool]:
 
 def _decompose(start: _System, ring: _Ring, factorize: bool) -> list[_System]:
     """Algorithm 2.25 (Decompose), optionally splitting on the factors of
-    each polynomial taken from the queue."""
+    each polynomial taken from the queue.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> systems = _decompose(_System({}, [(ring.check(x * y), True)]), ring, True)
+    >>> [sorted(str(p) for p, _ in s.triangular.values()) for s in systems]
+    [['y'], ['x', 'y']]
+    """
     pending = [start]
     result = []
     while pending:
@@ -454,7 +734,16 @@ def _split_factors(system: _System, factors: list[Pol], is_equation: bool) -> li
     """The factors f1, ..., fk of an equation or inequation into the queue:
     for an inequation all fi != 0; for an equation the disjoint cases f1 = 0,
     f1 != 0 and f2 = 0, ...; system takes the first, the others are
-    returned."""
+    returned.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> system = _System({}, [])
+    >>> others = _split_factors(system, [ring.check(x), ring.check(y)], True)
+    >>> system.queue, [o.queue for o in others]
+    ([(x, True)], [[(x, False), (y, True)]])
+    """
     if not is_equation:
         system.queue += [(f, False) for f in factors]
         return []
@@ -469,7 +758,15 @@ def _split_factors(system: _System, factors: list[Pol], is_equation: bool) -> li
 
 def _insert_equation(system: _System, q: Pol, x: Symbol, ring: _Ring) -> list[_System]:
     """Lines 11-26 of Decompose: the reduced equation q of leader x into the
-    candidate simple system; returns the systems split off."""
+    candidate simple system; returns the systems split off.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> system = _System({}, [])
+    >>> len(_insert_equation(system, ring.check(y * x - 1), x, ring)), system.triangular
+    (2, {x: (x*y - 1, True)})
+    """
     entry = system.triangular.get(x)
     if entry is not None and entry[1]:
         _, res0 = ring.prs(entry[0], q, x, 0)
@@ -490,7 +787,15 @@ def _insert_equation(system: _System, q: Pol, x: Symbol, ring: _Ring) -> list[_S
 
 
 def _insert_inequation(system: _System, q: Pol, x: Symbol, ring: _Ring) -> list[_System]:
-    """Lines 27-40 of Decompose: the reduced inequation q of leader x."""
+    """Lines 27-40 of Decompose: the reduced inequation q of leader x.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> ring = _Ring([x, y])  # x > y
+    >>> system = _System({}, [])
+    >>> len(_insert_inequation(system, ring.check(y * x - 1), x, ring)), system.triangular
+    (2, {x: (x*y - 1, False)})
+    """
     entry = system.triangular.get(x)
     if entry is not None and entry[1]:
         other, p = _res_split_divide(system, entry[0], (q, False), x, ring)

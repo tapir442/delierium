@@ -947,8 +947,11 @@ def _on_lower_derivative(eq: Expr, r: Expr, dep: list[Expr], highest_term: Expr)
     >>> u = Function("u")(x, t)
     >>> F = Function("F")
     >>> eq = u.diff(t) + F(u.diff(x, 2))  # u_t = -F(u_xx), #84
-    >>> _on_lower_derivative(eq, u.diff(t, x) + u.diff(t), [u], u.diff(x, 2))
-    -F(Derivative(u(x, t), (x, 2))) - Derivative(F(Derivative(u(x, t), (x, 2))), Derivative(u(x, t), (x, 2)))*Derivative(u(x, t), (x, 3))
+    >>> _on_lower_derivative(
+    ...     eq, u.diff(t, x) + u.diff(t), [u], u.diff(x, 2)
+    ... )  # doctest: +NORMALIZE_WHITESPACE
+    -F(Derivative(u(x, t), (x, 2))) - Derivative(F(Derivative(u(x, t), (x, 2))),
+    Derivative(u(x, t), (x, 2)))*Derivative(u(x, t), (x, 3))
     """
     candidates = sorted(
         (d for d in eq.atoms(Derivative) if d != highest_term and d.expr in dep),
@@ -1445,10 +1448,10 @@ def _check_dependent(dep: list[Any], indep: list[Any]) -> None:
 
     >>> from sympy import symbols
     >>> x, y = symbols("x y")
-    >>> _check_dependent([y], [x])
+    >>> _check_dependent([y], [x])  # doctest: +ELLIPSIS
     Traceback (most recent call last):
     ...
-    ValueError: the dependent variable y is not a function of the independent variables [x]: write y(x)
+    ValueError: the dependent variable y is not a function of ...: write y(x)
     """
     if not dep:
         raise ValueError("no dependent variables")
