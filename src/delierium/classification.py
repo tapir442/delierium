@@ -73,10 +73,31 @@ class Case:
 
     def rank(self) -> object:
         """The rank of the Janet basis: the dimension of the symmetry
-        algebra for the determining equations of a differential equation."""
+        algebra for the determining equations of a differential equation.
+
+        >>> from sympy import Function, diff, symbols
+        >>> x, y, a = symbols("x y a")
+        >>> z = Function("z")(x, y)
+        >>> generic, special = classify(
+        ...     [diff(z, x) - a * diff(z, y), a * diff(z, y, 2)], [z], [x, y]
+        ... )
+        >>> generic.rank(), special.rank()
+        (2, oo)
+        """
         return self.janet.rank()
 
     def __str__(self) -> str:
+        """The rule, the inequations and the rank.
+
+        >>> from sympy import Function, diff, symbols
+        >>> x, y, a = symbols("x y a")
+        >>> z = Function("z")(x, y)
+        >>> generic, special = classify(
+        ...     [diff(z, x) - a * diff(z, y), a * diff(z, y, 2)], [z], [x, y]
+        ... )
+        >>> str(generic), str(special)
+        ('generic (a != 0): rank 2', 'a = 0: rank oo')
+        """
         values = ", ".join(f"{k} = {v}" for k, v in self.rule.items()) or "generic"
         excluded = "; ".join(" or ".join(f"{e} != 0" for e in ineq) for ineq in self.inequations)
         return f"{values}{' (' + excluded + ')' if excluded else ''}: rank {self.rank()}"
@@ -194,7 +215,15 @@ def _determining_janet_basis(
     """The Janet basis of the determining equations of eq (unknown
     functions: the infinitesimals in the order of the coordinates, the
     independent variables, then the dependent one as a plain symbol) and
-    the symmetry condition they come from."""
+    the symmetry condition they come from.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> janet, condition = _determining_janet_basis(y.diff(x, 2), y, [x], Mgrevlex)
+    >>> janet.rank()
+    8
+    """
     infinitesimals = create_infinitesimals([dependent], independent)
     plain = {dependent: sp_symbol(dependent)}
     functions = [infinitesimals[v].xreplace(plain) for v in [*independent, dependent]]
@@ -211,7 +240,16 @@ def _initial_conditions(eq: Expr, dependent: Basic, independent: list[Basic]) ->
     """The parameter conditions of the initial of eq, the coefficient of its
     highest derivative: deriving the determining equations divides by it
     (solving for the highest derivative), so where it vanishes the equation
-    is a different one."""
+    is a different one.
+
+    >>> from sympy import Function, symbols
+    >>> x, a = symbols("x a")
+    >>> y = Function("y")(x)
+    >>> _initial_conditions(a * y.diff(x, 2) + y, y, [x])
+    [[a]]
+    >>> _initial_conditions(y.diff(x, 2) + a * y, y, [x])
+    []
+    """
     _, highest = order(eq, [dependent], independent)
     if not highest:
         return []
@@ -228,7 +266,13 @@ def _initial_conditions(eq: Expr, dependent: Basic, independent: list[Basic]) ->
 
 
 def sp_symbol(f: Basic) -> Basic:
-    """The plain symbol for the dependent variable f, e.g. u for u(x, t)."""
+    """The plain symbol for the dependent variable f, e.g. u for u(x, t).
+
+    >>> from sympy import Function, symbols
+    >>> x, t = symbols("x t")
+    >>> sp_symbol(Function("u")(x, t))
+    u
+    """
     from sympy import Symbol  # pylint: disable=import-outside-toplevel
 
     return Symbol(f.func.__name__)
@@ -240,6 +284,20 @@ def _classify(
     inequations: list[list[Expr]],
     depth: int,
 ) -> list[Case]:
+    """The cases below rule (where the inequations hold), the generic one
+    first, special cases nested up to depth.
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a = symbols("x y a")
+    >>> z = Function("z")(x, y)
+    >>> def build(rule):
+    ...     janet = JanetBasis(
+    ...         [z.diff(x) - a * z.diff(y), (a * z.diff(y, 2)).subs(rule)], [z], [x, y]
+    ...     )
+    ...     return janet, janet.parameter_conditions()
+    >>> [str(case) for case in _classify(build, {}, [], 1)]
+    ['generic (a != 0): rank 2', 'a = 0: rank oo']
+    """
     janet, conditions = build(rule)
     generic = Case(rule, list(inequations), janet)
     if depth == 0:
@@ -272,7 +330,15 @@ def _classify(
 def _inequations(inequations: list[list[Expr]]) -> list[list[Expr]] | None:
     """The inequations (each: not all of its expressions vanish) without the
     vanishing expressions, those that always hold and duplicates; None if
-    one of them cannot hold (all its expressions vanish)."""
+    one of them cannot hold (all its expressions vanish).
+
+    >>> from sympy import S, symbols
+    >>> a, b = symbols("a b")
+    >>> _inequations([[2 * a], [-a], [b, S.Zero], [S(3)]])
+    [[a], [b]]
+    >>> _inequations([[a - a]]) is None
+    True
+    """
     result: list[list[Expr]] = []
     for ineq in inequations:
         nonzero = [e for e in (e.simplify() for e in ineq) if e != 0]
@@ -298,7 +364,15 @@ def _solutions(condition: Sequence[Expr]) -> list[tuple[dict[Basic, Expr], list[
     leaders from the lowest up; the inequations of a system are the
     assumptions. In a simple system the initial of each equation and its
     discriminant do not vanish, so the roots are distinct and the solutions
-    disjoint."""
+    disjoint.
+
+    >>> from sympy import symbols
+    >>> a, b = symbols("a b")
+    >>> _solutions([a * b])
+    [({b: 0}, []), ({a: 0}, [b])]
+    >>> _solutions([a**2 + 1])
+    []
+    """
     polys = [_without_radicals(numer(together(e)).expand()) for e in condition]
     polys = [f for f in polys if f != 0]
     if not polys:
@@ -319,7 +393,13 @@ def _solutions(condition: Sequence[Expr]) -> list[tuple[dict[Basic, Expr], list[
 def _without_radicals(e: Expr) -> Expr:
     """e = 0 as a polynomial equation: a condition can contain roots of the
     parameters once a parameter was solved for (sqrt(-kappa*lambda) = 0,
-    #83); unrad squares them away, sqrt(f) = 0 gives f = 0."""
+    #83); unrad squares them away, sqrt(f) = 0 gives f = 0.
+
+    >>> from sympy import sqrt, symbols
+    >>> a, b = symbols("a b")
+    >>> _without_radicals(sqrt(-a * b)), _without_radicals(a + b)
+    (a*b, a + b)
+    """
     if not any(p.exp.is_Rational and not p.exp.is_Integer for p in e.atoms(Pow)):
         return e
     try:
@@ -332,7 +412,13 @@ def _without_radicals(e: Expr) -> Expr:
 def _solve_triangular(equations: list[Expr], variables: list[Basic]) -> list[dict[Basic, Expr]]:
     """The real solutions of the equations of a simple system, its leaders
     in terms of the free variables: each equation solved for its leader
-    after substituting the solutions of the lower ones."""
+    after substituting the solutions of the lower ones.
+
+    >>> from sympy import symbols
+    >>> a, b = symbols("a b")
+    >>> _solve_triangular([a - b, b**2 - 1], [a, b])
+    [{b: -1, a: -1}, {b: 1, a: 1}]
+    """
     solutions: list[dict[Basic, Expr]] = [{}]
     for equation in reversed(equations):  # lowest leader first
         leader = next(v for v in variables if equation.has(v))
@@ -349,7 +435,16 @@ def _solve_triangular(equations: list[Expr], variables: list[Basic]) -> list[dic
 
 def _same_basis(janet: JanetBasis, solution: dict[Basic, Expr], other: JanetBasis) -> bool:
     """janet's basis with solution substituted is other's (both fully
-    reduced with leading coefficients 1, so unique for the ranking)."""
+    reduced with leading coefficients 1, so unique for the ranking).
+
+    >>> from sympy import Function, symbols
+    >>> x, y, a = symbols("x y a")
+    >>> z = Function("z")(x, y)
+    >>> janet = JanetBasis([z.diff(x) - a * z.diff(y)], [z], [x, y])
+    >>> other = JanetBasis([z.diff(x) - 2 * z.diff(y)], [z], [x, y])
+    >>> _same_basis(janet, {a: 2}, other), _same_basis(janet, {a: 3}, other)
+    (True, False)
+    """
     substituted = [e.expression().subs(solution) for e in janet.S]
     if any(e.has(zoo, nan) for e in substituted):
         return False

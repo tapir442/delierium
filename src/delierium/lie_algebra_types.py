@@ -36,6 +36,11 @@ class LieAlgebraType:
     parameters: dict[str, Expr] = field(default_factory=dict)
 
     def __str__(self) -> str:
+        """The name with the parameters.
+
+        >>> str(LieAlgebraType("l3,2", {"c": -1})), str(LieAlgebraType("l1"))
+        ('l3,2(c = -1)', 'l1')
+        """
         if not self.parameters:
             return self.name
         values = ", ".join(f"{k} = {v}" for k, v in self.parameters.items())
@@ -44,7 +49,17 @@ class LieAlgebraType:
 
 def lie_algebra_type(algebra: "LieAlgebra") -> LieAlgebraType | None:
     """The type of algebra in Lie's classification (Schwarz 3.4), None if
-    its dimension is above 4."""
+    its dimension is above 4.
+
+    >>> from sympy import Rational, symbols
+    >>> from delierium import LieAlgebra
+    >>> x, y = symbols("x y")
+    >>> l32 = LieAlgebra([[1, 0], [0, 1], [x, Rational(3, 5) * y]], [x, y])
+    >>> lie_algebra_type(l32)
+    LieAlgebraType(name='l3,2', parameters={'c': 3/5})
+    >>> lie_algebra_type(LieAlgebra([[1, 0]], [x, y])).name
+    'l1'
+    """
     r = algebra.dimension
     derived = algebra.derived_series()
     d1 = derived[1] if len(derived) > 1 else r
@@ -60,6 +75,17 @@ def lie_algebra_type(algebra: "LieAlgebra") -> LieAlgebraType | None:
 
 
 def _dimension_3(algebra: "LieAlgebra", d1: int) -> LieAlgebraType:
+    """The type of a 3-dimensional algebra with derived algebra of dimension d1.
+
+    >>> from sympy import Rational, symbols
+    >>> from delierium import LieAlgebra
+    >>> x, y = symbols("x y")
+    >>> l32 = LieAlgebra([[1, 0], [0, 1], [x, Rational(3, 5) * y]], [x, y])
+    >>> str(_dimension_3(l32, 2))
+    'l3,2(c = 3/5)'
+    >>> str(_dimension_3(LieAlgebra([[1, 0], [0, 1], [x, x + y]], [x, y]), 2))
+    'l3,3'
+    """
     if d1 == 0:
         return LieAlgebraType("l3,6")
     if d1 == 3:
@@ -75,6 +101,15 @@ def _dimension_3(algebra: "LieAlgebra", d1: int) -> LieAlgebraType:
 
 
 def _dimension_4(algebra: "LieAlgebra", derived: list[int]) -> LieAlgebraType:
+    """The type of a 4-dimensional algebra with the derived series derived.
+
+    >>> from sympy import Rational, symbols
+    >>> from delierium import LieAlgebra
+    >>> x, y, z = symbols("x y z")
+    >>> a = LieAlgebra([[1, 0, 0], [0, 1, 0], [0, 0, 1], [x, 2 * y, 3 * z]], [x, y, z])
+    >>> str(_dimension_4(a, a.derived_series()))
+    'l4,6(a = 2, b = 3)'
+    """
     d1 = derived[1] if len(derived) > 1 else 4
     d2 = derived[2] if len(derived) > 2 else d1
     if d1 == 0:
@@ -91,7 +126,16 @@ def _dimension_4(algebra: "LieAlgebra", derived: list[int]) -> LieAlgebraType:
 
 
 def _heisenberg_ideal(algebra: "LieAlgebra") -> LieAlgebraType:
-    """g' is the Heisenberg algebra with center g'': ad X on g'/g''."""
+    """g' is the Heisenberg algebra with center g'': ad X on g'/g''.
+
+    >>> from sympy import Rational, symbols
+    >>> from delierium import LieAlgebra
+    >>> x, y, z = symbols("x y z")
+    >>> c = Rational(3, 5)
+    >>> h = LieAlgebra([[0, 0, 1], [1, 0, 0], [0, 1, x], [x, c * y, (1 + c) * z]], [x, y, z])
+    >>> h.derived_series(), str(_heisenberg_ideal(h))
+    ([4, 3, 1, 0], 'l4,5(c = 8/5)')
+    """
     g1 = _derived(algebra)
     g2 = algebra._span_of_brackets(g1, g1)  # pylint: disable=protected-access
     # a basis of g' starting with g'': the induced map is the lower block
@@ -105,7 +149,15 @@ def _heisenberg_ideal(algebra: "LieAlgebra") -> LieAlgebraType:
 
 
 def _abelian_ideal_3(algebra: "LieAlgebra") -> LieAlgebraType:
-    """g' abelian of dimension 3: the Jordan form of ad X on it."""
+    """g' abelian of dimension 3: the Jordan form of ad X on it.
+
+    >>> from sympy import Rational, symbols
+    >>> from delierium import LieAlgebra
+    >>> x, y, z = symbols("x y z")
+    >>> a = LieAlgebra([[1, 0, 0], [0, 1, 0], [0, 0, 1], [x, 2 * y, 3 * z]], [x, y, z])
+    >>> str(_abelian_ideal_3(a))
+    'l4,6(a = 2, b = 3)'
+    """
     blocks = _jordan_blocks(_ad_on(algebra, _derived(algebra)))
     sizes = sorted(size for _, size in blocks)
     if sizes == [3]:
@@ -126,6 +178,15 @@ def _abelian_ideal_3(algebra: "LieAlgebra") -> LieAlgebraType:
 
 
 def _derived_dimension_2(algebra: "LieAlgebra") -> LieAlgebraType:
+    """The type of a 4-dimensional algebra with derived algebra of dimension 2.
+
+    >>> from sympy import symbols
+    >>> from delierium import LieAlgebra
+    >>> x, y = symbols("x y")
+    >>> two = LieAlgebra([[1, 0], [x, 0], [0, 1], [0, y]], [x, y])  # l2,1 + l2,1
+    >>> two.derived_series(), str(_derived_dimension_2(two))
+    ([4, 2, 0], 'l4,10')
+    """
     if algebra.is_nilpotent():
         return LieAlgebraType("l4,13")
     center = algebra.center()
@@ -148,12 +209,31 @@ def _derived_dimension_2(algebra: "LieAlgebra") -> LieAlgebraType:
 
 
 def _derived(algebra: "LieAlgebra") -> Matrix:
+    """A basis (rows) of the derived algebra.
+
+    >>> from sympy import Rational, symbols
+    >>> from delierium import LieAlgebra
+    >>> x, y = symbols("x y")
+    >>> l32 = LieAlgebra([[1, 0], [0, 1], [x, Rational(3, 5) * y]], [x, y])
+    >>> _derived(l32)
+    Matrix([
+    [1, 0, 0],
+    [0, 1, 0]])
+    """
     g = eye(algebra.dimension)
     return algebra._span_of_brackets(g, g)  # pylint: disable=protected-access
 
 
 def _outside(algebra: "LieAlgebra", subspace: Matrix) -> Matrix:
-    """A basis vector (row) not in the span of the rows of subspace."""
+    """A basis vector (row) not in the span of the rows of subspace.
+
+    >>> from sympy import Rational, symbols
+    >>> from delierium import LieAlgebra
+    >>> x, y = symbols("x y")
+    >>> l32 = LieAlgebra([[1, 0], [0, 1], [x, Rational(3, 5) * y]], [x, y])
+    >>> _outside(l32, _derived(l32))
+    Matrix([[0, 0, 1]])
+    """
     r = algebra.dimension
     for i in range(r):
         e = eye(r)[i, :]
@@ -165,7 +245,17 @@ def _outside(algebra: "LieAlgebra", subspace: Matrix) -> Matrix:
 def _ad_on(algebra: "LieAlgebra", basis: Matrix, avoid: Matrix | None = None) -> Matrix:
     """The matrix of ad X on the invariant subspace spanned by the rows of
     basis, in that basis, for a basis vector X outside avoid (default:
-    the subspace)."""
+    the subspace).
+
+    >>> from sympy import Rational, symbols
+    >>> from delierium import LieAlgebra
+    >>> x, y = symbols("x y")
+    >>> l32 = LieAlgebra([[1, 0], [0, 1], [x, Rational(3, 5) * y]], [x, y])
+    >>> _ad_on(l32, _derived(l32))
+    Matrix([
+    [-1,    0],
+    [ 0, -3/5]])
+    """
     r, c = algebra.dimension, algebra.structure_constants
     x = _outside(algebra, basis if avoid is None else avoid)
     ad = Matrix(r, r, lambda k, j: sum(x[i] * c[i][j][k] for i in range(r)))
@@ -175,7 +265,15 @@ def _ad_on(algebra: "LieAlgebra", basis: Matrix, avoid: Matrix | None = None) ->
 
 
 def _extend(sub: Matrix, space: Matrix) -> Matrix:
-    """A basis of the row space of space, starting with the rows of sub."""
+    """A basis of the row space of space, starting with the rows of sub.
+
+    >>> from sympy import Matrix, eye
+    >>> _extend(Matrix([[1, 1, 0]]), eye(3))
+    Matrix([
+    [1, 1, 0],
+    [1, 0, 0],
+    [0, 0, 1]])
+    """
     rows = sub
     for i in range(space.rows):
         candidate = Matrix.vstack(rows, space[i, :])
@@ -185,7 +283,12 @@ def _extend(sub: Matrix, space: Matrix) -> Matrix:
 
 
 def _jordan_blocks(m: Matrix) -> list[tuple[Expr, int]]:
-    """(eigenvalue, size) of the Jordan blocks of m."""
+    """(eigenvalue, size) of the Jordan blocks of m.
+
+    >>> from sympy import Matrix
+    >>> _jordan_blocks(Matrix([[2, 1], [0, 2]])), _jordan_blocks(Matrix([[1, 0], [0, 3]]))
+    ([(2, 2)], [(1, 1), (3, 1)])
+    """
     _, j = m.jordan_form()
     blocks: list[tuple[Expr, int]] = []
     i = 0
@@ -199,19 +302,35 @@ def _jordan_blocks(m: Matrix) -> list[tuple[Expr, int]]:
 
 
 def _two_eigenvalues(blocks: list[tuple[Expr, int]]) -> tuple[Expr, Expr]:
-    """The eigenvalues of a diagonalizable 2x2 matrix from its blocks."""
+    """The eigenvalues of a diagonalizable 2x2 matrix from its blocks.
+
+    >>> _two_eigenvalues([(1, 1), (3, 1)])
+    (1, 3)
+    """
     if len(blocks) != 2:
         raise ValueError(f"expected two Jordan blocks of size 1, got {blocks}")
     return blocks[0][0], blocks[1][0]
 
 
 def _size(e: Expr) -> int:
+    """The length of e printed: how simple a parameter is.
+
+    >>> from sympy import symbols
+    >>> _size(symbols("x") ** 2 + 1)
+    8
+    """
     return len(str(e))
 
 
 def _canonical(options: list[Expr]) -> Expr:
     """The representative of a parameter defined up to the given choices
-    (c or 1/c): a number of absolute value at most 1, or else the shortest."""
+    (c or 1/c): a number of absolute value at most 1, or else the shortest.
+
+    >>> from sympy import Rational, symbols
+    >>> x = symbols("x")
+    >>> _canonical([Rational(5, 3), Rational(3, 5)]), _canonical([2 * x, 1 / (2 * x)])
+    (3/5, 2*x)
+    """
     options = [cancel(sympify(o)) for o in options]
 
     def key(o: Expr) -> tuple[int, int, tuple[object, ...]]:

@@ -23,6 +23,12 @@ __all__ = [
 def is_derivative_of(expr: Basic, u: Expr) -> bool:
     """
     Check if expr is a derivative of u.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> u, v = Function("u")(x), Function("v")(x)
+    >>> is_derivative_of(u.diff(x), u), is_derivative_of(v.diff(x), u), is_derivative_of(u, u)
+    (True, False, False)
     """
     return isinstance(expr, Derivative) and expr.expr.func == u.func
 
@@ -30,6 +36,12 @@ def is_derivative_of(expr: Basic, u: Expr) -> bool:
 def derivative_orders_of(expr: Basic, u: Expr) -> Iterator[int]:
     """
     Yield all derivative orders of u appearing in expr.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> u = Function("u")(x)
+    >>> sorted(derivative_orders_of(u.diff(x, 3) + u * u.diff(x), u))
+    [1, 3]
     """
     if hasattr(expr, 'args') and expr.args:
         for sub_expr in expr.args:
@@ -71,7 +83,15 @@ def variational_derivative(L: Expr, u_in: Expr) -> Expr:
 
 def _renamed_arguments(dependent: Any, independent: Any, deprecated: dict[str, Any]) -> tuple:
     """dependent and independent, also from the deprecated keywords depend and
-    independ."""
+    independ.
+
+    >>> _renamed_arguments("u", "x", {})
+    ('u', 'x')
+    >>> import warnings
+    >>> with warnings.catch_warnings(record=True):
+    ...     _renamed_arguments(None, None, {"depend": "u", "independ": "x"})
+    ('u', 'x')
+    """
     for old, new in (("depend", "dependent"), ("independ", "independent")):
         if old in deprecated:
             warnings.warn(
@@ -142,11 +162,26 @@ def euler_operator(
 
 
 def _order(jet: Expr) -> Integer | int:
+    """The order of the jet: 0 for the function itself.
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> u = Function("u")(x)
+    >>> _order(u.diff(x, 2)), _order(u)
+    (2, 0)
+    """
     return jet.derivative_count if isinstance(jet, Derivative) else 0
 
 
 def _total_derivative(expr: Expr, jet: Expr) -> Expr:
-    """D^alpha expr, alpha the multi-index of the derivative jet."""
+    """D^alpha expr, alpha the multi-index of the derivative jet.
+
+    >>> from sympy import Function, symbols
+    >>> x, t = symbols("x t")
+    >>> u = Function("u")(x, t)
+    >>> _total_derivative(x * t**2, u.diff(x, t)), _total_derivative(x * t, u)
+    (2*t, t*x)
+    """
     return diff(expr, *jet.variable_count) if isinstance(jet, Derivative) else expr
 
 

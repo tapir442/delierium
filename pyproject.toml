@@ -89,14 +89,14 @@ source-exclude = [
 # --------------------------------------------------------------------------
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tests", "README.md"]
+testpaths = ["tests", "README.md", "src/delierium"]
 filterwarnings = [
     # `from sympy import *` drags sympy's `test` runner into test modules
     "ignore:cannot collect 'test' because it is not a function:pytest.PytestCollectionWarning",
 ]
 addopts = [
     "-ra", "--strict-markers", "--strict-config", "--import-mode=importlib",
-    "--doctest-glob=README.md",
+    "--doctest-glob=README.md", "--doctest-modules",
     # the catalogue checks take over a minute (15 s with -n auto): run them
     # with `pytest -m slow`
     "-m", "not slow",

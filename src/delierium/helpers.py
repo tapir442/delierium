@@ -29,6 +29,13 @@ _in_ipython_session = hasattr(builtins, "__IPYTHON__")
 
 # fast solution für Profiling:
 def profile_if_enabled[F: Callable[..., Any]](func: F) -> F:
+    """func, wrapped by line_profiler's profile if JANET_PROFILE=true.
+
+    >>> def f():
+    ...     return 1
+    >>> profile_if_enabled(f) is f  # JANET_PROFILE not set
+    True
+    """
     if os.environ.get('JANET_PROFILE', 'false').lower() == 'true':
         from line_profiler import profile
 
@@ -40,6 +47,16 @@ def profile_if_enabled[F: Callable[..., Any]](func: F) -> F:
 def func_diff(fun: Expr, var: Symbol | Function) -> Expr:
     # simplify=False: SymPy's factor_terms(signsimp(...)) after every higher
     # derivative costs time and is of no use here
+    """d fun / d var, var also a function or a derivative (a jet coordinate).
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> func_diff(y.diff(x) ** 2 + x * y, y.diff(x))
+    2*Derivative(y(x), x)
+    >>> func_diff(x**2 * y, x)
+    x**2*Derivative(y(x), x) + 2*x*y(x)
+    """
     if var.is_Function or var.is_Derivative:
         d = Symbol('d')
         r = fun.xreplace({var: d}).diff(d, simplify=False).xreplace({d: var})
@@ -101,7 +118,11 @@ def ltf(  # pylint: disable=unused-argument
 
 
 def show_output(obj: object) -> None:
-    """Rich display in IPython/Jupyter, print everywhere else."""
+    """Rich display in IPython/Jupyter, print everywhere else.
+
+    >>> show_output("Janet basis")
+    Janet basis
+    """
     if _in_ipython_session:
         from IPython.display import display
 
@@ -124,7 +145,11 @@ def make_infinitesimal(v: Basic, *variables: Basic, name: str = "") -> Expr:
 
 def is_jupyter_lab() -> bool:
     """True inside a Jupyter kernel (JupyterLab, Notebook, VS Code), where
-    formulas can be displayed; False in a terminal, also in IPython there."""
+    formulas can be displayed; False in a terminal, also in IPython there.
+
+    >>> is_jupyter_lab()
+    False
+    """
     try:
         from IPython import get_ipython
     except ImportError:
@@ -134,7 +159,13 @@ def is_jupyter_lab() -> bool:
 
 
 def _function_name(f: Basic) -> str:
-    """y for y(x) or the symbol y: the name of a function or symbol."""
+    """y for y(x) or the symbol y: the name of a function or symbol.
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> _function_name(Function("u")(x)), _function_name(y)
+    ('u', 'y')
+    """
     if isinstance(f, AppliedUndef):
         return f.func.__name__
     return str(f)
