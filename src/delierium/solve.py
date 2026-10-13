@@ -37,7 +37,6 @@ from sympy import (
     Lambda,
     Matrix,
     Mul,
-    Piecewise,
     Poly,
     PolynomialError,
     Pow,
@@ -70,6 +69,7 @@ from sympy import (
 )
 from sympy.core.function import AppliedUndef
 
+from delierium.helpers import generic_case
 from delierium.infinitesimals import _simplified_residue
 
 __all__ = [
@@ -798,7 +798,7 @@ def _ode_solution(
         if isinstance(solution, list) or solution.rhs.has(Integral):
             continue
         # generic parameters: the first case of a Piecewise (a != 0)
-        rhs = solution.rhs.replace(lambda a: isinstance(a, Piecewise), lambda a: a.args[0].expr)
+        rhs = generic_case(solution.rhs)
         constants = sorted(
             (s for s in rhs.free_symbols if s.name.startswith("C") and s not in e.free_symbols),
             key=str,

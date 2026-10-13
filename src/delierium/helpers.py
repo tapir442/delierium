@@ -11,6 +11,7 @@ from sympy import (
     Derivative,
     Expr,
     Function,
+    Piecewise,
     Subs,
     Symbol,
     sympify,
@@ -158,6 +159,29 @@ def is_jupyter_lab() -> bool:
     return shell is not None and type(shell).__name__ == "ZMQInteractiveShell"
 
 
+def plain_symbol(f: Basic) -> Symbol:
+    """The plain symbol for the dependent variable f: u for u(x, t).
+
+    >>> from sympy import Function, symbols
+    >>> x, t = symbols("x t")
+    >>> plain_symbol(Function("u")(x, t))
+    u
+    """
+    return Symbol(f.func.__name__)
+
+
+def generic_case(e: Expr) -> Expr:
+    """e with every Piecewise replaced by its first case: generic values of
+    the parameters (a != 0 for dsolve's and integrate's case splits).
+
+    >>> from sympy import Ne, Piecewise, symbols
+    >>> x, a = symbols("x a")
+    >>> generic_case(Piecewise((x / a, Ne(a, 0)), (x, True)) + 1)
+    1 + x/a
+    """
+    return e.replace(lambda a: isinstance(a, Piecewise), lambda a: a.args[0].expr)
+
+
 def _function_name(f: Basic) -> str:
     """y for y(x) or the symbol y: the name of a function or symbol.
 
@@ -222,7 +246,7 @@ def lie_form(
             )
             replacements[d] = Symbol(f"{name}_{''.join(subscript)}")
     expr = expr.xreplace(replacements)
-    return expr.xreplace({f: Symbol(f.func.__name__) for f in expr.atoms(AppliedUndef)})
+    return expr.xreplace({f: plain_symbol(f) for f in expr.atoms(AppliedUndef)})
 
 
 def lie_derivative_printer(  # pylint: disable=keyword-arg-before-vararg,unused-argument

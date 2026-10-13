@@ -59,7 +59,13 @@ from sympy.functions.elementary.trigonometric import TrigonometricFunction
 from sympy.polys.fields import sfield
 from sympy.polys.polyerrors import CoercionFailed, PolynomialError
 
-from delierium.helpers import finish_substitution, func_diff, make_infinitesimal, profile_if_enabled
+from delierium.helpers import (
+    finish_substitution,
+    func_diff,
+    make_infinitesimal,
+    plain_symbol,
+    profile_if_enabled,
+)
 from delierium.janet_basis import (
     LHDP,
     JanetBasis,
@@ -844,6 +850,43 @@ def create_infinitesimals(
     return infinitesimals
 
 
+def _polynomial_in(eq: Expr, d: Basic) -> Poly | None:
+    """The numerator of eq as a polynomial in d (a derivative), None if it
+    is none.
+
+    >>> from sympy import Function, sqrt, symbols
+    >>> x = symbols("x")
+    >>> y = Function("y")(x)
+    >>> _polynomial_in(x * y.diff(x) ** 2 + y, y.diff(x)).all_coeffs()
+    [x, 0, y(x)]
+    >>> _polynomial_in(sqrt(y.diff(x)) + y, y.diff(x)) is None
+    True
+    """
+    h = Dummy()
+    try:
+        return Poly(numer(together(eq.xreplace({d: h}))), h)
+    except PolynomialError:
+        return None
+
+
+def _initial(eq: Expr, dep: list[Basic], indep: list[Basic]) -> Expr | None:
+    """The initial of eq: the coefficient of its leading derivative (see
+    _leading_derivative) in its numerator; None without a derivative or if
+    eq is no polynomial in it.
+
+    >>> from sympy import Function, symbols
+    >>> x, a = symbols("x a")
+    >>> y = Function("y")(x)
+    >>> _initial(a * x * y.diff(x, 2) + y, [y], [x]), _initial(y, [y], [x])
+    (a*x, None)
+    """
+    _, highest = order(eq, dep, indep)
+    if not highest:
+        return None
+    p = _polynomial_in(eq, _leading_derivative(eq, highest, dep))
+    return None if p is None else p.LC()
+
+
 def _leading_derivative(eq: Expr, candidates: set[Expr], dep: list[Function]) -> Expr:
     """The highest derivative to solve eq for, independent of the hash seed.
 
@@ -859,14 +902,10 @@ def _leading_derivative(eq: Expr, candidates: set[Expr], dep: list[Function]) ->
     Derivative(u(x, t), (t, 2))
     """
     dep_names = {d.name for d in dep}
-    h = Dummy()
 
     def rank(d: Expr) -> int:
-        try:
-            p = Poly(numer(together(eq.xreplace({d: h}))), h)
-        except PolynomialError:
-            return 2
-        if p.degree() != 1:
+        p = _polynomial_in(eq, d)
+        if p is None or p.degree() != 1:
             return 2
         jet_free = not any(a.func.__name__ in dep_names for a in p.LC().atoms(AppliedUndef))
         return 0 if jet_free else 1
@@ -1255,8 +1294,8 @@ def _solved_form(
         raise NotImplementedError("no distinct leading derivatives for the equations")
     rhs = {}
     for eq, leader in zip(eqs, leaders, strict=True):
-        h = Dummy()
-        if Poly(numer(together(eq.xreplace({leader: h}))), h).degree() != 1:
+        p = _polynomial_in(eq, leader)
+        if p is None or p.degree() != 1:
             raise NotImplementedError(f"{eq} is not linear in {leader}")
         rhs[leader.expr] = (leader.derivative_count, solve(eq, leader)[0])
     return rhs
@@ -1516,7 +1555,7 @@ def _determining_system(
         return system, functions, variables
     if len(eqs) == 1 and len(dep) == 1:
         infinitesimals = create_infinitesimals(dep, indep)
-        plain = {d: Symbol(d.func.__name__) for d in dep}
+        plain = {d: plain_symbol(d) for d in dep}
         pde = overdetermined_system_pde(eqs[0], dep, indep, infinitesimals=infinitesimals)
         functions = [infinitesimals[v].xreplace(plain) for v in indep + dep]
         return [e.xreplace(plain) for e in pde], functions, indep + [plain[d] for d in dep]
@@ -1635,16 +1674,8 @@ def _initials(eqs: list[Expr], dep: list[Basic], indep: list[Basic]) -> list[Exp
     result = []
     for eq in eqs:
         eq = _exact_numbers(_canonical_derivatives_of(eq, dep))  # as determining_condition
-        _, highest = order(eq, dep, indep)
-        if not highest:
-            continue
-        leader = _leading_derivative(eq, highest, dep)
-        h = Dummy()
-        try:
-            initial = Poly(numer(together(eq.xreplace({leader: h}))), h).LC()
-        except PolynomialError:
-            continue
-        if not initial.is_number and initial not in result:
+        initial = _initial(eq, dep, indep)
+        if initial is not None and not initial.is_number and initial not in result:
             result.append(initial)
     return result
 
@@ -1802,7 +1833,7 @@ def _linear_system_odes(
     indep = convert_to_iterable(independent)
     infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
     system = overdetermined_system_odes(eqs, dep, indep, infinitesimals=infinitesimals)
-    to_symbol = {d: Symbol(d.func.__name__) for d in dep}
+    to_symbol = {d: plain_symbol(d) for d in dep}
     inf = [infinitesimals[v].xreplace(to_symbol) for v in indep + dep]
     variables = indep + [to_symbol[d] for d in dep]
     return [e.xreplace(to_symbol) for e in system], inf, variables, to_symbol
