@@ -6,6 +6,8 @@ Details are in the issues referenced.
 
 * `invariants`, `canonical_coordinates`, `differential_invariants` of a given generator
   ([#42](https://github.com/tapir442/delierium/issues/42)).
+* `similarity_reduction`: a PDE by a given generator in one independent variable less
+  ([#15](https://github.com/tapir442/delierium/issues/15)).
 
 ### 2.3.0
 
