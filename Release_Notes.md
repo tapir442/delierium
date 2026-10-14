@@ -2,7 +2,7 @@
 
 Details are in the issues referenced.
 
-### Unreleased
+### 2.5.0
 
 * Experimental: `optimal_system`, one-dimensional optimal systems of a Lie algebra under the
   adjoint action, and `adjoint_matrix`, `adjoint_invariants` ([#44](https://github.com/tapir442/delierium/issues/44)).
