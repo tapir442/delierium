@@ -249,6 +249,19 @@ ODE. KdV by its travelling waves:
     >>> print(r.ansatz, r.equations)
     [Eq(u(x, t), F(-c*t + x))] [-c*Derivative(F(zeta), zeta) + F(zeta)*Derivative(F(zeta), zeta) + Derivative(F(zeta), (zeta, 3))]
 
+### Integration of ODEs
+
+`integrate_ode` solves a scalar ODE by its symmetries: it reduces the order by one generator
+at a time, in canonical coordinates, as long as the other symmetries go down to the reduced
+equation, and integrates back by quadratures. An ODE of order n with an n-dimensional
+solvable symmetry algebra is solved completely; `reduce_order` is the single step.
+y''' = y''²/y' by the translations and the scaling of x:
+
+    >>> from delierium import integrate_ode
+    >>> y = Function("y")(x)
+    >>> print(integrate_ode(diff(y, x, 3) - diff(y, x, 2) ** 2 / diff(y, x), y, x, [(1, 0), (0, 1), (x, 0)]))
+    [Eq(y(x), C1*exp((-C2 + x)/C1) + C3)]
+
 ### Optimal systems (experimental)
 
 `optimal_system` lists one generator of every class of one-dimensional subalgebras under the
@@ -331,6 +344,7 @@ The public interface is what `delierium` exports; `help(delierium)` lists it:
 * symmetry algebras: `symmetry_algebra`, `LieAlgebra` (`type()`, ...), `scaling_symmetries`
 * a given generator: `invariants`, `canonical_coordinates`, `differential_invariants`,
   `similarity_reduction`
+* integration of ODEs: `integrate_ode`, `reduce_order`, `OrderReduction`
 * optimal systems (experimental): `optimal_system`, `OptimalSystem`, `adjoint_matrix`,
   `adjoint_invariants`
 * group classification: `group_classification`, `classify`; `thomas_decomposition`

@@ -26,6 +26,9 @@ The public interface is what this package exports (``from delierium import
   differential_invariants (reduction of order of an ODE), similarity_reduction
   (a PDE in one independent variable less, the invariant solutions),
   SimilarityReduction
+* integration of an ODE: integrate_ode (the general solution of a scalar ODE
+  by quadratures along its symmetries), reduce_order (an ODE of one order
+  less by one generator: OrderReduction)
 * algebraic Thomas decomposition: thomas_decomposition (polynomial equations
   and inequations split into simple systems with disjoint solutions),
   SimpleSystem
@@ -77,6 +80,7 @@ from .infinitesimals import (
     verify_symmetries,
     verify_symmetry,
 )
+from .integration import OrderReduction, integrate_ode, reduce_order
 from .invariants import canonical_coordinates, differential_invariants, invariants
 from .janet_basis import (
     LHDP,
@@ -112,6 +116,7 @@ __all__ = [
     "Mlex",
     "NotClosedError",
     "OptimalSystem",
+    "OrderReduction",
     "SimilarityReduction",
     "SimpleSystem",
     "VectorField",
@@ -129,6 +134,7 @@ __all__ = [
     "frechet_derivative",
     "group_classification",
     "integrability_conditions",
+    "integrate_ode",
     "invariants",
     "is_janet_basis_of",
     "is_janet_basis_of_ode",
@@ -145,6 +151,7 @@ __all__ = [
     "overdetermined_system_odes",
     "overdetermined_system_pde",
     "prolongation",
+    "reduce_order",
     "scaling_symmetries",
     "similarity_reduction",
     "symmetry_algebra",
