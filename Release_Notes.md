@@ -4,6 +4,8 @@ Details are in the issues referenced.
 
 ### Unreleased
 
+* Experimental: `optimal_system`, one-dimensional optimal systems of a Lie algebra under the
+  adjoint action, and `adjoint_matrix`, `adjoint_invariants` ([#44](https://github.com/tapir442/delierium/issues/44)).
 * Faster determining equations and Janet bases (median 2.2x over the catalogue; polynomial
   equations in one polynomial ring).
 

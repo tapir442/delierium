@@ -249,6 +249,23 @@ ODE. KdV by its travelling waves:
     >>> print(r.ansatz, r.equations)
     [Eq(u(x, t), F(-c*t + x))] [-c*Derivative(F(zeta), zeta) + F(zeta)*Derivative(F(zeta), zeta) + Derivative(F(zeta), (zeta, 3))]
 
+### Optimal systems (experimental)
+
+`optimal_system` lists one generator of every class of one-dimensional subalgebras under the
+adjoint action, so that similarity reductions by them give every invariant solution once
+(up to symmetries). The symmetries `d/dx`, `d/dt`, `t d/dx + d/du`, `x d/dx + 3 t d/dt - 2 u d/du`
+of the KdV equation:
+
+    >>> from delierium import LieAlgebra
+    >>> x, t, u = symbols("x t u")
+    >>> kdv = LieAlgebra([[1, 0, 0], [0, 1, 0], [t, 0, 1], [x, 3 * t, -2 * u]], [x, t, u])
+    >>> kdv.optimal_system().representatives
+    [X1, X2, X3, X2 + X3, X2 - X3, X4]
+
+The classes are found level by level along a chain of ideals; equivalent candidates are
+merged numerically, and invariants show where two representatives are not equivalent (pairs
+they do not separate are in `unseparated`).
+
 ### Janet bases of linear systems
 
 `JanetBasis` takes a list of linear homogeneous PDEs, the unknown functions and the
@@ -314,6 +331,8 @@ The public interface is what `delierium` exports; `help(delierium)` lists it:
 * symmetry algebras: `symmetry_algebra`, `LieAlgebra` (`type()`, ...), `scaling_symmetries`
 * a given generator: `invariants`, `canonical_coordinates`, `differential_invariants`,
   `similarity_reduction`
+* optimal systems (experimental): `optimal_system`, `OptimalSystem`, `adjoint_matrix`,
+  `adjoint_invariants`
 * group classification: `group_classification`, `classify`; `thomas_decomposition`
 * Janet bases: `JanetBasis` (with `rank`, `parametric_derivatives`, `principal_derivatives`,
   `type`, `assumed_nonzero`, `parameter_conditions`, `representation`),
