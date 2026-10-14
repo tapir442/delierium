@@ -27,6 +27,7 @@ from sympy import (  # noqa: F401
     Integer,
     Lambda,
     LambertW,
+    NumberSymbol,
     Poly,
     Pow,
     Rational,
@@ -209,29 +210,18 @@ def prolonged_infinitesimals(
     >>> print(ltf(etas[u.diff(t)].expand(), [U], [Xi, T], printer=False))
     -T_t*u_t - T_u*u_t**2 + U_t + U_u*u_t - X_t*u_x - X_u*u_t*u_x
     """
-    n = len(indep)
     space = _JetSpace(dep, indep)
     symbolic = space.symbolic([infinitesimals[v] for v in (*indep, *dep)])
     # polynomials in the jet coordinates (X(x, u) arbitrary): in a ring
     symbolic = space.in_ring(symbolic, max_order)
-    xi, phi = symbolic[:n], symbolic[n:]
-    dq = {
-        # started with the first term, not Integer(0): ring elements
-        (a, ()): phi_a
-        - sum((xi[i] * space.jet(a, (i,)) for i in range(1, n)), xi[0] * space.jet(a, (0,)))
-        for a, phi_a in enumerate(phi)
-    }
-    result: OrderedDict[Basic, Expr] = OrderedDict()
-    for combi in variable_combinations(list(range(n)), max_order):
-        multi = tuple(combi)
-        for a, d in enumerate(dep):
-            dq[(a, multi)] = space.total(dq[(a, multi[:-1])], multi[-1])
-            eta = dq[(a, multi)] + sum(xi[i] * space.jet(a, (*multi, i)) for i in range(n))
-            result[d.diff(*(indep[i] for i in multi))] = eta
+    etas = space.prolonged(symbolic, max_order)
     back = space.back()
     return OrderedDict(
-        (k, _partials_in_argument_order(space.as_expr(v).xreplace(back), dep))
-        for k, v in result.items()
+        (
+            dep[a].diff(*(indep[i] for i in multi)),
+            _partials_in_argument_order(space.as_expr(eta).xreplace(back), dep),
+        )
+        for (a, multi), eta in etas.items()
     )
 
 
@@ -362,6 +352,53 @@ class _JetSpace:
             result += self.jet(a, (*multi, i)) * derivative
         return result
 
+    def prolonged(
+        self, symbolic: list[Any], max_order: int
+    ) -> dict[tuple[int, tuple[int, ...]], Any]:
+        """{(a, J): phi_J} for the infinitesimals xi, phi of the
+        coordinates (from symbolic or in_ring), J up to max_order in the
+        order of variable_combinations, see prolonged_infinitesimals.
+
+        >>> x = Symbol('x')
+        >>> y = Function('y')(x)
+        >>> space = _JetSpace([y], [x])
+        >>> list(space.prolonged(space.symbolic([Integer(1), Integer(0)]), 2).values())
+        [0, 0]
+        """
+        n = len(self.indep)
+        xi, phi = symbolic[:n], symbolic[n:]
+        dq = {
+            # started with the first term, not Integer(0): ring elements
+            (a, ()): phi_a
+            - sum((xi[i] * self.jet(a, (i,)) for i in range(1, n)), xi[0] * self.jet(a, (0,)))
+            for a, phi_a in enumerate(phi)
+        }
+        result = {}
+        for combi in variable_combinations(list(range(n)), max_order):
+            multi = tuple(combi)
+            for a in range(len(self.dep)):
+                dq[(a, multi)] = self.total(dq[(a, multi[:-1])], multi[-1])
+                result[(a, multi)] = dq[(a, multi)] + sum(
+                    xi[i] * self.jet(a, (*multi, i)) for i in range(n)
+                )
+        return result
+
+    def coordinates(self, e: Expr) -> Expr:
+        """e with u for u(x) and the jet symbols for its derivatives.
+
+        >>> x = Symbol('x')
+        >>> y = Function('y')(x)
+        >>> _JetSpace([y], [x]).coordinates(x * y.diff(x, 2) + y)
+        _y + _y_xx*x
+        """
+        index = {v: i for i, v in enumerate(self.indep)}
+        jets: dict[Basic, Basic] = {}
+        for d in e.atoms(Derivative):
+            if d.expr in self.dep and all(v in index for v in d.variables):
+                a = self.dep.index(d.expr)
+                jets[d] = self.jet(a, tuple(index[v] for v in d.variables))
+        return e.xreplace(jets).xreplace(self.base)
+
     def in_ring(self, infinitesimals: list[Expr], max_order: int) -> list[Any]:
         """The infinitesimals (from symbolic) as elements of the polynomial
         ring of the jet coordinates up to max_order + 1 and the X_K up to
@@ -390,7 +427,9 @@ class _JetSpace:
         coordinates = [*self.indep, *self.base.values(), *self.jets.values()]
         coordinates += self.partials.values()
         known = set(coordinates)
-        others = sorted({v for e in infinitesimals for v in e.free_symbols} - known, key=str)
+        # parameters and constants (pi)
+        constants = {v for e in infinitesimals for v in e.free_symbols | e.atoms(NumberSymbol)}
+        others = sorted(constants - known, key=str)
         gens = [*coordinates, *others]
         ring_, *elements = sring_ring(gens, QQ)
         try:
@@ -1398,8 +1437,110 @@ def compute_overdetermined_system_of_infinitesimals(
     D(X(y(x), x), y(x))
     D(Y(y(x), x), x)
     """
+    in_ring = _ring_determining_equations(eq, dep, indep, infinitesimals)
+    if in_ring is not None:
+        return in_ring
     condition = determining_condition(eq, dep, indep, infinitesimals)
     return split_jet_coefficients(condition, convert_to_iterable(dep))
+
+
+@profile_if_enabled
+def _ring_determining_equations(
+    eq: Expr,
+    dep: Variables,
+    indep: Variables,
+    infinitesimals: InfinitesimalNames = None,
+) -> list[Expr] | None:
+    """The determining equations of eq as determining_condition and
+    split_jet_coefficients give them, computed in one polynomial ring of
+    the jet coordinates, the partial derivatives of the infinitesimals and
+    the parameters: the numerator N of eq, pr X(N) reduced by N
+    (pseudo-remainder in the highest derivative), its coefficients by the
+    jet variables. None if eq or the infinitesimals are no polynomials in
+    these (1/x, sin(y), arbitrary functions f(x)).
+
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> for e in _ring_determining_equations(y.diff(x, 2), y, x):
+    ...     print(e)
+    -Derivative(X(y(x), x), (x, 2)) + 2*Derivative(Y(y(x), x), x, y(x))
+    Derivative(Y(y(x), x), (y(x), 2)) - 2*Derivative(X(y(x), x), x, y(x))
+    Derivative(X(y(x), x), (y(x), 2))
+    Derivative(Y(y(x), x), (x, 2))
+    >>> _ring_determining_equations(y.diff(x, 2) + y.diff(x) / x, y, x) is not None
+    True
+    >>> _ring_determining_equations(y.diff(x, 2) - exp(y), y, x) is None
+    True
+    """
+    dep = convert_to_iterable(dep)
+    indep = convert_to_iterable(indep)
+    eq = _local_signs(_exact_numbers(_canonical_derivatives_of(eq, dep)))
+    infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
+    max_order, highest_terms = order(eq, dep, indep)
+    highest_term = _leading_derivative(eq, highest_terms, dep)
+    space = _JetSpace(dep, indep)
+    symbolic = space.symbolic([infinitesimals[v] for v in (*indep, *dep)])
+    h = space.coordinates(highest_term)
+    # pr X(N/D) = pr X(N)/D where N = 0
+    numerator = numer(together(space.coordinates(eq)))
+    if any(e.has(Derivative, Subs, AppliedUndef) for e in (*symbolic, numerator)):
+        return None
+    *symbolic, N = space.in_ring([*symbolic, numerator], max_order)
+    if space.ring is None:
+        return None
+    gens = space.gens
+    coordinates = [gens[v] for v in (*indep, *space.base.values())]
+    condition = space.ring.zero
+    for c, eta in zip(coordinates, symbolic, strict=True):
+        condition += eta * N.diff(c)
+    for (a, multi), eta in space.prolonged(symbolic, max_order).items():
+        condition += eta * N.diff(space.jet(a, multi))
+    H = gens[h]
+    lc = N.coeff_wrt(H, N.degree(H))
+    if N.degree(H) == 1 and lc.is_ground:
+        # N solved for the highest derivative
+        condition = condition.compose(H, H - N.quo_ground(lc.LC))
+    else:
+        # on N = 0: N divides pr X(N) as a polynomial in the highest derivative
+        condition = condition.prem(N, H)
+    return _jet_coefficients(space, condition)
+
+
+def _jet_coefficients(space: "_JetSpace", condition: Any) -> list[Expr]:
+    """The coefficients of the ring element condition by the jet
+    variables, each with coprime integer coefficients, as expressions in
+    the functions and derivatives (_ring_determining_equations).
+
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> space = _JetSpace([y], [x])
+    >>> (X,) = space.in_ring(space.symbolic([Function('X')(x, y)]), 1)
+    >>> _jet_coefficients(space, space.total(X, 0) * 2 + 4 * X)
+    [2*X(x, y(x)) + Derivative(X(x, y(x)), x), Derivative(X(x, y(x)), y(x))]
+    """
+    dep = space.dep
+    generators = list(space.gens)
+    jets = set(space.jets.values())
+    positions = [k for k, g in enumerate(generators) if g in jets]
+    parts: dict[tuple[int, ...], dict[tuple[int, ...], Any]] = {}
+    for monomial, coefficient in condition.terms():
+        key = tuple(monomial[k] for k in positions)
+        rest = tuple(0 if k in positions else m for k, m in enumerate(monomial))
+        parts.setdefault(key, {})[rest] = coefficient
+    # the partials in SymPy's canonical order, as split_jet_coefficients
+    plain = {d: Symbol(d.name) for d in dep}
+    functions = {v: k for k, v in plain.items()}
+    back = {
+        s: v.xreplace(plain).doit(simplify=False).xreplace(functions)
+        for s, v in space.back().items()
+    }
+    result = set()
+    for part in parts.values():
+        c = space.ring.from_dict(part).clear_denoms()[1].primitive()[1].as_expr().xreplace(back)
+        if not c.is_Add:
+            c = c.as_coeff_Mul()[1]
+        result.add(c)
+    return sorted(result, key=default_sort_key)
 
 
 def overdetermined_system_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument
@@ -1642,9 +1783,9 @@ def overdetermined_system_pde(  # pylint: disable=keyword-arg-before-vararg,unus
     -2*U_ux - X_t + X_xx
     -T_t + T_xx + 2*X_x
     -U_uu + 2*X_ux
-    2*T_ux + 2*X_u
     T_u
     T_uu
+    T_ux + X_u
     T_x
     U_t - U_xx
     X_uu
