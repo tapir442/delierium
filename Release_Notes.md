@@ -2,7 +2,7 @@
 
 Details are in the issues referenced.
 
-### Unreleased
+### 2.6.0
 
 * `integrate_ode`: ODEs solved by quadratures along a solvable symmetry algebra, and
   `reduce_order` by one generator ([#43](https://github.com/tapir442/delierium/issues/43),
