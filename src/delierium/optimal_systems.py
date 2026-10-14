@@ -13,21 +13,50 @@ i.e. a -> a exp(-eps M_x) with (M_x)_ik = sum_j x_j c_ji^k (Hydon (10.27),
 with the opposite sign convention). Invariants of this action and the
 adjoint matrices are the tools of Hu, Li and Chen (A direct algorithm of
 one-dimensional optimal system for the group invariant solutions, J. Math.
-Phys. 56 (2015) 053504, arXiv:1411.3797), who choose the representatives by
-hand. Here they are found level by level along a chain of ideals
-g = W_0 > W_1 > ... > W_m = 0 (the derived series down to the perfect part,
-its radical, the derived series of the radical), as in Ovsiannikov's method:
-the coordinates of the quotient W_k / W_k+1 are normalized by the subgroup
-fixing the coordinates of the levels above, through one-parameter subgroups
-of a basis of its Lie algebra and the scalings, branching where a pivot can
-vanish. Candidates of a level that are equivalent under the whole group are
-merged (found numerically); homogeneous polynomial invariants of the action
-on the quotient g / W_k+1 decide that two candidates are not equivalent where
-they can.
+Phys. 56 (2015) 053504, arXiv:1411.3797), who still choose the
+representatives by hand. Here they are found automatically.
 
-Complete by construction (every generator is equivalent to a representative);
-not equivalent where the invariants show it, otherwise only not found
-equivalent: OptimalSystem.unseparated lists those pairs.
+How it works:
+
+1. Levels. A chain of ideals g = W_0 > W_1 > ... > W_m = 0 (the derived
+   series down to the perfect part, its radical, the derived series of the
+   radical) and a basis through it (_ideal_chain, _adapted_basis). The
+   coordinates of W_k / W_k+1 form level k; the action on g / W_k+1 does not
+   depend on the deeper levels, so the levels can be normalized one after
+   the other (Ovsiannikov's method).
+2. Normalizing a level (_Classifier.normalize). Moves are one-parameter
+   subgroups exp(eps x) and the scaling e^(mu eps), from a basis of the
+   subalgebra fixing the levels above (at first all of g). A move whose
+   coordinate k is linear in eps, a_k + eps * pivot, makes it 0 if the
+   pivot is not; the case pivot = 0 is a branch of its own. A rotation
+   (cos and sin of eps) makes a coordinate 0 always. Moves acting by
+   exponentials scale a coordinate to 1 or -1 (or it is 0). The deeper
+   levels are free parameters meanwhile, so whatever a move does to them is
+   absorbed.
+3. Stabilizer (_Classifier.stabilizer). For each normal form of the level,
+   the moves fixing it (a nullspace, with branches for the parameter values
+   where its dimension changes) act on the next level.
+4. Merging (_Classifier.merge). Normal forms of a level that the group maps
+   to one another are merged: searched numerically (Levenberg-Marquardt on a
+   word of one-parameter subgroups of the whole group, bounded so that it
+   does not run off to the boundary of an orbit). The whole group, since
+   the stabilizer of the levels above need not be connected: -1 in SL(2)
+   fixes sl(2) and reverses the doublet of the heat equation.
+5. Separating (_separated). Homogeneous polynomial invariants of the action
+   on a quotient g / W_k+1 (_polynomial_invariants, solving the linear PDEs
+   of Hu-Li-Chen 2.1) show that two normal forms are not equivalent where
+   their values differ beyond a common factor lambda**degree; the numeric
+   search is skipped then.
+
+Complete by construction: every branch is followed, so every generator is
+equivalent to a representative. Two representatives are proven not
+equivalent only where the invariants of some quotient separate them;
+otherwise they were merely not found equivalent, and
+OptimalSystem.unseparated lists those pairs. For the heat equation these
+are X6, X6 + X3, X6 - X3, which Hu, Li and Chen separate by an invariant of
+the stratum where the polynomial invariants vanish ((43)); such invariants
+are not computed here. The failed numeric searches dominate the time (the
+heat equation takes about two minutes).
 """
 
 import random
