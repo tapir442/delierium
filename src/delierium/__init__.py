@@ -35,6 +35,9 @@ The public interface is what this package exports (``from delierium import
   equations or from structure constants; commutator table, derived and lower
   central series, center, Killing form, type in Lie's classification up to
   dimension 4: LieAlgebraType), VectorField, NotClosedError
+* optimal systems (experimental): optimal_system (one generator of every class
+  of one-dimensional subalgebras under the adjoint action: OptimalSystem),
+  adjoint_matrix, adjoint_invariants
 * operators: euler_operator, frechet_derivative, adjoint_frechet_derivative,
   variational_derivative
 * pictures: the module delierium.visualization (staircase diagrams of Janet
@@ -86,6 +89,7 @@ from .janet_basis import (
 from .lie_algebra import LieAlgebra, NotClosedError, VectorField
 from .lie_algebra_types import LieAlgebraType
 from .matrix_order import Context, Mgrevlex, Mgrlex, Mlex
+from .optimal_systems import OptimalSystem, adjoint_invariants, adjoint_matrix, optimal_system
 from .reduction import SimilarityReduction, similarity_reduction
 from .scaling import scaling_symmetries
 from .symmetries import LieSymmetries, lie_symmetries
@@ -107,12 +111,15 @@ __all__ = [
     "Mgrlex",
     "Mlex",
     "NotClosedError",
+    "OptimalSystem",
     "SimilarityReduction",
     "SimpleSystem",
     "VectorField",
     "VerificationResult",
     "__version__",
     "adjoint_frechet_derivative",
+    "adjoint_invariants",
+    "adjoint_matrix",
     "canonical_coordinates",
     "classify",
     "create_infinitesimals",
@@ -133,6 +140,7 @@ __all__ = [
     "lie_symmetries",
     "ltf",
     "make_infinitesimal",
+    "optimal_system",
     "overdetermined_system_ode",
     "overdetermined_system_odes",
     "overdetermined_system_pde",

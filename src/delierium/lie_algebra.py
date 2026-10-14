@@ -60,6 +60,7 @@ from sympy.polys.matrices import DomainMatrix
 if TYPE_CHECKING:
     from delierium.janet_basis import JanetBasis
     from delierium.lie_algebra_types import LieAlgebraType
+    from delierium.optimal_systems import OptimalSystem
 
 __all__ = [
     "LieAlgebra",
@@ -726,6 +727,22 @@ class LieAlgebra:
         )
 
         return lie_algebra_type(self)
+
+    def optimal_system(self) -> "OptimalSystem":
+        """A one-dimensional optimal system (experimental, #44,
+        delierium.optimal_systems): one generator of every class under the
+        adjoint action. The Euclidean algebra e(2): rotations and
+        translations.
+
+        >>> x, y = Symbol('x'), Symbol('y')
+        >>> LieAlgebra([[1, 0], [0, 1], [-y, x]], [x, y]).optimal_system().representatives
+        [X2, X3]
+        """
+        from delierium.optimal_systems import (  # pylint: disable=import-outside-toplevel
+            optimal_system,
+        )
+
+        return optimal_system(self)
 
     def is_semisimple(self) -> bool:
         """Cartan's criterion: the Killing form is nondegenerate.
