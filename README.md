@@ -249,6 +249,36 @@ ODE. KdV by its travelling waves:
     >>> print(r.ansatz, r.equations)
     [Eq(u(x, t), F(-c*t + x))] [-c*Derivative(F(zeta), zeta) + F(zeta)*Derivative(F(zeta), zeta) + Derivative(F(zeta), (zeta, 3))]
 
+### Integration of ODEs
+
+`integrate_ode` solves a scalar ODE by its symmetries: it reduces the order by one generator
+at a time, in canonical coordinates, as long as the other symmetries go down to the reduced
+equation, and integrates back by quadratures. An ODE of order n with an n-dimensional
+solvable symmetry algebra is solved completely; `reduce_order` is the single step.
+y''' = y''²/y' by the translations and the scaling of x:
+
+    >>> from delierium import integrate_ode
+    >>> y = Function("y")(x)
+    >>> print(integrate_ode(diff(y, x, 3) - diff(y, x, 2) ** 2 / diff(y, x), y, x, [(1, 0), (0, 1), (x, 0)]))
+    [Eq(y(x), C1*exp((-C2 + x)/C1) + C3)]
+
+What it does:
+
+* It reduces first by a generator spanning a one-dimensional ideal of the algebra, so that
+  all the other symmetries go down to the reduced ODE; without one, only those normalizing
+  the generator chosen go down.
+* Without generators it takes those of `lie_symmetries`.
+* When the symmetries run out, a first order ODE is left to dsolve's fast methods; an ODE of
+  higher order raises `NotImplementedError`.
+* Solutions are equations with constants C1, ..., Cn, solved for y where possible;
+  integrals that SymPy does not evaluate (or that are too large to try) stay unevaluated.
+* `reduce_order(ode, X, y, x, others)` is one step: an `OrderReduction` with the reduced
+  ODE, the canonical coordinates r and s of X, and the symmetries that go down.
+
+Not yet: parametric solutions where the reduced solution cannot be solved for the
+derivative (y'' = tan(y')), and algebras that are not solvable (sl(2)). Of the 134 scalar
+ODEs with generators in the catalogue, 82 are solved completely.
+
 ### Optimal systems (experimental)
 
 `optimal_system` lists one generator of every class of one-dimensional subalgebras under the
@@ -331,6 +361,7 @@ The public interface is what `delierium` exports; `help(delierium)` lists it:
 * symmetry algebras: `symmetry_algebra`, `LieAlgebra` (`type()`, ...), `scaling_symmetries`
 * a given generator: `invariants`, `canonical_coordinates`, `differential_invariants`,
   `similarity_reduction`
+* integration of ODEs: `integrate_ode`, `reduce_order`, `OrderReduction`
 * optimal systems (experimental): `optimal_system`, `OptimalSystem`, `adjoint_matrix`,
   `adjoint_invariants`
 * group classification: `group_classification`, `classify`; `thomas_decomposition`

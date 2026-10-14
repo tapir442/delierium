@@ -2,6 +2,12 @@
 
 Details are in the issues referenced.
 
+### Unreleased
+
+* `integrate_ode`: ODEs solved by quadratures along a solvable symmetry algebra, and
+  `reduce_order` by one generator ([#43](https://github.com/tapir442/delierium/issues/43),
+  [#14](https://github.com/tapir442/delierium/issues/14)).
+
 ### 2.5.0
 
 * Experimental: `optimal_system`, one-dimensional optimal systems of a Lie algebra under the
