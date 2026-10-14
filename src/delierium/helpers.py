@@ -2,6 +2,7 @@
 
 import builtins
 import os
+import random
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any, cast
 
@@ -14,6 +15,9 @@ from sympy import (
     Piecewise,
     Subs,
     Symbol,
+    cancel,
+    default_sort_key,
+    ilcm,
     sympify,
 )
 from sympy.core.function import AppliedUndef
@@ -180,6 +184,61 @@ def generic_case(e: Expr) -> Expr:
     1 + x/a
     """
     return e.replace(lambda a: isinstance(a, Piecewise), lambda a: a.args[0].expr)
+
+
+def commensurable_families(
+    parts: Iterable[tuple[Basic, Basic, Expr]],
+) -> list[tuple[Basic, Expr, list[tuple[Basic, Expr]]]]:
+    """The items (atom, key, part) grouped by equal keys and parts that are
+    rational multiples of one another (b**n, b**(n/2), b**(-n): key b, parts
+    n, n/2, -n). Per family its key, a unit u with every part an integer
+    multiple k u, and the atoms with their k.
+
+    >>> from sympy import symbols
+    >>> b, n = symbols("b n")
+    >>> commensurable_families([(b**n, b, n), (b ** (n / 2), b, n / 2), (b**-n, b, -n)])
+    [(b, -n/2, [(b**(-n), 2), (b**(n/2), -1), (b**n, -2)])]
+    """
+    families: list[tuple[Basic, Expr, list[tuple[Basic, Expr]]]] = []
+    for atom, key, part in sorted(parts, key=lambda p: default_sort_key(p[0])):
+        for k, reference, members in families:
+            if k == key and cancel(part / reference).is_Rational:
+                members.append((atom, part))
+                break
+        else:
+            families.append((key, part, [(atom, part)]))
+    result = []
+    for key, reference, members in families:
+        ratios = [cancel(part / reference) for _, part in members]
+        unit = reference / ilcm(1, 1, *[r.q for r in ratios])
+        result.append((key, unit, [(atom, cancel(part / unit)) for atom, part in members]))
+    return result
+
+
+def random_point(symbols: Iterable[Basic], rng: random.Random) -> dict[Basic, Expr]:
+    """Random positive values (1.1 to 9.7) for the symbols.
+
+    >>> from sympy import symbols
+    >>> x, t = symbols("x t")
+    >>> random_point([x, t], random.Random(0))
+    {x: 6, t: 32/5}
+    """
+    return {s: sympify(rng.randint(11, 97)) / 10 for s in symbols}
+
+
+def numeric_value(e: Expr, point: dict[Basic, Expr]) -> complex | None:
+    """The value of e at the point, None if it is not numeric there (an
+    arbitrary function).
+
+    >>> from sympy import Function, symbols
+    >>> x = symbols("x")
+    >>> numeric_value(x**2, {x: 3}), numeric_value(Function("f")(x), {x: 3})
+    ((9+0j), None)
+    """
+    try:
+        return complex(e.xreplace(point).evalf(30))
+    except TypeError:
+        return None
 
 
 def _function_name(f: Basic) -> str:
