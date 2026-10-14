@@ -262,6 +262,23 @@ y''' = y''²/y' by the translations and the scaling of x:
     >>> print(integrate_ode(diff(y, x, 3) - diff(y, x, 2) ** 2 / diff(y, x), y, x, [(1, 0), (0, 1), (x, 0)]))
     [Eq(y(x), C1*exp((-C2 + x)/C1) + C3)]
 
+What it does:
+
+* It reduces first by a generator spanning a one-dimensional ideal of the algebra, so that
+  all the other symmetries go down to the reduced ODE; without one, only those normalizing
+  the generator chosen go down.
+* Without generators it takes those of `lie_symmetries`.
+* When the symmetries run out, a first order ODE is left to dsolve's fast methods; an ODE of
+  higher order raises `NotImplementedError`.
+* Solutions are equations with constants C1, ..., Cn, solved for y where possible;
+  integrals that SymPy does not evaluate (or that are too large to try) stay unevaluated.
+* `reduce_order(ode, X, y, x, others)` is one step: an `OrderReduction` with the reduced
+  ODE, the canonical coordinates r and s of X, and the symmetries that go down.
+
+Not yet: parametric solutions where the reduced solution cannot be solved for the
+derivative (y'' = tan(y')), and algebras that are not solvable (sl(2)). Of the 134 scalar
+ODEs with generators in the catalogue, 82 are solved completely.
+
 ### Optimal systems (experimental)
 
 `optimal_system` lists one generator of every class of one-dimensional subalgebras under the
