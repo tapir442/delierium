@@ -60,7 +60,7 @@ True
 
 import operator
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from contextvars import ContextVar
 from math import comb, gcd, lcm
 from typing import Any
@@ -633,6 +633,11 @@ class Coeff:
         if not self._canonical:
             self._expr = cancel(self._expr)
             self._canonical = True
+            # back into the field where the roots have cancelled (Kepler:
+            # (x**2 + y**2)**(3/2) only in some equations), so that the
+            # arithmetic with it is no longer on expressions
+            with suppress(_UnsupportedError):
+                self.f = _to_field(_prepare(self._expr))
         return self
 
     @property

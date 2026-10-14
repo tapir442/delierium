@@ -2,6 +2,11 @@
 
 Details are in the issues referenced.
 
+### Unreleased
+
+* Faster determining equations and Janet bases (median 2.2x over the catalogue; polynomial
+  equations in one polynomial ring).
+
 ### 2.4.0
 
 * `invariants`, `canonical_coordinates`, `differential_invariants` of a given generator

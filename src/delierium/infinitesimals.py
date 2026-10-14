@@ -13,6 +13,7 @@ from itertools import combinations, combinations_with_replacement, permutations,
 from typing import Any, cast
 
 from sympy import (  # noqa: F401
+    QQ,
     Abs,
     Add,
     Basic,
@@ -26,6 +27,7 @@ from sympy import (  # noqa: F401
     Integer,
     Lambda,
     LambertW,
+    NumberSymbol,
     Poly,
     Pow,
     Rational,
@@ -58,6 +60,8 @@ from sympy.functions.elementary.hyperbolic import HyperbolicFunction
 from sympy.functions.elementary.trigonometric import TrigonometricFunction
 from sympy.polys.fields import sfield
 from sympy.polys.polyerrors import CoercionFailed, PolynomialError
+from sympy.polys.rings import PolyElement, sring
+from sympy.polys.rings import ring as sring_ring
 
 from delierium.helpers import (
     finish_substitution,
@@ -206,52 +210,322 @@ def prolonged_infinitesimals(
     >>> print(ltf(etas[u.diff(t)].expand(), [U], [Xi, T], printer=False))
     -T_t*u_t - T_u*u_t**2 + U_t + U_u*u_t - X_t*u_x - X_u*u_t*u_x
     """
-    n = len(indep)
-    base = {d: Dummy(d.func.__name__) for d in dep}
-    jets: dict[tuple[int, tuple[int, ...]], Symbol] = {}
-    # symbol -> (a, J)
-    jet_of: dict[Basic, tuple[int, tuple[int, ...]]] = {base[d]: (a, ()) for a, d in enumerate(dep)}
+    space = _JetSpace(dep, indep)
+    symbolic = space.symbolic([infinitesimals[v] for v in (*indep, *dep)])
+    # polynomials in the jet coordinates (X(x, u) arbitrary): in a ring
+    symbolic = space.in_ring(symbolic, max_order)
+    etas = space.prolonged(symbolic, max_order)
+    back = space.back()
+    return OrderedDict(
+        (
+            dep[a].diff(*(indep[i] for i in multi)),
+            _partials_in_argument_order(space.as_expr(eta).xreplace(back), dep),
+        )
+        for (a, multi), eta in etas.items()
+    )
 
-    def jet(a: int, multi: tuple[int, ...]) -> Symbol:
+
+class _JetSpace:
+    """Jet coordinates for prolonged_infinitesimals: x, u and the u_J are
+    symbols, and so are the infinitesimals X(x, u) and their partial
+    derivatives, X_K for the counts K by argument: SymPy differentiates
+    functions and Derivatives much more slowly than symbols."""
+
+    def __init__(self, dep: list[Expr], indep: list[Symbol]) -> None:
+        """No jets yet but u for every dependent variable u(x).
+
+        >>> x = Symbol('x')
+        >>> space = _JetSpace([Function('y')(x)], [x])
+        >>> list(space.base.values())
+        [_y]
+        """
+        self.dep, self.indep = dep, indep
+        self.base = {d: Dummy(d.func.__name__) for d in dep}
+        self.jets: dict[tuple[int, tuple[int, ...]], Symbol] = {}
+        # symbol -> (a, J)
+        self.jet_of: dict[Basic, tuple[int, tuple[int, ...]]] = {
+            self.base[d]: (a, ()) for a, d in enumerate(dep)
+        }
+        self.partials: dict[tuple[Basic, tuple[int, ...]], Symbol] = {}
+        # symbol -> (X(x, u), K)
+        self.partial_of: dict[Basic, tuple[Basic, tuple[int, ...]]] = {}
+        # the polynomial ring of the jet coordinates (in_ring), its generators
+        self.ring: Any = None
+        self.gens: dict[Basic, Any] = {}
+        self._total: dict[tuple[Basic, int], Any] = {}
+
+    def jet(self, a: int, multi: tuple[int, ...]) -> Symbol:
+        """The symbol for the derivative of the a-th dependent variable by
+        the independent variables with the indices multi.
+
+        >>> x, t = symbols('x t')
+        >>> space = _JetSpace([Function('u')(x, t)], [x, t])
+        >>> space.jet(0, (1, 0)), space.jet(0, (0, 1)) == space.jet(0, (1, 0))
+        (_u_xt, True)
+        """
         multi = tuple(sorted(multi))
         if not multi:
-            return base[dep[a]]
-        if (a, multi) not in jets:
-            name = f"{dep[a].func.__name__}_{''.join(str(indep[i]) for i in multi)}"
-            jets[(a, multi)] = s = Dummy(name)
-            jet_of[s] = (a, multi)
-        return jets[(a, multi)]
+            symbol = self.base[self.dep[a]]
+        else:
+            if (a, multi) not in self.jets:
+                name = f"{self.dep[a].func.__name__}_{''.join(str(self.indep[i]) for i in multi)}"
+                self.jets[(a, multi)] = s = Dummy(name)
+                self.jet_of[s] = (a, multi)
+            symbol = self.jets[(a, multi)]
+        return self.gens[symbol] if self.ring is not None else symbol
 
-    def total(F: Expr, i: int) -> Expr:
-        """D_i F: F depends on x, u and finitely many u_J."""
-        result = F.diff(indep[i])
-        for s in F.free_symbols & jet_of.keys():
-            a, multi = jet_of[s]
-            result += jet(a, (*multi, i)) * F.diff(s)
+    def partial_symbol(self, f: Basic, counts: tuple[int, ...]) -> Symbol:
+        """The symbol for the partial derivative of f with the counts by
+        argument.
+
+        >>> x = Symbol('x')
+        >>> space = _JetSpace([Function('y')(x)], [x])
+        >>> X = Function('X')(x, space.base[space.dep[0]])
+        >>> space.partial_symbol(X, (1, 0))
+        _X(1, 0)
+        """
+        if (f, counts) not in self.partials:
+            self.partials[(f, counts)] = s = Dummy(f"{f.func.__name__}{counts}")
+            self.partial_of[s] = (f, counts)
+        return self.partials[(f, counts)]
+
+    def symbolic(self, infinitesimals: list[Expr]) -> list[Expr]:
+        """The infinitesimals with u for u(x) and with symbols for the
+        functions of x and u (none if they hold derivatives already).
+
+        >>> x = Symbol('x')
+        >>> y = Function('y')(x)
+        >>> space = _JetSpace([y], [x])
+        >>> space.symbolic([Function('X')(x, y), x * y])
+        [_X(0, 0), _y*x]
+        """
+        plain = {d: self.base[d] for d in self.dep}
+        result = [finish_substitution(e).xreplace(plain) for e in infinitesimals]
+        if any(e.has(Derivative, Subs) for e in result):
+            return result
+        coordinates = {*self.indep, *self.base.values()}
+        functions = {
+            f
+            for e in result
+            for f in e.atoms(AppliedUndef)
+            if f.args and set(f.args) <= coordinates and len(set(f.args)) == len(f.args)
+        }
+        as_symbols = {f: self.partial_symbol(f, (0,) * len(f.args)) for f in functions}
+        return [e.xreplace(as_symbols) for e in result]
+
+    def partial(self, F: Expr, c: Basic) -> Expr:
+        """dF/dc for a coordinate c (x or u), also through the X_K.
+
+        >>> x = Symbol('x')
+        >>> space = _JetSpace([Function('y')(x)], [x])
+        >>> (X,) = space.symbolic([Function('X')(x, Function('y')(x))])
+        >>> space.partial(x * X, x)
+        _X(0, 0) + _X(1, 0)*x
+        """
+        result = F.diff(c)
+        for s in F.free_symbols & self.partial_of.keys():
+            f, counts = self.partial_of[s]
+            if c in f.args:
+                k = f.args.index(c)
+                higher = (*counts[:k], counts[k] + 1, *counts[k + 1 :])
+                result += F.diff(s) * self.partial_symbol(f, higher)
         return result
 
-    plain = {d: base[d] for d in dep}
-    xi = [finish_substitution(infinitesimals[v]).xreplace(plain) for v in indep]
-    phi = [finish_substitution(infinitesimals[d]).xreplace(plain) for d in dep]
-    dq = {
-        (a, ()): phi_a - sum((xi[i] * jet(a, (i,)) for i in range(n)), Integer(0))
-        for a, phi_a in enumerate(phi)
-    }
-    result: OrderedDict[Basic, Expr] = OrderedDict()
-    for combi in variable_combinations(list(range(n)), max_order):
-        multi = tuple(combi)
-        for a, d in enumerate(dep):
-            dq[(a, multi)] = total(dq[(a, multi[:-1])], multi[-1])
-            eta = dq[(a, multi)] + sum(xi[i] * jet(a, (*multi, i)) for i in range(n))
-            result[d.diff(*(indep[i] for i in multi))] = eta
-    back: dict[Basic, Basic] = {base[d]: d for d in dep}
-    for (a, multi), sym in jets.items():
-        # diff() as in the rest of delierium: the canonical order u_tx
-        back[sym] = dep[a].diff(*(indep[i] for i in multi))
+    def total(self, F: Expr, i: int) -> Expr:
+        """D_i F, F depending on x, u, finitely many u_J and X_K.
 
-    return OrderedDict(
-        (k, _partials_in_argument_order(v.xreplace(back), dep)) for k, v in result.items()
-    )
+        >>> x = Symbol('x')
+        >>> space = _JetSpace([Function('y')(x)], [x])
+        >>> (X,) = space.symbolic([Function('X')(x, Function('y')(x))])
+        >>> space.total(X, 0)
+        _X(0, 1)*_y_x + _X(1, 0)
+        """
+        if self.ring is not None:
+            return self._ring_total(F, i)
+        result = self.partial(F, self.indep[i])
+        free = F.free_symbols
+        # u also where it is only an argument of an X_K
+        hidden = {v for s in free & self.partial_of.keys() for v in self.partial_of[s][0].args}
+        for s in (free | hidden) & self.jet_of.keys():
+            a, multi = self.jet_of[s]
+            derivative = F.diff(s) if multi else self.partial(F, s)
+            result += self.jet(a, (*multi, i)) * derivative
+        return result
+
+    def prolonged(
+        self, symbolic: list[Any], max_order: int
+    ) -> dict[tuple[int, tuple[int, ...]], Any]:
+        """{(a, J): phi_J} for the infinitesimals xi, phi of the
+        coordinates (from symbolic or in_ring), J up to max_order in the
+        order of variable_combinations, see prolonged_infinitesimals.
+
+        >>> x = Symbol('x')
+        >>> y = Function('y')(x)
+        >>> space = _JetSpace([y], [x])
+        >>> list(space.prolonged(space.symbolic([Integer(1), Integer(0)]), 2).values())
+        [0, 0]
+        """
+        n = len(self.indep)
+        xi, phi = symbolic[:n], symbolic[n:]
+        dq = {
+            # started with the first term, not Integer(0): ring elements
+            (a, ()): phi_a
+            - sum((xi[i] * self.jet(a, (i,)) for i in range(1, n)), xi[0] * self.jet(a, (0,)))
+            for a, phi_a in enumerate(phi)
+        }
+        result = {}
+        for combi in variable_combinations(list(range(n)), max_order):
+            multi = tuple(combi)
+            for a in range(len(self.dep)):
+                dq[(a, multi)] = self.total(dq[(a, multi[:-1])], multi[-1])
+                result[(a, multi)] = dq[(a, multi)] + sum(
+                    xi[i] * self.jet(a, (*multi, i)) for i in range(n)
+                )
+        return result
+
+    def coordinates(self, e: Expr) -> Expr:
+        """e with u for u(x) and the jet symbols for its derivatives.
+
+        >>> x = Symbol('x')
+        >>> y = Function('y')(x)
+        >>> _JetSpace([y], [x]).coordinates(x * y.diff(x, 2) + y)
+        _y + _y_xx*x
+        """
+        index = {v: i for i, v in enumerate(self.indep)}
+        jets: dict[Basic, Basic] = {}
+        for d in e.atoms(Derivative):
+            if d.expr in self.dep and all(v in index for v in d.variables):
+                a = self.dep.index(d.expr)
+                jets[d] = self.jet(a, tuple(index[v] for v in d.variables))
+        return e.xreplace(jets).xreplace(self.base)
+
+    def in_ring(self, infinitesimals: list[Expr], max_order: int) -> list[Any]:
+        """The infinitesimals (from symbolic) as elements of the polynomial
+        ring of the jet coordinates up to max_order + 1 and the X_K up to
+        max_order, the other symbols (parameters) as constants; unchanged
+        if they are no polynomials in them (concrete infinitesimals, 1/x).
+
+        >>> x = Symbol('x')
+        >>> y = Function('y')(x)
+        >>> space = _JetSpace([y], [x])
+        >>> X, Y = space.in_ring(space.symbolic([Function('X')(x, y), y]), 1)
+        >>> space.ring is not None, space.as_expr(Y)
+        (True, _y)
+        >>> space = _JetSpace([y], [x])
+        >>> space.in_ring(space.symbolic([1 / x, y]), 1), space.ring
+        ([1/x, _y], None)
+        """
+        n = len(self.indep)
+        for a in range(len(self.dep)):
+            for k in range(1, max_order + 2):
+                for multi in combinations_with_replacement(range(n), k):
+                    self.jet(a, multi)
+        for f, _ in list(self.partials):
+            for k in range(1, max_order + 1):
+                for positions in combinations_with_replacement(range(len(f.args)), k):
+                    self.partial_symbol(f, tuple(positions.count(p) for p in range(len(f.args))))
+        coordinates = [*self.indep, *self.base.values(), *self.jets.values()]
+        coordinates += self.partials.values()
+        known = set(coordinates)
+        # parameters and constants (pi)
+        constants = {v for e in infinitesimals for v in e.free_symbols | e.atoms(NumberSymbol)}
+        others = sorted(constants - known, key=str)
+        gens = [*coordinates, *others]
+        ring_, *elements = sring_ring(gens, QQ)
+        try:
+            result = [ring_.from_expr(e) for e in infinitesimals]
+        except (ValueError, CoercionFailed):
+            return infinitesimals
+        self.ring = ring_
+        self.gens = dict(zip(gens, elements, strict=True))
+        return result
+
+    def as_expr(self, e: Any) -> Expr:
+        """e as a SymPy expression, also if it is a ring element.
+
+        >>> x = Symbol('x')
+        >>> space = _JetSpace([Function('y')(x)], [x])
+        >>> (Y,) = space.in_ring([x**2], 1)
+        >>> space.as_expr(Y), space.as_expr(x)
+        (x**2, x)
+        """
+        return e.as_expr() if self.ring is not None and isinstance(e, PolyElement) else e
+
+    def _total_of_generator(self, g: Basic, i: int) -> Any:
+        """D_i of the generator g in the ring: 1 or 0 for the independent
+        variables, u_{J,i} for u_J, X_{K+i} + sum_a X_{K+u_a} u_{a,i} for
+        X_K, 0 for the parameters.
+
+        >>> x = Symbol('x')
+        >>> y = Function('y')(x)
+        >>> space = _JetSpace([y], [x])
+        >>> (X,) = space.in_ring(space.symbolic([Function('X')(x, y)]), 1)
+        >>> space.as_expr(space._total_of_generator(space.base[y], 0))
+        _y_x
+        """
+        if (g, i) in self._total:
+            return self._total[(g, i)]
+        R = self.ring
+        if g in self.jet_of:
+            a, multi = self.jet_of[g]
+            result = self.jet(a, (*multi, i))
+        elif g in self.partial_of:
+            f, counts = self.partial_of[g]
+            result = R.zero
+            for k, v in enumerate(f.args):
+                higher = (*counts[:k], counts[k] + 1, *counts[k + 1 :])
+                if v == self.indep[i]:
+                    result += self.gens[self.partial_symbol(f, higher)]
+                elif v in self.jet_of:
+                    a, _ = self.jet_of[v]
+                    result += self.gens[self.partial_symbol(f, higher)] * self.jet(a, (i,))
+        else:
+            result = R.one if g == self.indep[i] else R.zero
+        self._total[(g, i)] = result
+        return result
+
+    def _ring_total(self, F: Any, i: int) -> Any:
+        """D_i F for F in the ring: the sum of dF/dg * D_i g over its
+        generators g.
+
+        >>> x = Symbol('x')
+        >>> y = Function('y')(x)
+        >>> space = _JetSpace([y], [x])
+        >>> (X,) = space.in_ring(space.symbolic([x * Function('X')(x, y)]), 1)
+        >>> space.as_expr(space._ring_total(X, 0))
+        _X(0, 0) + _X(0, 1)*_y_x*x + _X(1, 0)*x
+        """
+        generators = list(self.gens)
+        present = {k for monomial in F.itermonoms() for k, e in enumerate(monomial) if e}
+        result = self.ring.zero
+        for k in present:
+            g = generators[k]
+            derivative = self._total_of_generator(g, i)
+            if derivative:
+                result += F.diff(self.gens[g]) * derivative
+        return result
+
+    def back(self) -> dict[Basic, Basic]:
+        """The symbols to put back: u(x), Derivative(u(x), ...), X(x, u(x))
+        and its derivatives, these in the order of the arguments as in
+        _partials_in_argument_order.
+
+        >>> x = Symbol('x')
+        >>> y = Function('y')(x)
+        >>> space = _JetSpace([y], [x])
+        >>> (X,) = space.symbolic([Function('X')(x, y)])
+        >>> sorted(space.total(X, 0).xreplace(space.back()).args, key=str)
+        [Derivative(X(x, y(x)), x), Derivative(X(x, y(x)), y(x))*Derivative(y(x), x)]
+        """
+        back: dict[Basic, Basic] = {self.base[d]: d for d in self.dep}
+        for (a, multi), sym in self.jets.items():
+            # diff() as in the rest of delierium: the canonical order u_tx
+            back[sym] = self.dep[a].diff(*(self.indep[i] for i in multi))
+        for (f, counts), sym in self.partials.items():
+            g = f.xreplace(back)
+            pairs = [(v.xreplace(back), k) for v, k in zip(f.args, counts, strict=True) if k]
+            back[sym] = Derivative(g, *pairs) if pairs else g
+        return back
 
 
 def _partials_in_argument_order(e: Expr, dep: list[Expr]) -> Expr:
@@ -467,17 +741,27 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     # denominator (it does not change where the expression vanishes)
     num, den = fraction(together(expr))
     other_den, _ = den.as_independent(*gens, as_Add=False)
-    expr = (num / other_den).expand()
-    for gen, relation in zip(alg_gens, relations, strict=True):
-        # only the powers of G below its degree are linearly independent
-        expr = prem(expr, relation, gen).expand()
-    # exponentials of jet variables and of the new generators (exp(n atan(p)))
-    expr, exp_gens = _exp_generators(expr, gens)
-    coeffs = Poly(expr, *gens, *exp_gens).coeffs() if jet else [expr]
+    coeffs: list[Expr] | None = None
+    if other_den == 1 and not alg_gens and jet:
+        # the usual case: the coefficients of the numerator directly, in
+        # lowest terms as polynomials
+        num, exp_gens = _exp_generators(num, gens)
+        coeffs = _polynomial_coefficients(num, [*gens, *exp_gens])
+    if coeffs is None:
+        expr = (num / other_den).expand()
+        for gen, relation in zip(alg_gens, relations, strict=True):
+            # only the powers of G below its degree are linearly independent
+            expr = prem(expr, relation, gen).expand()
+        # exponentials of jet variables and of the new generators (exp(n atan(p)))
+        expr, exp_gens = _exp_generators(expr, gens)
+        coeffs = Poly(expr, *gens, *exp_gens).coeffs() if jet else [expr]
+        lowest_terms = False
+    else:
+        lowest_terms = True
     back = {v: k for k, v in to_symbol.items()}
     result = set()
     for c in coeffs if complex_coefficients else _real_and_imaginary_parts(coeffs):
-        c = _numerator(c).xreplace(back)
+        c = (c if lowest_terms else _numerator(c)).xreplace(back)
         if c != 0:
             if not c.is_Add:
                 # a single term: its numeric factor does not matter, e.g.
@@ -485,6 +769,38 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
                 c = c.as_coeff_Mul()[1]
             result.add(c)
     return sorted(result, key=default_sort_key)
+
+
+def _polynomial_coefficients(e: Expr, gens: Sequence[Basic]) -> list[Expr] | None:
+    """The coefficients of the polynomial e in gens, each with integer
+    coefficients (as _numerator), from one sparse polynomial in all its
+    symbols, functions and derivatives; None if e is no polynomial in
+    them (1/x).
+
+    >>> x, a, p = Symbol('x'), Symbol('a'), Symbol('p')
+    >>> f = Function('f')(x)
+    >>> sorted(_polynomial_coefficients(p**2 * x / 2 + p * (a * f.diff(x) + 1) - x, [p]), key=str)
+    [-x, a*Derivative(f(x), x) + 1, x]
+    >>> _polynomial_coefficients(p / x, [p]) is None
+    True
+    """
+    atoms = {a: Dummy() for a in e.atoms(Derivative, AppliedUndef)}
+    try:
+        ring_, element = sring(e.xreplace(atoms), domain=QQ)
+    except (PolynomialError, CoercionFailed, NotImplementedError, ValueError):
+        return None
+    if any(g.is_Pow and g.exp.is_negative for g in ring_.symbols):
+        return None
+    positions = [ring_.symbols.index(g) for g in gens if g in ring_.symbols]
+    terms: dict[tuple[int, ...], dict[tuple[int, ...], Any]] = {}
+    for monomial, coefficient in element.terms():
+        key = tuple(monomial[k] for k in positions)
+        rest = tuple(0 if k in positions else m for k, m in enumerate(monomial))
+        terms.setdefault(key, {})[rest] = coefficient
+    back = {d: a for a, d in atoms.items()}
+    return [
+        ring_.from_dict(part).clear_denoms()[1].as_expr().xreplace(back) for part in terms.values()
+    ]
 
 
 def _numerator(c: Expr) -> Expr:
@@ -1121,8 +1437,110 @@ def compute_overdetermined_system_of_infinitesimals(
     D(X(y(x), x), y(x))
     D(Y(y(x), x), x)
     """
+    in_ring = _ring_determining_equations(eq, dep, indep, infinitesimals)
+    if in_ring is not None:
+        return in_ring
     condition = determining_condition(eq, dep, indep, infinitesimals)
     return split_jet_coefficients(condition, convert_to_iterable(dep))
+
+
+@profile_if_enabled
+def _ring_determining_equations(
+    eq: Expr,
+    dep: Variables,
+    indep: Variables,
+    infinitesimals: InfinitesimalNames = None,
+) -> list[Expr] | None:
+    """The determining equations of eq as determining_condition and
+    split_jet_coefficients give them, computed in one polynomial ring of
+    the jet coordinates, the partial derivatives of the infinitesimals and
+    the parameters: the numerator N of eq, pr X(N) reduced by N
+    (pseudo-remainder in the highest derivative), its coefficients by the
+    jet variables. None if eq or the infinitesimals are no polynomials in
+    these (1/x, sin(y), arbitrary functions f(x)).
+
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> for e in _ring_determining_equations(y.diff(x, 2), y, x):
+    ...     print(e)
+    -Derivative(X(y(x), x), (x, 2)) + 2*Derivative(Y(y(x), x), x, y(x))
+    Derivative(Y(y(x), x), (y(x), 2)) - 2*Derivative(X(y(x), x), x, y(x))
+    Derivative(X(y(x), x), (y(x), 2))
+    Derivative(Y(y(x), x), (x, 2))
+    >>> _ring_determining_equations(y.diff(x, 2) + y.diff(x) / x, y, x) is not None
+    True
+    >>> _ring_determining_equations(y.diff(x, 2) - exp(y), y, x) is None
+    True
+    """
+    dep = convert_to_iterable(dep)
+    indep = convert_to_iterable(indep)
+    eq = _local_signs(_exact_numbers(_canonical_derivatives_of(eq, dep)))
+    infinitesimals = create_infinitesimals(dep, indep, infinitesimals)
+    max_order, highest_terms = order(eq, dep, indep)
+    highest_term = _leading_derivative(eq, highest_terms, dep)
+    space = _JetSpace(dep, indep)
+    symbolic = space.symbolic([infinitesimals[v] for v in (*indep, *dep)])
+    h = space.coordinates(highest_term)
+    # pr X(N/D) = pr X(N)/D where N = 0
+    numerator = numer(together(space.coordinates(eq)))
+    if any(e.has(Derivative, Subs, AppliedUndef) for e in (*symbolic, numerator)):
+        return None
+    *symbolic, N = space.in_ring([*symbolic, numerator], max_order)
+    if space.ring is None:
+        return None
+    gens = space.gens
+    coordinates = [gens[v] for v in (*indep, *space.base.values())]
+    condition = space.ring.zero
+    for c, eta in zip(coordinates, symbolic, strict=True):
+        condition += eta * N.diff(c)
+    for (a, multi), eta in space.prolonged(symbolic, max_order).items():
+        condition += eta * N.diff(space.jet(a, multi))
+    H = gens[h]
+    lc = N.coeff_wrt(H, N.degree(H))
+    if N.degree(H) == 1 and lc.is_ground:
+        # N solved for the highest derivative
+        condition = condition.compose(H, H - N.quo_ground(lc.LC))
+    else:
+        # on N = 0: N divides pr X(N) as a polynomial in the highest derivative
+        condition = condition.prem(N, H)
+    return _jet_coefficients(space, condition)
+
+
+def _jet_coefficients(space: "_JetSpace", condition: Any) -> list[Expr]:
+    """The coefficients of the ring element condition by the jet
+    variables, each with coprime integer coefficients, as expressions in
+    the functions and derivatives (_ring_determining_equations).
+
+    >>> x = Symbol('x')
+    >>> y = Function('y')(x)
+    >>> space = _JetSpace([y], [x])
+    >>> (X,) = space.in_ring(space.symbolic([Function('X')(x, y)]), 1)
+    >>> _jet_coefficients(space, space.total(X, 0) * 2 + 4 * X)
+    [2*X(x, y(x)) + Derivative(X(x, y(x)), x), Derivative(X(x, y(x)), y(x))]
+    """
+    dep = space.dep
+    generators = list(space.gens)
+    jets = set(space.jets.values())
+    positions = [k for k, g in enumerate(generators) if g in jets]
+    parts: dict[tuple[int, ...], dict[tuple[int, ...], Any]] = {}
+    for monomial, coefficient in condition.terms():
+        key = tuple(monomial[k] for k in positions)
+        rest = tuple(0 if k in positions else m for k, m in enumerate(monomial))
+        parts.setdefault(key, {})[rest] = coefficient
+    # the partials in SymPy's canonical order, as split_jet_coefficients
+    plain = {d: Symbol(d.name) for d in dep}
+    functions = {v: k for k, v in plain.items()}
+    back = {
+        s: v.xreplace(plain).doit(simplify=False).xreplace(functions)
+        for s, v in space.back().items()
+    }
+    result = set()
+    for part in parts.values():
+        c = space.ring.from_dict(part).clear_denoms()[1].primitive()[1].as_expr().xreplace(back)
+        if not c.is_Add:
+            c = c.as_coeff_Mul()[1]
+        result.add(c)
+    return sorted(result, key=default_sort_key)
 
 
 def overdetermined_system_ode(  # pylint: disable=keyword-arg-before-vararg,unused-argument
@@ -1365,9 +1783,9 @@ def overdetermined_system_pde(  # pylint: disable=keyword-arg-before-vararg,unus
     -2*U_ux - X_t + X_xx
     -T_t + T_xx + 2*X_x
     -U_uu + 2*X_ux
-    2*T_ux + 2*X_u
     T_u
     T_uu
+    T_ux + X_u
     T_x
     U_t - U_xx
     X_uu

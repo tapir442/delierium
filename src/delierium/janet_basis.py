@@ -10,7 +10,7 @@ from typing import Any
 
 import sympy as sp
 from more_itertools import bucket, flatten
-from sympy import Add, Basic, Dummy, Expr, Mul, default_sort_key, numer, oo, together
+from sympy import Add, Basic, Dummy, Expr, Mul, Symbol, Tuple, default_sort_key, numer, oo, together
 from sympy.functions.elementary.exponential import ExpBase
 from sympy.polys.polyerrors import CoercionFailed, PolynomialError
 from sympy.polys.rings import sring
@@ -266,6 +266,7 @@ class _Dterm:
     @profile_if_enabled
     def diff(self, *variables: Basic) -> list["_Dterm"]:
         """The derivative by the variables, a list of terms (product rule).
+        Key optimization within janet_basis. Avoids long intermediate results
 
         >>> from sympy import Function, symbols
         >>> x, y = symbols("x y")
@@ -288,7 +289,7 @@ class _Dterm:
         result: list[_Dterm] = []
         if fprime:
             result = [_Dterm(coeff=fprime, derivative=g, context=self.context)]
-        gprime = g.diff(*variables)
+        gprime = _derivative_by(g, variables[0])
         d2 = _Dterm(coeff=f, derivative=gprime, context=self.context)
         if d2:
             result.append(d2)
@@ -311,24 +312,55 @@ class _Dterm:
         return hash(self.comparison_vector)
 
 
-def _simplify_coefficients(e: Basic) -> Basic:
-    """e.simplify() with the derivatives replaced by symbols while simplifying:
-    SymPy's trigsimp (inside simplify) calls collect(), which raises
-    NotImplementedError ("Improve MV Derivative support in collect") on
-    derivatives with respect to several variables, e.g. for the determining
-    equations of sinh-Gordon w_tt = a w_xx + b sinh(lam w).
+def _derivative_by(g: Expr, v: Basic) -> Expr:
+    """dg/dv for g a function of symbols or a derivative of one, built
+    directly in SymPy's canonical form: g.diff(v) goes through
+    Derivative.doit, more than ten times slower, and was most of the time
+    of LHDP.diff.
 
-    >>> from sympy import Function, cosh, sinh, symbols
-    >>> x, t = symbols('x t')
+    >>> from sympy import Function, symbols
+    >>> x, y, t = symbols("x y t")
+    >>> f = Function("f")(x, y, t)
+    >>> all(
+    ...     _derivative_by(g, v) == g.diff(v)
+    ...     for g in [f, f.diff(x), f.diff(x, 2, y)]
+    ...     for v in [x, y, t, symbols("s")]
+    ... )
+    True
+    """
+    function = g.expr if isinstance(g, Derivative) else g
+    if not (
+        isinstance(v, Symbol)
+        and v in function.args
+        and all(isinstance(a, Symbol) for a in function.args)
+    ):
+        return g.diff(v)
+    counts = dict(g.variable_count) if isinstance(g, Derivative) else {}
+    counts[v] = counts.get(v, 0) + 1
+    # SymPy's own canonical order of the variables, as in Derivative.doit
+    pairs = [Tuple(w, n) for w, n in counts.items()]
+    return Derivative(function, *Derivative._sort_variable_count(pairs))  # pylint: disable=protected-access
+
+
+def _simplify_coefficients(e: Basic) -> Basic:
+    """e cancelled and with the powers of a base merged (u**s/u is u**(s - 1),
+    #38), the derivatives replaced by symbols meanwhile. Cheaper than
+    simplify(), which was three quarters of the time of JanetBasis; a
+    coefficient that vanishes only by other identities (sinh**2 - cosh**2 +
+    1) is recognized by Coeff.canonical, a term without unknown in
+    LHDP._init.
+
+    >>> from sympy import Function, symbols
+    >>> x, t, s, u = symbols('x t s u')
     >>> T = Function('T')(x, t)
-    >>> _simplify_coefficients(sinh(x) ** 2 * T.diff(x, t) - (cosh(x) ** 2 - 1) * T.diff(x, t))
-    0
+    >>> _simplify_coefficients((s * u ** (s - 1) - s * u**s / u) * T.diff(x, t) + T / (x * t) * x)
+    T(x, t)/t
     """
     derivatives = {d: Dummy() for d in e.atoms(Derivative)}
-    # rebuilt, so that the variables are in canonical order as after
-    # simplify(): Derivative(X, x, y) and Derivative(X, y, x) must not differ
+    # rebuilt, so that the variables are in canonical order:
+    # Derivative(X, x, y) and Derivative(X, y, x) must not differ
     back = {v: k.doit(simplify=False) for k, v in derivatives.items()}
-    return e.xreplace(derivatives).simplify().xreplace(back)
+    return sp.powsimp(sp.cancel(e.xreplace(derivatives))).xreplace(back)
 
 
 class LHDP:
@@ -412,14 +444,23 @@ class LHDP:
         ['(-1) * z(x, y)', '(3) * D(z(x, y), x)']
         """
         if e == 0:
-            # an equation that vanishes only after simplify() (#38): no terms
+            # an equation that vanishes after simplification (#38): no terms
             self.terms = []
             return
         # the coefficients of equal derivatives are collected
         dterms: dict[Expr, Expr] = {}
+        rest: list[Expr] = []  # terms without exactly one unknown
         for term in Add.make_args(e):
-            derivative, coeff = analyze_term(self.context, term)
+            try:
+                derivative, coeff = analyze_term(self.context, term)
+            except ValueError:
+                rest.append(term)
+                continue
             dterms[derivative] = dterms.get(derivative, sp.S.Zero) + coeff
+        # allowed only if they add up to zero, which _simplify_coefficients
+        # may not have seen (#38)
+        if rest and sp.simplify(Add(*rest)) != 0:
+            analyze_term(self.context, rest[0])  # raises the ValueError
         self.terms = [
             _Dterm(derivative=d, coeff=c, context=self.context) for d, c in dterms.items()
         ]
