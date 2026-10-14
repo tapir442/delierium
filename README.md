@@ -409,6 +409,27 @@ is known, and ways forward. They are skipped by default; run them with
 * Vishwas Khare, M. G. Timol: New Algorithm In SageMath To Check Symmetry Of Ode Of First
   Order,
   https://www.researchgate.net/publication/338388495_New_Algorithm_In_SageMath_To_Check_Symmetry_Of_Ode_Of_First_Order
+* Peter J. Olver: Applications of Lie Groups to Differential Equations, Springer New York
+  1993 (2nd ed., Graduate Texts in Mathematics 107).
+* George W. Bluman, Stephen C. Anco: Symmetry and Integration Methods for Differential
+  Equations, Springer New York 2002 (Applied Mathematical Sciences 154).
+* George W. Bluman, Sukeyuki Kumei: Symmetries and Differential Equations, Springer New York
+  1989 (Applied Mathematical Sciences 81).
+* Nail H. Ibragimov (ed.): CRC Handbook of Lie Group Analysis of Differential Equations,
+  Vol. 1, CRC Press 1994.
+* Mir Sajjad Hashemi, Dumitru Baleanu: Lie Symmetry Analysis of Fractional Differential
+  Equations, CRC Press 2020.
+* Xiaorui Hu, Yuqi Li, Yong Chen: A direct algorithm of one-dimensional optimal system for
+  the group invariant solutions, J. Math. Phys. 56 (2015) 053504, arXiv:1411.3797.
+* Thomas Bächler, Vladimir Gerdt, Markus Lange-Hegermann, Daniel Robertz: Algorithmic Thomas
+  decomposition of algebraic and differential systems, J. Symb. Comp. 47 (2012),
+  arXiv:1108.0817.
+* Vladimir P. Gerdt, Yuri A. Blinkov: Minimal involutive bases, Math. Comput. Simulation 45
+  (1998); Janet-like monomial division, CASC 2005, LNCS 3718.
+* Amir Hashemi: invbasis, Maple procedures for involutive bases,
+  https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt
+* The papers, benchmarks and collections the symmetry catalogue is taken from are listed
+  in `tests/symmetry_catalog.py`.
 
 # License
 
