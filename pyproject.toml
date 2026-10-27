@@ -1,6 +1,6 @@
 [project]
 name = "delierium"
-version = "2.6.0"
+version = "2.6.1"
 description = "Symmetry Analysis for ODEs and PDEs using SymPy"
 readme = "README.md"
 license = "MIT"
@@ -20,6 +20,7 @@ classifiers = [
 dependencies = [
     "gmpy2>=2.3.1",
     "more-itertools>=10",
+    "python-flint>=0.7",
     "sympy>=1.13",
 ]
 

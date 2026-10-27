@@ -1,6 +1,6 @@
 from sympy import Function, I, Rational, cos, cosh, exp, nan, sin, sinh, sqrt, symbols, tan, zoo
 
-from delierium.coefficients import Coeff
+from delierium.coefficients import Coeff, primitive
 
 x, y, n = symbols("x y n")
 
@@ -94,3 +94,20 @@ def test_janet_basis_does_not_divide_by_a_trigonometric_zero():
     basis = [simplify(e.expression()) for e in JanetBasis(eqs, [f, g], [x, y]).S]
     assert g.diff(y) in basis
     assert all(not e.has(zoo, nan) for e in basis)
+
+
+def test_primitive():
+    a, b = symbols("a b")
+    common = a**2 * x - b * y + 3
+    coeffs = [
+        Coeff(-2 * x * common / (a + 1)),
+        Coeff(4 * common / (a + 1)),
+        Coeff(6 * x**2 * common),
+    ]
+    assert [c.as_expr() for c in primitive(coeffs)] == [
+        x,
+        -2,
+        (-3 * a * x**2 - 3 * x**2).expand(),
+    ]
+    # coprime: nothing to divide out
+    assert [c.as_expr() for c in primitive([Coeff(x), Coeff(y)])] == [x, y]

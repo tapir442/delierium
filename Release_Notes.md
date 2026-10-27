@@ -2,6 +2,28 @@
 
 Details are in the issues referenced.
 
+### 2.6.1
+
+* Faster determining equations and Janet bases; results unchanged. python-flint is a new
+  dependency (gcd of the coefficients in the Janet basis).
+* `determining_janet_basis` over the whole catalogue (730 entries, one process each):
+  921 s in 2.6.0, 148 s with the python-flint gcd, 114 s in 2.6.1 (fewer `expand()` and
+  `cancel()`: numerators and coefficients in sparse polynomial rings, no `cancel()` of the
+  equations of a Janet basis, cheaper comparisons of the unknowns). Kamke 6.171 (over 600 s
+  in 2.6.0) takes 3 s, EqWorld 2.2.5 457 s → 4 s, Kamke 6.219 307 s → 1.6 s.
+* `janet_basis_from_ode` on the 342 scalar ODEs of the catalogue, the 338 that all three
+  versions finish (1.0.0 fails on four, 2.6.0 on Kamke 6.171):
+
+  | | 1.0.0 | 2.6.0 | 2.6.1 |
+  |---|---|---|---|
+  | total | 304.2 s | 334.4 s | 16.5 s |
+  | without Kamke 6.219 | 88.4 s | 28.0 s | 15.0 s |
+  | median entry | 0.202 s | 0.053 s | 0.031 s |
+
+  Per entry (median) 2.6.1 is 6.4x faster than 1.0.0 and 1.6x faster than 2.6.0; the Janet
+  bases equal those of 2.6.0 on all 338 entries. AMD Ryzen 9 7900X, Linux 7.0, Python
+  3.14.4, SymPy 1.14.0, python-flint 0.9.0; 3 processes at a time, nice 19.
+
 ### 2.6.0
 
 * `integrate_ode`: ODEs solved by quadratures along a solvable symmetry algebra, and
