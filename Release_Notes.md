@@ -22,6 +22,9 @@ Details are in the issues referenced.
   catalogue entries. EqWorld ODE 3.32 about 190 s → 8.4 s, Painlevé V (over 300 s) 47 s;
   the catalogue 116 s → 105 s (flint), then 187 s → 158 s (gcd; with 3.32 and Painlevé V,
   2 processes at a time).
+* Python 3.15.1 against 3.14.4, catalogue Janet bases (786 entries, the same bases): median
+  entry 1.12x faster, total 155.5 s → 150.1 s; Painlevé V and EqWorld 3.32 slower (46.0 s →
+  48.9 s, 8.3 s → 10.0 s), probably python-flint's generic abi3 wheel on 3.15.
 * `delierium.multipliers`: the multipliers and nonmultipliers of the Janet division, moved
   out of `janet_basis`.
 
