@@ -48,8 +48,8 @@ The public interface is what this package exports (``from delierium import
   (``pip install delierium[plot]``) and is not imported by ``import delierium``
 
 The modules' ``__all__`` list in addition building blocks of the algorithms
-(e.g. delierium.janet_basis.complete_system, vec_multipliers); they may
-change. Every other name is internal.
+(e.g. delierium.janet_basis.complete_system, delierium.multipliers.vec_multipliers);
+they may change. Every other name is internal.
 
 ``delierium.__version__`` is the version of the installed package, from its
 metadata; the only place it is written is ``pyproject.toml``.

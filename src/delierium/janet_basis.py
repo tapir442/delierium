@@ -15,7 +15,15 @@ from sympy.functions.elementary.exponential import ExpBase
 from sympy.polys.polyerrors import CoercionFailed, PolynomialError
 from sympy.polys.rings import sring
 
-from delierium.coefficients import ONE, Coeff, CoeffLike, fresh_field, primitive
+from delierium.coefficients import (
+    ONE,
+    Coeff,
+    CoeffLike,
+    cofactors,
+    fresh_field,
+    irreducible_factors,
+    primitive,
+)
 from delierium.helpers import (
     Derivative,
     ltf,
@@ -23,6 +31,12 @@ from delierium.helpers import (
     show_output,
 )
 from delierium.matrix_order import Context, Mgrevlex, Mgrlex, WeightFunction
+from delierium.multipliers import (
+    MultiplierClass,
+    in_janet_class,
+    janet_completion,
+    vec_multipliers,
+)
 
 __all__ = [
     "LHDP",
@@ -362,6 +376,51 @@ def _canonical_derivatives(e: Basic) -> Basic:
     return e.xreplace(rule) if rule else e
 
 
+class _Factor:
+    """A factor assumed nonzero, kept as its coefficient: converting every one
+    to an expression (as_expr) took a fifth of the time of JanetBasis, though
+    only the factors of the basis and of the dropped equations are needed.
+    Equal field elements are equal factors.
+
+    >>> from sympy import symbols
+    >>> x = symbols("x")
+    >>> _Factor(Coeff(2 * x)) == _Factor(Coeff(x) * 2), _Factor(Coeff(x)).as_expr()
+    (True, x)
+    """
+
+    __slots__ = ("coeff", "key")
+
+    def __init__(self, coeff: Coeff) -> None:
+        self.coeff = coeff
+        f = coeff.f
+        self.key: Any = (f.numer, f.denom) if f is not None else coeff.canonical().as_expr()
+
+    def __hash__(self) -> int:
+        return hash(self.key)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, _Factor) and self.key == other.key
+
+    def as_expr(self) -> Expr:
+        """The factor as an expression."""
+        return self.coeff.as_expr()
+
+
+# the assumptions of an LHDP: expressions, or factors converted only when needed
+Assumed = frozenset[Expr | _Factor]
+
+
+def _as_exprs(assumed: Iterable[Expr | _Factor]) -> frozenset[Expr]:
+    """The assumptions as expressions.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> sorted(_as_exprs({y, _Factor(Coeff(x))}), key=str)
+    [x, y]
+    """
+    return frozenset(a.as_expr() if isinstance(a, _Factor) else a for a in assumed)
+
+
 class LHDP:
     """Linear Homogeneous Differential Polynomial."""
 
@@ -376,7 +435,7 @@ class LHDP:
         e: Basic | int,
         context: Context,
         dterms: Iterable[_Dterm] = (),
-        assumptions: Iterable[Expr] = frozenset(),
+        assumptions: Iterable[Expr | _Factor] = frozenset(),
     ) -> None:
         """The linear homogeneous differential polynomial e (or the terms
         dterms), normalized: monic, x assumed nonzero for dividing by it.
@@ -394,8 +453,10 @@ class LHDP:
         self.multipliers: list[int] = []
         self.nonmultipliers: list[int] = []
         # the factors assumed nonzero in deriving this equation: those of the
-        # equations it comes from and those it was divided or multiplied by
-        self.assumptions: frozenset[Expr] = frozenset(assumptions)
+        # equations it comes from and those it was divided or multiplied by;
+        # the latter as _Factor, converted to expressions only when needed
+        # (assumptions)
+        self.assumed: Assumed = frozenset(assumptions)
         if dterms:
             self.terms = [t.copy() for t in dterms]
         else:
@@ -426,7 +487,19 @@ class LHDP:
         >>> sorted(p.assumptions, key=str)
         [x, y]
         """
-        self.assumptions |= {factor.as_expr()}
+        self.assumed |= {_Factor(factor)}
+
+    @property
+    def assumptions(self) -> frozenset[Expr]:
+        """The factors assumed nonzero in deriving this equation, as expressions.
+
+        >>> from sympy import Function, symbols
+        >>> x, y = symbols("x y")
+        >>> z = Function("z")(x, y)
+        >>> LHDP(x * z.diff(x) - z, Context([z], [x, y])).assumptions
+        frozenset({x})
+        """
+        return _as_exprs(self.assumed)
 
     @profile_if_enabled
     def _init(self, e: Basic) -> None:
@@ -672,7 +745,7 @@ class LHDP:
             e=0,
             dterms=[t for t in new_dterms.values() if t.coeff],
             context=self.context,
-            assumptions=self.assumptions,
+            assumptions=self.assumed,
         )
 
     def __str__(self) -> str:
@@ -910,10 +983,14 @@ def _subtract_derivative(e1: LHDP, e2: LHDP, factor: Coeff, variables: Sequence[
     # (product rule), so they must be added up, not kept side by side
     remaining = OrderedDict((t.comparison_vector, t.copy()) for t in e1.terms)
     lc = e2.terms[0].coeff
-    assumptions = e1.assumptions | e2.assumptions
+    if lc != ONE:
+        # lc/g * e1 - factor/g * ..., g their gcd: the coefficients grow less
+        # (Painlevé VI)
+        lc, factor = cofactors(lc, factor)
+    assumptions = e1.assumed | e2.assumed
     if lc != ONE:
         # e1 is multiplied by lc: the result is equivalent where lc != 0
-        assumptions |= {lc.as_expr()}
+        assumptions |= {_Factor(lc)}
         for t in remaining.values():
             t.coeff *= lc
     _subtract_terms(remaining, e2_terms, factor, e2.context)
@@ -923,7 +1000,7 @@ def _subtract_derivative(e1: LHDP, e2: LHDP, factor: Coeff, variables: Sequence[
     return LHDP(e=0, context=e2.context, dterms=dterms, assumptions=assumptions)
 
 
-def _vanished(context: Context, assumptions: Iterable[Expr]) -> LHDP:
+def _vanished(context: Context, assumptions: Iterable[Expr | _Factor]) -> LHDP:
     """The zero equation an equation reduced to, with the assumptions its
     vanishing depends on; falsy like every LHDP without terms.
 
@@ -938,7 +1015,7 @@ def _vanished(context: Context, assumptions: Iterable[Expr]) -> LHDP:
     zero = LHDP.__new__(LHDP)
     zero.context = context
     zero.terms, zero.multipliers, zero.nonmultipliers = [], [], []
-    zero.assumptions = frozenset(assumptions)
+    zero.assumed = frozenset(assumptions)
     return zero
 
 
@@ -1067,147 +1144,6 @@ def _autoreduce(S: Iterable[LHDP], context: Context) -> tuple[list[LHDP], list[L
     return equations, dropped
 
 
-def vec_degree(v: int, m: Sequence[int]) -> int:
-    """The degree of the monomial m in the variable v.
-
-    >>> vec_degree(1, (2, 3))
-    3
-    """
-    return m[v]
-
-
-@profile_if_enabled
-def vec_multipliers(
-    m: Sequence[int], M: Iterable[Sequence[int]], Vars: Sequence[int]
-) -> tuple[list[int], list[int]]:
-    """multipliers and nonmultipliers for differential vectors aka tuples
-
-    m   : a tuple representing a differential vector
-    M   : the complete set of differential vectors
-    Vars: a tuple representing the order of indizes in m
-          Examples:
-              (0,1,2) means first index in m represents the highest variable
-              (2,1,0) means last index in m represents the highest variable
-
-    Returns (multipliers, nonmultipliers), as lists of indices in m.
-
-    Follows the Maple procedure Janet in Amir Hashemi's invbasis,
-    https://amirhashemi.iut.ac.ir/sites/amirhashemi.iut.ac.ir/files//file_basepage/invbasis.txt
-
-    ......................................................
-    The doctest example is from Schwarz, Example C.1, p. 384
-    This example is in on variables x1,x2,x3, with x3 the highest rated variable.
-    So we have to specify (2,1,0) to represent this
-
-    >>> M = [(2, 2, 3), (3, 0, 3), (3, 1, 1), (0, 1, 1)]
-    >>> r = vec_multipliers(M[0], M, (2, 1, 0))
-    >>> print(M[0], r[0], r[1])
-    (2, 2, 3) [2, 1, 0] []
-    >>> r = vec_multipliers(M[1], M, (2, 1, 0))
-    >>> print(M[1], r[0], r[1])
-    (3, 0, 3) [2, 0] [1]
-    >>> r = vec_multipliers(M[2], M, (2, 1, 0))
-    >>> print(M[2], r[0], r[1])
-    (3, 1, 1) [1, 0] [2]
-    >>> r = vec_multipliers(M[3], M, (2, 1, 0))
-    >>> print(M[3], r[0], r[1])
-    (0, 1, 1) [1] [0, 2]
-    >>> N = [[0, 2], [2, 0], [1, 1]]
-    >>> r = vec_multipliers(N[0], N, (0, 1))
-    >>> print(r)
-    ([1], [0])
-    >>> r = vec_multipliers(N[1], N, (0, 1))
-    >>> print(r)
-    ([0, 1], [])
-    >>> r = vec_multipliers(N[2], N, (0, 1))
-    >>> print(r)
-    ([1], [0])
-    >>> r = vec_multipliers(N[0], N, (1, 0))
-    >>> print(r)
-    ([1, 0], [])
-    >>> r = vec_multipliers(N[1], N, (1, 0))
-    >>> print(r)
-    ([0], [1])
-    >>> r = vec_multipliers(N[2], N, (1, 0))
-    >>> print(r)
-    ([0], [1])
-    >>> # next example form Gerdt/Blinkov: Janet-like monomial divisiom, Table1
-    >>> # x1 -> Index 2
-    >>> # x2 -> Index 1 (this is easy)
-    >>> # x3 -> Index 0
-    >>> U = [[0, 0, 5], [1, 2, 2], [2, 0, 2], [1, 4, 0], [2, 1, 0], [5, 0, 0]]
-    >>> vec_multipliers(U[0], U, (2, 1, 0))
-    ([2, 1, 0], [])
-    >>> vec_multipliers(U[1], U, (2, 1, 0))
-    ([1, 0], [2])
-    >>> vec_multipliers(U[2], U, (2, 1, 0))
-    ([0], [1, 2])
-    >>> vec_multipliers(U[3], U, (2, 1, 0))
-    ([1, 0], [2])
-    >>> vec_multipliers(U[4], U, (2, 1, 0))
-    ([0], [1, 2])
-    >>> vec_multipliers(U[5], U, (2, 1, 0))
-    ([0], [1, 2])
-    >>> # the first variable is compared with its own maximal degree
-    >>> V = [(0, 2), (1, 0)]
-    >>> vec_multipliers(V[0], V, (0, 1))
-    ([1], [0])
-    >>> vec_multipliers(V[1], V, (0, 1))
-    ([0, 1], [])
-    >>> vec_multipliers(V[0], V[:1], (0, 1))
-    ([0, 1], [])
-    >>> # Iohara/Malbos, Example 3.2.6: five variables, the last index is the highest
-    >>> W = [
-    ...     (0, 0, 0, 1, 1),
-    ...     (0, 0, 1, 0, 1),
-    ...     (0, 1, 0, 0, 1),
-    ...     (0, 0, 0, 2, 0),
-    ...     (0, 0, 1, 1, 0),
-    ...     (0, 0, 2, 0, 0),
-    ... ]
-    >>> for w in W:
-    ...     print(w, *vec_multipliers(w, W, (4, 3, 2, 1, 0)))
-    (0, 0, 0, 1, 1) [4, 3, 2, 1, 0] []
-    (0, 0, 1, 0, 1) [4, 2, 1, 0] [3]
-    (0, 1, 0, 0, 1) [4, 1, 0] [2, 3]
-    (0, 0, 0, 2, 0) [3, 2, 1, 0] [4]
-    (0, 0, 1, 1, 0) [2, 1, 0] [3, 4]
-    (0, 0, 2, 0, 0) [2, 1, 0] [3, 4]
-    """
-    # Janet: the highest variable is a multiplier if m has the maximal degree in it
-    d = max((vec_degree(Vars[0], u) for u in M), default=0)
-    mult = []
-    if vec_degree(Vars[0], m) == d:
-        mult.append(Vars[0])
-    for j, v in enumerate(Vars[1:], start=1):
-        dd = [vec_degree(x, m) for x in Vars[:j]]
-        V = [u for u in M if [vec_degree(x, u) for x in Vars[:j]] == dd]
-        if vec_degree(v, m) == max((vec_degree(v, u) for u in V), default=0):
-            mult.append(v)
-    return mult, sorted(set(Vars) - set(mult))
-
-
-# an element of S with its multiplier and nonmultiplier variables
-_MultiplierClass = namedtuple("_MultiplierClass", ["monom", "dp", "multipliers", "nonmultipliers"])
-
-
-def _in_janet_class(
-    monom: Sequence[int],
-    base: Sequence[int],
-    multipliers: Iterable[int],
-    nonmultipliers: Iterable[int],
-) -> bool:
-    """monom lies in the Janet class of base: it is base multiplied by
-    multiplier variables only (Schwarz, p. 383).
-
-    >>> _in_janet_class((2, 1), (1, 1), [0], [1]), _in_janet_class((2, 2), (1, 1), [0], [1])
-    (True, False)
-    """
-    return all(monom[i] >= base[i] for i in multipliers) and all(
-        monom[i] == base[i] for i in nonmultipliers
-    )
-
-
 @profile_if_enabled
 def complete(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     """Janet-complete S, polynomials with the same leading function.
@@ -1236,7 +1172,7 @@ def complete(S: Iterable[LHDP], context: Context) -> list[LHDP]:
                 raised = list(dp.order)
                 raised[n] += 1
                 if tuple(raised) not in added and not any(
-                    _in_janet_class(raised, other.order, mult, nonmult)
+                    in_janet_class(raised, other.order, mult, nonmult)
                     for other, mult, nonmult in classes
                 ):
                     added.add(tuple(raised))
@@ -1244,37 +1180,6 @@ def complete(S: Iterable[LHDP], context: Context) -> list[LHDP]:
         if not missing:
             return list(result)
         result.update(missing)
-
-
-def _janet_completion(monomials: Iterable[Sequence[int]], n: int) -> set[tuple[int, ...]]:
-    """The minimal Janet completion of a set of monomials (exponent vectors).
-
-    Unlike complete(), which adds all missing prolongations of a pass at
-    once, only the lowest one (by degree) is added before the Janet classes
-    are computed again; so no element is added that a lower prolongation
-    would already cover (Gerdt, Blinkov, minimal involutive bases).
-
-    >>> sorted(_janet_completion([(0, 1, 1), (1, 1, 0)], 3))
-    [(0, 1, 1), (1, 1, 0)]
-    >>> sorted(_janet_completion([(0, 0, 2), (1, 1, 0)], 3))
-    [(0, 0, 2), (1, 0, 2), (1, 1, 0)]
-    >>> sorted(_janet_completion([(0, 1, 1), (1, 0, 2), (1, 2, 0), (2, 0, 1), (2, 1, 0)], 3))
-    [(0, 1, 1), (1, 0, 2), (1, 1, 1), (1, 2, 0), (2, 0, 1), (2, 1, 0)]
-    """
-    result = {tuple(m) for m in monomials}
-    while True:
-        orders = list(result)
-        classes = [(m, *vec_multipliers(m, orders, range(n))) for m in orders]
-        missing = set()
-        for m, _, nonmultipliers in classes:
-            for k in nonmultipliers:
-                raised = list(m)
-                raised[k] += 1
-                if not any(_in_janet_class(raised, o, mult, non) for o, mult, non in classes):
-                    missing.add(tuple(raised))
-        if not missing:
-            return result
-        result.add(min(missing, key=lambda m: (sum(m), tuple(reversed(m)))))
 
 
 def minimize(S: list[LHDP], context: Context) -> tuple[list[LHDP], list[LHDP]]:
@@ -1309,7 +1214,7 @@ def minimize(S: list[LHDP], context: Context) -> tuple[list[LHDP], list[LHDP]]:
             for m in orders
             if not any(o != m and all(a >= b for a, b in zip(m, o, strict=True)) for o in orders)
         ]
-        wanted = _janet_completion(generators, n)
+        wanted = janet_completion(generators, n)
         if not wanted <= set(orders):
             return S, []
         kept += [by_order[m] for m in wanted]
@@ -1479,7 +1384,7 @@ def _integrability_pairs(
         # S1
         multipliers, nonmultipliers = vec_multipliers(monom, ms, indices)
         multiplier_collection.append(
-            _MultiplierClass(
+            MultiplierClass(
                 monom,
                 dp,
                 [context.independent[i] for i in multipliers],
@@ -1524,8 +1429,8 @@ def _multiplicative_derivative(ei: Any, n: Basic, ej: Any, context: Context) -> 
     >>> z = Function("z")(x, y)
     >>> ctx = Context([z], [x, y])
     >>> S = [LHDP(z.diff(x) - z, ctx), LHDP(z.diff(y) - x * z, ctx)]
-    >>> ei = _MultiplierClass([1, 0], S[0], [x], [y])
-    >>> ej = _MultiplierClass([0, 1], S[1], [x, y], [])
+    >>> ei = MultiplierClass([1, 0], S[0], [x], [y])
+    >>> ej = MultiplierClass([0, 1], S[1], [x, y], [])
     >>> _multiplicative_derivative(ei, y, ej, ctx)
     [x]
     """
@@ -1553,9 +1458,9 @@ def _difference(d1: LHDP, d2: LHDP, context: Context) -> LHDP:
     D(z(x, y), y) + (-x) * z(x, y)
     """
     lc1, lc2 = d1.terms[0].coeff, d2.terms[0].coeff
-    assumptions = d1.assumptions | d2.assumptions
+    assumptions = d1.assumed | d2.assumed
     if lc1 != lc2:
-        assumptions |= {lc.as_expr() for lc in (lc1, lc2) if lc != ONE}
+        assumptions |= {_Factor(lc) for lc in (lc1, lc2) if lc != ONE}
         for t in d1.terms:
             t.coeff *= lc2
     else:
@@ -1846,9 +1751,10 @@ class JanetBasis:
         ([x], ([], [x]))
         """
         if self._assumed is None:
-            factors = nonzero_factors(
-                set().union(*(e.assumptions for e in [*self.S, *self._dropped]))
-            )
+            assumed = frozenset().union(*(e.assumed for e in [*self.S, *self._dropped]))
+            # the coefficients themselves: their numerators are polynomials
+            # already, as expressions they would be brought together again
+            factors = nonzero_factors(a.coeff if isinstance(a, _Factor) else a for a in assumed)
             self._assumed = (factors, split_assumptions(factors, self.context.independent))
         return self._assumed
 
@@ -2060,7 +1966,9 @@ def nonzero_factors(coefficients: Iterable[Coeff | Expr]) -> list[Expr]:
     """
     result: set[Expr] = set()
     for c in coefficients:
-        if isinstance(c, Coeff) and c.is_field:
+        # field numerators are expanded already: no expand() in sring
+        expanded = isinstance(c, Coeff) and c.is_field
+        if expanded:
             num = c.f.numer.as_expr()
         else:
             num = numer(together(c.as_expr() if isinstance(c, Coeff) else c))
@@ -2071,7 +1979,7 @@ def nonzero_factors(coefficients: Iterable[Coeff | Expr]) -> list[Expr]:
         # shared coefficient field, whose generators depend on everything
         # computed before (x may be stored as sqrt(x)**2)
         try:
-            factors = [f.as_expr() for f, _ in sring(num)[1].factor_list()[1]]
+            factors = [f.as_expr() for f in irreducible_factors(sring(num, expand=not expanded)[1])]
         except (TypeError, PolynomialError, CoercionFailed):
             factors = [num]
         for f in factors:

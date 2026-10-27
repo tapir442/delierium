@@ -797,7 +797,10 @@ def _normal_forms(
         for alpha in indices:
             orders = [(z, n) for z, n in zip(coordinates, alpha, strict=True) if n]
             remainder = janet.representation(f.diff(*orders) if orders else f)[1]
-            atoms = remainder.atoms(Derivative) | (remainder.atoms(AppliedUndef) & set(functions))
+            # the parametric derivatives; derivatives of given functions (g'(x) for
+            # g(x) y'' + ...) are coefficients
+            atoms = {d for d in remainder.atoms(Derivative) if d.expr in functions}
+            atoms |= remainder.atoms(AppliedUndef) & set(functions)
             linear = remainder.xreplace(
                 {e: t[keys.index(_derivative_key(e, functions, coordinates))] for e in atoms}
             )
