@@ -213,7 +213,8 @@ def _identity_coefficients(
         variables.append(v)
         if replaced != e:
             variables.append(e_v)
-            e = replaced
+            # pylint infers sympify's result as an array, depending on the run
+            e = replaced  # pylint: disable=redefined-variable-type
         e, exponentials = _common_exponentials(e, v, coordinates)
         variables += exponentials
     e, powers = _common_powers(e, variables)
