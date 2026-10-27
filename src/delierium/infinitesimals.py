@@ -9,11 +9,13 @@ from collections import OrderedDict
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import reduce
-from itertools import combinations, combinations_with_replacement, permutations, product
+from itertools import chain, combinations, combinations_with_replacement, permutations, product
+from operator import mul
 from typing import Any, cast
 
 from sympy import (  # noqa: F401
     QQ,
+    ZZ,
     Abs,
     Add,
     Basic,
@@ -59,7 +61,6 @@ from sympy import (  # noqa: F401
 from sympy.core.function import AppliedUndef
 from sympy.functions.elementary.hyperbolic import HyperbolicFunction
 from sympy.functions.elementary.trigonometric import TrigonometricFunction
-from sympy.polys.fields import sfield
 from sympy.polys.polyerrors import CoercionFailed, PolynomialError
 from sympy.polys.rings import PolyElement, sring
 from sympy.polys.rings import ring as sring_ring
@@ -529,6 +530,36 @@ class _JetSpace:
             back[sym] = Derivative(g, *pairs) if pairs else g
         return back
 
+    def canonical_back(self, generators: Iterable[Basic]) -> dict[Basic, Basic]:
+        """back() for the base symbols u and the partials X_K among generators,
+        the partials in SymPy's canonical order as in split_jet_coefficients
+        (Derivative(X(x, y), y, x).doit() with y for y(x)).
+
+        >>> x = Symbol('x')
+        >>> y = Function('y')(x)
+        >>> space = _JetSpace([y], [x])
+        >>> (X,) = space.symbolic([Function('X')(x, y)])
+        >>> F = space.total(X, 0)
+        >>> sorted(space.canonical_back(F.free_symbols).values(), key=str)
+        [Derivative(X(x, y(x)), x), Derivative(X(x, y(x)), y(x))]
+        """
+        plain = {d: Symbol(d.name) for d in self.dep}
+        functions = {v: k for k, v in plain.items()}
+        to_plain = {self.base[d]: plain[d] for d in self.dep}
+        back: dict[Basic, Basic] = {}
+        for sym in generators:
+            if sym in self.partial_of:
+                f, counts = self.partial_of[sym]
+                g = f.xreplace(to_plain)
+                pairs = [
+                    (v.xreplace(to_plain), k) for v, k in zip(f.args, counts, strict=True) if k
+                ]
+                d = Derivative(g, *pairs, evaluate=True) if pairs else g
+                back[sym] = d.xreplace(functions)
+            elif sym in self.jet_of and not self.jet_of[sym][1]:
+                back[sym] = self.dep[self.jet_of[sym][0]]
+        return back
+
 
 def _partials_in_argument_order(e: Expr, dep: list[Expr]) -> Expr:
     """e with the mixed partials of the infinitesimals in the order of their
@@ -750,7 +781,8 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
         num, exp_gens = _exp_generators(num, gens)
         coeffs = _polynomial_coefficients(num, [*gens, *exp_gens])
     if coeffs is None:
-        expr = (num / other_den).expand()
+        # without jet variables a single coefficient, expanded by _numerator
+        expr = (num / other_den).expand() if jet else num / other_den
         for gen, relation in zip(alg_gens, relations, strict=True):
             # only the powers of G below its degree are linearly independent
             expr = prem(expr, relation, gen).expand()
@@ -788,7 +820,7 @@ def _polynomial_coefficients(e: Expr, gens: Sequence[Basic]) -> list[Expr] | Non
     """
     atoms = {a: Dummy() for a in e.atoms(Derivative, AppliedUndef)}
     try:
-        ring_, element = sring(e.xreplace(atoms), domain=QQ)
+        ring_, (element,) = _ring_elements([e.xreplace(atoms)])
     except (PolynomialError, CoercionFailed, NotImplementedError, ValueError):
         return None
     if any(g.is_Pow and g.exp.is_negative for g in ring_.symbols):
@@ -805,12 +837,74 @@ def _polynomial_coefficients(e: Expr, gens: Sequence[Basic]) -> list[Expr] | Non
     ]
 
 
+def _leaves(exprs: Iterable[Expr]) -> set[Expr]:
+    """The factors of exprs that are no numbers, sums, products or positive
+    integer powers.
+
+    >>> x, y = Symbol('x'), Symbol('y')
+    >>> sorted(_leaves([(x + 1) ** 2 * exp(y) / x]), key=str)
+    [1/x, exp(y), x]
+    """
+    leaves: set[Expr] = set()
+
+    def collect(a: Expr) -> None:
+        if a.is_Rational:
+            return
+        if a.is_Add or a.is_Mul:
+            for b in a.args:
+                collect(b)
+        elif a.is_Pow and a.exp.is_Integer and a.exp > 0:
+            collect(a.base)
+        else:
+            leaves.add(a)
+
+    for e in exprs:
+        collect(e)
+    return leaves
+
+
+def _ring_elements(exprs: Sequence[Expr], domain: Any = QQ) -> tuple[Any, list[Any]]:
+    """sring(exprs, domain=domain), without expanding them if they are
+    polynomials in symbols: then they are multiplied out in the ring
+    (expand() took 6 s for the apoptosis model, ODEBench 53). Other
+    factors (sqrt(x), exp(x)) may be related to each other, which only
+    sring sees on the expanded expressions. CoercionFailed for a rational
+    number not in domain.
+
+    >>> x, y = Symbol('x'), Symbol('y')
+    >>> _ring_elements([(x + y) ** 2 / 2])[1]
+    [1/2*x**2 + x*y + 1/2*y**2]
+    """
+    leaves = _leaves(exprs)
+    if not all(a.is_Symbol for a in leaves):
+        return sring(exprs, domain=domain)
+    ordered_leaves = sorted(leaves, key=default_sort_key)
+    ring_, elements = sring(ordered_leaves or [S.One], domain=domain)
+    of_leaf = dict(zip(ordered_leaves, elements, strict=False))
+
+    def rebuild(a: Expr) -> Any:
+        if a.is_Rational:
+            return ring_(ring_.domain.convert(a))
+        if a.is_Add:
+            return sum((rebuild(b) for b in a.args), ring_.zero)
+        if a.is_Mul:
+            result = ring_.one
+            for b in a.args:
+                result *= rebuild(b)
+            return result
+        if a.is_Pow and a.exp.is_Integer and a.exp > 0:
+            return rebuild(a.base) ** int(a.exp)
+        return of_leaf[a]
+
+    return ring_, [rebuild(e) for e in exprs]
+
+
 def _numerator(c: Expr) -> Expr:
     """The numerator of c in lowest terms, expanded: numer(cancel(c)).expand().
 
-    Computed in SymPy's sparse field of rational functions, with derivatives
-    and functions as symbols: cancel() took 15 s for a coefficient of 2000
-    terms of the apoptosis model (ODEBench 53), the field 0.7 s.
+    Computed in SymPy's sparse polynomial ring, with derivatives and
+    functions as symbols: cancel() took 15 s for a coefficient of 2000
+    terms of the apoptosis model (ODEBench 53), the sparse field 0.7 s.
 
     >>> x, a = Symbol('x'), Symbol('a')
     >>> f = Function('f')(x)
@@ -820,11 +914,45 @@ def _numerator(c: Expr) -> Expr:
     atoms = {a: Dummy() for a in c.atoms(Derivative, AppliedUndef)}
     plain = c.xreplace(atoms)
     try:
-        _, element = sfield(plain)
-        result = element.numer.as_expr()
+        # sfield(c) expands the numerator of c over a common denominator;
+        # instead the terms are grouped by denominator and the groups added
+        # in the ring over the least common multiple, cancelled once
+        pieces = _numerators_and_denominators(plain)
+        if not all(a.is_Symbol for a in _leaves(pieces)):
+            # u*u**(1/3) is u**(4/3) only in the expanded expression
+            plain = plain.expand()
+            pieces = _numerators_and_denominators(plain)
+        try:
+            ring_, elements = _ring_elements(pieces, ZZ)
+        except CoercionFailed:
+            ring_, elements = sring(pieces)
+        numerators, denominators = elements[::2], elements[1::2]
+        denominator = ring_.one
+        for d in denominators:
+            denominator = denominator.lcm(d)
+        numerator = sum(
+            (n * denominator.exquo(d) for n, d in zip(numerators, denominators, strict=True)),
+            ring_.zero,
+        )
+        result = numerator.cancel(denominator)[0].as_expr()
     except (PolynomialError, CoercionFailed, NotImplementedError):
         result = numer(cancel(plain)).expand()
     return result.xreplace({d: a for a, d in atoms.items()})
+
+
+def _numerators_and_denominators(e: Expr) -> list[Expr]:
+    """n1, d1, n2, d2, ...: e = n1/d1 + n2/d2 + ..., the terms of e grouped by
+    their denominator.
+
+    >>> x, y = Symbol('x'), Symbol('y')
+    >>> _numerators_and_denominators(x / y + 1 / y + x)
+    [x, 1, x + 1, y]
+    """
+    groups: dict[Expr, list[Expr]] = {}
+    for t in Add.make_args(e):
+        n, d = t.as_numer_denom()
+        groups.setdefault(d, []).append(n)
+    return [p for d, ns in groups.items() for p in (Add(*ns), d)]
 
 
 def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dummy]]:
@@ -1491,22 +1619,19 @@ def _jet_coefficients(space: "_JetSpace", condition: Any) -> list[Expr]:
     >>> _jet_coefficients(space, space.total(X, 0) * 2 + 4 * X)
     [2*X(x, y(x)) + Derivative(X(x, y(x)), x), Derivative(X(x, y(x)), y(x))]
     """
-    dep = space.dep
     generators = list(space.gens)
     jets = set(space.jets.values())
     positions = [k for k, g in enumerate(generators) if g in jets]
+    # 0 at the jet variables, 1 elsewhere: the monomial without them
+    others = [int(g not in jets) for g in generators]
     parts: dict[tuple[int, ...], dict[tuple[int, ...], Any]] = {}
     for monomial, coefficient in condition.terms():
-        key = tuple(monomial[k] for k in positions)
-        rest = tuple(0 if k in positions else m for k, m in enumerate(monomial))
+        key = tuple(map(monomial.__getitem__, positions))
+        rest = tuple(map(mul, monomial, others))
         parts.setdefault(key, {})[rest] = coefficient
-    # the partials in SymPy's canonical order, as split_jet_coefficients
-    plain = {d: Symbol(d.name) for d in dep}
-    functions = {v: k for k, v in plain.items()}
-    back = {
-        s: v.xreplace(plain).doit(simplify=False).xreplace(functions)
-        for s, v in space.back().items()
-    }
+    # only the generators in the coefficients need to be put back
+    occurring = {k for rest in chain.from_iterable(parts.values()) for k, m in enumerate(rest) if m}
+    back = space.canonical_back(generators[k] for k in occurring)
     result = set()
     for part in parts.values():
         c = space.ring.from_dict(part).clear_denoms()[1].primitive()[1].as_expr().xreplace(back)

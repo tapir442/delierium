@@ -10,7 +10,7 @@ from typing import Any
 
 import sympy as sp
 from more_itertools import bucket, flatten
-from sympy import Add, Basic, Dummy, Expr, Mul, Symbol, Tuple, default_sort_key, numer, oo, together
+from sympy import Add, Basic, Expr, Mul, Symbol, Tuple, default_sort_key, numer, oo, together
 from sympy.functions.elementary.exponential import ExpBase
 from sympy.polys.polyerrors import CoercionFailed, PolynomialError
 from sympy.polys.rings import sring
@@ -342,25 +342,24 @@ def _derivative_by(g: Expr, v: Basic) -> Expr:
     return Derivative(function, *Derivative._sort_variable_count(pairs))  # pylint: disable=protected-access
 
 
-def _simplify_coefficients(e: Basic) -> Basic:
-    """e cancelled and with the powers of a base merged (u**s/u is u**(s - 1),
-    #38), the derivatives replaced by symbols meanwhile. Cheaper than
-    simplify(), which was three quarters of the time of JanetBasis; a
-    coefficient that vanishes only by other identities (sinh**2 - cosh**2 +
-    1) is recognized by Coeff.canonical, a term without unknown in
-    LHDP._init.
+def _canonical_derivatives(e: Basic) -> Basic:
+    """e with the variables of its derivatives in canonical order:
+    Derivative(X, x, y) and Derivative(X, y, x) must not differ.
 
     >>> from sympy import Function, symbols
-    >>> x, t, s, u = symbols('x t s u')
+    >>> x, t = symbols('x t')
     >>> T = Function('T')(x, t)
-    >>> _simplify_coefficients((s * u ** (s - 1) - s * u**s / u) * T.diff(x, t) + T / (x * t) * x)
-    T(x, t)/t
+    >>> _canonical_derivatives(Derivative(T, x, t)) == Derivative(T, x, t).doit()
+    True
+    >>> _canonical_derivatives(Derivative(T, x, t))
+    Derivative(T(x, t), t, x)
     """
-    derivatives = {d: Dummy() for d in e.atoms(Derivative)}
-    # rebuilt, so that the variables are in canonical order:
-    # Derivative(X, x, y) and Derivative(X, y, x) must not differ
-    back = {v: k.doit(simplify=False) for k, v in derivatives.items()}
-    return sp.powsimp(sp.cancel(e.xreplace(derivatives))).xreplace(back)
+    rule = {}
+    for d in e.atoms(Derivative):
+        ordered = Derivative._sort_variable_count(d.variable_count)  # pylint: disable=protected-access
+        if list(ordered) != list(d.variable_count):
+            rule[d] = Derivative(d.expr, *ordered)
+    return e.xreplace(rule) if rule else e
 
 
 class LHDP:
@@ -403,7 +402,7 @@ class LHDP:
             # e is only a placeholder (0) when the terms come as dterms
             if isinstance(e, int):
                 raise TypeError(f"LHDP({e}, ...) without dterms: e must be an expression")
-            self._init(_simplify_coefficients(e).expand())
+            self._init(_canonical_derivatives(e).expand())
         # coefficients are in canonical form (coefficients.Coeff), so a
         # vanishing one is recognized
         self.terms = [t for t in self.terms if t.coeff.canonical()]
@@ -457,8 +456,8 @@ class LHDP:
                 rest.append(term)
                 continue
             dterms[derivative] = dterms.get(derivative, sp.S.Zero) + coeff
-        # allowed only if they add up to zero, which _simplify_coefficients
-        # may not have seen (#38)
+        # allowed only if they add up to zero (#38: sigma u**(sigma - 1) -
+        # sigma u**sigma/u)
         if rest and sp.simplify(Add(*rest)) != 0:
             analyze_term(self.context, rest[0])  # raises the ValueError
         self.terms = [
@@ -869,8 +868,12 @@ def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
     >>> _reduce_inner(e1, e2, ctx).expression().simplify()
     Derivative(z(x, y), x) + z(x, y)/x
     """
+    # the same function: the same marker in the comparison vectors, much
+    # cheaper than comparing the functions
+    n = len(e2.order)
+    marker = e2.comparison_vector[n:]
     for term in e1.terms:
-        if term.function != e2.function:
+        if term.comparison_vector[n:] != marker:
             continue
         dif = [a - b for a, b in zip(term.order, e2.order, strict=True)]
         if any(d < 0 for d in dif):
