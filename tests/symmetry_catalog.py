@@ -103,6 +103,8 @@ ODESYM_SOURCE = (
     "arXiv:2506.19550; github.com/kahlmeyer94/ODESym, ode_examples.py"
 )
 EQWORLD_SOURCE = "EqWorld, Polyanin, Zhurov, Levitin, eqworld.ipmnet.ru/en/solutions/npde"
+EQWORLD_ODE_SOURCE = "EqWorld, Polyanin, Zhurov, Levitin, eqworld.ipmnet.ru/en/solutions/ode"
+PAINLEVE_SOURCE = "NIST Digital Library of Mathematical Functions, 32.2, dlmf.nist.gov/32.2"
 KO_KIM_LEE_SOURCE = (
     "Ko, Kim, Lee, Learning Infinitesimal Generators of Continuous Symmetries from Data, "
     "arXiv:2410.21853v2 (2024)"
@@ -7431,6 +7433,478 @@ KAMKE = [
     # END KAMKE
 ]
 
+# EqWorld's second and third order ODEs and the Painlevé equations: the pages give
+# solutions, not symmetries. Dimension and generators are delierium's, the generators
+# checked against the determining equations; the dimensions cross-checked where possible
+# (benchmarks/painleve-eqworld-ode-2026-10-23). For arbitrary functions the dimension is
+# that of generic ones.
+_DELIERIUM = "dimension and generators by delierium"
+BLAD_LIEPDE_AGREE = f"{_DELIERIUM}; BLAD (Rosenfeld-Groebner) and REDUCE's LIEPDE agree"
+LIEPDE_AGREES = f"{_DELIERIUM}; REDUCE's LIEPDE agrees"
+LIEPDE_TIMEOUT = f"{_DELIERIUM}; REDUCE's LIEPDE does not finish in 300 s"
+LIEPDE_NOT_COMPARABLE = (
+    f"{_DELIERIUM}; not cross-checked: REDUCE's LIEPDE takes an arbitrary function of an "
+    "expression as an opaque operator"
+)
+LINEARIZABLE_0347 = (
+    f"{_DELIERIUM}; linearizable: u = int exp(-int f dy) dy gives u'' = g(x) u' "
+    "(REDUCE's LIEPDE finds no symmetry)"
+)
+EQWORLD_ODES = [
+    ode(
+        "EqWorld ODE 3.1: y'' = f(y)",
+        "-f(y(x)) + Derivative(y(x), (x, 2))",
+        1,
+        [("1", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0301.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.2: y'' = A x**n y**m",
+        "-A*x**n*y(x)**m + Derivative(y(x), (x, 2))",
+        1,
+        [("x*(1 - m)/(n + 2)", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0302.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.3: y'' = a/y**3 - f(x) y",
+        "-a/y(x)**3 + f(x)*y(x) + Derivative(y(x), (x, 2))",
+        3,
+        (),
+        f"{EQWORLD_ODE_SOURCE}/ode0303.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.4: y'' = f(a y + b x + c)",
+        "-f(a*y(x) + b*x + c) + Derivative(y(x), (x, 2))",
+        1,
+        [("-a/b", "1")],
+        f"{EQWORLD_ODE_SOURCE}/ode0304.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.5: y'' = f(a x**2 + b x + c + y)",
+        "-f(a*x**2 + b*x + c + y(x)) + Derivative(y(x), (x, 2))",
+        1,
+        [("-1", "2*a*x + b")],
+        f"{EQWORLD_ODE_SOURCE}/ode0305.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.6: y'' = f(y/x)/x",
+        "Derivative(y(x), (x, 2)) - f(y(x)/x)/x",
+        1,
+        [("x", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0306.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.7: y'' = f(y/x)/x**3",
+        "Derivative(y(x), (x, 2)) - f(y(x)/x)/x**3",
+        1,
+        [("x**2", "x*y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0307.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.8: y'' = f(y/sqrt(x))/x**(3/2)",
+        "Derivative(y(x), (x, 2)) - f(y(x)/sqrt(x))/x**(3/2)",
+        1,
+        [("2*x", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0308.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.9: y'' = x**(k - 2) f(y/x**k)",
+        "-x**(k - 2)*f(y(x)/x**k) + Derivative(y(x), (x, 2))",
+        1,
+        [("x/k", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0309.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.10: y'' = f(x**n y**m) y/x**2",
+        "Derivative(y(x), (x, 2)) - f(x**n*y(x)**m)*y(x)/x**2",
+        1,
+        [("-m*x/n", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0310.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.12: y'' = f(y exp(a x)) exp(-a x)",
+        "-f(y(x)*exp(a*x))*exp(-a*x) + Derivative(y(x), (x, 2))",
+        1,
+        [("-1/a", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0312.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.13: y'' = f(y**m exp(a x)) y",
+        "-f(y(x)**m*exp(a*x))*y(x) + Derivative(y(x), (x, 2))",
+        1,
+        [("-m/a", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0313.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.14: y'' = f(x**n exp(a y))/x**2",
+        "Derivative(y(x), (x, 2)) - f(x**n*exp(a*y(x)))/x**2",
+        1,
+        [("-a*x/n", "1")],
+        f"{EQWORLD_ODE_SOURCE}/ode0314.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.15: y'' = (f(y/psi(x))/psi(x)**2 + y psi''(x))/psi(x)",
+        "-f(y(x)/psi(x))/psi(x)**3 + Derivative(y(x), (x, 2)) - y(x)*Derivative(psi(x), (x, 2))/psi(x)",
+        1,
+        [("psi(x)**2", "y*psi(x)*Derivative(psi(x), x)")],
+        f"{EQWORLD_ODE_SOURCE}/ode0315.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.16: y'' = f(y) + y'",
+        "-f(y(x)) - Derivative(y(x), x) + Derivative(y(x), (x, 2))",
+        1,
+        [("1", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0316.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.17: y'' = -f(y) y' - g(y)",
+        "f(y(x))*Derivative(y(x), x) + g(y(x)) + Derivative(y(x), (x, 2))",
+        1,
+        [("1", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0317.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.18: y'' = -(a y + f(x)) y' - y f'(x)",
+        "(a*y(x) + f(x))*Derivative(y(x), x) + y(x)*Derivative(f(x), x) + Derivative(y(x), (x, 2))",
+        0,
+        (),
+        f"{EQWORLD_ODE_SOURCE}/ode0318.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.19: y'' = -a f(x) y**2 - (2 a y + f(x)) y' + g(x)",
+        "a*f(x)*y(x)**2 + (2*a*y(x) + f(x))*Derivative(y(x), x) - g(x) + Derivative(y(x), (x, 2))",
+        0,
+        (),
+        f"{EQWORLD_ODE_SOURCE}/ode0319.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.20: y'' = a y' + f(y) exp(2 a x)",
+        "-a*Derivative(y(x), x) - f(y(x))*exp(2*a*x) + Derivative(y(x), (x, 2))",
+        1,
+        [("exp(-a*x)", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0320.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.21: y'' = f(y) y'",
+        "-f(y(x))*Derivative(y(x), x) + Derivative(y(x), (x, 2))",
+        1,
+        [("1", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0321.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.22: y'' = (al + f(y) exp(al x)) y'",
+        "-(al + f(y(x))*exp(al*x))*Derivative(y(x), x) + Derivative(y(x), (x, 2))",
+        1,
+        [("exp(-al*x)", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0322.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.23: x y'' = n y' + x**(2 n + 1) f(y)",
+        "-n*Derivative(y(x), x) + x*Derivative(y(x), (x, 2)) - x**(2*n + 1)*f(y(x))",
+        1,
+        [("x**(-n)", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0323.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.24: x y'' = f(y) y'",
+        "x*Derivative(y(x), (x, 2)) - f(y(x))*Derivative(y(x), x)",
+        1,
+        [("x", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0324.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.25: x y'' = (k + x**k f(y) - 1) y'",
+        "x*Derivative(y(x), (x, 2)) - (k + x**k*f(y(x)) - 1)*Derivative(y(x), x)",
+        1,
+        [("x/x**k", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0325.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.26: x**2 y'' = -x y' + f(y)",
+        "x**2*Derivative(y(x), (x, 2)) + x*Derivative(y(x), x) - f(y(x))",
+        1,
+        [("x", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0326.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.27: (a x**2 + b) y'' = -a x y' - f(y)",
+        "a*x*Derivative(y(x), x) + (a*x**2 + b)*Derivative(y(x), (x, 2)) + f(y(x))",
+        1,
+        [("sqrt(a*x**2 + b)", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0327.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.28: y'' = f(y) y' + g(x)",
+        "-f(y(x))*Derivative(y(x), x) - g(x) + Derivative(y(x), (x, 2))",
+        0,
+        (),
+        f"{EQWORLD_ODE_SOURCE}/ode0328.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.29: x y'' = x**(n - 1) f(x**n y) - (n + 1) y'",
+        "x*Derivative(y(x), (x, 2)) - x**(n - 1)*f(x**n*y(x)) + (n + 1)*Derivative(y(x), x)",
+        1,
+        [("-x/(n*x**n)", "y/x**n")],
+        f"{EQWORLD_ODE_SOURCE}/ode0329.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.30: g(x) y'' = f(y) - g'(x) y'/2",
+        "-f(y(x)) + g(x)*Derivative(y(x), (x, 2)) + Derivative(g(x), x)*Derivative(y(x), x)/2",
+        1,
+        [("sqrt(g(x))", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0330.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.31: y'' = -a y' + f(y exp(a x)) exp(a x)",
+        "a*Derivative(y(x), x) - f(y(x)*exp(a*x))*exp(a*x) + Derivative(y(x), (x, 2))",
+        1,
+        [("-exp(-a*x)/a", "y*exp(-a*x)")],
+        f"{EQWORLD_ODE_SOURCE}/ode0331.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.32: x y'' = f(x**n exp(a y)) y'",
+        "x*Derivative(y(x), (x, 2)) - f(x**n*exp(a*y(x)))*Derivative(y(x), x)",
+        1,
+        [("-a*x/n", "1")],
+        f"{EQWORLD_ODE_SOURCE}/ode0332.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.33: x**2 y'' = -x y' + f(x**n exp(a y))",
+        "x**2*Derivative(y(x), (x, 2)) + x*Derivative(y(x), x) - f(x**n*exp(a*y(x)))",
+        1,
+        [("-a*x/n", "1")],
+        f"{EQWORLD_ODE_SOURCE}/ode0333.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.34: y y'' = -f(x) y y' - g(x) - y'**2",
+        "f(x)*y(x)*Derivative(y(x), x) + g(x) + y(x)*Derivative(y(x), (x, 2)) + Derivative(y(x), x)**2",
+        8,
+        [("0", "1/y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0334.pdf",
+        LIEPDE_TIMEOUT,
+    ),
+    ode(
+        "EqWorld ODE 3.35: y y'' = -f(x) y y' - g(x) y**2 + y'**2",
+        "f(x)*y(x)*Derivative(y(x), x) + g(x)*y(x)**2 + y(x)*Derivative(y(x), (x, 2)) - Derivative(y(x), x)**2",
+        8,
+        [("0", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0335.pdf",
+        LIEPDE_TIMEOUT,
+    ),
+    ode(
+        "EqWorld ODE 3.36: y y'' = n y'**2 - (a y**(4 n - 2) + f(x) y**2)",
+        "a*y(x)**(4*n - 2) - n*Derivative(y(x), x)**2 + f(x)*y(x)**2 + y(x)*Derivative(y(x), (x, 2))",
+        3,
+        (),
+        f"{EQWORLD_ODE_SOURCE}/ode0336.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.37: y y'' = n y'**2 - (f(x) y**2 + g(x) y**(n + 1))",
+        "-n*Derivative(y(x), x)**2 + f(x)*y(x)**2 + g(x)*y(x)**(n + 1) + y(x)*Derivative(y(x), (x, 2))",
+        8,
+        (),
+        f"{EQWORLD_ODE_SOURCE}/ode0337.pdf",
+        LIEPDE_TIMEOUT,
+    ),
+    ode(
+        "EqWorld ODE 3.38: y y'' = -a y'**2 - f(x) y y' - g(x) y**2",
+        "a*Derivative(y(x), x)**2 + f(x)*y(x)*Derivative(y(x), x) + g(x)*y(x)**2 + y(x)*Derivative(y(x), (x, 2))",
+        8,
+        [("0", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0338.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.39: y y'' = f(x) y'**2",
+        "-f(x)*Derivative(y(x), x)**2 + y(x)*Derivative(y(x), (x, 2))",
+        1,
+        [("0", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0339.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.40: y'' = a y'**2 - (f(x) exp(a y) + g(x))",
+        "-a*Derivative(y(x), x)**2 + f(x)*exp(a*y(x)) + g(x) + Derivative(y(x), (x, 2))",
+        8,
+        (),
+        f"{EQWORLD_ODE_SOURCE}/ode0340.pdf",
+        LIEPDE_TIMEOUT,
+    ),
+    ode(
+        "EqWorld ODE 3.41: y'' = a y'**2 - (b exp(4 a y) + f(x))",
+        "-a*Derivative(y(x), x)**2 + b*exp(4*a*y(x)) + f(x) + Derivative(y(x), (x, 2))",
+        3,
+        (),
+        f"{EQWORLD_ODE_SOURCE}/ode0341.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.42: y'' = -a y'**2 + f(y) exp(x) + y'/2",
+        "a*Derivative(y(x), x)**2 - f(y(x))*exp(x) - Derivative(y(x), x)/2 + Derivative(y(x), (x, 2))",
+        1,
+        [("exp(-x/2)", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0342.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.43: y'' = -al y'**2 + (be + f(y) exp(be x)) y'",
+        "al*Derivative(y(x), x)**2 - (be + f(y(x))*exp(be*x))*Derivative(y(x), x) + Derivative(y(x), (x, 2))",
+        1,
+        [("exp(-be*x)", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0343.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.44: y'' = -f(y) y'**2 - g(y)",
+        "f(y(x))*Derivative(y(x), x)**2 + g(y(x)) + Derivative(y(x), (x, 2))",
+        1,
+        [("1", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0344.pdf",
+        LIEPDE_TIMEOUT,
+    ),
+    ode(
+        "EqWorld ODE 3.45: y'' = -f(y) y'**2 + g(y) exp(x) + y'/2",
+        "f(y(x))*Derivative(y(x), x)**2 - g(y(x))*exp(x) - Derivative(y(x), x)/2 + Derivative(y(x), (x, 2))",
+        1,
+        [("exp(-x/2)", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0345.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.46: y'' = x f(y) y'**3",
+        "-x*f(y(x))*Derivative(y(x), x)**3 + Derivative(y(x), (x, 2))",
+        8,
+        [("x", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0346.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 3.47: y'' = f(y) y'**2 + g(x) y'",
+        "-f(y(x))*Derivative(y(x), x)**2 - g(x)*Derivative(y(x), x) + Derivative(y(x), (x, 2))",
+        8,
+        (),
+        f"{EQWORLD_ODE_SOURCE}/ode0347.pdf",
+        LINEARIZABLE_0347,
+    ),
+    ode(
+        "EqWorld ODE 3.48: y'' = f(x) g(x y' - y)",
+        "-f(x)*g(x*Derivative(y(x), x) - y(x)) + Derivative(y(x), (x, 2))",
+        1,
+        [("0", "x")],
+        f"{EQWORLD_ODE_SOURCE}/ode0348.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.49: y'' = f(x y'/y) y/x**2",
+        "Derivative(y(x), (x, 2)) - f(x*Derivative(y(x), x)/y(x))*y(x)/x**2",
+        2,
+        [("0", "y"), ("x", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0349.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.50: g(x) y'' = f(y) h(sqrt(g(x)) y') - g'(x) y'/2",
+        "-f(y(x))*h(sqrt(g(x))*Derivative(y(x), x)) + g(x)*Derivative(y(x), (x, 2)) + Derivative(g(x), x)*Derivative(y(x), x)/2",
+        1,
+        [("sqrt(g(x))", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0350.pdf",
+        LIEPDE_NOT_COMPARABLE,
+    ),
+    ode(
+        "EqWorld ODE 3.51: y'' = f(a y + y'**2)",
+        "-f(a*y(x) + Derivative(y(x), x)**2) + Derivative(y(x), (x, 2))",
+        1,
+        [("1", "0")],
+        f"{EQWORLD_ODE_SOURCE}/ode0351.pdf",
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "EqWorld ODE 5.1: y''' = A x**al y**be",
+        "-A*x**al*y(x)**be + Derivative(y(x), (x, 3))",
+        1,
+        [("x*(1 - be)/(al + 3)", "y")],
+        f"{EQWORLD_ODE_SOURCE}/ode0501.pdf",
+        LIEPDE_AGREES,
+    ),
+]
+PAINLEVE = [
+    ode(
+        "Painlevé I: y'' = x + 6 y**2",
+        "-x - 6*y(x)**2 + Derivative(y(x), (x, 2))",
+        0,
+        (),
+        PAINLEVE_SOURCE,
+        BLAD_LIEPDE_AGREE,
+    ),
+    ode(
+        "Painlevé II: y'' = a + x y + 2 y**3",
+        "-a - x*y(x) - 2*y(x)**3 + Derivative(y(x), (x, 2))",
+        0,
+        (),
+        PAINLEVE_SOURCE,
+        BLAD_LIEPDE_AGREE,
+    ),
+    ode(
+        "Painlevé III: y'' = a y**2/x + b/x + c y**3 + d/y + y'**2/y - y'/x",
+        "-c*y(x)**3 - d/y(x) + Derivative(y(x), (x, 2)) - Derivative(y(x), x)**2/y(x) - (a*y(x)**2 + b)/x + Derivative(y(x), x)/x",
+        0,
+        (),
+        PAINLEVE_SOURCE,
+        LIEPDE_AGREES,
+    ),
+    ode(
+        "Painlevé IV: y'' = -2 a y + b/y + 2 x**2 y + 4 x y**2 + 3 y**3/2 + y'**2/(2 y)",
+        "-b/y(x) - 4*x*y(x)**2 - (-2*a + 2*x**2)*y(x) - 3*y(x)**3/2 + Derivative(y(x), (x, 2)) - Derivative(y(x), x)**2/(2*y(x))",
+        0,
+        (),
+        PAINLEVE_SOURCE,
+        BLAD_LIEPDE_AGREE,
+    ),
+    ode(
+        "Painlevé V: y'' = (1/(2 y) + 1/(y - 1)) y'**2 - y'/x + (y - 1)**2 (a y + b/y)/x**2"
+        " + c y/x + d y (y + 1)/(y - 1)",
+        "-c*y(x)/x - d*(y(x) + 1)*y(x)/(y(x) - 1) - (1/(2*y(x)) + 1/(y(x) - 1))*Derivative(y(x), x)**2 + Derivative(y(x), (x, 2)) + Derivative(y(x), x)/x - (a*y(x) + b/y(x))*(y(x) - 1)**2/x**2",
+        0,
+        (),
+        PAINLEVE_SOURCE,
+        LIEPDE_AGREES,
+    ),
+]
+
+
 CATALOG = (
     CLASSICAL_ODES
     + FIRST_ORDER_ODES
@@ -7464,4 +7938,6 @@ CATALOG = (
     + HASHEMI_BALEANU
     + KAMKE_FIRST_ORDER
     + KAMKE
+    + EQWORLD_ODES
+    + PAINLEVE
 )

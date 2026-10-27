@@ -33,13 +33,13 @@ from delierium.infinitesimals import (
 from delierium.janet_basis import (
     LHDP,
     JanetBasis,
-    _janet_completion,
     integrability_conditions,
     is_janet_basis_of,
     janet_type,
     reduce_by_system,
 )
 from delierium.matrix_order import Context, Mgrevlex, Mgrlex, Mlex
+from delierium.multipliers import janet_completion
 
 
 @pytest.mark.parametrize(
@@ -652,7 +652,7 @@ def test_minimal_reduced_janet_basis(name, variables, system, expected):
         for m in leading
         if not any(o != m and all(a >= b for a, b in zip(m, o, strict=True)) for o in leading)
     ]
-    assert _janet_completion(generators, len(variables)) == set(leading)
+    assert janet_completion(generators, len(variables)) == set(leading)
     for e in janet.S:
         for term in e.terms[1:]:
             assert not any(

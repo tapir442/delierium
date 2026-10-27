@@ -75,6 +75,7 @@ from sympy import (
     Pow,
     Rational,
     S,
+    Subs,
     Symbol,
     cancel,
     default_sort_key,
@@ -87,9 +88,9 @@ from sympy.core.function import AppliedUndef, Function
 from sympy.functions.elementary.exponential import ExpBase
 from sympy.functions.elementary.hyperbolic import cosh, coth, csch, sech, sinh, tanh
 from sympy.functions.elementary.trigonometric import cos, cot, csc, sec, sin, tan
-from sympy.polys.domains import ZZ
+from sympy.polys.domains import QQ, ZZ
 from sympy.polys.fields import FracElement, FracField
-from sympy.polys.rings import PolyElement, PolyRing
+from sympy.polys.rings import PolyElement
 
 from delierium.helpers import profile_if_enabled
 
@@ -328,19 +329,26 @@ def fresh_field() -> Iterator[None]:
 
 
 def _is_transcendental_atom(e: Basic) -> bool:
-    """Symbols, E, pi and applied functions: no algebraic relation with
-    anything else the field contains.
+    """Symbols, E, pi and applied functions, also derivatives of unknown
+    functions at a point (f'(e t) is Subs(Derivative(f(xi), xi), xi, e t)):
+    no algebraic relation with anything else the field contains.
 
     >>> from sympy import Function, exp, sqrt, symbols
-    >>> x = symbols("x")
-    >>> [_is_transcendental_atom(e) for e in (x, Function("f")(x), exp(x), sqrt(2))]
-    [True, True, False, False]
+    >>> x, e = symbols("x e")
+    >>> f = Function("f")
+    >>> [_is_transcendental_atom(a) for a in (x, f(x), exp(x), sqrt(2), f(e * x).diff(x).args[1])]
+    [True, True, False, False, True]
     """
     return (
         e.is_Symbol
         or e in (S.Exp1, S.Pi)
         or isinstance(e, (AppliedUndef, Derivative))
         or (isinstance(e, Function) and not isinstance(e, ExpBase))
+        or (
+            isinstance(e, Subs)
+            and isinstance(e.expr, Derivative)
+            and isinstance(e.expr.expr, AppliedUndef)
+        )
     )
 
 
@@ -755,6 +763,8 @@ class Coeff:
         >>> a * b
         x/(x + 1)
         """
+        if isinstance(other, Coeff) and self.f is not None and other.f is not None:
+            return Coeff._new(f=_field_mul(*self._common_field_elements(other)))
         return self._binary(other, operator.mul)
 
     __rmul__ = __mul__
@@ -927,24 +937,90 @@ class Coeff:
         return self.as_expr().xreplace(rule)
 
 
-def _content(ring: PolyRing, polys: Sequence[PolyElement]) -> PolyElement:
-    """The greatest common divisor of polys, by python-flint: orders of
-    magnitude faster than SymPy's (Kamke 6.219: 301 s, 1.7 s with flint).
+def irreducible_factors(p: PolyElement) -> list[PolyElement]:
+    """The irreducible nonconstant factors of p, each once; by python-flint
+    for integer or rational coefficients (Kamke 6.87: SymPy took 341 s for a
+    numerator of 188 terms), else by SymPy.
+
+    >>> from sympy import QQ, symbols
+    >>> from sympy.polys.rings import ring
+    >>> R, x, y = ring("x, y", QQ)
+    >>> sorted(str(f) for f in irreducible_factors((x**2 - y**2) * (2 * x + 1) ** 2 / 3))
+    ['2*x + 1', 'x + y', 'x - y']
+    """
+    ring = p.ring
+    if ring.domain not in (ZZ, QQ) or not ring.ngens:
+        return [f for f, _ in p.factor_list()[1] if not f.is_ground]
+    if ring.domain == QQ:
+        p = p.clear_denoms()[1]
+    ctx = flint.fmpz_mpoly_ctx.get(("x", ring.ngens), "lex")
+    _, factors = ctx.from_dict({m: int(c) for m, c in p.items()}).factor()
+    return [
+        ring.from_dict({m: ring.domain(int(c)) for m, c in f.to_dict().items()})
+        for f, _ in factors
+        if not f.is_constant()
+    ]
+
+
+def cofactors(a: Coeff, b: Coeff) -> tuple[Coeff, Coeff]:
+    """a/g and b/g, g the gcd of polynomials a and b (by python-flint); a and
+    b unchanged unless both are nonconstant polynomials over the integers.
+
+    >>> from sympy import symbols
+    >>> x, y = symbols("x y")
+    >>> [c.as_expr() for c in cofactors(Coeff(x**2 * y - y), Coeff(2 * x + 2))]
+    [x*y - y, 2]
+    """
+    if a.f is None or b.f is None:
+        return a, b
+    f, g = a._common_field_elements(b)  # pylint: disable=protected-access
+    ring = f.field.ring
+    if (
+        ring.domain != ZZ
+        or f.denom != ring.one
+        or g.denom != ring.one
+        or f.numer.is_ground
+        or g.numer.is_ground
+    ):
+        return a, b
+    ctx = flint.fmpz_mpoly_ctx.get(("x", ring.ngens), "lex")
+    p = ctx.from_dict({m: int(c) for m, c in f.numer.items()})
+    q = ctx.from_dict({m: int(c) for m, c in g.numer.items()})
+    d = p.gcd(q)
+    if d.is_one():
+        return a, b
+
+    def back(r: Any) -> Coeff:
+        poly = ring.from_dict({m: ZZ(int(c)) for m, c in r.to_dict().items()})
+        return Coeff._new(f=f.field.raw_new(poly, ring.one))
+
+    return back(p / d), back(q / d)
+
+
+def _field_mul(f: FracElement, g: FracElement) -> FracElement:
+    """f * g, elements of the same field; large numerators and denominators
+    multiplied by python-flint (EqWorld 3.32: SymPy took 55 s of 65).
 
     >>> from sympy import symbols
     >>> x, y = symbols("x y")
     >>> field = FracField((x, y), ZZ)
-    >>> p, q = field.ring.from_expr(6 * x**2 * y - 6 * y), field.ring.from_expr(4 * x + 4)
-    >>> _content(field.ring, [p, q]).as_expr()
-    2*x + 2
+    >>> f, g = field.from_expr((x + y) ** 30 / x), field.from_expr((x - y) ** 30 / y)
+    >>> _field_mul(f, g) == f * g
+    True
     """
+    ring = f.field.ring
+    small = len(f.numer) * len(g.numer) + len(f.denom) * len(g.denom) < 1000
+    if small or ring.domain != ZZ:
+        return f * g
     ctx = flint.fmpz_mpoly_ctx.get(("x", ring.ngens), "lex")
-    content = ctx.from_dict({})
-    for p in polys:
-        content = content.gcd(ctx.from_dict({m: int(c) for m, c in p.items()}))
-        if content.is_one():
-            return ring.one
-    return ring.from_dict({m: ZZ(int(c)) for m, c in content.to_dict().items()})
+
+    def product(p: PolyElement, q: PolyElement) -> PolyElement:
+        r = ctx.from_dict({m: int(c) for m, c in p.items()}) * ctx.from_dict(
+            {m: int(c) for m, c in q.items()}
+        )
+        return ring.from_dict({m: ZZ(int(c)) for m, c in r.to_dict().items()})
+
+    return f.field.new(product(f.numer, g.numer), product(f.denom, g.denom))
 
 
 def primitive(coeffs: Sequence[Coeff]) -> list[Coeff] | None:
@@ -963,14 +1039,29 @@ def primitive(coeffs: Sequence[Coeff]) -> list[Coeff] | None:
     field = _state().field
     fs = [_lift(f) for f in fs]  # a later lift may have grown the field
     ring = field.ring
-    den = ring.one
-    for f in fs:
-        if f.denom != ring.one:
-            den = den.lcm(f.denom)
-    nums = [f.numer * den.exquo(f.denom) for f in fs]
-    content = _content(ring, nums)
-    if content != ring.one:
-        nums = [n.exquo(content) for n in nums]
+    # in python-flint: SymPy's exact division searches the leading term anew
+    # in every step (EqWorld 3.32: 99 s of 143), its gcd is orders of magnitude
+    # slower (Kamke 6.219: 301 s, 1.7 s with flint)
+    ctx = flint.fmpz_mpoly_ctx.get(("x", ring.ngens), "lex")
+
+    def to_flint(p: PolyElement) -> Any:
+        return ctx.from_dict({m: int(c) for m, c in p.items()})
+
+    numers = [to_flint(f.numer) for f in fs]
+    denoms = [to_flint(f.denom) for f in fs]
+    den = ctx.from_dict({(0,) * ring.ngens: 1})
+    for d in denoms:
+        if not d.is_one():
+            den = den * d / den.gcd(d)
+    flint_nums = [n * (den / d) for n, d in zip(numers, denoms, strict=True)]
+    content = ctx.from_dict({})
+    for n in flint_nums:
+        content = content.gcd(n)
+        if content.is_one():
+            break
+    if not content.is_one() and not content.is_zero():
+        flint_nums = [n / content for n in flint_nums]
+    nums = [ring.from_dict({m: ZZ(int(c)) for m, c in n.to_dict().items()}) for n in flint_nums]
     if ring.domain.is_negative(nums[0].LC):
         nums = [-n for n in nums]
     return [Coeff._new(f=field.raw_new(n, ring.one)) for n in nums]

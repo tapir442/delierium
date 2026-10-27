@@ -83,6 +83,7 @@ __all__ = [
     "linearly_independent",
     "reduce_determining_equations",
     "run_steps",
+    "solve_algebraic",
     "solve_determining_equations",
     "solve_euler_ode",
     "solve_linear_ode",
@@ -961,6 +962,38 @@ def integrate_one_term(state: SolverState) -> bool:
     return True
 
 
+def solve_algebraic(state: SolverState) -> bool:
+    """A step: an equation a g + b = 0 in which the unknown function g occurs
+    without derivatives and b is free of the unknown functions: g = -b/a,
+    if that depends only on the arguments of g. The ODEs of the other steps
+    may leave such equations (EqWorld 3.29: Y found, then X from one with
+    x**n, which no ansatz has).
+
+    >>> from sympy import Function, symbols
+    >>> x, y, n, c = symbols("x y n c")
+    >>> X = Function("X")(x, y)
+    >>> state = SolverState([n * X * x**n + c * x], [X], [x, y])
+    >>> state.constants = [c]
+    >>> solve_algebraic(state), state.infinitesimals
+    (True, [-c*x/(n*x**n)])
+    """
+    for e in state.system:
+        derived = {d.expr for d in e.atoms(Derivative)}
+        for g in state.functions:
+            if g in derived or not e.has(g):
+                continue
+            a, b = e.diff(g), e.subs(g, 0)
+            if a.has(g) or a == 0 or any(b.has(f) or a.has(f) for f in state.functions):
+                continue
+            solution = cancel(-b / a)
+            if not solution.free_symbols & set(state.coordinates) <= set(g.args):
+                continue
+            state.log(f"  algebraic: {e} = 0  ->  {g} = {solution}")
+            state.substitute(g, solution)
+            return True
+    return False
+
+
 def solve_linear_ode(state: SolverState) -> bool:
     """A step: an equation that is a linear ODE in a single unknown function
     of one variable (constants may occur), solved by a fast method of dsolve
@@ -1131,13 +1164,20 @@ def ansatz(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> Step
 
 
 def default_steps(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> list[Step]:
-    """integrate_one_term, solve_linear_ode, solve_euler_ode,
+    """integrate_one_term, solve_linear_ode, solve_euler_ode, solve_algebraic,
     ansatz(max_degree, functions).
 
-    >>> [step.__name__ for step in default_steps()]
-    ['integrate_one_term', 'solve_linear_ode', 'solve_euler_ode', 'ansatz(max_degree=3)']
+    >>> [step.__name__ for step in default_steps()]  # doctest: +NORMALIZE_WHITESPACE
+    ['integrate_one_term', 'solve_linear_ode', 'solve_euler_ode', 'solve_algebraic',
+     'ansatz(max_degree=3)']
     """
-    return [integrate_one_term, solve_linear_ode, solve_euler_ode, ansatz(max_degree, functions)]
+    return [
+        integrate_one_term,
+        solve_linear_ode,
+        solve_euler_ode,
+        solve_algebraic,
+        ansatz(max_degree, functions),
+    ]
 
 
 def run_steps(state: SolverState, steps: Sequence[Step], max_iterations: int = 1000) -> None:
