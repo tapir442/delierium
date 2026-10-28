@@ -27,7 +27,6 @@ from delierium.coefficients import (
 from delierium.helpers import (
     Derivative,
     ltf,
-    profile_if_enabled,
     show_output,
 )
 from delierium.matrix_order import Context, Mgrevlex, Mgrlex, WeightFunction
@@ -74,7 +73,6 @@ ComparisonVector = tuple[int, ...]
 _AssumptionCache = tuple[list[Expr], tuple[list[list[Expr]], list[Expr]]]
 
 
-@profile_if_enabled
 def function_marker(dependent: Sequence[Basic], func: Basic) -> list[int]:
     """The function part of a comparison vector: 1 at the position of func
     among the dependent functions, 0 elsewhere.
@@ -91,7 +89,6 @@ def function_marker(dependent: Sequence[Basic], func: Basic) -> list[int]:
     return iv
 
 
-@profile_if_enabled
 def compute_order(
     derivative: Basic, independent: Sequence[Basic], comp_order: Callable[[Basic], Order]
 ) -> Order:
@@ -122,7 +119,6 @@ class _Dterm:
     function: Expr
     order: Order
 
-    @profile_if_enabled
     def __init__(self, coeff: CoeffLike, derivative: Expr, context: Context) -> None:
         """A term coeff * derivative: its function, order and comparison vector.
 
@@ -163,7 +159,6 @@ class _Dterm:
             setattr(new, slot, getattr(self, slot))
         return new
 
-    @profile_if_enabled
     def expression(self) -> Expr:
         """The term as a SymPy expression.
 
@@ -177,7 +172,6 @@ class _Dterm:
         """
         return self.coeff.as_expr() * self.derivative
 
-    @profile_if_enabled
     def _compute_comparison_vector(self) -> ComparisonVector:
         """The comparison vector of the term, see ComparisonVector.
 
@@ -207,7 +201,6 @@ class _Dterm:
         result = f"{self.derivative}" if self.coeff == 1 else f"({self.coeff}) * {self.derivative}"
         return result.replace("Derivative", "D")
 
-    @profile_if_enabled
     def _compute_order(self) -> Order:
         """computes the monomial tuple from the derivative part
 
@@ -223,7 +216,6 @@ class _Dterm:
             self.derivative, self.context.independent, self.context.order_of_derivative
         )
 
-    @profile_if_enabled
     def __lt__(self, other: "_Dterm") -> bool:
         """
         >>> from sympy import *
@@ -242,7 +234,6 @@ class _Dterm:
         # comparison vectors is False, the coefficients need no comparison
         return self.context.gt(other.comparison_vector, self.comparison_vector)
 
-    @profile_if_enabled
     def __eq__(self, other: object) -> bool:
         """Equal derivative and coefficient.
 
@@ -277,7 +268,6 @@ class _Dterm:
             self.expression(), self.context.dependent, self.context.independent, printer=False
         )
 
-    @profile_if_enabled
     def diff(self, *variables: Basic) -> list["_Dterm"]:
         """The derivative by the variables, a list of terms (product rule).
         Key optimization within janet_basis. Avoids long intermediate results
@@ -429,7 +419,6 @@ class LHDP:
     function: Expr
     comparison_vector: ComparisonVector
 
-    @profile_if_enabled
     def __init__(
         self,
         e: Basic | int,
@@ -501,7 +490,6 @@ class LHDP:
         """
         return _as_exprs(self.assumed)
 
-    @profile_if_enabled
     def _init(self, e: Basic) -> None:
         """The terms of e, the coefficients of equal derivatives collected.
 
@@ -597,7 +585,6 @@ class LHDP:
             for t in self.terms[1:]:
                 t.coeff = (t.coeff / coeff).canonical()
 
-    @profile_if_enabled
     def normalize(self) -> None:
         """Monic (or with coprime coefficients in a fraction free context).
 
@@ -662,7 +649,6 @@ class LHDP:
         """
         return len(self.terms) > 0
 
-    @profile_if_enabled
     def __lt__(self, other: "LHDP") -> bool:
         """Ranked lower: by the first terms that differ.
 
@@ -680,7 +666,6 @@ class LHDP:
                 return a < b
         return False
 
-    @profile_if_enabled
     def __eq__(self, other: object) -> bool:
         """The same terms.
 
@@ -722,7 +707,6 @@ class LHDP:
             res += f"[{self.multipliers}], [{self.nonmultipliers}]"
         return res
 
-    @profile_if_enabled
     def diff(self, *args: Basic) -> "LHDP":
         """The derivative by the variables, a new LHDP with the same assumptions.
 
@@ -795,7 +779,6 @@ class LHDP:
         return hash(tuple(t.comparison_vector for t in self.terms))
 
 
-@profile_if_enabled
 def analyze_term(context: Context, term: Expr) -> tuple[Expr, Expr]:
     """A term of a linear homogeneous equation split into (derivative,
     coefficient).
@@ -835,7 +818,6 @@ def analyze_term(context: Context, term: Expr) -> tuple[Expr, Expr]:
     return unknowns[0], Mul(*coeffs)
 
 
-@profile_if_enabled
 def reorder(  # pylint: disable=unused-argument
     S: Iterable[LHDP], context: Context, ascending: bool = False
 ) -> list[LHDP]:
@@ -855,7 +837,6 @@ def reorder(  # pylint: disable=unused-argument
     return sorted(S, reverse=not ascending)
 
 
-@profile_if_enabled
 def reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP | None:
     """e reduced by S as far as possible: no term of the result is a
     derivative of a leading derivative in S; None if e reduces to zero.
@@ -913,7 +894,6 @@ def _reduce_by_system(e: LHDP, S: list[LHDP], context: Context) -> LHDP:
     return e
 
 
-@profile_if_enabled
 def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
     """One reduction step of e1 modulo e2 (Schwarz, Algorithm 2.4).
 
@@ -955,7 +935,6 @@ def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
     return e1
 
 
-@profile_if_enabled
 def _subtract_derivative(e1: LHDP, e2: LHDP, factor: Coeff, variables: Sequence[Basic]) -> LHDP:
     """lc * e1 - factor * ∂^variables(e2), an empty LHDP if that is zero; lc
     is e2's leading coefficient, 1 unless the context is fraction free. The
@@ -1052,7 +1031,6 @@ def _subtract_terms(
             hit.coeff -= subtrahend
 
 
-@profile_if_enabled
 def _variables_of(context: Context, dif: Sequence[int]) -> list[Basic]:
     """The independent variables, each repeated as often as dif says
     (an exponent vector): the variables to differentiate by.
@@ -1071,7 +1049,6 @@ def _variables_of(context: Context, dif: Sequence[int]) -> list[Basic]:
     return variables
 
 
-@profile_if_enabled
 def _reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
     """e1 reduced by e2 as far as possible (no normalization).
 
@@ -1091,7 +1068,6 @@ def _reduce(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
         e1 = new_e1
 
 
-@profile_if_enabled
 def autoreduce(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     """S autoreduced: no element is reducible by the others (ascending).
 
@@ -1144,7 +1120,6 @@ def _autoreduce(S: Iterable[LHDP], context: Context) -> tuple[list[LHDP], list[L
     return equations, dropped
 
 
-@profile_if_enabled
 def complete(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     """Janet-complete S, polynomials with the same leading function.
 
@@ -1266,7 +1241,6 @@ def _reduce_tail(e: LHDP, basis: list[LHDP], context: Context) -> LHDP:
         e = reduced
 
 
-@profile_if_enabled
 def complete_system(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     """
     Algorithm C1, p. 385
@@ -1333,7 +1307,6 @@ def complete_system(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     return reorder(res, context, ascending=True)
 
 
-@profile_if_enabled
 def integrability_conditions_by_function(S: Iterable[LHDP], context: Context) -> Iterator[LHDP]:
     """The integrability conditions of S, computed separately for the
     elements of each leading function.
@@ -1350,7 +1323,6 @@ def integrability_conditions_by_function(S: Iterable[LHDP], context: Context) ->
     return flatten(_integrability_conditions_of_function(s[k], context) for k in s)
 
 
-@profile_if_enabled
 def _integrability_pairs(
     S: Iterable[LHDP], context: Context
 ) -> Iterator[tuple[LHDP, Basic, LHDP, list[Basic]]]:
@@ -1399,7 +1371,6 @@ def _integrability_pairs(
                 yield ei.dp, n, ej.dp, m
 
 
-@profile_if_enabled
 def _integrability_conditions_of_function(S: Iterable[LHDP], context: Context) -> list[LHDP]:
     """The integrability conditions of S, elements of one leading function:
     the differences of the pairs of _integrability_pairs.
@@ -2332,7 +2303,6 @@ def _derivative(f: Expr, orders: Sequence[int], context: Context) -> Expr:
     return Derivative(f, *variables) if variables else f
 
 
-@profile_if_enabled
 def integrability_conditions(
     S: Iterable[Expr],
     dependent: Iterable[Basic],
@@ -2374,7 +2344,6 @@ def integrability_conditions(
     return sorted(result, key=default_sort_key)
 
 
-@profile_if_enabled
 def is_janet_basis_of(
     B: Iterable[Expr | LHDP],
     S: Iterable[Basic],

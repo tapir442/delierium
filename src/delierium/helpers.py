@@ -48,7 +48,6 @@ def profile_if_enabled[F: Callable[..., Any]](func: F) -> F:
     return func
 
 
-@profile_if_enabled
 def func_diff(fun: Expr, var: Symbol | Function) -> Expr:
     # simplify=False: SymPy's factor_terms(signsimp(...)) after every higher
     # derivative costs time and is of no use here
@@ -71,7 +70,6 @@ def func_diff(fun: Expr, var: Symbol | Function) -> Expr:
     return r
 
 
-@profile_if_enabled
 def finish_substitution(expr: Basic) -> Basic:
     """Put the points of the Subs in expr back in: Subs(Derivative(X(xi), xi),
     xi, y(x)) becomes Derivative(X(y(x)), y(x)). A Subs whose point is an
@@ -136,7 +134,6 @@ def show_output(obj: object) -> None:
         print(obj)
 
 
-@profile_if_enabled
 def make_infinitesimal(v: Basic, *variables: Basic, name: str = "") -> Expr:
     """
     >>> x = Symbol('x')
@@ -228,16 +225,18 @@ def random_point(symbols: Iterable[Basic], rng: random.Random) -> dict[Basic, Ex
 
 def numeric_value(e: Expr, point: dict[Basic, Expr]) -> complex | None:
     """The value of e at the point, None if it is not numeric there (an
-    arbitrary function).
+    arbitrary function, its derivative: a number replaces the variable of
+    differentiation, which SymPy rejects with a ValueError).
 
     >>> from sympy import Function, symbols
     >>> x = symbols("x")
-    >>> numeric_value(x**2, {x: 3}), numeric_value(Function("f")(x), {x: 3})
-    ((9+0j), None)
+    >>> f = Function("f")(x)
+    >>> numeric_value(x**2, {x: 3}), numeric_value(f, {x: 3}), numeric_value(f.diff(x), {x: 3})
+    ((9+0j), None, None)
     """
     try:
         return complex(e.xreplace(point).evalf(30))
-    except TypeError:
+    except (TypeError, ValueError):
         return None
 
 

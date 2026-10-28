@@ -71,7 +71,6 @@ from delierium.helpers import (
     func_diff,
     make_infinitesimal,
     plain_symbol,
-    profile_if_enabled,
 )
 from delierium.janet_basis import (
     LHDP,
@@ -163,7 +162,6 @@ def order(  # pylint: disable=unused-argument
     return (max_order, max_deriv)
 
 
-@profile_if_enabled
 def prolonged_infinitesimals(
     dep: list[Expr],
     indep: list[Symbol],
@@ -589,7 +587,6 @@ def _partials_in_argument_order(e: Expr, dep: list[Expr]) -> Expr:
     )
 
 
-@profile_if_enabled
 def prolongation(
     expr: Expr, infinitesimals: Mapping[Basic, Expr], dep: list[Expr], indep: list[Symbol]
 ) -> Expr:
@@ -1545,7 +1542,6 @@ def compute_overdetermined_system_of_infinitesimals(
     return split_jet_coefficients(condition, convert_to_iterable(dep))
 
 
-@profile_if_enabled
 def _ring_determining_equations(
     eq: Expr,
     dep: Variables,

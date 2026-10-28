@@ -64,6 +64,7 @@ from sympy import (
     classify_ode,
     dsolve,
     exp,
+    factor_list,
     integrate,
     simplify,
     solve,
@@ -304,7 +305,8 @@ def _independent(
     chosen: list[tuple[Expr, Expr]] = []
     rows: list[list[Expr]] = []
     for g in generators:
-        row = [S(c).xreplace(p) for p in points for c in g]
+        # subs, not xreplace: a number for the variable of a derivative (psi'(x))
+        row = [S(c).subs(p) for p in points for c in g]
         if Matrix([*rows, row]).rank(simplify=True) > len(rows):
             chosen.append(g)
             rows.append(row)
@@ -512,7 +514,7 @@ def _quadrature(f: Expr, t: Symbol, upper: Expr) -> Expr:
     g = f.subs(t, local)
     attempts: list[tuple[dict[str, bool], Expr]] = []
     if g.is_rational_function(local):
-        attempts = [({}, g)]
+        attempts = [] if _hard_denominator(g, local) else [({}, g)]
     elif (g := simplify(g)).count_ops() <= _LARGE:
         attempts = [({"manual": True}, g), ({"risch": True}, g)]
         if g.count_ops() <= _SMALL:
@@ -551,6 +553,28 @@ def _absorbed(e: Expr, constants: Sequence[Symbol]) -> Expr:
         else:
             e = e.xreplace(replacement)
     return e
+
+
+def _hard_denominator(g: Expr, t: Symbol) -> bool:
+    """Whether the denominator of the rational function g of t has an
+    irreducible factor with parameters of degree >= 3 in t, or of degree 2
+    with three or more parameters: integrate's logarithmic part works on
+    subresultants with symbolic coefficients then, which may exhaust the
+    memory (ODEBench 14, 15, 18).
+
+    >>> from sympy import symbols
+    >>> t, a, b, c = symbols("t a b c")
+    >>> [_hard_denominator(1 / q, t) for q in (t**3 + a * t + 1, a * t**2 + b * t + c)]
+    [True, True]
+    >>> [_hard_denominator(1 / q, t) for q in (t**3 + t + 1, t**2 + a, a * t**2 + b)]
+    [False, False, False]
+    """
+    denominator = cancel(g).as_numer_denom()[1]
+    for f, _ in factor_list(denominator)[1]:
+        degree, parameters = Poly(f, t).degree(), len(f.free_symbols - {t})
+        if parameters and (degree >= 3 or (degree == 2 and parameters >= 3)):
+            return True
+    return False
 
 
 def _generic(e: Expr) -> Expr:
