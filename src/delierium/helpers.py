@@ -228,16 +228,18 @@ def random_point(symbols: Iterable[Basic], rng: random.Random) -> dict[Basic, Ex
 
 def numeric_value(e: Expr, point: dict[Basic, Expr]) -> complex | None:
     """The value of e at the point, None if it is not numeric there (an
-    arbitrary function).
+    arbitrary function, its derivative: a number replaces the variable of
+    differentiation, which SymPy rejects with a ValueError).
 
     >>> from sympy import Function, symbols
     >>> x = symbols("x")
-    >>> numeric_value(x**2, {x: 3}), numeric_value(Function("f")(x), {x: 3})
-    ((9+0j), None)
+    >>> f = Function("f")(x)
+    >>> numeric_value(x**2, {x: 3}), numeric_value(f, {x: 3}), numeric_value(f.diff(x), {x: 3})
+    ((9+0j), None, None)
     """
     try:
         return complex(e.xreplace(point).evalf(30))
-    except TypeError:
+    except (TypeError, ValueError):
         return None
 
 

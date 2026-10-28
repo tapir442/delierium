@@ -31,6 +31,9 @@ Details are in the issues referenced.
   equations in the ansatz; fixed spurious conditions from `exp(a*log(y))` next to `y**a`,
   `sin**2 + cos**2`, and `re`/`im` of symbolic roots.
   Complete generators for 525 of the 611 finite catalogue entries (was 511), none lost.
+* `integrate_ode`: rational quadratures with symbolic denominators of high degree stay
+  integrals (they exhausted the memory); random points with derivatives of arbitrary
+  functions. 121 of the 176 catalogue ODEs with generators solved (was 115), none lost.
 
 ### 2.6.1
 
