@@ -92,8 +92,6 @@ from sympy.polys.domains import QQ, ZZ
 from sympy.polys.fields import FracElement, FracField
 from sympy.polys.rings import PolyElement
 
-from delierium.helpers import profile_if_enabled
-
 __all__ = [
     "Coeff",
     "fresh_field",
@@ -540,7 +538,6 @@ def _prepare(e: Any) -> Expr:
     return expand_power_exp(e)
 
 
-@profile_if_enabled
 def _to_field(e: Expr) -> FracElement:
     """e (prepared) as an element of the current field, or _UnsupportedError.
 
@@ -874,7 +871,6 @@ class Coeff:
 
     __repr__ = __str__
 
-    @profile_if_enabled
     def diff(self, *variables: Basic) -> "Coeff":
         """The derivative by the variables, one after the other.
 

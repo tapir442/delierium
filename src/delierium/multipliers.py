@@ -7,8 +7,6 @@ whose leading derivatives are such monomials.
 from collections import namedtuple
 from collections.abc import Iterable, Sequence
 
-from delierium.helpers import profile_if_enabled
-
 __all__ = ["MultiplierClass", "in_janet_class", "janet_completion", "vec_degree", "vec_multipliers"]
 
 
@@ -21,7 +19,6 @@ def vec_degree(v: int, m: Sequence[int]) -> int:
     return m[v]
 
 
-@profile_if_enabled
 def vec_multipliers(
     m: Sequence[int], M: Iterable[Sequence[int]], Vars: Sequence[int]
 ) -> tuple[list[int], list[int]]:

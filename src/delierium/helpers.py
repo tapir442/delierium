@@ -48,7 +48,6 @@ def profile_if_enabled[F: Callable[..., Any]](func: F) -> F:
     return func
 
 
-@profile_if_enabled
 def func_diff(fun: Expr, var: Symbol | Function) -> Expr:
     # simplify=False: SymPy's factor_terms(signsimp(...)) after every higher
     # derivative costs time and is of no use here
@@ -71,7 +70,6 @@ def func_diff(fun: Expr, var: Symbol | Function) -> Expr:
     return r
 
 
-@profile_if_enabled
 def finish_substitution(expr: Basic) -> Basic:
     """Put the points of the Subs in expr back in: Subs(Derivative(X(xi), xi),
     xi, y(x)) becomes Derivative(X(y(x)), y(x)). A Subs whose point is an
@@ -136,7 +134,6 @@ def show_output(obj: object) -> None:
         print(obj)
 
 
-@profile_if_enabled
 def make_infinitesimal(v: Basic, *variables: Basic, name: str = "") -> Expr:
     """
     >>> x = Symbol('x')
