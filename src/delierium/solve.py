@@ -27,6 +27,7 @@ from typing import Any, cast
 
 import mpmath
 from sympy import (
+    Abs,
     Add,
     Basic,
     Derivative,
@@ -44,6 +45,7 @@ from sympy import (
     S,
     Subs,
     Symbol,
+    arg,
     cancel,
     classify_ode,
     cos,
@@ -52,14 +54,18 @@ from sympy import (
     exp,
     expand,
     expand_power_exp,
+    expand_trig,
     factor_list,
     ff,
     ilcm,
+    im,
+    integrate,
     lambdify,
     log,
     numer,
     oo,
     powsimp,
+    re,
     roots,
     simplify,
     sin,
@@ -79,6 +85,7 @@ __all__ = [
     "ansatz_generators",
     "candidate_functions",
     "default_steps",
+    "integrate_known",
     "integrate_one_term",
     "linearly_independent",
     "reduce_determining_equations",
@@ -218,7 +225,7 @@ def _identity_coefficients(
         e, exponentials = _common_exponentials(e, v, coordinates)
         variables += exponentials
     e, powers = _common_powers(e, variables)
-    numerator: Basic = numer(together(e))
+    numerator: Basic = numer(together(_sines(e)))
     if numerator == 0:
         return [], "vanishes"
     atoms = [
@@ -386,7 +393,8 @@ def linearly_independent(
             try:
                 functions = [lambdify(symbols, c, "mpmath") for c in g]
                 row = [mpmath.mpc(f(*p)) for p in points for f in functions]
-            except (NameError, TypeError, ValueError):  # not numeric (f(x)): keep it
+            # not numeric (f(x), psi'(x) has no printer): keep it
+            except (NameError, NotImplementedError, TypeError, ValueError):
                 kept.append(g)
                 continue
             size = max((abs(r) for r in row), default=0)
@@ -689,6 +697,44 @@ def _integration(
     return solution, new
 
 
+def _sines(e: Expr) -> Expr:
+    """e with sin(n*t), cos(n*t) (n > 1 an integer) expanded and cos(t)**n
+    (n >= 2) as a polynomial in sin(t), times cos(t) for odd n: sin(t) and
+    cos(t) are then independent as polynomial generators, so that splitting
+    by them does not give conditions that are not there (sin**2 + cos**2 - 1
+    split as 1, 1, -1).
+
+    >>> from sympy import cos, sin, symbols
+    >>> x = symbols("x")
+    >>> _sines(2 * sin(x) ** 2 + 2 * cos(x) ** 2 + cos(x) ** 3).expand()
+    -sin(x)**2*cos(x) + cos(x) + 2
+    >>> _sines(cos(2 * x) + 2 * sin(x) ** 2).expand()
+    1
+    """
+
+    def multiple(f: Expr) -> bool:
+        if not isinstance(f, (sin, cos)):
+            return False
+        n, _ = f.args[0].as_coeff_Mul()
+        return bool(n.is_Integer and n > 1)
+
+    e = cast(Expr, e.replace(multiple, expand_trig))
+
+    def power(base: Expr, n: int) -> Expr:
+        t = base.args[0]
+        return (1 - sin(t) ** 2) ** (n // 2) * cos(t) ** (n % 2)
+
+    return cast(
+        Expr,
+        e.replace(
+            lambda f: (
+                isinstance(f, Pow) and isinstance(f.base, cos) and f.exp.is_Integer and f.exp >= 2
+            ),
+            lambda f: power(f.base, int(f.exp)),
+        ),
+    )
+
+
 def _split_free(e: Expr, functions: Sequence[Expr], coordinates: Sequence[Basic]) -> list[Expr]:
     """e = 0 split by the coordinates none of its unknowns depends on (as
     polynomial coefficients, functions of them taken as independent); [e]
@@ -711,7 +757,7 @@ def _split_free(e: Expr, functions: Sequence[Expr], coordinates: Sequence[Basic]
     if not free:
         return [e]
     common, powers = _common_powers(e, free)
-    numerator = numer(together(common))
+    numerator = numer(together(_sines(common)))
     atoms = [
         a
         for a in numerator.atoms(Function, Pow)
@@ -759,6 +805,33 @@ def _cleaned(system: Sequence[Expr]) -> list[Expr]:
     return result
 
 
+def _powers_of_logs(e: Expr) -> Expr:
+    """e with exp(c*log(v)) as v**c, the form the other steps use: dsolve
+    writes y**a as exp(a*log(y)), and the two would split as independent
+    functions.
+
+    >>> from sympy import exp, log, symbols
+    >>> x, y, a = symbols("x y a")
+    >>> _powers_of_logs(exp(a * log(y) + x) - exp(-a * log(y)))
+    y**a*exp(x) - 1/y**a
+    """
+
+    def powers(argument: Expr) -> Expr:
+        factors, rest = [], []
+        for term in Add.make_args(argument):
+            c, f = term.as_independent(log, as_Add=False)
+            if isinstance(f, log):
+                factors.append(f.args[0] ** c)
+            else:
+                rest.append(term)
+        return Mul(*factors) * exp(Add(*rest))
+
+    return cast(
+        Expr,
+        e.replace(lambda f: isinstance(f, exp) and f.args[0].has(log), lambda f: powers(f.args[0])),
+    )
+
+
 def _ode_solution(
     e: Expr, functions: Sequence[Expr], state: "SolverState"
 ) -> tuple[Expr, Expr, list[Symbol]] | None:
@@ -788,10 +861,13 @@ def _ode_solution(
             solution = dsolve(e, g, hint=hint)
         except (NotImplementedError, ValueError, TypeError, IndexError):
             continue
-        if isinstance(solution, list) or solution.rhs.has(Integral):
+        # symbolic roots split into re() and im() as if the parameters were
+        # complex (y**re(a)*sin(log(y)*Abs(im(a))) for roots 1, a): left to
+        # solve_euler_ode, which keeps y**a
+        if isinstance(solution, list) or solution.rhs.has(Integral, re, im, Abs, arg):
             continue
         # generic parameters: the first case of a Piecewise (a != 0)
-        rhs = generic_case(solution.rhs)
+        rhs = _powers_of_logs(generic_case(solution.rhs))
         constants = sorted(
             (s for s in rhs.free_symbols if s.name.startswith("C") and s not in e.free_symbols),
             key=str,
@@ -965,8 +1041,9 @@ def integrate_one_term(state: SolverState) -> bool:
 
 def solve_algebraic(state: SolverState) -> bool:
     """A step: an equation a g + b = 0 in which the unknown function g occurs
-    without derivatives and b is free of the unknown functions: g = -b/a,
-    if that depends only on the arguments of g. The ODEs of the other steps
+    without derivatives, a is free of the unknown functions and b contains
+    only unknowns of arguments of g: g = -b/a, if that depends only on the
+    arguments of g. The ODEs of the other steps
     may leave such equations (EqWorld 3.29: Y found, then X from one with
     x**n, which no ansatz has).
 
@@ -984,13 +1061,64 @@ def solve_algebraic(state: SolverState) -> bool:
             if g in derived or not e.has(g):
                 continue
             a, b = e.diff(g), e.subs(g, 0)
-            if a.has(g) or a == 0 or any(b.has(f) or a.has(f) for f in state.functions):
+            others = [f for f in state.functions if f != g]
+            if a.has(g) or a == 0 or b.has(g) or any(a.has(f.func) for f in others):
+                continue
+            # other unknowns in b only of arguments of g: g stays a function
+            # of its arguments (F4(x, t) = q - 1 + 2 F1_t(x, t))
+            if any(b.has(f.func) and not set(f.args) <= set(g.args) for f in others):
                 continue
             solution = cancel(-b / a)
             if not solution.free_symbols & set(state.coordinates) <= set(g.args):
                 continue
             state.log(f"  algebraic: {e} = 0  ->  {g} = {solution}")
             state.substitute(g, solution)
+            return True
+    return False
+
+
+def integrate_known(state: SolverState) -> bool:
+    """A step: an equation c * d^k g/dv^k + b = 0 for an unknown function g
+    of several variables that occurs only in this derivative, c and b free
+    of the unknowns: g is the k-fold integral of -b/c by v plus a polynomial
+    of degree < k in v with new unknown functions of the other arguments as
+    coefficients (if SymPy integrates it; one variable is solve_linear_ode's).
+
+    >>> from sympy import Function, symbols
+    >>> u, t, c = symbols("u t c")
+    >>> F = Function("F")(u, t)
+    >>> state = SolverState([3 * t * F.diff(u) + 2 * c * t], [F], [u, t])
+    >>> state.constants = [c]
+    >>> integrate_known(state), state.infinitesimals
+    (True, [-2*c*u/3 + F1(t)])
+    """
+    for e in state.system:
+        for g in state.functions:
+            derivatives = {d for d in e.atoms(Derivative) if d.expr == g}
+            if len(g.args) < 2 or len(derivatives) != 1:
+                continue
+            d = derivatives.pop()
+            if len(d.variable_count) != 1:
+                continue
+            v, k = d.variable_count[0]
+            marker = Dummy()
+            replaced = e.xreplace({d: marker})
+            c, b = replaced.diff(marker), replaced.subs(marker, 0)
+            if c == 0 or any(c.has(f.func) or b.has(f.func) for f in state.functions):
+                continue
+            rhs = cancel(-b / c)
+            if not rhs.free_symbols & set(state.coordinates) <= set(g.args):
+                continue
+            integral: Basic = rhs
+            for _ in range(k):
+                integral = integrate(integral, v)
+            if integral.has(Integral):
+                continue
+            others = [w for w in g.args if w != v]
+            new = [state.fresh_function(others) for _ in range(k)]
+            solution = integral + sum(f * v**i for i, f in enumerate(new))
+            state.log(f"  integrate known: {e} = 0  ->  {g} = {solution}")
+            state.substitute(g, solution, new)
             return True
     return False
 
@@ -1166,17 +1294,18 @@ def ansatz(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> Step
 
 def default_steps(max_degree: int = 3, functions: Sequence[Expr] | None = None) -> list[Step]:
     """integrate_one_term, solve_linear_ode, solve_euler_ode, solve_algebraic,
-    ansatz(max_degree, functions).
+    integrate_known, ansatz(max_degree, functions).
 
     >>> [step.__name__ for step in default_steps()]  # doctest: +NORMALIZE_WHITESPACE
     ['integrate_one_term', 'solve_linear_ode', 'solve_euler_ode', 'solve_algebraic',
-     'ansatz(max_degree=3)']
+     'integrate_known', 'ansatz(max_degree=3)']
     """
     return [
         integrate_one_term,
         solve_linear_ode,
         solve_euler_ode,
         solve_algebraic,
+        integrate_known,
         ansatz(max_degree, functions),
     ]
 
