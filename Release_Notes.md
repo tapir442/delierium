@@ -2,7 +2,7 @@
 
 Details are in the issues referenced.
 
-### Not released yet
+### 2.7.0
 
 * Faster Janet bases (`determining_janet_basis` over the catalogue about 112 s → 102 s) and
   assumptions: `assumed_nonzero` factors by python-flint (Kamke 6.87, 6.219, 6.171 and
@@ -12,7 +12,7 @@ Details are in the issues referenced.
 * `janet_basis_from_ode` on 338 scalar ODEs: 304.2 s in 1.0.0, 15.1 s now (median entry
   6.5x faster; 1.6x faster than 2.6.0):
 
-  | | 1.0.0 | 2.6.0 | 2.6.1 | not released yet |
+  | | 1.0.0 | 2.6.0 | 2.6.1 | 2.7.0 |
   |---|---|---|---|---|
   | total | 304.2 s | 334.4 s | 16.5 s | 15.1 s |
   | without Kamke 6.219 | 88.4 s | 28.0 s | 15.0 s | 14.0 s |
@@ -34,6 +34,9 @@ Details are in the issues referenced.
 * `integrate_ode`: rational quadratures with symbolic denominators of high degree stay
   integrals (they exhausted the memory); random points with derivatives of arbitrary
   functions. 121 of the 176 catalogue ODEs with generators solved (was 115), none lost.
+* Catalogue: EqWorld's ODEs 3.1-3.51, 5.1 and Painlevé I-V (56 entries), cross-checked with
+  BLAD and REDUCE's LIEPDE where possible.
+* Python 3.15 supported (CI tests 3.12-3.15).
 
 ### 2.6.1
 
