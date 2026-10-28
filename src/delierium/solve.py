@@ -69,6 +69,7 @@ from sympy import (
     roots,
     simplify,
     sin,
+    solve,
     sqrt,
     sympify,
     together,
@@ -456,7 +457,69 @@ def candidate_functions(
             (0 if exps else 1, [exp(w), exp(-w)]),
             (0 if trigs else 1, [sin(w), cos(w)]),
         ]
+    if exponentials := _characteristic_exponentials(coordinates, system):
+        families.append((0, exponentials))
     return [family for _, family in sorted(families, key=lambda f: f[0])]
+
+
+def _characteristic_exponentials(
+    coordinates: Sequence[Basic], system: Sequence[Expr]
+) -> list[Expr]:
+    """exp(a1 v1 + a2 v2 + ...) for the solutions (a1, a2, ...) of the
+    characteristic equations of the equations of the system that are linear,
+    homogeneous and with constant coefficients in one unknown function of
+    several coordinates (exp(x + t), exp(x - t) for F_tt = F_x, F_xt = F_t,
+    F_xx = F_x); [] if there are none or infinitely many.
+
+    >>> from sympy import Function, symbols
+    >>> x, t = symbols("x t")
+    >>> F = Function("F")(x, t)
+    >>> system = [F.diff(t, 2) - F.diff(x), F.diff(x, t) - F.diff(t), F.diff(x, 2) - F.diff(x)]
+    >>> _characteristic_exponentials([x, t], system)
+    [exp(-t + x), exp(t + x)]
+    """
+    result: list[Expr] = []
+    for f, equations in _homogeneous_by_function(coordinates, system).items():
+        variables = [v for v in f.args if v in coordinates]
+        rates = [Dummy() for _ in variables]
+        trial = exp(sum(a * v for a, v in zip(rates, variables, strict=True)))
+        characteristic = [expand(cancel(e.subs(f, trial).doit() / trial)) for e in equations]
+        characteristic = [c for c in characteristic if not c.has(*coordinates, AppliedUndef)]
+        if not characteristic:
+            continue
+        try:
+            solutions = solve(characteristic, rates, dict=True)
+        except (NotImplementedError, ValueError, TypeError):
+            continue
+        for solution in solutions:
+            if len(solution) != len(rates) or any(r.has(*rates) for r in solution.values()):
+                return []  # a family of solutions, no finite list
+            exponent = sum(solution[r] * v for r, v in zip(rates, variables, strict=True))
+            if exponent != 0:
+                result.append(exp(exponent))
+    return sorted(set(result), key=str)
+
+
+def _homogeneous_by_function(
+    coordinates: Sequence[Basic], system: Sequence[Expr]
+) -> dict[Expr, list[Expr]]:
+    """The homogeneous equations of the system in a single unknown function
+    of at least two coordinates, by that function.
+
+    >>> from sympy import Function, symbols
+    >>> x, t = symbols("x t")
+    >>> F, G = Function("F")(x, t), Function("G")(x)
+    >>> _homogeneous_by_function([x, t], [F.diff(x) - F, F.diff(t) + 1, G.diff(x)])
+    {F(x, t): [-F(x, t) + Derivative(F(x, t), x)]}
+    """
+    by_function: dict[Expr, list[Expr]] = {}
+    for e in system:
+        functions = {f for f in e.atoms(AppliedUndef) if f.has(*coordinates)}
+        if len(functions) == 1:
+            (f,) = functions
+            if sum(v in coordinates for v in f.args) >= 2 and e.subs(f, 0).doit() == 0:
+                by_function.setdefault(f, []).append(e)
+    return by_function
 
 
 def _divides_unevenly(v: Basic, system: Sequence[Expr]) -> bool:
