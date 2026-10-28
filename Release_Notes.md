@@ -27,6 +27,10 @@ Details are in the issues referenced.
   48.9 s, 8.3 s → 10.0 s), probably python-flint's generic abi3 wheel on 3.15.
 * `delierium.multipliers`: the multipliers and nonmultipliers of the Janet division, moved
   out of `janet_basis`.
+* Solver: new steps `solve_algebraic` and `integrate_known`, exponentials from characteristic
+  equations in the ansatz; fixed spurious conditions from `exp(a*log(y))` next to `y**a`,
+  `sin**2 + cos**2`, and `re`/`im` of symbolic roots.
+  Complete generators for 525 of the 611 finite catalogue entries (was 511), none lost.
 
 ### 2.6.1
 
