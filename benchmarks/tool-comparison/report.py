@@ -684,6 +684,8 @@ def section_sympy():
                      "integral in y of an expression in x).")
         else:
             cause = branch("SymPy", "sympy/sympy#30643")
+            cause = (cause[0], cause[1] + "\n\n[^zoo]: SymPy's ComplexInfinity: a "
+                     "division by zero inside its heuristics.", cause[2])
         paras.append(kamke_paragraph(name, K[name][0], "SymPy", gens.get(name, []), flags, cause))
     text = ["## SymPy\n",
             "SymPy 1.14.0 (`infinitesimals`, `checkinfsol`): some generators of first order "
@@ -896,7 +898,7 @@ def superscripts(text):
 
 
 GREEK = {
-    "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "zeta": "ζ",
+    "alpha": "α", "beta": "β", "gamma": "γ", "delta": "δ", "epsilon": "ε", "eps": "ε", "zeta": "ζ",
     "eta": "η", "theta": "θ", "kappa": "κ", "lambda": "λ", "mu": "μ", "nu": "ν", "xi": "ξ",
     "pi": "π", "rho": "ρ", "sigma": "σ", "tau": "τ", "phi": "φ", "chi": "χ", "psi": "ψ",
     "omega": "ω", "Gamma": "Γ", "Delta": "Δ", "Lambda": "Λ", "Phi": "Φ", "Psi": "Ψ",
@@ -916,7 +918,12 @@ def markup(text):
         # the outer derivative of divergence form, (u u_x)_x
         t = re.sub(r"([)\]])_([A-Za-z0-9]{1,4})(?![\w])", r"\1<sub>\2</sub>", t)
         t = re.sub(r"λ_(?![\w])", "λ", t)  # the parameter lambda_ (lambda is a keyword)
-        parts[k] = superscripts(t)
+        t = re.sub(r"(?<![\w])(f0|e1|e2|e3|c1|c2)(?![\w])", lambda m: f"{m[1][0]}<sub>{m[1][1]}</sub>", t)
+        t = re.sub(r"(?<![\w])exp\(", "e^(", t)
+        t = re.sub(r"(?<![\w])sqrt\(([\w.]+)\)", r"√\1", t)
+        t = re.sub(r"(?<![\w])sqrt\(", "√(", t)
+        t = superscripts(t.replace("[^", "\x01")).replace("\x01", "[^")  # footnotes
+        parts[k] = re.sub(r"(?<![\w^])zoo(?![\w\]])", "zoo[^zoo]", t)
     return "`".join(parts)
 
 
