@@ -1,0 +1,448 @@
+{"suite": "meta", "planned": {}, "timeout": 60.0, "budget": null, "jobs": 3}
+{"suite": "kamke", "name": "1.259", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13126208200264955, "ok": [true]}
+{"suite": "kamke", "name": "1.351", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.20196583100187127, "ok": [true]}
+{"suite": "kamke", "name": "1.284", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04962771400460042, "ok": [true, true]}
+{"suite": "kamke", "name": "1.421", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04198098099732306, "ok": [true]}
+{"suite": "kamke", "name": "1.188", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.30482687799667474, "ok": [true, false]}
+{"suite": "kamke", "name": "1.222", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13851041800080566, "ok": [true, true]}
+{"suite": "kamke", "name": "1.803", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12060586699954001, "ok": [true]}
+{"suite": "kamke", "name": "1.92", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10514976600097725, "ok": [true]}
+{"suite": "kamke", "name": "1.164", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10363319300086005, "ok": [true]}
+{"suite": "kamke", "name": "1.396", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.179508387001988, "ok": [false, false, false, false]}
+{"suite": "kamke", "name": "1.611", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12874066599761136, "ok": [true]}
+{"suite": "kamke", "name": "1.117", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11516874600056326, "ok": [true]}
+{"suite": "kamke", "name": "1.251", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10387144000560511, "ok": [true]}
+{"suite": "kamke", "name": "1.591", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13339837700186763, "ok": [true]}
+{"suite": "kamke", "name": "1.58", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09319054999650689, "ok": [true]}
+{"suite": "kamke", "name": "1.667", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13530271599302068, "ok": [true]}
+{"suite": "kamke", "name": "1.910", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18386954099696595, "ok": [true]}
+{"suite": "kamke", "name": "1.6", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10499068799981615, "ok": [true]}
+{"suite": "kamke", "name": "1.27", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08507162099704146, "ok": [true]}
+{"suite": "kamke", "name": "1.172", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.047339544995338656, "ok": [true, true]}
+{"suite": "kamke", "name": "1.407", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.043146014999365434, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.131", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14867588299966883, "ok": [true, true]}
+{"suite": "kamke", "name": "1.260", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.0541613219975261, "ok": [true, true]}
+{"suite": "kamke", "name": "1.642", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11706250600400381, "ok": [true, true]}
+{"suite": "kamke", "name": "1.778", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.16626294900197536, "ok": [true]}
+{"suite": "kamke", "name": "1.593", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12502322799991816, "ok": [true]}
+{"suite": "kamke", "name": "1.580", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10881072800111724, "ok": [true, true]}
+{"suite": "kamke", "name": "1.769", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18942752899602056, "ok": [true]}
+{"suite": "kamke", "name": "1.214", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10835429299913812, "ok": [true]}
+{"suite": "kamke", "name": "1.254", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05361961699964013, "ok": [true, true]}
+{"suite": "kamke", "name": "1.111", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08972550400358159, "ok": [true]}
+{"suite": "kamke", "name": "1.41", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.0416861979974783, "ok": [true]}
+{"suite": "kamke", "name": "1.563", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.16392302300664596, "ok": [true, true]}
+{"suite": "kamke", "name": "1.161", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.23305184100172482, "ok": [true, false, true]}
+{"suite": "kamke", "name": "1.294", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.21965020900097443, "ok": [true]}
+{"suite": "kamke", "name": "1.449", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.2928851230026339, "ok": [false, true, false, true, false, false]}
+{"suite": "kamke", "name": "1.108", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09890763599833008, "ok": [true]}
+{"suite": "kamke", "name": "1.305", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10865312299574725, "ok": [true]}
+{"suite": "kamke", "name": "1.971", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04723176299739862, "ok": [true]}
+{"suite": "kamke", "name": "1.975", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05745262099662796, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.711", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1176745239936281, "ok": [true]}
+{"suite": "kamke", "name": "1.413", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04111553899565479, "ok": [true]}
+{"suite": "kamke", "name": "1.592", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1611509569993359, "ok": [true]}
+{"suite": "kamke", "name": "1.382", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.26686753599642543, "ok": [true, false]}
+{"suite": "kamke", "name": "1.234", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1087614760035649, "ok": [true]}
+{"suite": "kamke", "name": "1.78", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11671478400239721, "ok": [true]}
+{"suite": "kamke", "name": "1.391", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11561044400150422, "ok": [false, false, false]}
+{"suite": "kamke", "name": "1.899", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.21857144700334175, "ok": [true, true]}
+{"suite": "kamke", "name": "1.57", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12849680899671512, "ok": [true, true]}
+{"suite": "kamke", "name": "1.241", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.044962940002733376, "ok": [true, true]}
+{"suite": "kamke", "name": "1.475", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.041084941003646236, "ok": [true]}
+{"suite": "kamke", "name": "1.344", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10577315399859799, "ok": [true]}
+{"suite": "kamke", "name": "1.208", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12358885900175665, "ok": [true]}
+{"suite": "kamke", "name": "1.851", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.07824488500045845, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.641", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12044161000085296, "ok": [true]}
+{"suite": "kamke", "name": "1.601", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11459559100330807, "ok": [true]}
+{"suite": "kamke", "name": "1.603", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.22707409499707865, "ok": [true, true]}
+{"suite": "kamke", "name": "1.878", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.21265830400079722, "ok": [true, true]}
+{"suite": "kamke", "name": "1.199", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10538806299882708, "ok": [true, true]}
+{"suite": "kamke", "name": "1.481", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.24269118899974274, "ok": [false, false, false, false, false, false]}
+{"suite": "kamke", "name": "1.564", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15126456600410165, "ok": [true, true]}
+{"suite": "kamke", "name": "1.404", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04221130299993092, "ok": [true]}
+{"suite": "kamke", "name": "1.220", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09503780199884204, "ok": [true, true]}
+{"suite": "kamke", "name": "1.125", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11364584200055106, "ok": [true]}
+{"suite": "kamke", "name": "1.651", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09897846800595289, "ok": [true]}
+{"suite": "kamke", "name": "1.105", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1034504109993577, "ok": [true]}
+{"suite": "kamke", "name": "1.171", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.046033136000914965, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.756", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11471482500201091, "ok": [true]}
+{"suite": "kamke", "name": "1.693", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14126267800020287, "ok": [true]}
+{"suite": "kamke", "name": "1.229", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15685864099941682, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.285", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05022921199997654, "ok": [true]}
+{"suite": "kamke", "name": "1.145", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09060739699634723, "ok": [true]}
+{"suite": "kamke", "name": "1.936", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18406457699893508, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.206", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.16439785299735377, "ok": [false]}
+{"suite": "kamke", "name": "1.36", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08641719299339456, "ok": [true]}
+{"suite": "kamke", "name": "1.97", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09658062400558265, "ok": [true]}
+{"suite": "kamke", "name": "1.227", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18612732399924425, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.39", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12499519500124734, "ok": [true, true, true, true]}
+{"suite": "kamke", "name": "1.621", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.0976124879962299, "ok": [true]}
+{"suite": "kamke", "name": "1.288", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1722392209994723, "ok": [true, true]}
+{"suite": "kamke", "name": "1.581", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13482050199672813, "ok": [true]}
+{"suite": "kamke", "name": "1.582", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12375168399739778, "ok": [true, true]}
+{"suite": "kamke", "name": "1.596", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12653067400242435, "ok": [true]}
+{"suite": "kamke", "name": "1.371", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08900563500355929, "ok": [true, true]}
+{"suite": "kamke", "name": "1.995", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11003178700048011, "ok": [true]}
+{"suite": "kamke", "name": "1.750", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14208912699541543, "ok": [true]}
+{"suite": "kamke", "name": "1.368", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.03919257399684284, "ok": [true]}
+{"suite": "kamke", "name": "1.779", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15382731900172075, "ok": [true]}
+{"suite": "kamke", "name": "1.178", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.3044310659970506, "ok": [true, true]}
+{"suite": "kamke", "name": "1.759", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1927188190020388, "ok": [true]}
+{"suite": "kamke", "name": "1.280", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.051345954001590144, "ok": [true, true]}
+{"suite": "kamke", "name": "1.157", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12421284800075227, "ok": [true]}
+{"suite": "kamke", "name": "1.148", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10801290300150868, "ok": [true, true]}
+{"suite": "kamke", "name": "1.671", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11561076500220224, "ok": [true]}
+{"suite": "kamke", "name": "1.307", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.20862090599985095, "ok": [true]}
+{"suite": "kamke", "name": "1.645", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09273916300298879, "ok": [true, true]}
+{"suite": "kamke", "name": "1.19", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04646283200418111, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.211", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10612163800396957, "ok": [true]}
+{"suite": "kamke", "name": "1.865", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18981609699403634, "ok": [true]}
+{"suite": "kamke", "name": "1.158", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15082265700038988, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.15", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04490496200014604, "ok": [true]}
+{"suite": "kamke", "name": "1.330", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10548181799822487, "ok": [true]}
+{"suite": "kamke", "name": "1.138", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04217867099941941, "ok": [true]}
+{"suite": "kamke", "name": "1.183", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1500062170016463, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.297", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04761704499833286, "ok": [true]}
+{"suite": "kamke", "name": "1.839", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13970616999722552, "ok": [true]}
+{"suite": "kamke", "name": "1.202", "tool": "cross_deli", "order": 1, "status": "ok", "time": 4.122064756003965, "ok": [false]}
+{"suite": "kamke", "name": "1.476", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.044235016001039185, "ok": [true]}
+{"suite": "kamke", "name": "1.77", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08845821900467854, "ok": [true]}
+{"suite": "kamke", "name": "1.273", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10919185300008394, "ok": [true, true]}
+{"suite": "kamke", "name": "1.441", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.44420379099756246, "ok": [false, true, false]}
+{"suite": "kamke", "name": "1.209", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09788742299861042, "ok": [true, true]}
+{"suite": "kamke", "name": "1.858", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.07665807000012137, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.751", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12906854000175372, "ok": [true]}
+{"suite": "kamke", "name": "1.400", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04542740000033518, "ok": [true, true]}
+{"suite": "kamke", "name": "1.997", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1166755509984796, "ok": [true]}
+{"suite": "kamke", "name": "1.414", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.041541656995832454, "ok": [true]}
+{"suite": "kamke", "name": "1.470", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.042008151998743415, "ok": [true]}
+{"suite": "kamke", "name": "1.239", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04941282100480748, "ok": [true]}
+{"suite": "kamke", "name": "1.226", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1084010910053621, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.498", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12429972200334305, "ok": [true, true]}
+{"suite": "kamke", "name": "1.26", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15570680199743947, "ok": [true, true, true, true]}
+{"suite": "kamke", "name": "1.12", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08005174100253498, "ok": [true, true]}
+{"suite": "kamke", "name": "1.595", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12245176700525917, "ok": [true]}
+{"suite": "kamke", "name": "1.261", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05081773499841802, "ok": [true, true]}
+{"suite": "kamke", "name": "1.386", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04653932499786606, "ok": [true, true]}
+{"suite": "kamke", "name": "1.142", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11411699499876704, "ok": [true]}
+{"suite": "kamke", "name": "1.124", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12002041000232566, "ok": [true]}
+{"suite": "kamke", "name": "1.354", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11341980800352758, "ok": [true]}
+{"suite": "kamke", "name": "1.353", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12300798000069335, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.189", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.45538747400132706, "ok": [true, false]}
+{"suite": "kamke", "name": "1.43", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12613160500040976, "ok": [true]}
+{"suite": "kamke", "name": "1.505", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15113946099882014, "ok": [false, false, false]}
+{"suite": "kamke", "name": "1.13", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08425809600157663, "ok": [true]}
+{"suite": "kamke", "name": "1.119", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10399201599648222, "ok": [true, true]}
+{"suite": "kamke", "name": "1.973", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14187025700084632, "ok": [true]}
+{"suite": "kamke", "name": "1.221", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.052109295000263955, "ok": [true, true]}
+{"suite": "kamke", "name": "1.523", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.40402784300385974, "ok": [true, false, false]}
+{"suite": "kamke", "name": "1.589", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12361082999996142, "ok": [true]}
+{"suite": "kamke", "name": "1.167", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.044017467997036874, "ok": [true]}
+{"suite": "kamke", "name": "1.147", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.0964202329996624, "ok": [true]}
+{"suite": "kamke", "name": "1.387", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08282661200064467, "ok": [true]}
+{"suite": "kamke", "name": "1.17", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.0908214590017451, "ok": [true, true, true, true]}
+{"suite": "kamke", "name": "1.149", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11821555699862074, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.190", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12774450900178635, "ok": [true, true]}
+{"suite": "kamke", "name": "1.909", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.19375878799473867, "ok": [true]}
+{"suite": "kamke", "name": "1.133", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08384330799890449, "ok": [true, true]}
+{"suite": "kamke", "name": "1.184", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.3910826179999276, "ok": [true]}
+{"suite": "kamke", "name": "1.540", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15997812800196698, "ok": [false, false, false]}
+{"suite": "kamke", "name": "1.763", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12518017199909082, "ok": [true]}
+{"suite": "kamke", "name": "1.682", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.06292721300269477, "ok": [true, true]}
+{"suite": "kamke", "name": "1.185", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11418099400179926, "ok": [true]}
+{"suite": "kamke", "name": "1.525", "tool": "cross_deli", "order": 1, "status": "ok", "time": 2.0896979289973387, "ok": [false, false, false]}
+{"suite": "kamke", "name": "1.840", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14107206000335282, "ok": [true]}
+{"suite": "kamke", "name": "1.289", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.20626172300399048, "ok": [true, true]}
+{"suite": "kamke", "name": "1.118", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09049606900225626, "ok": [true, true]}
+{"suite": "kamke", "name": "1.302", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05005204899498494, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.372", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09628870600135997, "ok": [true, true]}
+{"suite": "kamke", "name": "1.140", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10310527399997227, "ok": [true, true, true, true]}
+{"suite": "kamke", "name": "1.860", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.30484630400314927, "ok": [true]}
+{"suite": "kamke", "name": "1.193", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11129143799917074, "ok": [true, false, true]}
+{"suite": "kamke", "name": "1.44", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10234472899901448, "ok": [true, true]}
+{"suite": "kamke", "name": "1.585", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11333340599958319, "ok": [true]}
+{"suite": "kamke", "name": "1.921", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1316561509956955, "ok": [true]}
+{"suite": "kamke", "name": "1.228", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14631800400093198, "ok": [true, true]}
+{"suite": "kamke", "name": "1.109", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10265128400351387, "ok": [true]}
+{"suite": "kamke", "name": "1.129", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12888575800025137, "ok": [true, true]}
+{"suite": "kamke", "name": "1.256", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.16745000299852109, "ok": [true, true]}
+{"suite": "kamke", "name": "1.518", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13956658800452715, "ok": [true, true]}
+{"suite": "kamke", "name": "1.10", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09549977700226009, "ok": [true]}
+{"suite": "kamke", "name": "1.578", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10352828699979, "ok": [true, true]}
+{"suite": "kamke", "name": "1.389", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14500308800052153, "ok": [false, true]}
+{"suite": "kamke", "name": "1.267", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13828587699390482, "ok": [true]}
+{"suite": "kamke", "name": "1.343", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09615441499772714, "ok": [true]}
+{"suite": "kamke", "name": "1.271", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.0462081540026702, "ok": [true]}
+{"suite": "kamke", "name": "1.635", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1093339590006508, "ok": [true]}
+{"suite": "kamke", "name": "1.207", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09935058599512558, "ok": [true, true]}
+{"suite": "kamke", "name": "1.236", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.135912930003542, "ok": [true]}
+{"suite": "kamke", "name": "1.358", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.17607917900022585, "ok": [true, true]}
+{"suite": "kamke", "name": "1.802", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10798781600169605, "ok": [true]}
+{"suite": "kamke", "name": "1.478", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.16036294000514317, "ok": [true, true]}
+{"suite": "kamke", "name": "1.822", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.21681957299733767, "ok": [true]}
+{"suite": "kamke", "name": "1.61", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1397345730001689, "ok": [true, true]}
+{"suite": "kamke", "name": "1.905", "tool": "cross_deli", "order": 1, "status": "ok", "time": 1.3947523009992437, "ok": [true, true]}
+{"suite": "kamke", "name": "1.373", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15353048300312366, "ok": [true, true]}
+{"suite": "kamke", "name": "1.640", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1264531079941662, "ok": [false]}
+{"suite": "kamke", "name": "1.186", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14578451399574988, "ok": [true]}
+{"suite": "kamke", "name": "1.666", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11163285899965558, "ok": [true]}
+{"suite": "kamke", "name": "1.462", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04252260499924887, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.38", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1127931430019089, "ok": [false]}
+{"suite": "kamke", "name": "1.235", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09263663099409314, "ok": [true, true]}
+{"suite": "kamke", "name": "1.749", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11135633999947459, "ok": [true]}
+{"suite": "kamke", "name": "1.369", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08365749999938998, "ok": [true, true]}
+{"suite": "kamke", "name": "1.141", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.047051153997017536, "ok": [true, true]}
+{"suite": "kamke", "name": "1.223", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10341675800009398, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.471", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09143995799968252, "ok": [false, false]}
+{"suite": "kamke", "name": "1.809", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.2095984990010038, "ok": [true, true]}
+{"suite": "kamke", "name": "1.458", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11642555199796334, "ok": [true, true]}
+{"suite": "kamke", "name": "1.304", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05925259499781532, "ok": [true, true]}
+{"suite": "kamke", "name": "1.204", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11036422000324819, "ok": [true, false, true]}
+{"suite": "kamke", "name": "1.484", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05314357399765868, "ok": [true]}
+{"suite": "kamke", "name": "1.698", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13593054199736798, "ok": [true]}
+{"suite": "kamke", "name": "1.850", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.27193334100593347, "ok": [true]}
+{"suite": "kamke", "name": "1.729", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13043542200466618, "ok": [true]}
+{"suite": "kamke", "name": "1.552", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18717769200156908, "ok": [true, true]}
+{"suite": "kamke", "name": "1.11", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15632413900311803, "ok": [true]}
+{"suite": "kamke", "name": "1.29", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09521532500366447, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.514", "tool": "cross_deli", "order": 1, "status": "ok", "time": 2.396221287002845, "ok": [true, true]}
+{"suite": "kamke", "name": "1.230", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10294111599796452, "ok": [true]}
+{"suite": "kamke", "name": "1.59", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.2529835700042895, "ok": [true, true]}
+{"suite": "kamke", "name": "1.155", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.17332507699757116, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.907", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.2796025470015593, "ok": [true]}
+{"suite": "kamke", "name": "1.335", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13309119999757968, "ok": [true, true]}
+{"suite": "kamke", "name": "1.990", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11730568100028904, "ok": [true]}
+{"suite": "kamke", "name": "1.724", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1611352070030989, "ok": [true]}
+{"suite": "kamke", "name": "1.492", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1226530050043948, "ok": [true, true]}
+{"suite": "kamke", "name": "1.151", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15115769499971066, "ok": [true]}
+{"suite": "kamke", "name": "1.893", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.2811728500018944, "ok": [true, true]}
+{"suite": "kamke", "name": "1.135", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09591011700103991, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.656", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1019412919995375, "ok": [true]}
+{"suite": "kamke", "name": "1.422", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04234707699652063, "ok": [true]}
+{"suite": "kamke", "name": "1.810", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1322929540037876, "ok": [true]}
+{"suite": "kamke", "name": "1.772", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14733992800029228, "ok": [true]}
+{"suite": "kamke", "name": "1.594", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1453655980003532, "ok": [true]}
+{"suite": "kamke", "name": "1.557", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1101629429977038, "ok": [true, true]}
+{"suite": "kamke", "name": "1.146", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09771918800106505, "ok": [true]}
+{"suite": "kamke", "name": "1.299", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05296900699613616, "ok": [true, true]}
+{"suite": "kamke", "name": "1.306", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.049161739996634424, "ok": [true, true]}
+{"suite": "kamke", "name": "1.655", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13741150900023058, "ok": [true]}
+{"suite": "kamke", "name": "1.130", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04879380099737318, "ok": [true, true, true, true]}
+{"suite": "kamke", "name": "1.76", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.28901756400591694, "ok": [true, true]}
+{"suite": "kamke", "name": "1.40", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08771809199970448, "ok": [true]}
+{"suite": "kamke", "name": "1.95", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08068764299969189, "ok": [true]}
+{"suite": "kamke", "name": "1.938", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18942450400209054, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.278", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11904735599819105, "ok": [true]}
+{"suite": "kamke", "name": "1.622", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12061705799715128, "ok": [true]}
+{"suite": "kamke", "name": "1.374", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10993440500169527, "ok": [false, true]}
+{"suite": "kamke", "name": "1.929", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.06310746099916287, "ok": [true]}
+{"suite": "kamke", "name": "1.740", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11355589300364954, "ok": [true]}
+{"suite": "kamke", "name": "1.112", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10540691799542401, "ok": [true]}
+{"suite": "kamke", "name": "1.272", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04459756600408582, "ok": [true]}
+{"suite": "kamke", "name": "1.419", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04142303499975242, "ok": [true]}
+{"suite": "kamke", "name": "1.268", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.32301543100038543, "ok": [true]}
+{"suite": "kamke", "name": "1.447", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09043778899649624, "ok": [true, true]}
+{"suite": "kamke", "name": "1.102", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11135418599587865, "ok": [true]}
+{"suite": "kamke", "name": "1.636", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09251629600476008, "ok": [true]}
+{"suite": "kamke", "name": "1.168", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1282871349976631, "ok": [true]}
+{"suite": "kamke", "name": "1.736", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1884260219958378, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.126", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09767208999983268, "ok": [true, true]}
+{"suite": "kamke", "name": "1.8", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10844325999642024, "ok": [true]}
+{"suite": "kamke", "name": "1.318", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.21173288900172338, "ok": [true, true]}
+{"suite": "kamke", "name": "1.2", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10634070899686776, "ok": [true]}
+{"suite": "kamke", "name": "1.934", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18194207800115691, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.800", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.22971229100221535, "ok": [true, true]}
+{"suite": "kamke", "name": "1.728", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1363014180024038, "ok": [true]}
+{"suite": "kamke", "name": "1.96", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11278037000010954, "ok": [true, true, true, true]}
+{"suite": "kamke", "name": "1.974", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.053615167998941615, "ok": [true, true]}
+{"suite": "kamke", "name": "1.486", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09081501599575859, "ok": [true, true]}
+{"suite": "kamke", "name": "1.985", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05954089599981671, "ok": [true]}
+{"suite": "kamke", "name": "1.980", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12812500199652277, "ok": [true, true]}
+{"suite": "kamke", "name": "1.166", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1372987770009786, "ok": [true]}
+{"suite": "kamke", "name": "1.120", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10746935399947688, "ok": [true]}
+{"suite": "kamke", "name": "1.958", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.3418529310001759, "ok": [true]}
+{"suite": "kamke", "name": "1.548", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.3920459539949661, "ok": [true, true]}
+{"suite": "kamke", "name": "1.218", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05241804399702232, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.123", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11084185499930754, "ok": [true]}
+{"suite": "kamke", "name": "1.198", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.21827223699801834, "ok": [true, true]}
+{"suite": "kamke", "name": "1.584", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12043503700260771, "ok": [true]}
+{"suite": "kamke", "name": "1.440", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15560419899702538, "ok": [false, true, true, false, false, false]}
+{"suite": "kamke", "name": "1.445", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10499453599913977, "ok": [false, false]}
+{"suite": "kamke", "name": "1.9", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.3184891159980907, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.315", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04884953500004485, "ok": [true]}
+{"suite": "kamke", "name": "1.375", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.3701406140025938, "ok": [true, false, true]}
+{"suite": "kamke", "name": "1.618", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1948399539978709, "ok": [true]}
+{"suite": "kamke", "name": "1.443", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.050434156000847, "ok": [true, true]}
+{"suite": "kamke", "name": "1.23", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09015939800156048, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.442", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.2143429509960697, "ok": [false, false, false, false]}
+{"suite": "kamke", "name": "1.894", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.2740195220030728, "ok": [true]}
+{"suite": "kamke", "name": "1.252", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1061786749996827, "ok": [true]}
+{"suite": "kamke", "name": "1.981", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14750927600107389, "ok": [true, true]}
+{"suite": "kamke", "name": "1.159", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10949098299897742, "ok": [true]}
+{"suite": "kamke", "name": "1.325", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.049630048000835814, "ok": [true]}
+{"suite": "kamke", "name": "1.197", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11334602900024038, "ok": [true]}
+{"suite": "kamke", "name": "1.238", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.22012109200295527, "ok": [true, true]}
+{"suite": "kamke", "name": "1.579", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.16728715899807867, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.345", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11329537499841535, "ok": [true]}
+{"suite": "kamke", "name": "1.754", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10377277500083437, "ok": [true]}
+{"suite": "kamke", "name": "1.972", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.21548500200151466, "ok": [true, true]}
+{"suite": "kamke", "name": "1.996", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12891500299883774, "ok": [true]}
+{"suite": "kamke", "name": "1.240", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.048363143992901314, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.300", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05100670800311491, "ok": [true, true, true, true]}
+{"suite": "kamke", "name": "1.439", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.3833335329982219, "ok": [false, true, true, false, false, false]}
+{"suite": "kamke", "name": "1.262", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.049477872998977546, "ok": [true]}
+{"suite": "kamke", "name": "1.303", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.06129370100097731, "ok": [true, true]}
+{"suite": "kamke", "name": "1.762", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13034784799674526, "ok": [true]}
+{"suite": "kamke", "name": "1.725", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.19064823700318811, "ok": [true]}
+{"suite": "kamke", "name": "1.153", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12183696500142105, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.376", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.397162515000673, "ok": [false, true]}
+{"suite": "kamke", "name": "1.867", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.0733082309961901, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.181", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.085474305000389, "ok": [true]}
+{"suite": "kamke", "name": "1.169", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.24423786700208439, "ok": [true]}
+{"suite": "kamke", "name": "1.308", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09380760599742644, "ok": [true, true, true, true]}
+{"suite": "kamke", "name": "1.242", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11015425700315973, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.163", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09736151800461812, "ok": [true]}
+{"suite": "kamke", "name": "1.536", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.21411287099908805, "ok": [true, false]}
+{"suite": "kamke", "name": "1.743", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1757680760056246, "ok": [true]}
+{"suite": "kamke", "name": "1.258", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10265624200110324, "ok": [true, true]}
+{"suite": "kamke", "name": "1.132", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10763488399970811, "ok": [true]}
+{"suite": "kamke", "name": "1.411", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04003756800375413, "ok": [true]}
+{"suite": "kamke", "name": "1.237", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.2967286079947371, "ok": [false, true]}
+{"suite": "kamke", "name": "1.225", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10877192600310082, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.104", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1053682259953348, "ok": [true, true]}
+{"suite": "kamke", "name": "1.722", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.16632664800272323, "ok": [true]}
+{"suite": "kamke", "name": "1.320", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10386887500499142, "ok": [true, true]}
+{"suite": "kamke", "name": "1.298", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05300990400428418, "ok": [true, true, true, true]}
+{"suite": "kamke", "name": "1.176", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13593635400320636, "ok": [true]}
+{"suite": "kamke", "name": "1.600", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12603778999618953, "ok": [true]}
+{"suite": "kamke", "name": "1.122", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.23929903999669477, "ok": [true]}
+{"suite": "kamke", "name": "1.270", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10343914000259247, "ok": [true]}
+{"suite": "kamke", "name": "1.633", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12545327399857342, "ok": [true]}
+{"suite": "kamke", "name": "1.549", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15318421400297666, "ok": [true, false]}
+{"suite": "kamke", "name": "1.393", "tool": "cross_deli", "order": 1, "status": "ok", "time": 3.790721174002101, "ok": [false, true, false]}
+{"suite": "kamke", "name": "1.45", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11162207799497992, "ok": [true]}
+{"suite": "kamke", "name": "1.848", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18752343999949517, "ok": [true]}
+{"suite": "kamke", "name": "1.314", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11664241900143679, "ok": [true]}
+{"suite": "kamke", "name": "1.165", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.2997214580027503, "ok": [true, true, true, true]}
+{"suite": "kamke", "name": "1.795", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.20653805199981434, "ok": [true, true]}
+{"suite": "kamke", "name": "1.35", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11453348599752644, "ok": [true, true]}
+{"suite": "kamke", "name": "1.628", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11078067099879263, "ok": [true]}
+{"suite": "kamke", "name": "1.224", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1015271060023224, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.455", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04348438900342444, "ok": [true]}
+{"suite": "kamke", "name": "1.437", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.048143751999305096, "ok": [true, true]}
+{"suite": "kamke", "name": "1.951", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.23729207800352015, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.539", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.4376115129998652, "ok": [false, false]}
+{"suite": "kamke", "name": "1.463", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.07731159499962814, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.457", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.048139122998691164, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.896", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.19591858600324485, "ok": [true]}
+{"suite": "kamke", "name": "1.143", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04561245699733263, "ok": [true, true]}
+{"suite": "kamke", "name": "1.18", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11300047200347763, "ok": [true, true]}
+{"suite": "kamke", "name": "1.606", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18675026100390824, "ok": [true]}
+{"suite": "kamke", "name": "1.187", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12162517899560044, "ok": [true]}
+{"suite": "kamke", "name": "1.84", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08935373699932825, "ok": [true]}
+{"suite": "kamke", "name": "1.182", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14749788500193972, "ok": [true]}
+{"suite": "kamke", "name": "1.886", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11402413100586273, "ok": [true]}
+{"suite": "kamke", "name": "1.328", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11139627500233473, "ok": [true]}
+{"suite": "kamke", "name": "1.232", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04590248100430472, "ok": [true, true]}
+{"suite": "kamke", "name": "1.983", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.21845578000647947, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.213", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1512909250013763, "ok": [false, true]}
+{"suite": "kamke", "name": "1.154", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1283833759953268, "ok": [true]}
+{"suite": "kamke", "name": "1.643", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1128181800013408, "ok": [true]}
+{"suite": "kamke", "name": "1.613", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1512042719987221, "ok": [true]}
+{"suite": "kamke", "name": "1.275", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10187215200130595, "ok": [true]}
+{"suite": "kamke", "name": "1.91", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09696977400017204, "ok": [true]}
+{"suite": "kamke", "name": "1.705", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11541577900061384, "ok": [true]}
+{"suite": "kamke", "name": "1.565", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.26508834100241074, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.20", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09902873300598003, "ok": [true]}
+{"suite": "kamke", "name": "1.293", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05099242200230947, "ok": [true, true]}
+{"suite": "kamke", "name": "1.775", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14118917000450892, "ok": [true]}
+{"suite": "kamke", "name": "1.438", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15722492799977772, "ok": [false, true, true, false, false, false]}
+{"suite": "kamke", "name": "1.764", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1334012020015507, "ok": [true]}
+{"suite": "kamke", "name": "1.434", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.03624062999733724, "ok": [true, true]}
+{"suite": "kamke", "name": "1.90", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10237044699897524, "ok": [true]}
+{"suite": "kamke", "name": "1.93", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11308929900405928, "ok": [true]}
+{"suite": "kamke", "name": "1.42", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10788329000206431, "ok": [true]}
+{"suite": "kamke", "name": "1.245", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05335497999476502, "ok": [true, true]}
+{"suite": "kamke", "name": "1.583", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12100526600261219, "ok": [true]}
+{"suite": "kamke", "name": "1.723", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.06643203299609013, "ok": [true, true]}
+{"suite": "kamke", "name": "1.175", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14224438799283234, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.385", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04182781399867963, "ok": [true]}
+{"suite": "kamke", "name": "1.215", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1270239279983798, "ok": [true, true]}
+{"suite": "kamke", "name": "1.632", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11291727599746082, "ok": [true]}
+{"suite": "kamke", "name": "1.253", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10881739000615198, "ok": [true]}
+{"suite": "kamke", "name": "1.210", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.0938659449966508, "ok": [true, true]}
+{"suite": "kamke", "name": "1.402", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08635385399975348, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.5", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10780307999812067, "ok": [true]}
+{"suite": "kamke", "name": "1.868", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.06317265299730934, "ok": [true, true]}
+{"suite": "kamke", "name": "1.7", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12340501499420498, "ok": [true]}
+{"suite": "kamke", "name": "1.277", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05234601899428526, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.34", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.17054262100282358, "ok": [true]}
+{"suite": "kamke", "name": "1.179", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15983988899824908, "ok": [true]}
+{"suite": "kamke", "name": "1.397", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04386095400695922, "ok": [true]}
+{"suite": "kamke", "name": "1.103", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11605114999838406, "ok": [true]}
+{"suite": "kamke", "name": "1.1", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.27033952299825614, "ok": [true, true]}
+{"suite": "kamke", "name": "1.697", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14833762899797875, "ok": [true]}
+{"suite": "kamke", "name": "1.350", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.3203824859956512, "ok": [true]}
+{"suite": "kamke", "name": "1.4", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11283279800409218, "ok": [true]}
+{"suite": "kamke", "name": "1.174", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10776718200213509, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.869", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.3626000990043394, "ok": [true, true]}
+{"suite": "kamke", "name": "1.281", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05024243600200862, "ok": [true]}
+{"suite": "kamke", "name": "1.734", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12500797899701865, "ok": [true]}
+{"suite": "kamke", "name": "1.748", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12483996500668582, "ok": [true]}
+{"suite": "kamke", "name": "1.999", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1651803490021848, "ok": [true]}
+{"suite": "kamke", "name": "1.101", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09741009800200118, "ok": [true, true, true, true, true]}
+{"suite": "kamke", "name": "1.170", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05075995600054739, "ok": [true, true]}
+{"suite": "kamke", "name": "1.28", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09599526699457783, "ok": [true]}
+{"suite": "kamke", "name": "1.700", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12341300900152419, "ok": [true, true]}
+{"suite": "kamke", "name": "1.324", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.14441822200024035, "ok": [true]}
+{"suite": "kamke", "name": "1.852", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.07820611299393931, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.978", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10858880200248677, "ok": [true]}
+{"suite": "kamke", "name": "1.976", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1137759159973939, "ok": [true, true]}
+{"suite": "kamke", "name": "1.381", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.03939971200452419, "ok": [true]}
+{"suite": "kamke", "name": "1.217", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09314703799464041, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.156", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1292072200012626, "ok": [true, true]}
+{"suite": "kamke", "name": "1.950", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.6117363390003447, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.134", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11993421799706994, "ok": [true]}
+{"suite": "kamke", "name": "1.263", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10432004099857295, "ok": [true, true]}
+{"suite": "kamke", "name": "1.884", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.18973159899906022, "ok": [true]}
+{"suite": "kamke", "name": "1.465", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.041916409994883, "ok": [true]}
+{"suite": "kamke", "name": "1.444", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04511192000063602, "ok": [true]}
+{"suite": "kamke", "name": "1.255", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.051839479005138855, "ok": [true, true]}
+{"suite": "kamke", "name": "1.81", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13264270999934524, "ok": [false]}
+{"suite": "kamke", "name": "1.264", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05340976300067268, "ok": [true, true]}
+{"suite": "kamke", "name": "1.100", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.08583816800091881, "ok": [true]}
+{"suite": "kamke", "name": "1.309", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1827112600003602, "ok": [true, true, true]}
+{"suite": "kamke", "name": "1.60", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1373765940006706, "ok": [true, true]}
+{"suite": "kamke", "name": "1.401", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04148448000341887, "ok": [true]}
+{"suite": "kamke", "name": "1.246", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05393312399974093, "ok": [true]}
+{"suite": "kamke", "name": "1.464", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04044992000126513, "ok": [true]}
+{"suite": "kamke", "name": "1.885", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.32690011299564503, "ok": [true]}
+{"suite": "kamke", "name": "1.177", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15492325299419463, "ok": [true, true]}
+{"suite": "kamke", "name": "1.52", "tool": "cross_deli", "order": 1, "status": "ok", "time": 1.2072063079976942, "ok": [true, false]}
+{"suite": "kamke", "name": "1.871", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.19449316499958513, "ok": [true]}
+{"suite": "kamke", "name": "1.935", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.16178211999795167, "ok": [true, true]}
+{"suite": "kamke", "name": "1.577", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12115986600110773, "ok": [true, true]}
+{"suite": "kamke", "name": "1.276", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.04805242099973839, "ok": [true, true]}
+{"suite": "kamke", "name": "1.316", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.09535434599820292, "ok": [true, true]}
+{"suite": "kamke", "name": "1.744", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1507253439995111, "ok": [true]}
+{"suite": "kamke", "name": "1.150", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11842766500194557, "ok": [true, true]}
+{"suite": "kamke", "name": "1.192", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.19597443100064993, "ok": [true]}
+{"suite": "kamke", "name": "1.814", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.1233209169949987, "ok": [true]}
+{"suite": "kamke", "name": "1.545", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.2735497809990193, "ok": [true, true]}
+{"suite": "kamke", "name": "1.196", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15589919299964095, "ok": [true]}
+{"suite": "kamke", "name": "1.924", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.13528948099701665, "ok": [true]}
+{"suite": "kamke", "name": "1.630", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.11945976899733068, "ok": [true]}
+{"suite": "kamke", "name": "1.668", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12600352500157896, "ok": [true]}
+{"suite": "kamke", "name": "1.301", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.049650236003799364, "ok": [true, true]}
+{"suite": "kamke", "name": "1.233", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.12110636600118596, "ok": [true]}
+{"suite": "kamke", "name": "1.173", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.15308649100188632, "ok": [true]}
+{"suite": "kamke", "name": "1.137", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.046147799999744166, "ok": [true, true]}
+{"suite": "kamke", "name": "1.136", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.043113813997479156, "ok": [true]}
+{"suite": "kamke", "name": "1.3", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10146056100347778, "ok": [true]}
+{"suite": "kamke", "name": "1.737", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.20643855499656638, "ok": [true, true]}
+{"suite": "kamke", "name": "1.403", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.396421184996143, "ok": [false, true]}
+{"suite": "kamke", "name": "1.979", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.05256365700188326, "ok": [true, true]}
+{"suite": "kamke", "name": "1.216", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.10067655100283446, "ok": [true]}
+{"suite": "kamke", "name": "1.431", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.3760234709989163, "ok": [true, false]}
+{"suite": "kamke", "name": "1.160", "tool": "cross_deli", "order": 1, "status": "ok", "time": 0.17565215800277656, "ok": [true, true]}
