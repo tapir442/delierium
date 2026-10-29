@@ -514,18 +514,50 @@ def _trigonometric_normal(e: Expr) -> Expr:
     return e.xreplace(rule) if rule else e
 
 
+def _derivative_of_compound(e: Basic) -> bool:
+    """Whether e is a derivative of an arbitrary function with an argument
+    that is not a symbol (d/dx f(y/x)).
+
+    >>> from sympy import Function, symbols
+    >>> x, y = symbols("x y")
+    >>> f = Function("f")
+    >>> (
+    ...     _derivative_of_compound(f(y / x).diff(x, evaluate=False)),
+    ...     _derivative_of_compound(f(x).diff(x)),
+    ... )
+    (True, False)
+    """
+    return (
+        isinstance(e, Derivative)
+        and isinstance(e.expr, AppliedUndef)
+        and not all(a.is_Symbol for a in e.expr.args)
+    )
+
+
 def _prepare(e: Any) -> Expr:
     # b**(n - 1) -> b**n/b, exp(x + 1) -> E*exp(x), so that the field sees
     # the same generators whatever form the powers come in
     """e for the field: floats as rationals, trigonometric functions in sin and
-    cos of common arguments, sums in exponents as products.
+    cos of common arguments, sums in exponents as products, derivatives of
+    arbitrary functions of expressions evaluated.
 
-    >>> from sympy import exp, symbols
+    >>> from sympy import Function, exp, symbols
     >>> x, y, n = symbols("x y n")
     >>> _prepare(0.25 * x), _prepare(exp(x + 1)), _prepare(y ** (n - 1))
     (x/4, E*exp(x), y**(n - 1))
+
+    f'(y/x) from d/dx f(y/x) and d/dy f(y/x): unevaluated they would be two
+    independent generators of the field (symmgrp's determining equations of
+    EqWorld 3.6 got rank 0 instead of 1):
+
+    >>> f = Function("f")
+    >>> _prepare(f(y / x).diff(x, evaluate=False))
+    -y*Subs(Derivative(f(_xi_1), _xi_1), _xi_1, y/x)/x**2
     """
     e = sympify(e)
+    compound = [d for d in e.atoms(Derivative) if _derivative_of_compound(d)]
+    if compound:
+        e = e.xreplace({d: d.doit() for d in compound})
     # a float is taken for the simplest rational within its precision (0.1
     # -> 1/10, not the binary approximation; 1.66666666666667 -> 5/3): the
     # field cannot represent floats, and as expressions they make every

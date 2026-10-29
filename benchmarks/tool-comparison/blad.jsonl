@@ -1,0 +1,786 @@
+{"name": "(3+1)-dimensional Calogero-Bogoyavlenskii-Schiff equation, potential form", "expected": "infinite", "deteq_time": 0.91, "blad_time": 0.87, "status": "ok", "chains": 23, "generic": ["infinite"], "special": [["infinite", ["a*d - b*c"]], ["infinite", ["a + b - c - d"]], ["infinite", ["b"]], ["infinite", ["b - d", "a - c"]], ["infinite", ["b", "a"]], ["infinite", ["2*b - d", "2*a - c"]], ["infinite", ["b", "a - c - d"]], ["infinite", ["c + d", "a + b"]], ["infinite", ["c", "a"]], ["infinite", ["c - d", "a - b"]], ["infinite", ["c - 2*d", "b - d", "a - 2*d"]], ["infinite", ["c + d", "b", "a"]], ["infinite", ["c - d", "b", "a"]], ["infinite", ["c", "b", "a"]], ["infinite", ["c + d", "2*b - d", "2*a + d"]], ["infinite", ["c", "2*b - d", "a"]], ["infinite", ["c - d", "2*b - d", "2*a - d"]], ["infinite", ["d", "b"]], ["infinite", ["d", "b", "a - c"]], ["infinite", ["d", "b", "2*a - c"]], ["infinite", ["d", "c"]], ["infinite", ["d", "c", "b", "a"]]], "check": "agree", "time": 1.96}
+{"name": "AIMS 2026 I-(1): u_t = (u**m u_x**n)_x + e u**r", "expected": 3, "deteq_time": 0.23, "status": "unsupported", "check": "power u**m", "time": 0.25}
+{"name": "AIMS 2026 I-(2): u_t = (u**m u_x**n)_x + e2 u**(m + n) - e3 u/(m + n - 1)", "expected": 3, "deteq_time": 0.5, "status": "unsupported", "check": "power u**m", "time": 0.53}
+{"name": "AIMS 2026 I-(3): u_t = (u**(1 - n) u_x**n)_x + e2 u log(u)", "expected": 3, "deteq_time": 0.23, "status": "unsupported", "check": "power u**(1 - n)", "time": 0.25}
+{"name": "AIMS 2026 I-(4): u_t = (u**m u_x**n)_x + e2 u", "expected": 4, "deteq_time": 0.22, "status": "unsupported", "check": "power u**m", "time": 0.25}
+{"name": "AIMS 2026 I-(5): u_t = (u**(1 - n) u_x**n)_x + e2 u", "expected": 4, "deteq_time": 0.22, "status": "unsupported", "check": "power u**(1 - n)", "time": 0.24}
+{"name": "AIMS 2026 II-(1): u_t = (exp(u) u_x**n)_x + e2 exp(q u)", "expected": 3, "deteq_time": 0.17, "status": "unsupported", "check": "function exp", "time": 0.18}
+{"name": "AIMS 2026 II-(2): u_t = (exp(u) u_x**n)_x + e2 exp(u) - e3", "expected": 3, "deteq_time": 0.17, "status": "unsupported", "check": "function exp", "time": 0.19}
+{"name": "APEBench phy_adv, 2D: u_t = -1/4 (u_x + u_y)", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.03}
+{"name": "APEBench phy_adv: u_t = -1/4 u_x", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.03}
+{"name": "APEBench phy_adv_diff, 2D: u_t = -1/4 (u_x + u_y) + 1/125 Laplace u", "expected": "infinite", "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.07}
+{"name": "APEBench phy_adv_diff: u_t = -1/4 u_x + 1/125 u_xx", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "APEBench phy_aniso_diff: u_t = div(A grad u), A = ((1/1000, 1/2000), (1/2000, 1/500))", "expected": "infinite", "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.08}
+{"name": "APEBench phy_burgers: u_t + 1/8 u u_x = 3/10000 u_xx", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.04}
+{"name": "APEBench phy_burgers_sc, 2D: u_t + 1/8 u (u_x + u_y) = 3/10000 Laplace u", "expected": 5, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.07}
+{"name": "APEBench phy_diag_diff: u_t = 1/1000 u_xx + 1/500 u_yy", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.06}
+{"name": "APEBench phy_diff, 2D: u_t = 1/125 Laplace u", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.06}
+{"name": "APEBench phy_diff: u_t = 1/125 u_xx", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "APEBench phy_disp, 2D: u_t = 1/4000 (u_xxx + u_yyy)", "expected": "infinite", "deteq_time": 0.06, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.09}
+{"name": "APEBench phy_disp: u_t = 1/4000 u_xxx", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.05}
+{"name": "APEBench phy_fisher, 2D: u_t = 1/250 Laplace u + 20 u (1 - u)", "expected": 4, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.06}
+{"name": "APEBench phy_fisher: u_t = 1/250 u_xx + 20 u (1 - u)", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "APEBench phy_four, 2D: the four linear terms of phy_four in x and y", "expected": "infinite", "deteq_time": 0.2, "blad_time": 0.04, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.31}
+{"name": "APEBench phy_four: u_t = -2500 u_x + 80 u_xx + 1/40 u_xxx - 3/40000 u_xxxx", "expected": "infinite", "deteq_time": 0.05, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.1}
+{"name": "APEBench phy_hyp_diff, 2D: u_t = -3/40000 (u_xxxx + u_yyyy)", "expected": "infinite", "deteq_time": 0.17, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.22}
+{"name": "APEBench phy_hyp_diff: u_t = -3/40000 u_xxxx", "expected": "infinite", "deteq_time": 0.05, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.07}
+{"name": "APEBench phy_kdv, 2D: u_t = -6 u (u_x + u_y) - (u_xxx + u_yyy) - 1/8 (u_xxxx + u_yyyy)", "expected": 4, "deteq_time": 0.19, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.28}
+{"name": "APEBench phy_kdv: u_t = -6 u u_x - u_xxx - 1/8 u_xxxx", "expected": 3, "deteq_time": 0.05, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.09}
+{"name": "APEBench phy_ks, 2D: u_t = -1/2 |grad u|**2 - Laplace u - (u_xxxx + u_yyyy)", "expected": 6, "deteq_time": 0.18, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.26}
+{"name": "APEBench phy_ks: u_t = -1/2 u_x**2 - u_xx - u_xxxx", "expected": 4, "deteq_time": 0.05, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.08}
+{"name": "APEBench phy_ks_cons: u_t + 18/5 u u_x = -36/25 u_xx - 2/5 u_xxxx", "expected": 3, "deteq_time": 0.05, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.08}
+{"name": "APEBench phy_mix_disp: u_t = 1/4000 (d/dx + d/dy) Laplace u", "expected": "infinite", "deteq_time": 0.08, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.16}
+{"name": "APEBench phy_mix_hyp: u_t = -3/40000 Laplace(Laplace u)", "expected": "infinite", "deteq_time": 0.2, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.29}
+{"name": "APEBench phy_sh: u_t = 7/10 u - (1 + Laplace)**2 u + u**2 - u**3 in the plane", "expected": 4, "deteq_time": 0.21, "blad_time": 0.04, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.32}
+{"name": "APEBench phy_unbal_adv: u_t + 1/100 u_x - 1/25 u_y + 1/200 u_z = 0", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.05}
+{"name": "Anco et al.: u_t = -kappa p u_x**(p - 1) u_xx + c (a + u)**q", "expected": 3, "deteq_time": 0.18, "status": "unsupported", "check": "power (a + u)**q", "time": 0.2}
+{"name": "Anco et al.: u_t = -kappa p u_x**(p - 1) u_xx + c exp(q u)", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "function exp", "time": 0.15}
+{"name": "Arrigo 2.1", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.03}
+{"name": "Arrigo 2.18", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.04}
+{"name": "Arrigo 2.19 (modified Emden equation)", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Arrigo 2.2", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.05}
+{"name": "Arrigo 2.21", "expected": "infinite", "deteq_time": 0.09, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.1}
+{"name": "Arrigo 2.22", "expected": 4, "deteq_time": 0.32, "blad_time": 0.06, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.4}
+{"name": "Arrigo Exercises 2.6, 1 (i)", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Arrigo Exercises 2.6, 1 (ii)", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "Arrigo Exercises 2.6, 1 (iii)", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Arrigo Exercises 2.6, 3", "expected": 3, "deteq_time": 0.06, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.1}
+{"name": "BGL 5.3-1: u_t = f0 u_x**-2 {u; x} + g0", "expected": 6, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [6], "special": [["infinite", ["f0"]]], "check": "agree", "time": 0.06}
+{"name": "BGL 5.3-2: u_t = f0 u**2 u_x**-2 {u; x} + g0", "expected": 5, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [5], "special": [["infinite", ["f0"]], [6, ["4*f0 - 9*g0"]]], "check": "agree", "time": 0.07}
+{"name": "BGL 5.3-3: u_t = f0 t**2 u_x**-2 {u; x} + g0", "expected": 6, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [6], "special": [["infinite", ["f0"]]], "check": "agree", "time": 0.07}
+{"name": "BGL 5.3-4: sl(2) + <d_t, u d_u>", "expected": 5, "deteq_time": 0.82, "blad_time": 0.05, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.93}
+{"name": "BGL 5.3-5: sl(2) + <d_t, t d_t + c u d_u>", "expected": 5, "deteq_time": 0.88, "blad_time": 0.1, "status": "ok", "chains": 5, "generic": [5], "special": [["infinite", ["c"]], ["infinite", ["g0", "f0", "6*c - 1"]], [7, ["g0", "f0", "2*c - 1"]], [7, ["g0", "f0", "2*c + 1"]]], "check": "agree", "time": 1.04}
+{"name": "BGL 5.3-6: sl(2) + <t u d_u, -t d_t>", "expected": 5, "deteq_time": 1.96, "blad_time": 0.07, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 2.12}
+{"name": "BGL 5.3-7: sl(2) + <t d_t, u d_u>", "expected": 5, "deteq_time": 0.91, "blad_time": 0.05, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 1.02}
+{"name": "BGL A4.8: u_t = u_x**(-3q - 2) u_xxx + u u_x", "expected": 4, "deteq_time": 0.16, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [4], "special": [[4, ["q"]]], "check": "agree", "time": 0.19}
+{"name": "BGL A4.8: u_t = u_x**-2 u_xxx + u u_x + kappa u_x log(u_x)", "expected": 4, "deteq_time": 0.16, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.18}
+{"name": "BGL Schwarzian KdV: u_t = u_xxx - 3 u_xx**2/(2 u_x)", "expected": 6, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.05}
+{"name": "Baumann p. 136: u' = F(u, x)", "expected": "infinite", "deteq_time": 0.02, "status": "unsupported", "check": "function F", "time": 0.03}
+{"name": "Baumann p. 137: u' = f(x) g(u)", "expected": "infinite", "deteq_time": 0.06, "status": "unsupported", "check": "function f", "time": 0.07}
+{"name": "Baumann p. 150: Riccati u' + u**2 - 2/x**2 = 0", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.03}
+{"name": "Baumann p. 153: u**2/x**2 + u**3/x - u'/x**2 = 0", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.03}
+{"name": "Baumann p. 155: x u' - u + sqrt(u/x) = 0", "expected": "infinite", "deteq_time": 0.08, "status": "unsupported", "check": "power sqrt(u/x)", "time": 0.09}
+{"name": "Baumann p. 164: u' = 1 + tan(x - u)/x", "expected": "infinite", "deteq_time": 0.11, "status": "unsupported", "check": "function tan", "time": 0.12}
+{"name": "Baumann p. 169: u' = (x**2 + u**2)/(x u)", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.03}
+{"name": "Baumann p. 170: u' = u (1 - u**2 exp(u))", "expected": "infinite", "deteq_time": 0.09, "status": "unsupported", "check": "function exp", "time": 0.09}
+{"name": "Baumann p. 176: u'' - u'/u**2 + 1/(u x) = 0", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Baumann p. 181: Ames u'' + u'/x + a exp(u) = 0", "expected": 2, "deteq_time": 0.1, "status": "unsupported", "check": "function exp", "time": 0.11}
+{"name": "Baumann p. 185: u'' - a u'**2 = 0", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.03}
+{"name": "Baumann p. 189: generalized cable u'' - a (1 + u'**2)**nu = 0", "expected": 2, "deteq_time": 0.08, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": [2], "special": [[8, ["a"]], [4, ["nu"]], [3, ["2*nu - 3"]]], "check": "agree", "time": 0.1}
+{"name": "Baumann p. 196: 4 w**2 w'' - 4 w' + 2 w - w**3 = 0", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Baumann p. 198: v' - v**2 v'' = 0", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Baumann p. 203: Kamke 7.13 u'' u''' - a sqrt(1 + b**2 u''**2) = 0", "expected": 3, "deteq_time": 0.16, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [3], "special": [[7, ["a"]], [4, ["b"]]], "check": "agree", "time": 0.18}
+{"name": "Baumann p. 209: u''' + R (u' u'' - u u''') = 0", "expected": 3, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 2, "generic": [3], "special": [[7, ["R"]]], "check": "agree", "time": 0.07}
+{"name": "Baumann p. 212: Kamke 7.16 3 u'' u'''' - 5 u'''**2 = 0", "expected": 6, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.05}
+{"name": "Baumann p. 270: Karpman-Belashov (u_t + 6 u u_x - mu u_xx - epsilon u_xxx - lambda u_xxxxx)_x - u_yy = 0", "expected": "infinite", "deteq_time": 2.98, "blad_time": 0.15, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["lambda_"]], ["infinite", ["mu", "epsilon"]]], "check": "agree", "time": 3.25}
+{"name": "Baumann p. 289: single flux line u_t = k u_xx/(1 + u_x**2)", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["k"]]], "check": "agree", "time": 0.05}
+{"name": "Baumann p. 297: cylindrical KdV u_t + 6 u u_x + u_xxx + u/(2t) = 0", "expected": 4, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.06}
+{"name": "Baumann p. 298: KdV with slowly varying coefficients", "expected": 2, "deteq_time": 0.18, "status": "unsupported", "check": "function B", "time": 0.2}
+{"name": "Baumann p. 298: spherical KdV u_t + 6 u u_x + u_xxx + u/t = 0", "expected": 3, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.07}
+{"name": "Baumann p. 299: u_t - 6 u**2 u_x + 6 lambda u_x + u_xxx = 0", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "Baumann p. 300: generalized KdV u_t + b u**alpha u_x + u_xxx = 0", "expected": 3, "deteq_time": 0.16, "status": "unsupported", "check": "power u**alpha", "time": 0.18}
+{"name": "Baumann p. 300: perturbed KdV", "expected": 2, "deteq_time": 0.1, "blad_time": 0.09, "status": "ok", "chains": 4, "generic": [2], "special": [[3, ["a + 3*b"]], ["infinite", ["d"]], ["infinite", ["e"]]], "check": "agree", "time": 0.25}
+{"name": "Baumann p. 301: Kadomtsev-Petviashvili (u_t + u u_x + mu u_xxx)_x + sigma u_yy = 0", "expected": "infinite", "deteq_time": 0.18, "blad_time": 0.08, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["mu"]], ["infinite", ["sigma"]]], "check": "agree", "time": 0.3}
+{"name": "Baumann p. 301: KdV-Burgers u_t + u u_x + mu u_xxx - nu u_xx = 0", "expected": 3, "deteq_time": 0.04, "blad_time": 0.02, "status": "ok", "chains": 3, "generic": [3], "special": [["infinite", ["mu"]], [4, ["nu"]]], "check": "agree", "time": 0.08}
+{"name": "Baumann p. 305: Stokes' creeping flow", "expected": "infinite", "deteq_time": 0.95, "status": "unsupported", "check": "function cot", "time": 1.06}
+{"name": "Baumann p. 341: Fokker-Planck equation of the Rayleigh particle", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.05}
+{"name": "Baumann p. 348: molecular beam epitaxy", "expected": 3, "deteq_time": 0.06, "blad_time": 0.06, "status": "ok", "chains": 6, "generic": [3], "special": [[4, ["alpha"]], [4, ["alpha", "Phi"]], ["infinite", ["kappa"]], ["infinite", ["lambda_", "g"]], ["infinite", ["lambda_", "g", "alpha"]]], "check": "agree", "time": 0.17}
+{"name": "Baumann p. 350: molecular beam epitaxy, surface diffusion", "expected": 4, "deteq_time": 0.06, "blad_time": 0.04, "status": "ok", "chains": 4, "generic": [4], "special": [[4, ["Phi"]], ["infinite", ["g"]], ["infinite", ["kappa"]]], "check": "agree", "time": 0.13}
+{"name": "Baumann p. 352: molecular beam epitaxy, desorption", "expected": 4, "deteq_time": 0.03, "blad_time": 0.09, "status": "ok", "chains": 5, "generic": [4], "special": [[5, ["alpha"]], [5, ["alpha", "Phi"]], ["infinite", ["lambda_"]], ["infinite", ["lambda_", "alpha"]]], "check": "agree", "time": 0.14}
+{"name": "Benjamin-Bona-Mahony equation", "expected": 3, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.07}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 10: u_tt = delta u_xx + exp(-u_x)", "expected": 5, "deteq_time": 0.12, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [[6, ["delta"]]], "check": "agree", "time": 0.14}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 11: u_tt = (delta exp(2 u_x)) u_xx + 2 u_x", "expected": 5, "deteq_time": 0.12, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["delta"]]], "check": "agree", "time": 0.15}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 12: u_tt = (delta exp(2 u_x)) u_xx + exp(u_x) + 2 eps2 x", "expected": 5, "deteq_time": 0.12, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [[6, ["eps2", "delta"]]], "check": "agree", "time": 0.15}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 13: u_tt = (delta exp(2 u_x)) u_xx + exp(q u_x)", "expected": 5, "deteq_time": 0.12, "blad_time": 0.02, "status": "ok", "chains": 4, "generic": [5], "special": [[6, ["delta"]], [5, ["q - 2"]], ["infinite", ["q", "delta"]]], "check": "agree", "time": 0.16}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 14: u_tt = (delta u_x**(2 p)) u_xx + u_x**q", "expected": 5, "deteq_time": 0.11, "blad_time": 0.03, "status": "ok", "chains": 9, "generic": [5], "special": [[6, ["delta"]], [5, ["2*p - q + 2"]], ["infinite", ["q", "delta"]], [7, ["q - 3", "delta"]], [7, ["q + 3", "delta"]], [7, ["q", "p"]], [6, ["q + 3", "p + 2"]], [5, ["q", "p + 1"]]], "check": "agree", "time": 0.16}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 15: u_tt = (delta u_x**(2 p)) u_xx + eps u_x**(p + 1/2) + 2 x", "expected": 5, "deteq_time": 0.21, "blad_time": 0.04, "status": "ok", "chains": 5, "generic": [5], "special": [["infinite", ["eps", "delta"]], [5, ["2*p + 3"]], ["infinite", ["2*p + 1", "delta"]], [8, ["p", "eps"]]], "check": "agree", "time": 0.27}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 16: u_tt = (delta u_x**(2 p)) u_xx + 2 log(u_x)", "expected": 5, "deteq_time": 0.11, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [5], "special": [[6, ["delta"]], [5, ["p + 1"]]], "check": "agree", "time": 0.14}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 17: u_tt = delta/u_x u_xx + 2 log(u_x) + 2 x", "expected": 5, "deteq_time": 0.12, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.14}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 18: u_tt = (delta u_x**(-4)) u_xx + u_x**(-3)", "expected": 6, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [6], "special": [["infinite", ["delta"]]], "check": "agree", "time": 0.06}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 19: u_tt = (delta u_x**(-4)) u_xx + nu u_x**(-3)/x", "expected": 6, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [6], "special": [["infinite", ["delta"]], [7, ["nu"]]], "check": "agree", "time": 0.06}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 20: u_tt = (delta u_x**(2 p)) u_xx", "expected": 6, "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 5, "generic": [6], "special": [["infinite", ["delta"]], [8, ["p"]], [7, ["p + 2"]], [6, ["p + 1"]]], "check": "agree", "time": 0.13}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 21: u_tt = (delta exp(2 u_x)) u_xx", "expected": 6, "deteq_time": 0.11, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [6], "special": [["infinite", ["delta"]]], "check": "agree", "time": 0.13}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 22: u_tt = (delta u_x**(-4)) u_xx", "expected": 7, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [7], "special": [["infinite", ["delta"]]], "check": "agree", "time": 0.05}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 7: u_tt = (delta exp(2 x) u_x**(2 p)) u_xx + nu exp(2 x) u_x**(2 p + 1)", "expected": 5, "deteq_time": 0.15, "status": "unsupported", "check": "function exp", "time": 0.16}
+{"name": "Bihlo, Dos Santos Cardoso-Bihlo, Popovych 8: u_tt = (delta x**2 exp(2 u_x)) u_xx + nu x exp(2 u_x)", "expected": 5, "deteq_time": 0.13, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": [5], "special": [[6, ["delta - nu"]], [6, ["delta"]], ["infinite", ["nu", "delta"]]], "check": "agree", "time": 0.16}
+{"name": "Blasius equation", "expected": 2, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Bluman-Anco (3.173): y y' (y/y')'' = 1", "expected": 2, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.06}
+{"name": "Bluman-Anco (3.194): (y y' (y/y')'')' = 0", "expected": 3, "deteq_time": 0.06, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.1}
+{"name": "Bluman-Anco (3.245): y''' = 6 x y''**3/y'**2 + 6 y''**2/y'", "expected": 3, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Bluman-Anco (3.257): y'''' = 4 y'''**2/(3 y'')", "expected": 6, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.05}
+{"name": "Bluman-Anco (3.413): y'' = 2 (x y' - y)(1 + y'**2)/(x**2 + y**2)", "expected": 8, "deteq_time": 0.03, "blad_time": 0.06, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.11}
+{"name": "Bluman-Anco (3.499): KdV traveling waves y''' = -y y'", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Bluman-Anco (4.64): u_tt = c(x)**2 u_xx, c = (1 + x)**(1 + A/2) (1 - x)**(1 - A/2)", "expected": "infinite", "deteq_time": 0.19, "status": "unsupported", "check": "power (x + 1)**(A + 2)", "time": 0.2}
+{"name": "Bluman-Anco (4.64): u_tt = c(x)**2 u_xx, c = (1 + x**2) exp(A atan(x))", "expected": "infinite", "deteq_time": 0.14, "status": "unsupported", "check": "function exp", "time": 0.16}
+{"name": "Bluman-Anco (4.64): u_tt = c(x)**2 u_xx, c = x**2 exp(1/x)", "expected": "infinite", "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "Bluman-Anco (4.80): biharmonic equation u_xxxx + 2 u_xxyy + u_yyyy = 0", "expected": "infinite", "deteq_time": 0.07, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.14}
+{"name": "Bluman-Anco (4.88): axisymmetric wave equation u_tt = u_rr + u_r/r", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.05}
+{"name": "Bluman-Anco Exercise 3.3-3: y'' = a y'**k", "expected": 3, "deteq_time": 0.07, "blad_time": 0.01, "status": "ok", "chains": 5, "generic": [3], "special": [[8, ["a"]], [4, ["k"]], [4, ["k - 3"]], [3, ["k - 2"]]], "check": "agree", "time": 0.09}
+{"name": "Bluman-Anco Exercise 3.3-4: y'' = exp(-y')", "expected": 3, "deteq_time": 0.08, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.09}
+{"name": "Bluman-Anco Exercise 3.5-2: Duffing y'' + a y' + b y + y**3 = 0", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [1], "special": [[2, ["2*a**2 - 9*b"]], [2, ["b", "a"]]], "check": "agree", "time": 0.04}
+{"name": "Bluman-Anco Exercise 3.5-3: y'' = 2 y'**2 cot(y) + sin(y) cos(y)", "expected": 8, "deteq_time": 0.12, "status": "unsupported", "check": "function cot", "time": 0.13}
+{"name": "Bluman-Anco Exercise 3.5-4: y''' = x (x - 1) y''**3 - 2 x y''**2 + y''", "expected": 2, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.07}
+{"name": "Bluman-Anco Exercise 3.5-4: y''' = y (y''/y')**3", "expected": 3, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Bluman-Anco Exercise 3.5-6: y'''' = y' y'''/y", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "Bluman-Anco Exercise 3.5-7: y'''' = y**(-5/3)", "expected": 3, "deteq_time": 0.12, "status": "unsupported", "check": "power y**(5/3)", "time": 0.13}
+{"name": "Bluman-Kumei Exercise 4.2-10: u_xx = u_x**2 u_t", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Bluman-Kumei Exercise 4.2-14: stream function (Lap u)_t + u_y (Lap u)_x - u_x (Lap u)_y = nu Lap Lap u", "expected": "infinite", "deteq_time": 0.27, "blad_time": 0.18, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["nu"]]], "check": "agree", "time": 0.62}
+{"name": "Bluman-Kumei Exercise 4.2-15: u_t = u_xx + F(u)", "expected": 2, "deteq_time": 0.09, "status": "unsupported", "check": "function F", "time": 0.1}
+{"name": "Bluman-Kumei Exercise 4.2-6: heat equation in space u_t = u_xx + u_yy + u_zz", "expected": "infinite", "deteq_time": 0.05, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.08}
+{"name": "Bluman-Kumei Exercise 4.2-8: u_tt = A**2 (u + B)**(2 C) u_xx", "expected": 4, "deteq_time": 0.17, "status": "unsupported", "check": "power (B + u)**(2*C)", "time": 0.18}
+{"name": "Bluman-Kumei Exercise 4.2-8: u_tt = A**2 (u + B)**4 u_xx", "expected": 5, "deteq_time": 0.04, "blad_time": 0.03, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["A"]]], "check": "agree", "time": 0.1}
+{"name": "Bluman-Kumei Exercise 4.2-8: u_tt = c(u)**2 u_xx", "expected": 3, "deteq_time": 0.1, "status": "unsupported", "check": "function c", "time": 0.11}
+{"name": "Bluman-Kumei Exercise 4.2-9: Laplace equation in space u_xx + u_yy + u_zz = 0", "expected": "infinite", "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.06}
+{"name": "Boyer-Finley equation", "expected": "infinite", "deteq_time": 0.17, "status": "unsupported", "check": "function exp", "time": 0.19}
+{"name": "CRC 1, 10.10: potential hyperbolic heat equation tau0 exp(l u_x) u_tt + u_t = k0 exp(m u_x) u_xx", "expected": 4, "deteq_time": 0.14, "blad_time": 0.04, "status": "ok", "chains": 6, "generic": [4], "special": [[5, ["k0"]], [4, ["l + m"]], ["infinite", ["l", "k0"]], [5, ["m", "l"]], ["infinite", ["tau0", "l", "k0"]]], "check": "agree", "time": 0.2}
+{"name": "CRC 1, 10.10: potential hyperbolic heat equation tau0 u_tt + u_t = k(u_x) u_xx", "expected": 4, "deteq_time": 0.11, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [4], "special": [[3, ["tau0"]]], "check": "agree", "time": 0.13}
+{"name": "CRC 1, 10.10: potential hyperbolic heat equation tau0 u_tt + u_t = k0 exp(m u_x) u_xx", "expected": 5, "deteq_time": 0.12, "blad_time": 0.04, "status": "ok", "chains": 6, "generic": [5], "special": [["infinite", ["k0"]], [7, ["m"]], [4, ["tau0"]], ["infinite", ["tau0", "k0"]], [5, ["tau0", "m"]]], "check": "agree", "time": 0.18}
+{"name": "CRC 1, 10.10: potential hyperbolic heat equation tau0 u_tt + u_t = k0 u_x**n u_xx", "expected": 5, "deteq_time": 0.11, "blad_time": 0.04, "status": "ok", "chains": 8, "generic": [5], "special": [["infinite", ["k0"]], [7, ["n"]], [6, ["n + 2"]], [4, ["tau0"]], ["infinite", ["tau0", "k0"]], [5, ["tau0", "n"]], [5, ["tau0", "n + 2"]]], "check": "agree", "time": 0.17}
+{"name": "CRC 1, 10.10: potential hyperbolic heat equation tau0 u_x**l u_tt + u_t = k0 u_x**n u_xx", "expected": 4, "deteq_time": 0.12, "blad_time": 0.08, "status": "ok", "chains": 10, "generic": [4], "special": [[5, ["k0"]], [4, ["l + n + 2"]], ["infinite", ["l", "k0"]], [6, ["l + 2", "k0"]], [5, ["n", "l"]], [4, ["n + 2", "l"]], ["infinite", ["tau0", "l", "k0"]], ["infinite", ["tau0", "l + 2", "k0"]], [5, ["tau0", "n + 2", "l"]]], "check": "agree", "time": 0.22}
+{"name": "CRC 1, 10.11: hyperbolic heat equation u_tt + u_t = (k(u) u_x)_x", "expected": 2, "deteq_time": 0.12, "status": "unsupported", "check": "function k", "time": 0.13}
+{"name": "CRC 1, 10.11: hyperbolic heat equation u_tt + u_t = (lam (u + mu)**(-2) u_x)_x", "expected": 4, "deteq_time": 0.06, "blad_time": 0.09, "status": "ok", "chains": 2, "generic": [4], "special": [["infinite", ["lam"]]], "check": "agree", "time": 0.21}
+{"name": "CRC 1, 10.11: hyperbolic heat equation u_tt + u_t = (lam (u + mu)**(-4/3) u_x)_x", "expected": 4, "deteq_time": 0.38, "status": "unsupported", "check": "power (mu + u)**(1/3)", "time": 0.4}
+{"name": "CRC 1, 10.11: hyperbolic heat equation u_tt + u_t = (lam (u + mu)**nu u_x)_x", "expected": 3, "deteq_time": 0.26, "status": "unsupported", "check": "power (mu + u)**nu", "time": 0.28}
+{"name": "CRC 1, 10.11: hyperbolic heat equation u_tt + u_t = (lam exp(nu u) u_x)_x", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "function exp", "time": 0.15}
+{"name": "CRC 1, 10.2: nonlinear heat equation u_t = (k(u) u_x)_x", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "function k", "time": 0.14}
+{"name": "CRC 1, 10.2: nonlinear heat equation u_t = (u**sigma u_x)_x", "expected": 4, "deteq_time": 0.15, "status": "unsupported", "check": "power u**sigma", "time": 0.17}
+{"name": "CRC 1, 10.3: nonlinear filtration equation v_t = exp(n atan(v_x))/(1 + v_x**2) v_xx", "expected": 5, "deteq_time": 0.12, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [[6, ["n**2 + 4"]]], "check": "agree", "time": 0.14}
+{"name": "CRC 1, 10.3: nonlinear filtration equation v_t = k(v_x) v_xx", "expected": 4, "deteq_time": 0.1, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.11}
+{"name": "CRC 1, 10.3: nonlinear filtration equation v_t = v_x**n v_xx", "expected": 5, "deteq_time": 0.1, "blad_time": 0.0, "status": "ok", "chains": 3, "generic": [5], "special": [[6, ["n"]], [6, ["n + 2"]]], "check": "agree", "time": 0.12}
+{"name": "CRC 1, 10.4: potential filtration equation w_t = -3 w_xx**(-1/3)", "expected": 7, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.04}
+{"name": "CRC 1, 10.4: potential filtration equation w_t = 3 w_xx**(1/3)", "expected": 7, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.04}
+{"name": "CRC 1, 10.4: potential filtration equation w_t = K(w_xx)", "expected": 5, "deteq_time": 0.05, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.06}
+{"name": "CRC 1, 10.4: potential filtration equation w_t = exp(w_xx)", "expected": 6, "deteq_time": 0.05, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.06}
+{"name": "CRC 1, 10.4: potential filtration equation w_t = log(w_xx)", "expected": 6, "deteq_time": 0.09, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.1}
+{"name": "CRC 1, 10.4: potential filtration equation w_t = w_xx**sigma/sigma", "expected": 6, "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": [6], "special": [[7, ["3*sigma - 1"]], [7, ["3*sigma + 1"]], [6, ["sigma"]]], "check": "agree", "time": 0.12}
+{"name": "CRC 1, 10.5: heat equation with a source u_t = (k(u) u_x)_x + q(u)", "expected": 2, "deteq_time": 0.14, "status": "unsupported", "check": "function k", "time": 0.15}
+{"name": "CRC 1, 10.5: u_t = (exp(u) u_x)_x + a exp(m u)", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "function exp", "time": 0.14}
+{"name": "CRC 1, 10.5: u_t = (exp(u) u_x)_x + d", "expected": 4, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "CRC 1, 10.5: u_t = (u**(-4/3) u_x)_x + a u**(-1/3)", "expected": 5, "deteq_time": 0.16, "status": "unsupported", "check": "power u**(7/3)", "time": 0.17}
+{"name": "CRC 1, 10.5: u_t = (u**(-4/3) u_x)_x + a u**n", "expected": 3, "deteq_time": 0.16, "status": "unsupported", "check": "power u**(7/3)", "time": 0.17}
+{"name": "CRC 1, 10.5: u_t = (u**(-4/3) u_x)_x + d u", "expected": 5, "deteq_time": 0.15, "status": "unsupported", "check": "power u**(7/3)", "time": 0.16}
+{"name": "CRC 1, 10.5: u_t = (u**sigma u_x)_x + a u**n", "expected": 3, "deteq_time": 0.17, "status": "unsupported", "check": "power u**sigma", "time": 0.19}
+{"name": "CRC 1, 10.5: u_t = (u**sigma u_x)_x + d u", "expected": 4, "deteq_time": 0.16, "status": "unsupported", "check": "power u**sigma", "time": 0.18}
+{"name": "CRC 1, 10.7: u_t = div(exp(u) grad u) in the plane", "expected": 6, "deteq_time": 0.18, "status": "unsupported", "check": "function exp", "time": 0.2}
+{"name": "CRC 1, 10.7: u_t = div(grad u/u) in the plane", "expected": "infinite", "deteq_time": 0.05, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.08}
+{"name": "CRC 1, 10.7: u_t = div(k(u) grad u) + q(u) in the plane", "expected": 4, "deteq_time": 0.23, "status": "unsupported", "check": "function k", "time": 0.25}
+{"name": "CRC 1, 10.7: u_t = div(k(u) grad u) in the plane", "expected": 5, "deteq_time": 0.22, "status": "unsupported", "check": "function k", "time": 0.24}
+{"name": "CRC 1, 10.7: u_t = div(u**(-4/5) grad u) in space", "expected": 12, "deteq_time": 0.37, "status": "unsupported", "check": "power u**(9/5)", "time": 0.39}
+{"name": "CRC 1, 10.7: u_t = div(u**sigma grad u) in the plane", "expected": 6, "deteq_time": 0.27, "status": "unsupported", "check": "power u**sigma", "time": 0.3}
+{"name": "CRC 1, 10.8: anisotropic u_t = (exp(a1 u) u_x)_x + (exp(a2 u) u_y)_y", "expected": 5, "deteq_time": 0.21, "status": "unsupported", "check": "function exp", "time": 0.23}
+{"name": "CRC 1, 10.8: anisotropic u_t = (k1(u) u_x)_x + (k2(u) u_y)_y", "expected": 4, "deteq_time": 0.23, "status": "unsupported", "check": "function k1", "time": 0.25}
+{"name": "CRC 1, 10.8: anisotropic u_t = (u**s1 u_x)_x + (u**s2 u_y)_y", "expected": 5, "deteq_time": 0.29, "status": "unsupported", "check": "power u**s1", "time": 0.32}
+{"name": "CRC 1, 11.10: u_t + u u_x + b u_ttt = 0", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [3], "special": [["infinite", ["b"]]], "check": "agree", "time": 0.06}
+{"name": "CRC 1, 11.1: w_s = 0", "expected": "infinite", "deteq_time": 0.01, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.01}
+{"name": "CRC 1, 11.2: simplest transfer equation v_t = v v_x", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.03}
+{"name": "CRC 1, 11.3: transfer equation u_t = h(u) u_x", "expected": "infinite", "deteq_time": 0.07, "status": "unsupported", "check": "function h", "time": 0.08}
+{"name": "CRC 1, 11.6: generalized Hopf equation u_t + u u_x = (k(u) u_x)_x", "expected": 2, "deteq_time": 0.14, "status": "unsupported", "check": "function k", "time": 0.15}
+{"name": "CRC 1, 11.6: generalized Hopf equation u_t + u u_x = (u**(2 m) u_x)_x", "expected": 3, "deteq_time": 0.18, "status": "unsupported", "check": "power u**(2*m)", "time": 0.2}
+{"name": "CRC 1, 11.8: cylindrical Burgers u_t + u/(2t) + u u_x - mu u_xx = 0", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [3], "special": [["infinite", ["mu"]]], "check": "agree", "time": 0.05}
+{"name": "CRC 1, 11.8: linearized KdV u_t + j u/(2t) + b u_xxx = 0", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["b"]]], "check": "agree", "time": 0.06}
+{"name": "CRC 1, 11.8: spherical Burgers u_t + u/t + u u_x - mu u_xx = 0", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [3], "special": [["infinite", ["mu"]]], "check": "agree", "time": 0.05}
+{"name": "CRC 1, 11.8: u_t + g u u_x - mu u_xx + b u_xxx = 0", "expected": 3, "deteq_time": 0.04, "blad_time": 0.02, "status": "ok", "chains": 4, "generic": [3], "special": [["infinite", ["b"]], ["infinite", ["g"]], [4, ["mu"]]], "check": "agree", "time": 0.08}
+{"name": "CRC 1, 11.8: u_t + g u**m u_x - mu u_xx + b u_xxx = 0", "expected": 2, "deteq_time": 0.18, "status": "unsupported", "check": "power u**m", "time": 0.2}
+{"name": "CRC 1, 11.8: u_t + g u_x - mu u_xx + b u_xxx = 0", "expected": "infinite", "deteq_time": 0.04, "blad_time": 0.02, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["b"]]], "check": "agree", "time": 0.07}
+{"name": "CRC 1, 12.1: wave equation u_tt = u_xx", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "CRC 1, 12.2: u_tt = (A x + B)**(2 C) u_xx", "expected": "infinite", "deteq_time": 0.17, "status": "unsupported", "check": "power (A*x + B)**(2*C)", "time": 0.18}
+{"name": "CRC 1, 12.2: u_tt = (A x + B)**2 u_xx", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.03, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["A"]], ["infinite", ["B", "A"]]], "check": "agree", "time": 0.08}
+{"name": "CRC 1, 12.2: u_tt = A**2 exp(2 B x) u_xx", "expected": "infinite", "deteq_time": 0.11, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "CRC 1, 12.2: u_tt = c(x)**2 u_xx", "expected": "infinite", "deteq_time": 0.09, "status": "unsupported", "check": "function c", "time": 0.11}
+{"name": "CRC 1, 12.3: z_xy = F(z)", "expected": 3, "deteq_time": 0.05, "status": "unsupported", "check": "function F", "time": 0.06}
+{"name": "CRC 1, 12.3: z_xy = z", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "CRC 1, 12.3: z_xy = z**(1 - s)", "expected": 4, "deteq_time": 0.11, "status": "unsupported", "check": "power z**(1 - s)", "time": 0.12}
+{"name": "CRC 1, 12.4: nonlinear wave equation u_tt = (exp(u) u_x)_x", "expected": 4, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "CRC 1, 12.4: nonlinear wave equation u_tt = (k u**(-4) u_x)_x", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["k"]]], "check": "agree", "time": 0.06}
+{"name": "CRC 1, 12.4: nonlinear wave equation u_tt = (k u**(-4/3) u_x)_x", "expected": 5, "deteq_time": 0.16, "status": "unsupported", "check": "power u**(4/3)", "time": 0.17}
+{"name": "CRC 1, 12.4: nonlinear wave equation u_tt = (k u**sigma u_x)_x", "expected": 4, "deteq_time": 0.16, "status": "unsupported", "check": "power u**sigma", "time": 0.17}
+{"name": "CRC 1, 12.4: nonlinear wave equation u_tt = (phi(u) u_x)_x", "expected": 3, "deteq_time": 0.11, "status": "unsupported", "check": "function phi", "time": 0.13}
+{"name": "CRC 1, 12.4: v_tt = k exp(v_x) v_xx", "expected": 6, "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [6], "special": [["infinite", ["k"]]], "check": "agree", "time": 0.13}
+{"name": "CRC 1, 12.4: v_tt = k v_x**(-4) v_xx", "expected": 7, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [7], "special": [["infinite", ["k"]]], "check": "agree", "time": 0.05}
+{"name": "CRC 1, 12.4: v_tt = k v_x**m v_xx", "expected": 6, "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 5, "generic": [6], "special": [["infinite", ["k"]], [8, ["m"]], [7, ["m + 4"]], [6, ["m + 2"]]], "check": "agree", "time": 0.13}
+{"name": "CRC 1, 12.4: v_tt = phi(v_x) v_xx", "expected": 5, "deteq_time": 0.1, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.11}
+{"name": "CRC 1, 12.4: w_tt = F(w_xx)", "expected": 7, "deteq_time": 0.06, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.07}
+{"name": "CRC 1, 12.4: w_tt = k exp(w_xx)", "expected": 8, "deteq_time": 0.11, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [8], "special": [["infinite", ["k"]]], "check": "agree", "time": 0.13}
+{"name": "CRC 1, 12.4: w_tt = k log(w_xx)", "expected": 8, "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [8], "special": [["infinite", ["k"]]], "check": "agree", "time": 0.12}
+{"name": "CRC 1, 12.4: w_tt = k w_xx**(-1/3)", "expected": 9, "deteq_time": 0.17, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [9], "special": [["infinite", ["k"]]], "check": "agree", "time": 0.19}
+{"name": "CRC 1, 12.4: w_tt = k w_xx**(-3)", "expected": 9, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [9], "special": [["infinite", ["k"]]], "check": "agree", "time": 0.05}
+{"name": "CRC 1, 12.4: w_tt = k w_xx**m", "expected": 8, "deteq_time": 0.1, "blad_time": 0.02, "status": "ok", "chains": 5, "generic": [8], "special": [["infinite", ["k"]], [9, ["m + 3"]], [9, ["3*m + 1"]], ["infinite", ["m"]]], "check": "agree", "time": 0.13}
+{"name": "Chazy equation", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.05}
+{"name": "Cherniha, King, Kovalenko 10: u_t = u_x**k u_xx + e2 u", "expected": 5, "deteq_time": 0.11, "blad_time": 0.02, "status": "ok", "chains": 5, "generic": [5], "special": [[5, ["e2"]], [6, ["k"]], [6, ["k + 2"]], [6, ["k", "e2"]]], "check": "agree", "time": 0.15}
+{"name": "Cherniha, King, Kovalenko 3: u_t = u_x**k u_xx + e1 exp(-u)", "expected": 3, "deteq_time": 0.15, "status": "unsupported", "check": "function exp", "time": 0.16}
+{"name": "Cherniha, King, Kovalenko 4: u_t = u_x**k u_xx + e1 u**m", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "power u**m", "time": 0.14}
+{"name": "Cherniha, King, Kovalenko 5: u_t = u_x**k u_xx + e1 u**(k + 1) + e2 u", "expected": 3, "deteq_time": 0.15, "status": "unsupported", "check": "power u**(k + 1)", "time": 0.17}
+{"name": "EqWorld 1.1.1: w_t = w_xx + a w (1 - w). Fisher equation", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [2], "special": [["infinite", ["a"]]], "check": "agree", "time": 0.05}
+{"name": "EqWorld 1.1.2: w_t = w_xx + a w - b w**3. Newell-Whitehead equation", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [2], "special": [[3, ["a"]], ["infinite", ["b"]]], "check": "agree", "time": 0.05}
+{"name": "EqWorld 1.1.3: w_t = w_xx - w (1 - w)(a - w). FitzHugh-Nagumo equation", "expected": 2, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.06}
+{"name": "EqWorld 1.1.4: w_t = w_xx + a w + b w**m", "expected": 2, "deteq_time": 0.11, "status": "unsupported", "check": "power w**m", "time": 0.12}
+{"name": "EqWorld 1.1.5: w_t = w_xx + a + b exp(lam w)", "expected": 2, "deteq_time": 0.11, "status": "unsupported", "check": "function exp", "time": 0.12}
+{"name": "EqWorld 1.1.6: w_t = w_xx + a w ln w", "expected": 4, "deteq_time": 0.1, "status": "unsupported", "check": "function log", "time": 0.11}
+{"name": "EqWorld 1.2.10: w_t = [f(w) w_x]_x + g(w). Nonlinear heat equation with a source of general form", "expected": 2, "deteq_time": 0.14, "status": "unsupported", "check": "function f", "time": 0.15}
+{"name": "EqWorld 1.2.1: w_t = a (w**m w_x)_x. Heat equation with a power-law nonlinearity", "expected": 4, "deteq_time": 0.16, "status": "unsupported", "check": "power w**m", "time": 0.17}
+{"name": "EqWorld 1.2.2: w_t = a (w**m w_x)_x + b w", "expected": 4, "deteq_time": 0.18, "status": "unsupported", "check": "power w**m", "time": 0.19}
+{"name": "EqWorld 1.2.3: w_t = a (w**m w_x)_x + b w**(m + 1)", "expected": 3, "deteq_time": 0.18, "status": "unsupported", "check": "power w**m", "time": 0.2}
+{"name": "EqWorld 1.2.4: w_t = a (w**m w_x)_x + b w**(1 - m)", "expected": 3, "deteq_time": 0.18, "status": "unsupported", "check": "power w**m", "time": 0.2}
+{"name": "EqWorld 1.2.5: w_t = a (w**(2n) w_x)_x + b w**(1 - n)", "expected": 3, "deteq_time": 0.19, "status": "unsupported", "check": "power w**(2*n)", "time": 0.21}
+{"name": "EqWorld 1.2.6: w_t = a (w**n w_x)_x + b w + c1 w**m + c2 w**k", "expected": 2, "deteq_time": 0.2, "status": "unsupported", "check": "power w**n", "time": 0.22}
+{"name": "EqWorld 1.2.7: w_t = a (exp(lam w) w_x)_x. Heat equation with a exponential nonlinearity", "expected": 4, "deteq_time": 0.13, "status": "unsupported", "check": "function exp", "time": 0.14}
+{"name": "EqWorld 1.2.8: w_t = a (exp(lam w) w_x)_x + b + c1 exp(be w) + c2 exp(sig w)", "expected": 2, "deteq_time": 0.16, "status": "unsupported", "check": "function exp", "time": 0.17}
+{"name": "EqWorld 1.2.9: w_t = [f(w) w_x]_x. Nonlinear heat equation of general form", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "function f", "time": 0.14}
+{"name": "EqWorld 1.3.2: w_t + sig w w_x = a w_xx + b0 + b1 w + b2 w**2 + b3 w**3", "expected": 2, "deteq_time": 0.03, "blad_time": 0.12, "status": "ok", "chains": 7, "generic": [2], "special": [["infinite", ["a"]], [3, ["3*b1*b3 - b2**2", "27*b0*b3**2 - b2**3"]], [3, ["b3", "b2"]], [5, ["b3", "b2", "b1"]], [3, ["sig", "b3", "4*b0*b2 - b1**2"]], ["infinite", ["sig", "b3", "b2"]]], "check": "agree", "time": 0.18}
+{"name": "EqWorld 1.3.3: w_t = x**(-n)[x**n f(w) w_x]_x + g(w)", "expected": 1, "deteq_time": 0.18, "status": "unsupported", "check": "function f", "time": 0.2}
+{"name": "EqWorld 1.3.4: w_t = [f(w)(w_x)**n]_x + g(w)", "expected": 2, "deteq_time": 0.18, "status": "unsupported", "check": "function f", "time": 0.19}
+{"name": "EqWorld 2.1.1: w_tt = a w_xx + a w + b w**n. Klein-Gordon equation with a power-law nonlinearity", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "power w**n", "time": 0.14}
+{"name": "EqWorld 2.1.2: w_tt = w_xx + a w**n + b w**(2n - 1). Klein-Gordon equation with a power-law nonlinearity", "expected": 3, "deteq_time": 0.14, "status": "unsupported", "check": "power w**(2*n - 1)", "time": 0.15}
+{"name": "EqWorld 2.1.3: w_tt = a**2 w_xx + b exp(be w). Modified Liouville equation", "expected": "infinite", "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "EqWorld 2.1.4: w_tt = w_xx + a exp(be w) + b exp(2 be w). Klein-Gordon equation with a exponential nonlinearity", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "function exp", "time": 0.14}
+{"name": "EqWorld 2.1.5: w_tt = a w_xx + b sinh(lam w). Sinh-Gordon equation", "expected": 3, "deteq_time": 0.14, "status": "unsupported", "check": "function sinh", "time": 0.15}
+{"name": "EqWorld 2.1.6: w_tt = a w_xx + b sin(lam w). Sine-Gordon equation", "expected": 3, "deteq_time": 0.12, "status": "unsupported", "check": "function sin", "time": 0.13}
+{"name": "EqWorld 2.1.7: w_tt = w_xx + f(w). Nonlinear Klein-Gordon equation", "expected": 3, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.11}
+{"name": "EqWorld 2.2.1: w_tt = a (w w_x)_x", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [4], "special": [["infinite", ["a"]]], "check": "agree", "time": 0.06}
+{"name": "EqWorld 2.2.2: w_tt = a (w**n w_x)_x + b w**k", "expected": 3, "deteq_time": 0.17, "status": "unsupported", "check": "power w**n", "time": 0.18}
+{"name": "EqWorld 2.2.3: w_tt = a (exp(lam w) w_x)_x", "expected": 4, "deteq_time": 0.14, "status": "unsupported", "check": "function exp", "time": 0.15}
+{"name": "EqWorld 2.2.4: w_tt = a x**(-n)(x**n w_x)_x + f(w)", "expected": 1, "deteq_time": 0.14, "status": "unsupported", "check": "function f", "time": 0.16}
+{"name": "EqWorld 2.2.5: w_tt = [a (x + b)**n w_x]_x + f(w)", "expected": 1, "deteq_time": 0.26, "status": "unsupported", "check": "power (b + x)**n", "time": 0.28}
+{"name": "EqWorld 2.2.6: w_tt = a (exp(lam x) w_x)_x + f(w)", "expected": 1, "deteq_time": 0.13, "status": "unsupported", "check": "function exp", "time": 0.15}
+{"name": "EqWorld 2.2.7: w_tt = [f(w) w_x]_x", "expected": 3, "deteq_time": 0.11, "status": "unsupported", "check": "function f", "time": 0.13}
+{"name": "EqWorld 3.1.1: w_xx + w_yy = a w + b w**n", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "power w**n", "time": 0.15}
+{"name": "EqWorld 3.1.2: w_xx + w_yy = a w**n + b w**(2n - 1)", "expected": 3, "deteq_time": 0.14, "status": "unsupported", "check": "power w**(2*n - 1)", "time": 0.15}
+{"name": "EqWorld 3.1.3: w_xx + w_yy = a exp(be w)", "expected": "infinite", "deteq_time": 0.11, "status": "unsupported", "check": "function exp", "time": 0.12}
+{"name": "EqWorld 3.1.4: w_xx + w_yy = a exp(be w) + b exp(2 be w)", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "function exp", "time": 0.14}
+{"name": "EqWorld 3.1.5: w_xx + w_yy = a w ln(be w)", "expected": 3, "deteq_time": 0.11, "status": "unsupported", "check": "function log", "time": 0.13}
+{"name": "EqWorld 3.1.6: w_xx + w_yy = a sin(be w)", "expected": 3, "deteq_time": 0.12, "status": "unsupported", "check": "function sin", "time": 0.13}
+{"name": "EqWorld 3.1.7: w_xx + w_yy = f(w)", "expected": 3, "deteq_time": 0.1, "status": "unsupported", "check": "function f", "time": 0.11}
+{"name": "EqWorld 3.2.2: a w_xx + (b exp(mu y) w_y)_y = f(w). Anisotropic heat (diffusion) equation", "expected": 1, "deteq_time": 0.14, "status": "unsupported", "check": "function exp", "time": 0.16}
+{"name": "EqWorld 3.3.1: w_xx + [(al w + be) w_y]_y = 0. Stationary Khokhlov-Zabolotskaya equation", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 3, "generic": [4], "special": [["infinite", ["al"]], ["infinite", ["be", "al"]]], "check": "agree", "time": 0.07}
+{"name": "EqWorld 3.3.2: w_xx + (a exp(be w) w_y)_y = 0. Anisotropic heat (diffusion) equation", "expected": 4, "deteq_time": 0.14, "status": "unsupported", "check": "function exp", "time": 0.15}
+{"name": "EqWorld 3.3.3: [f(w) w_x]_x + [g(w) w_y]_y = 0. Anisotropic heat (diffusion) equation", "expected": 3, "deteq_time": 0.17, "status": "unsupported", "check": "function f", "time": 0.19}
+{"name": "EqWorld 4.1.1: a w_x w_xx + w_yy = 0. Equation of steady transonic gas flow", "expected": 6, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [6], "special": [["infinite", ["a"]]], "check": "agree", "time": 0.05}
+{"name": "EqWorld 4.1.2: w_yy + a y**(-1) w_y + b w_x w_xx = 0. Equation of steady transonic gas flow", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": [5], "special": [[6, ["3*a - 5"]], [6, ["a"]], ["infinite", ["b"]]], "check": "agree", "time": 0.06}
+{"name": "EqWorld 4.2.1: (w_xy)**2 - w_xx w_yy = 0. Homogeneous Monge-Ampere equation", "expected": 15, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [15], "special": [], "check": "agree", "time": 0.05}
+{"name": "EqWorld 4.2.2: (w_xy)**2 - w_xx w_yy = A. Nonhomogeneous Monge-Ampere equation", "expected": 9, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [9], "special": [[15, ["A"]]], "check": "agree", "time": 0.06}
+{"name": "EqWorld 5.1.1: w_t + w_xxx - 6 w w_x = 0. Korteweg-de Vries equation", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.05}
+{"name": "EqWorld 5.1.2: w_t + w_xxx - 6 w w_x + (2 t)**(-1) w = 0. Cylindrical Korteweg-de Vries equation", "expected": 4, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.07}
+{"name": "EqWorld 5.1.3: w_t + w_xxx + 6 sig w**2 w_x = 0. Modified Korteweg-de Vries equation", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [3], "special": [["infinite", ["sig"]]], "check": "agree", "time": 0.06}
+{"name": "EqWorld 5.1.4: w_t + w_xxx + f(w) w_x = 0. Generalized Korteweg-de Vries equation", "expected": 2, "deteq_time": 0.14, "status": "unsupported", "check": "function f", "time": 0.15}
+{"name": "EqWorld 5.1.5: w_y w_xy - w_x w_yy = a w_yyy. Hydrodynamic boundary layer equation", "expected": "infinite", "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["a"]]], "check": "agree", "time": 0.07}
+{"name": "EqWorld 5.1.6: w_y w_xy - w_x w_yy = a w_yyy + f(x). Boundary layer equation with pressure gradient", "expected": "infinite", "deteq_time": 0.17, "status": "unsupported", "check": "function f", "time": 0.19}
+{"name": "EqWorld 6.1.1: w_tt + (w w_x)_x + w_xxxx = 0. Boussinesq equation", "expected": 3, "deteq_time": 0.05, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.09}
+{"name": "EqWorld 6.1.2: w_y (Laplace w)_x - w_x (Laplace w)_y = a Laplace Laplace w. Equation of motion of viscous fluid; it is obtained from the Navier-Stokes equations", "expected": 5, "deteq_time": 0.1, "blad_time": 0.1, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["a"]]], "check": "agree", "time": 0.3}
+{"name": "EqWorld ODE 3.10: y'' = f(x**n y**m) y/x**2", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "function f", "time": 0.11}
+{"name": "EqWorld ODE 3.12: y'' = f(y exp(a x)) exp(-a x)", "expected": 1, "deteq_time": 0.11, "status": "unsupported", "check": "function f", "time": 0.12}
+{"name": "EqWorld ODE 3.13: y'' = f(y**m exp(a x)) y", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.14: y'' = f(x**n exp(a y))/x**2", "expected": 1, "deteq_time": 0.11, "status": "unsupported", "check": "function exp", "time": 0.12}
+{"name": "EqWorld ODE 3.15: y'' = (f(y/psi(x))/psi(x)**2 + y psi''(x))/psi(x)", "expected": 1, "deteq_time": 0.11, "status": "unsupported", "check": "function f", "time": 0.13}
+{"name": "EqWorld ODE 3.16: y'' = f(y) + y'", "expected": 1, "deteq_time": 0.07, "status": "unsupported", "check": "function f", "time": 0.08}
+{"name": "EqWorld ODE 3.17: y'' = -f(y) y' - g(y)", "expected": 1, "deteq_time": 0.08, "status": "unsupported", "check": "function f", "time": 0.08}
+{"name": "EqWorld ODE 3.18: y'' = -(a y + f(x)) y' - y f'(x)", "expected": 0, "deteq_time": 0.08, "status": "unsupported", "check": "function f", "time": 0.09}
+{"name": "EqWorld ODE 3.19: y'' = -a f(x) y**2 - (2 a y + f(x)) y' + g(x)", "expected": 0, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.1: y'' = f(y)", "expected": 1, "deteq_time": 0.03, "status": "unsupported", "check": "function f", "time": 0.04}
+{"name": "EqWorld ODE 3.20: y'' = a y' + f(y) exp(2 a x)", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.21: y'' = f(y) y'", "expected": 1, "deteq_time": 0.07, "status": "unsupported", "check": "function f", "time": 0.08}
+{"name": "EqWorld ODE 3.22: y'' = (al + f(y) exp(al x)) y'", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.23: x y'' = n y' + x**(2 n + 1) f(y)", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "function f", "time": 0.11}
+{"name": "EqWorld ODE 3.24: x y'' = f(y) y'", "expected": 1, "deteq_time": 0.08, "status": "unsupported", "check": "function f", "time": 0.09}
+{"name": "EqWorld ODE 3.25: x y'' = (k + x**k f(y) - 1) y'", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "function f", "time": 0.11}
+{"name": "EqWorld ODE 3.26: x**2 y'' = -x y' + f(y)", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.27: (a x**2 + b) y'' = -a x y' - f(y)", "expected": 1, "deteq_time": 0.12, "status": "unsupported", "check": "function f", "time": 0.13}
+{"name": "EqWorld ODE 3.28: y'' = f(y) y' + g(x)", "expected": 0, "deteq_time": 0.07, "status": "unsupported", "check": "function f", "time": 0.08}
+{"name": "EqWorld ODE 3.29: x y'' = x**(n - 1) f(x**n y) - (n + 1) y'", "expected": 1, "deteq_time": 0.11, "status": "unsupported", "check": "function f", "time": 0.12}
+{"name": "EqWorld ODE 3.2: y'' = A x**n y**m", "expected": 1, "deteq_time": 0.08, "status": "unsupported", "check": "power x**n", "time": 0.09}
+{"name": "EqWorld ODE 3.30: g(x) y'' = f(y) - g'(x) y'/2", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "function g", "time": 0.12}
+{"name": "EqWorld ODE 3.31: y'' = -a y' + f(y exp(a x)) exp(a x)", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "function f", "time": 0.11}
+{"name": "EqWorld ODE 3.32: x y'' = f(x**n exp(a y)) y'", "expected": 1, "deteq_time": 0.11, "status": "unsupported", "check": "function exp", "time": 0.12}
+{"name": "EqWorld ODE 3.33: x**2 y'' = -x y' + f(x**n exp(a y))", "expected": 1, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "EqWorld ODE 3.34: y y'' = -f(x) y y' - g(x) - y'**2", "expected": 8, "deteq_time": 0.11, "status": "unsupported", "check": "function f", "time": 0.12}
+{"name": "EqWorld ODE 3.35: y y'' = -f(x) y y' - g(x) y**2 + y'**2", "expected": 8, "deteq_time": 0.11, "status": "unsupported", "check": "function f", "time": 0.12}
+{"name": "EqWorld ODE 3.36: y y'' = n y'**2 - (a y**(4 n - 2) + f(x) y**2)", "expected": 3, "deteq_time": 0.11, "status": "unsupported", "check": "function f", "time": 0.12}
+{"name": "EqWorld ODE 3.37: y y'' = n y'**2 - (f(x) y**2 + g(x) y**(n + 1))", "expected": 8, "deteq_time": 0.11, "status": "unsupported", "check": "function g", "time": 0.12}
+{"name": "EqWorld ODE 3.38: y y'' = -a y'**2 - f(x) y y' - g(x) y**2", "expected": 8, "deteq_time": 0.11, "status": "unsupported", "check": "function f", "time": 0.12}
+{"name": "EqWorld ODE 3.39: y y'' = f(x) y'**2", "expected": 1, "deteq_time": 0.08, "status": "unsupported", "check": "function f", "time": 0.09}
+{"name": "EqWorld ODE 3.3: y'' = a/y**3 - f(x) y", "expected": 3, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.40: y'' = a y'**2 - (f(x) exp(a y) + g(x))", "expected": 8, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.41: y'' = a y'**2 - (b exp(4 a y) + f(x))", "expected": 3, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.42: y'' = -a y'**2 + f(y) exp(x) + y'/2", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "function exp", "time": 0.11}
+{"name": "EqWorld ODE 3.43: y'' = -al y'**2 + (be + f(y) exp(be x)) y'", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "function exp", "time": 0.11}
+{"name": "EqWorld ODE 3.44: y'' = -f(y) y'**2 - g(y)", "expected": 1, "deteq_time": 0.08, "status": "unsupported", "check": "function f", "time": 0.09}
+{"name": "EqWorld ODE 3.45: y'' = -f(y) y'**2 + g(y) exp(x) + y'/2", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "function f", "time": 0.12}
+{"name": "EqWorld ODE 3.46: y'' = x f(y) y'**3", "expected": 8, "deteq_time": 0.07, "status": "unsupported", "check": "function f", "time": 0.08}
+{"name": "EqWorld ODE 3.47: y'' = f(y) y'**2 + g(x) y'", "expected": 8, "deteq_time": 0.08, "status": "unsupported", "check": "function f", "time": 0.09}
+{"name": "EqWorld ODE 3.48: y'' = f(x) g(x y' - y)", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.49: y'' = f(x y'/y) y/x**2", "expected": 2, "deteq_time": 0.1, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.11}
+{"name": "EqWorld ODE 3.4: y'' = f(a y + b x + c)", "expected": 1, "deteq_time": 0.08, "status": "unsupported", "check": "function f", "time": 0.09}
+{"name": "EqWorld ODE 3.50: g(x) y'' = f(y) h(sqrt(g(x)) y') - g'(x) y'/2", "expected": 1, "deteq_time": 0.12, "status": "unsupported", "check": "function f", "time": 0.13}
+{"name": "EqWorld ODE 3.51: y'' = f(a y + y'**2)", "expected": 1, "deteq_time": 0.08, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": [1], "special": [[2, ["a"]]], "check": "agree", "time": 0.09}
+{"name": "EqWorld ODE 3.5: y'' = f(a x**2 + b x + c + y)", "expected": 1, "deteq_time": 0.08, "status": "unsupported", "check": "function f", "time": 0.09}
+{"name": "EqWorld ODE 3.6: y'' = f(y/x)/x", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.7: y'' = f(y/x)/x**3", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.8: y'' = f(y/sqrt(x))/x**(3/2)", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "function f", "time": 0.1}
+{"name": "EqWorld ODE 3.9: y'' = x**(k - 2) f(y/x**k)", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "function f", "time": 0.11}
+{"name": "EqWorld ODE 5.1: y''' = A x**al y**be", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "power x**al", "time": 0.11}
+{"name": "Ermakov-Pinney equation", "expected": 3, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.03}
+{"name": "Fornberg-Whitham equation: u_t - u_xxt + u_x + u u_x = u u_xxx + 3 u_x u_xx", "expected": 3, "deteq_time": 0.05, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.1}
+{"name": "Gabel et al. 10: u_t = (exp(u) u_x)_x - exp(u)", "expected": 3, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "Gabel et al. 11: u_t = (exp(u) u_x)_x - exp(2u)", "expected": 3, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "Gabel et al. 12: u_t = (exp(u) u_x)_x + 1", "expected": 4, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "Gabel et al. 13: u_t = (exp(u) u_x)_x - 1", "expected": 4, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "Gabel et al. 14: u_t = u_xx - exp(u)", "expected": 3, "deteq_time": 0.09, "status": "unsupported", "check": "function exp", "time": 0.11}
+{"name": "Gabel et al. 15: u_t = u_xx + 1/u", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 17: u_t = u_xx - u**2", "expected": 3, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 18: u_t = u_xx + u", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 19: u_t = u_xx - u", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 1: u_t = 1/10 u_xx", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 20: u_t = u_xx + 1", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 21: u_t = u_xx - 1", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 22: u_t = u u_x + u_xx", "expected": 5, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 23: u_t = u_xx + u_x**2", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 24: u_t = (exp(u) u_x)_x - u u_x", "expected": 3, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "Gabel et al. 25: u_t = u u_x + u_txx", "expected": 3, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "Gabel et al. 2: u_t = u_xx", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 3: u_t = 10 u_xx", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Gabel et al. 4: u_t = (exp(u) u_x)_x", "expected": 4, "deteq_time": 0.11, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "Gabel et al. 5: u_t = exp(u_x) u_xx", "expected": 5, "deteq_time": 0.1, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.11}
+{"name": "Gabel et al. 6: u_t = exp(3 atan(u_x)) u_xx / (u_x**2 + 1)", "expected": 5, "deteq_time": 0.12, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.14}
+{"name": "Gabel et al. 7: u_t = atan(u_xx)", "expected": 5, "deteq_time": 0.15, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.17}
+{"name": "Gabel et al. 8: u_t = (exp(u) u_x)_x + exp(-2u)", "expected": 3, "deteq_time": 0.17, "status": "unsupported", "check": "function exp", "time": 0.18}
+{"name": "Gabel et al. 9: u_t = (exp(u) u_x)_x + exp(-u)", "expected": 3, "deteq_time": 0.15, "status": "unsupported", "check": "function exp", "time": 0.17}
+{"name": "Gungor, Lahno, Zhdanov (4.11): u_t = u_xxx - 3/2 u_xx**2/u_x + lam u_x/x**2", "expected": 5, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [[6, ["lam"]]], "check": "agree", "time": 0.06}
+{"name": "Harry Dym equation", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.06}
+{"name": "Hashemi, Baleanu 1.1.4: u_t + a1 u u_x - a2 u_xx + a3 u_xxx + a4 u_xxxx = 0", "expected": 3, "deteq_time": 0.06, "blad_time": 0.04, "status": "ok", "chains": 5, "generic": [3], "special": [["infinite", ["a1"]], ["infinite", ["8*a2*a4 + 3*a3**2", "a1"]], [4, ["a3", "a2"]], ["infinite", ["a4"]]], "check": "agree", "time": 0.13}
+{"name": "Huxley equation u_t = u_xx + 2u**2 (1 - u)", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Hydon Example 11.1: y'' = tan(y')", "expected": 2, "deteq_time": 0.05, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.07}
+{"name": "Hydon Example 11.4: y''' = y''**2/x - y''/y'", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Hydon Example 11.5: Chazy y''' = 2 y y'' - 3 y'**2 + lam (6 y' - y**2)**2", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "Hydon Example 2.10: Riccati y' = x y**2 - 2 y/x - 1/x**3", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Example 2.11: y' = (y + 1)/x + y**2/x**3", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Example 2.12: y' = (y - 4 x y**2 - 16 x**3)/(y**3 + 4 x**2 y + x)", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.08}
+{"name": "Hydon Example 2.13: y' = (1 - y**2)/(x y) + 1", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Example 2.17: y' = (y**3 + y - 3 x**2 y)/(3 x y**2 + x - x**3)", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.07}
+{"name": "Hydon Example 3.3", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Example 3.4: y''' = y**(-3)", "expected": 2, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Example 4.1", "expected": 8, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Example 4.2: y'' = y'**2/y + (y - 1/y) y'", "expected": 1, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.05}
+{"name": "Hydon Example 4.5: y'' = y'/x + 3 y**2/(2 x**3)", "expected": 1, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.05}
+{"name": "Hydon Example 5.2: y'''' = 2 (1 - y') y'''/y", "expected": 3, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.08}
+{"name": "Hydon Example 5.8: y'''' = y'''**(4/3)", "expected": 5, "deteq_time": 0.17, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.2}
+{"name": "Hydon Example 6.2: y''' = y''**2/(y' (1 + y'))", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "Hydon Example 6.4: y'' = y'**3/(y'**3 - 2)", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Example 6.5: y''' = 2 y''**2/y' + y''/x + y'**2/x", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Hydon Example 7.2: y''' = (3 y' - 1) y''**2/y'**2", "expected": 4, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Example 7.5: y'''' = (y''' + y'''**2)/y''", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.06}
+{"name": "Hydon Example 7.7: y''' = 3 y y'", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Example 7.8: y1' = (x y1 + y2**2)/(y1 y2 - x**2), y2' = (x y2 + y1**2)/(y1 y2 - x**2)", "expected": "infinite", "deteq_time": 0.15, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.19}
+{"name": "Hydon Example 8.4: Thomas equation u_xt = u_x u_t - 1", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Exercise 11.1: y'' = y'/x + 4 y**2/x**3", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Exercise 2.3: y' = 2 y/x", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.03}
+{"name": "Hydon Exercise 2.5: y' = 3 y/x + x**5/(2 y + x**3)", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.05}
+{"name": "Hydon Exercise 2.6: y' = exp(-x) y**2 + y + exp(x)", "expected": "infinite", "deteq_time": 0.09, "status": "unsupported", "check": "function exp", "time": 0.1}
+{"name": "Hydon Exercise 2.7: y' = (y + y**3)/(x + (x + 1) y**2)", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.06}
+{"name": "Hydon Exercise 3.4: y'' = y'**4 + a y'**2", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": [2], "special": [[3, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Hydon Exercise 3.5: y''' = 7 y' - 6 y", "expected": 5, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Exercise 4.5: y' = y**3/((x + 1) y**2 - x**2)", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.05}
+{"name": "Hydon Exercise 4.8: Poisson-Boltzmann y'' = -k y'/x - d exp(y)", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "function exp", "time": 0.11}
+{"name": "Hydon Exercise 6.1: y'' = y' (1 - y')/y", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Exercise 6.2: y'' = y y'/x**3 - y**2/x**4", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Exercise 6.5: y'' = y'**2/y - y**2/(x**3 y')", "expected": 2, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Exercise 6.6: y''' = 3 y''**2/(2 y') + (y**2/2 + 1) y'**3", "expected": 6, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.04}
+{"name": "Hydon Exercise 8.2: u_t = u_x**3", "expected": 5, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.03}
+{"name": "Kahlmeyer et al. example1 (independent): y' = (y1*log(t), y0*log(t))", "expected": "infinite", "deteq_time": 0.08, "status": "unsupported", "check": "function log", "time": 0.1}
+{"name": "Kahlmeyer et al. example10: y' = (t*log(y1), t*y0**2)", "expected": "infinite", "deteq_time": 0.09, "status": "unsupported", "check": "function log", "time": 0.1}
+{"name": "Kahlmeyer et al. example1: y' = (y0*(t + y1/y0)**2, t**2*y0)", "expected": "infinite", "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.13}
+{"name": "Kahlmeyer et al. example2 (independent): y' = (t*sqrt(y0), t*y0*y1)", "expected": "infinite", "deteq_time": 0.09, "status": "unsupported", "check": "power sqrt(y0)", "time": 0.1}
+{"name": "Kahlmeyer et al. example2: y' = (y0**2*y1*exp(1/y0), t*exp(-1/y0))", "expected": "infinite", "deteq_time": 0.11, "status": "unsupported", "check": "function exp", "time": 0.12}
+{"name": "Kahlmeyer et al. example3: y' = (t*y0*(y1 - log(y0)), t + y1 - log(y0))", "expected": "infinite", "deteq_time": 0.11, "status": "unsupported", "check": "function log", "time": 0.13}
+{"name": "Kahlmeyer et al. example4: y' = ((2*y0 + y1*exp(-y0/t**2))/t, y1)", "expected": "infinite", "deteq_time": 0.14, "status": "unsupported", "check": "function exp", "time": 0.15}
+{"name": "Kahlmeyer et al. example5: y' = (y0*(t - log(y0)*tan(t)), -y1*log(y0)*tan(t) + y1)", "expected": "infinite", "deteq_time": 0.13, "status": "unsupported", "check": "function tan", "time": 0.15}
+{"name": "Kahlmeyer et al. example6: y' = (y0*(t*y1/y0 + 2*log(y0)/t), 2*y1*log(y0)/t)", "expected": "infinite", "deteq_time": 0.11, "status": "unsupported", "check": "function log", "time": 0.12}
+{"name": "Kahlmeyer et al. example7: y' = (y1*exp(-y0**2/(2*t**2))/y0 + y0/(2*t), -y0**2*y1/(2*t**3))", "expected": "infinite", "deteq_time": 0.18, "status": "unsupported", "check": "function exp", "time": 0.19}
+{"name": "Kahlmeyer et al. example8: y' = (exp(-t)*sin(y1), exp(-t)*sin(y0))", "expected": "infinite", "deteq_time": 0.1, "status": "unsupported", "check": "function sin", "time": 0.11}
+{"name": "Kahlmeyer et al. example9: y' = (t*y1*sin(y0), t*sin(y0))", "expected": "infinite", "deteq_time": 0.09, "status": "unsupported", "check": "function cos", "time": 0.1}
+{"name": "Kamke 1.518", "expected": 3, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 1.520", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.03}
+{"name": "Kamke 1.521", "expected": 3, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 1.522", "expected": 3, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 1.523", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [1], "special": [[3, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 1.524", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.03}
+{"name": "Kamke 1.526", "expected": 0, "deteq_time": 0.03, "blad_time": 0.15, "status": "ok", "chains": 1, "generic": [0], "special": [], "check": "agree", "time": 0.19}
+{"name": "Kamke 1.527", "expected": 3, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 1.528", "expected": 1, "deteq_time": 0.02, "blad_time": 1.29, "status": "ok", "chains": 4, "generic": [1], "special": [[3, ["a"]], ["infinite", ["b"]], ["infinite", ["b", "a"]]], "check": "agree", "time": 1.32}
+{"name": "Kamke 1.529", "expected": 0, "deteq_time": 0.02, "blad_time": 0.08, "status": "ok", "chains": 1, "generic": [0], "special": [], "check": "agree", "time": 0.11}
+{"name": "Kamke 1.530", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.03}
+{"name": "Kamke 1.532", "expected": 1, "deteq_time": 0.03, "blad_time": 2.64, "status": "ok", "chains": 3, "generic": [1], "special": [["infinite", ["a"]], [3, ["c", "b"]]], "check": "agree", "time": 2.67}
+{"name": "Kamke 1.533", "expected": 3, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [3], "special": [["infinite", ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 1.534", "expected": 1, "deteq_time": 0.02, "blad_time": 0.05, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.08}
+{"name": "Kamke 1.535", "expected": 3, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 1.536", "expected": 1, "deteq_time": 0.03, "blad_time": 0.09, "status": "ok", "chains": 2, "generic": [1], "special": [[3, ["b"]]], "check": "agree", "time": 0.13}
+{"name": "Kamke 1.537", "expected": 3, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 1.538", "expected": 1, "deteq_time": 0.02, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 1.540", "expected": 1, "deteq_time": 0.02, "blad_time": 0.04, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 1.541", "expected": 3, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 1.542", "expected": 3, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 1.543", "expected": 3, "deteq_time": 0.02, "blad_time": 0.06, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.11}
+{"name": "Kamke 1.544", "expected": 3, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 1.545", "expected": 3, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 1.546", "expected": 0, "deteq_time": 0.02, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [0], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 1.547", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 1.548", "expected": 3, "deteq_time": 0.04, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.09}
+{"name": "Kamke 1.549", "expected": 1, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": [1], "special": [["infinite", ["a"]]], "check": "agree", "time": 0.03}
+{"name": "Kamke 3.1", "expected": 5, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": [5], "special": [[7, ["lambda_"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 3.16", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.2", "expected": 4, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [4], "special": [[7, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 3.21", "expected": 7, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.27", "expected": 5, "deteq_time": 0.1, "status": "unsupported", "check": "function exp", "time": 0.12}
+{"name": "Kamke 3.29", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.30", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [4], "special": [[7, ["a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.31", "expected": 4, "status": "RuntimeError: out of memory error", "time": 64.24}
+{"name": "Kamke 3.32", "expected": 4, "deteq_time": 0.03, "blad_time": 137.33, "status": "ok", "chains": 2, "generic": [4], "special": [[5, ["2*v + 3"]]], "check": "agree", "time": 137.39}
+{"name": "Kamke 3.33", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 3.34", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [4], "special": [[7, ["a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.35", "expected": 4, "status": "RuntimeError: out of time error", "time": 300.18}
+{"name": "Kamke 3.37", "expected": 4, "deteq_time": 0.03, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.09}
+{"name": "Kamke 3.38", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 3.39", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.08}
+{"name": "Kamke 3.4", "expected": 5, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 3.40", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [4], "special": [[5, ["a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.41", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 3.42", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.45", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 3.47", "expected": 7, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.48", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [[7, ["a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.49", "expected": 4, "status": "RuntimeError: out of memory error", "time": 36.32}
+{"name": "Kamke 3.50", "expected": 4, "deteq_time": 0.03, "blad_time": 3.13, "status": "ok", "chains": 3, "generic": [4], "special": [[5, ["a"]], [7, ["8*n**3 - 12*n**2 - 66*n + 35", "a"]]], "check": "agree", "time": 3.18}
+{"name": "Kamke 3.51", "expected": 4, "deteq_time": 0.04, "blad_time": 0.26, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.32}
+{"name": "Kamke 3.53", "expected": 4, "deteq_time": 0.04, "blad_time": 0.24, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.3}
+{"name": "Kamke 3.54", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 3.56", "expected": 4, "deteq_time": 0.04, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.09}
+{"name": "Kamke 3.57", "expected": 7, "deteq_time": 0.04, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.1}
+{"name": "Kamke 3.58", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 3.6", "expected": 7, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 3.60", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [4], "special": [[7, ["a"]], [5, ["nu**2 - 1"]]], "check": "agree", "time": 0.06}
+{"name": "Kamke 3.61", "expected": 7, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.63", "expected": 5, "deteq_time": 0.15, "status": "unsupported", "check": "function log", "time": 0.16}
+{"name": "Kamke 3.64", "expected": 7, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.65", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 3.66", "expected": 4, "deteq_time": 0.03, "blad_time": 0.03, "status": "ok", "chains": 2, "generic": [4], "special": [[5, ["a"]]], "check": "agree", "time": 0.07}
+{"name": "Kamke 3.68", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 3.7", "expected": 4, "status": "RuntimeError: out of time error", "time": 299.75}
+{"name": "Kamke 3.70", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.09}
+{"name": "Kamke 3.71", "expected": 5, "deteq_time": 0.04, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.11}
+{"name": "Kamke 3.73", "expected": 4, "deteq_time": 0.04, "blad_time": 0.04, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.11}
+{"name": "Kamke 3.74", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 3.75", "expected": 4, "deteq_time": 0.04, "blad_time": 0.04, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.11}
+{"name": "Kamke 3.76", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 3.77", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 2, "generic": [4], "special": [[5, ["a"]]], "check": "agree", "time": 0.06}
+{"name": "Kamke 6.1", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.03}
+{"name": "Kamke 6.10", "expected": 1, "deteq_time": 0.02, "blad_time": 0.02, "status": "ok", "chains": 6, "generic": [1], "special": [[8, ["b", "a"]], [2, ["3*b*d - c**2", "27*a*d**2 - c**3"]], [2, ["4*b*d - c**2", "a"]], [2, ["d", "c", "a"]], [2, ["d", "c", "b"]]], "check": "agree", "time": 0.06}
+{"name": "Kamke 6.104", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [2], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.105", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [1], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.106", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [1], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.107", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.108", "expected": 0, "deteq_time": 0.02, "blad_time": 0.05, "status": "ok", "chains": 3, "generic": [0], "special": [[1, ["a"]], [8, ["b", "a"]]], "check": "agree", "time": 0.09}
+{"name": "Kamke 6.109", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.11", "expected": 1, "deteq_time": 0.08, "status": "unsupported", "check": "power x**r", "time": 0.09}
+{"name": "Kamke 6.110", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.111", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.117", "expected": 8, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.118", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": [1], "special": [[2, ["a + 1"]], [2, ["a"]], [8, ["b"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.119", "expected": 1, "deteq_time": 0.03, "blad_time": 0.03, "status": "ok", "chains": 2, "generic": [1], "special": [[2, ["b", "a"]]], "check": "agree", "time": 0.07}
+{"name": "Kamke 6.12", "expected": 2, "deteq_time": 0.1, "status": "unsupported", "check": "power y**(2*n + 1)", "time": 0.11}
+{"name": "Kamke 6.120", "expected": 1, "deteq_time": 0.03, "blad_time": 0.05, "status": "ok", "chains": 2, "generic": [1], "special": [[2, ["b", "a"]]], "check": "agree", "time": 0.09}
+{"name": "Kamke 6.124", "expected": 8, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.125", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.126", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": [2], "special": [[8, ["a - 1"]], [8, ["a"]], [3, ["2*a + 1"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.127", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": [2], "special": [[8, ["a + 2"]], [3, ["4*a + 5"]], [8, ["b"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.128", "expected": 8, "deteq_time": 0.11, "status": "unsupported", "check": "power y**(1 - a)", "time": 0.13}
+{"name": "Kamke 6.130", "expected": 2, "status": "RuntimeError: out of memory error", "time": 315.79}
+{"name": "Kamke 6.133", "expected": 3, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 6.134", "expected": 8, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 6.135", "expected": 8, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 6.137", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.138", "expected": 3, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [3], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.140", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.141", "expected": 1, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.142", "expected": 0, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [0], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.143", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [1], "special": [[8, ["a"]], [2, ["b"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.144", "expected": 0, "deteq_time": 0.03, "blad_time": 0.04, "status": "ok", "chains": 2, "generic": [0], "special": [[3, ["a"]]], "check": "agree", "time": 0.08}
+{"name": "Kamke 6.145", "expected": 0, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [0], "special": [[8, ["a"]], [2, ["b"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.146", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.147", "expected": 0, "deteq_time": 0.03, "blad_time": 0.15, "status": "ok", "chains": 1, "generic": [0], "special": [], "check": "agree", "time": 0.19}
+{"name": "Kamke 6.150", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.151", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.153", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [1], "special": [[8, ["a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.154", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.155", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 6.156", "expected": 1, "deteq_time": 0.03, "blad_time": 0.08, "status": "ok", "chains": 4, "generic": [1], "special": [[2, ["4*a*c - b**2"]], [2, ["c", "b"]], [8, ["c", "b", "a"]]], "check": "agree", "time": 0.12}
+{"name": "Kamke 6.157", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.158", "expected": 3, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.159", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.160", "expected": 1, "deteq_time": 0.03, "blad_time": 0.19, "status": "ok", "chains": 4, "generic": [1], "special": [[3, ["a"]], [8, ["c", "a"]], [2, ["c", "b"]]], "check": "agree", "time": 0.23}
+{"name": "Kamke 6.162", "expected": 3, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [3], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.163", "expected": 3, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.164", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": [8], "special": [["infinite", ["n"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.168", "expected": 8, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [8], "special": [["infinite", ["b", "a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.169", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.170", "expected": 8, "deteq_time": 0.11, "status": "unsupported", "check": "function f", "time": 0.12}
+{"name": "Kamke 6.171", "expected": 0, "status": "RuntimeError: out of time error", "time": 299.21}
+{"name": "Kamke 6.172", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": [1], "special": [[2, ["a - 1"]], [2, ["a"]], [8, ["b"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.173", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.174", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.175", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.176", "expected": 8, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.178", "expected": 8, "deteq_time": 0.03, "blad_time": 0.04, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.09}
+{"name": "Kamke 6.179", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.180", "expected": 8, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 6.181", "expected": 8, "deteq_time": 0.03, "blad_time": 0.05, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.1}
+{"name": "Kamke 6.182", "expected": 8, "deteq_time": 0.03, "blad_time": 0.06, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.11}
+{"name": "Kamke 6.183", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.184", "expected": 8, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [8], "special": [["infinite", ["a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.185", "expected": 8, "deteq_time": 0.04, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.1}
+{"name": "Kamke 6.186", "expected": 8, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 6.188", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [2], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.189", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [1], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.190", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [1], "special": [[2, ["a"]], [8, ["b", "a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.191", "expected": 8, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.192", "expected": 8, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.193", "expected": 8, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 6.194", "expected": 8, "deteq_time": 0.03, "blad_time": 0.05, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.11}
+{"name": "Kamke 6.195", "expected": 8, "deteq_time": 0.03, "blad_time": 0.06, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.11}
+{"name": "Kamke 6.2", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.03}
+{"name": "Kamke 6.205", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [2], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.206", "expected": 8, "deteq_time": 0.04, "blad_time": 0.07, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.15}
+{"name": "Kamke 6.208", "expected": 8, "deteq_time": 0.03, "blad_time": 0.06, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.11}
+{"name": "Kamke 6.209", "expected": 3, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [3], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.21", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.210", "expected": 8, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.211", "expected": 0, "deteq_time": 0.03, "blad_time": 0.05, "status": "ok", "chains": 2, "generic": [0], "special": [[3, ["a"]]], "check": "agree", "time": 0.09}
+{"name": "Kamke 6.212", "expected": 0, "deteq_time": 0.03, "blad_time": 0.34, "status": "ok", "chains": 6, "generic": [0], "special": [[1, ["4*a*c - b**2"]], [1, ["a"]], [2, ["b", "a"]], [1, ["c", "b"]], [8, ["c", "b", "a"]]], "check": "agree", "time": 0.38}
+{"name": "Kamke 6.214", "expected": 8, "deteq_time": 0.03, "blad_time": 0.05, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.1}
+{"name": "Kamke 6.219", "expected": 1, "deteq_time": 0.06, "blad_time": 3.6, "status": "ok", "chains": 4, "generic": [1], "special": [[1, ["b", "a"]], [3, ["c", "b", "a"]], [8, ["d"]]], "check": "agree", "time": 3.74}
+{"name": "Kamke 6.226", "expected": 1, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.227", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.228", "expected": 2, "deteq_time": 0.03, "blad_time": 0.08, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.12}
+{"name": "Kamke 6.229", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [2], "special": [["infinite", ["a"]], [8, ["b"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.232", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.233", "expected": 1, "status": "RuntimeError: out of memory error", "time": 53.06}
+{"name": "Kamke 6.237", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [2], "special": [["infinite", ["a"]], [3, ["2*a - 1"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.239", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.240", "expected": 1, "deteq_time": 0.03, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.09}
+{"name": "Kamke 6.243", "expected": 1, "deteq_time": 0.03, "blad_time": 0.05, "status": "ok", "chains": 4, "generic": [1], "special": [[3, ["a"]], [2, ["b"]], ["infinite", ["b", "a"]]], "check": "agree", "time": 0.1}
+{"name": "Kamke 6.244", "expected": 3, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 6.245", "expected": 1, "deteq_time": 0.04, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.08}
+{"name": "Kamke 6.26", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "power y**n", "time": 0.12}
+{"name": "Kamke 6.27", "expected": 0, "deteq_time": 0.09, "status": "unsupported", "check": "power x**r", "time": 0.1}
+{"name": "Kamke 6.3", "expected": 0, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [0], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.30", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.31", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [1], "special": [[2, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.32", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.4", "expected": 1, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.40", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [1], "special": [[2, ["a**3 - b"]], [2, ["b", "a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.42", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": [2], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.43", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [2], "special": [[8, ["a**2 - 9*b"]], [8, ["b", "a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.45", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [1], "special": [[8, ["a"]], [8, ["b"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.47", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [1], "special": [[8, ["a"]], [8, ["c"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.5", "expected": 0, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": [0], "special": [[8, ["a"]], [1, ["b"]], [2, ["c", "b"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.50", "expected": 1, "deteq_time": 0.02, "blad_time": 0.02, "status": "ok", "chains": 3, "generic": [1], "special": [[8, ["a"]], [8, ["b"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.56", "expected": 1, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": [1], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.57", "expected": 2, "deteq_time": 0.09, "blad_time": 0.02, "status": "ok", "chains": 5, "generic": [2], "special": [[8, ["a"]], [4, ["r"]], [3, ["r - 3"]], [2, ["r - 1"]]], "check": "agree", "time": 0.12}
+{"name": "Kamke 6.57, r = 3", "expected": 3, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 2, "generic": [3], "special": [[8, ["a"]]], "check": "agree", "time": 0.06}
+{"name": "Kamke 6.6", "expected": 0, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [0], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.7", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": [2], "special": [[8, ["a"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.71", "expected": 3, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.03}
+{"name": "Kamke 6.73", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "power y**n", "time": 0.1}
+{"name": "Kamke 6.74", "expected": 1, "deteq_time": 0.1, "status": "unsupported", "check": "power x**m", "time": 0.11}
+{"name": "Kamke 6.78", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.79", "expected": 1, "deteq_time": 0.02, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.8", "expected": 0, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [0], "special": [[8, ["a"]], [2, ["b"]]], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.80", "expected": 1, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 3, "generic": [1], "special": [[8, ["a"]], [2, ["b"]]], "check": "agree", "time": 0.06}
+{"name": "Kamke 6.81", "expected": 3, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.82", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "power y**n", "time": 0.1}
+{"name": "Kamke 6.86", "expected": 1, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 3, "generic": [1], "special": [[8, ["a"]], [2, ["b"]]], "check": "agree", "time": 0.06}
+{"name": "Kamke 6.87", "expected": 1, "status": "RuntimeError: out of memory error", "time": 55.29}
+{"name": "Kamke 6.89", "expected": 1, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 6.9", "expected": 0, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": [0], "special": [[8, ["a"]], [1, ["b"]], [2, ["d", "c", "b"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.90", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 6.92", "expected": 1, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.93", "expected": 8, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.94", "expected": 1, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [1], "special": [[2, ["b", "a - 6"]]], "check": "agree", "time": 0.06}
+{"name": "Kamke 6.96", "expected": 1, "deteq_time": 0.09, "status": "unsupported", "check": "power y**n", "time": 0.1}
+{"name": "Kamke 6.97", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.98", "expected": 1, "deteq_time": 0.02, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 6.99", "expected": 8, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 7.1", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [2], "special": [[7, ["a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 7.10", "expected": 6, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 7.11", "expected": 6, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 7.12", "expected": 4, "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 3, "generic": [4], "special": [[7, ["a**2 + 9"]], [6, ["a"]]], "check": "agree", "time": 0.07}
+{"name": "Kamke 7.2", "expected": 1, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 7.3", "expected": 2, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "Kamke 7.4", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [2], "special": [[7, ["a"]]], "check": "agree", "time": 0.05}
+{"name": "Kamke 7.5", "expected": 1, "deteq_time": 0.03, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.07}
+{"name": "Kamke 7.6", "expected": 1, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.06}
+{"name": "Kamke 7.7", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 7.8", "expected": 7, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kamke 7.9", "expected": 7, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.05}
+{"name": "Kepler problem in the plane", "expected": 3, "deteq_time": 0.39, "status": "unsupported", "check": "power sqrt(x**2 + y**2)", "time": 0.41}
+{"name": "Khare-Timol Example 3: y'' = F(x)/y**2", "expected": 0, "deteq_time": 0.08, "status": "unsupported", "check": "function F", "time": 0.09}
+{"name": "Ko, Kim, Lee: Burgers u_t + u u_x - nu u_xx = 0", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["nu"]]], "check": "agree", "time": 0.05}
+{"name": "Ko, Kim, Lee: KdV u_t + u u_x + u_xxx = 0", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.05}
+{"name": "Ko, Kim, Lee: cKdV u_t + u u_x + u_xxx + u/(2(t + 1)) = 0", "expected": 4, "deteq_time": 0.04, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.1}
+{"name": "Ko, Kim, Lee: nKdV exp(-t/t0) u_t + u u_x + u_xxx = 0", "expected": 4, "deteq_time": 0.19, "status": "unsupported", "check": "function exp", "time": 0.21}
+{"name": "Kuramoto-Sivashinsky equation", "expected": 3, "deteq_time": 0.05, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.08}
+{"name": "Lane-Emden equation, n = 5", "expected": 1, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [1], "special": [], "check": "agree", "time": 0.04}
+{"name": "Liouville equation", "expected": "infinite", "deteq_time": 0.1, "status": "unsupported", "check": "function exp", "time": 0.11}
+{"name": "MEE circular rod: u_tt - c**2 u_xx - c**2/2 u_xx**2 - n u_xxtt = 0", "expected": 7, "deteq_time": 0.07, "blad_time": 0.06, "status": "ok", "chains": 3, "generic": [7], "special": [["infinite", ["c"]], ["infinite", ["n"]]], "check": "agree", "time": 0.17}
+{"name": "Nadjafikhah et al.: u_tt = exp(u) (u_xx + u_yy)", "expected": "infinite", "deteq_time": 0.16, "status": "unsupported", "check": "function exp", "time": 0.18}
+{"name": "Nadjafikhah et al.: u_tt = u**(-4) (u_xx + u_yy)", "expected": 7, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.07}
+{"name": "Nadjafikhah et al.: u_tt = u**4 (u_xx + u_yy)", "expected": 6, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.07}
+{"name": "Nadjafikhah et al.: u_tt = u**k (u_xx + u_yy)", "expected": 6, "deteq_time": 0.19, "status": "unsupported", "check": "power u**k", "time": 0.2}
+{"name": "ODEBench 10: Refined language death model for two languages", "expected": "infinite", "deteq_time": 0.12, "status": "unsupported", "check": "power (1 - x0)**(2*c1)", "time": 0.14}
+{"name": "ODEBench 11: Naive critical slowing down (statistical mechanics)", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.03}
+{"name": "ODEBench 13: Overdamped bead on a rotating hoop", "expected": "infinite", "deteq_time": 0.09, "status": "unsupported", "check": "function cos", "time": 0.1}
+{"name": "ODEBench 14: Budworm outbreak model with predation", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.03, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["c1"]], ["infinite", ["c3", "c0"]]], "check": "agree", "time": 0.08}
+{"name": "ODEBench 15: Budworm outbreak with predation (dimensionless)", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c1"]]], "check": "agree", "time": 0.07}
+{"name": "ODEBench 16: Landau equation (typical time scale tau = 1)", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c2", "c1", "c0"]]], "check": "agree", "time": 0.04}
+{"name": "ODEBench 17: Logistic equation with harvesting/fishing", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["c1"]], ["infinite", ["c2", "c0"]]], "check": "agree", "time": 0.04}
+{"name": "ODEBench 18: Improved logistic equation with harvesting/fishing", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.03, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["c1"]], ["infinite", ["c2", "c0"]]], "check": "agree", "time": 0.08}
+{"name": "ODEBench 19: Improved logistic equation with harvesting/fishing (dimensionless)", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.07}
+{"name": "ODEBench 1: RC-circuit (charging capacitor)", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["c1"]], ["infinite", ["c2"]]], "check": "agree", "time": 0.04}
+{"name": "ODEBench 20: Autocatalytic gene switching (dimensionless)", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.06}
+{"name": "ODEBench 21: Dimensionally reduced SIR infection model for dead people (dimensionless)", "expected": "infinite", "deteq_time": 0.09, "status": "unsupported", "check": "function exp", "time": 0.1}
+{"name": "ODEBench 22: Hysteretic activation of a protein expression (positive feedback, basal promoter expression)", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.02, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["c3", "c1", "c0"]], ["infinite", ["c3", "c2", "c0 + c1"]]], "check": "agree", "time": 0.07}
+{"name": "ODEBench 23: Overdamped pendulum with constant driving torque/fireflies/Josephson junction (dimensionless)", "expected": "infinite", "deteq_time": 0.07, "status": "unsupported", "check": "function cos", "time": 0.08}
+{"name": "ODEBench 24: Harmonic oscillator without damping", "expected": "infinite", "deteq_time": 0.07, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c0"]]], "check": "agree", "time": 0.09}
+{"name": "ODEBench 25: Harmonic oscillator with damping", "expected": "infinite", "deteq_time": 0.08, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c1", "c0"]]], "check": "agree", "time": 0.1}
+{"name": "ODEBench 26: Lotka-Volterra competition model (Strogatz version with sheeps and rabbits)", "expected": "infinite", "deteq_time": 0.11, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.15}
+{"name": "ODEBench 27: Lotka-Volterra simple (as on Wikipedia)", "expected": "infinite", "deteq_time": 0.1, "blad_time": 0.02, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["c3", "c2"]], ["infinite", ["c3", "c2", "c1", "c0"]]], "check": "agree", "time": 0.13}
+{"name": "ODEBench 28: Pendulum without friction", "expected": "infinite", "deteq_time": 0.08, "status": "unsupported", "check": "function sin", "time": 0.09}
+{"name": "ODEBench 29: Dipole fixed point", "expected": "infinite", "deteq_time": 0.09, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.11}
+{"name": "ODEBench 2: Population growth (naive)", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c0"]]], "check": "agree", "time": 0.03}
+{"name": "ODEBench 30: RNA molecules catalyzing each others replication", "expected": "infinite", "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.13}
+{"name": "ODEBench 31: SIR infection model only for healthy and sick", "expected": "infinite", "deteq_time": 0.09, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c1", "c0"]]], "check": "agree", "time": 0.11}
+{"name": "ODEBench 32: Damped double well oscillator", "expected": "infinite", "deteq_time": 0.09, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.11}
+{"name": "ODEBench 33: Glider (dimensionless)", "expected": "infinite", "deteq_time": 0.13, "status": "unsupported", "check": "function cos", "time": 0.14}
+{"name": "ODEBench 34: Frictionless bead on a rotating hoop (dimensionless)", "expected": "infinite", "deteq_time": 0.1, "status": "unsupported", "check": "function sin", "time": 0.11}
+{"name": "ODEBench 35: Rotational dynamics of an object in a shear flow", "expected": "infinite", "deteq_time": 0.14, "status": "unsupported", "check": "function cos", "time": 0.15}
+{"name": "ODEBench 36: Pendulum with non-linear damping, no driving (dimensionless)", "expected": "infinite", "deteq_time": 0.11, "status": "unsupported", "check": "function sin", "time": 0.12}
+{"name": "ODEBench 37: Van der Pol oscillator (standard form)", "expected": "infinite", "deteq_time": 0.09, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.11}
+{"name": "ODEBench 38: Van der Pol oscillator (simplified form from Strogatz)", "expected": "infinite", "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c0"]]], "check": "agree", "time": 0.12}
+{"name": "ODEBench 39: Glycolytic oscillator, e.g., ADP and F6P in yeast (dimensionless)", "expected": "infinite", "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.14}
+{"name": "ODEBench 3: Population growth with carrying capacity", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["c0"]], ["infinite", ["c1"]]], "check": "agree", "time": 0.04}
+{"name": "ODEBench 40: Duffing equation (weakly non-linear oscillation)", "expected": "infinite", "deteq_time": 0.09, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.11}
+{"name": "ODEBench 41: Cell cycle model by Tyson for interaction between protein cdc2 and cyclin (dimensionless)", "expected": "infinite", "deteq_time": 0.11, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.15}
+{"name": "ODEBench 42: Reduced model for chlorine dioxide-iodine-malonic acid rection (dimensionless)", "expected": "infinite", "deteq_time": 0.15, "blad_time": 0.04, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c2"]]], "check": "agree", "time": 0.23}
+{"name": "ODEBench 43: Driven pendulum with linear damping / Josephson junction (dimensionless)", "expected": "infinite", "deteq_time": 0.1, "status": "unsupported", "check": "function sin", "time": 0.11}
+{"name": "ODEBench 44: Driven pendulum with quadratic damping (dimensionless)", "expected": "infinite", "deteq_time": 0.1, "status": "unsupported", "check": "function sin", "time": 0.11}
+{"name": "ODEBench 45: Isothermal autocatalytic reaction model by Gray and Scott 1985 (dimensionless)", "expected": "infinite", "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.13}
+{"name": "ODEBench 46: Interacting bar magnets", "expected": "infinite", "deteq_time": 0.14, "status": "unsupported", "check": "function sin", "time": 0.15}
+{"name": "ODEBench 47: Binocular rivalry model (no oscillations)", "expected": "infinite", "deteq_time": 0.47, "status": "unsupported", "check": "function exp", "time": 0.5}
+{"name": "ODEBench 48: Bacterial respiration model for nutrients and oxygen levels", "expected": "infinite", "deteq_time": 0.14, "blad_time": 0.04, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.21}
+{"name": "ODEBench 49: Brusselator: hypothetical chemical oscillation model (dimensionless)", "expected": "infinite", "deteq_time": 0.11, "blad_time": 0.02, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c1", "c0"]]], "check": "agree", "time": 0.14}
+{"name": "ODEBench 4: RC-circuit with non-linear resistor (charging capacitor)", "expected": "infinite", "deteq_time": 0.16, "status": "unsupported", "check": "function exp", "time": 0.17}
+{"name": "ODEBench 50: Chemical oscillator model by Schnackenberg 1979 (dimensionless)", "expected": "infinite", "deteq_time": 0.1, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.12}
+{"name": "ODEBench 51: Oscillator death model by Ermentrout and Kopell 1990", "expected": "infinite", "deteq_time": 0.11, "status": "unsupported", "check": "function cos", "time": 0.12}
+{"name": "ODEBench 52: Maxwell-Bloch equations (laser dynamics)", "expected": "infinite", "deteq_time": 0.16, "blad_time": 0.07, "status": "ok", "chains": 4, "generic": ["infinite"], "special": [["infinite", ["c2"]], ["infinite", ["c2", "c1"]], ["infinite", ["c2", "c1", "c0"]]], "check": "agree", "time": 0.27}
+{"name": "ODEBench 53: Model for apoptosis (cell death)", "expected": "infinite", "deteq_time": 1.51, "blad_time": 3.47, "status": "ok", "chains": 3, "generic": ["infinite"], "special": [["infinite", ["c3", "c2", "c1"]], ["infinite", ["c5", "c4", "c3", "c2", "c1", "c0"]]], "check": "agree", "time": 12.16}
+{"name": "ODEBench 54, 55, 56: Lorenz equations in well-behaved periodic regime", "expected": "infinite", "deteq_time": 0.14, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.2}
+{"name": "ODEBench 57, 58, 59: R\u00f6ssler attractor (stable fixed point)", "expected": "infinite", "deteq_time": 0.15, "blad_time": 0.03, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c3"]]], "check": "agree", "time": 0.22}
+{"name": "ODEBench 5: Velocity of a falling object with air resistance", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c1", "c0"]]], "check": "agree", "time": 0.03}
+{"name": "ODEBench 6, 12: Autocatalysis with one fixed abundant chemical", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c1", "c0"]]], "check": "agree", "time": 0.03}
+{"name": "ODEBench 60: Aizawa attractor (chaotic)", "expected": "infinite", "deteq_time": 0.23, "blad_time": 0.19, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.64}
+{"name": "ODEBench 61: Chen-Lee attractor; system for gyro motion with feedback control of rigid body (chaotic)", "expected": "infinite", "deteq_time": 0.14, "blad_time": 0.03, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c3"]]], "check": "agree", "time": 0.21}
+{"name": "ODEBench 62: Binocular rivalry model with adaptation (oscillations)", "expected": "infinite", "deteq_time": 1.98, "status": "unsupported", "check": "function exp", "time": 2.09}
+{"name": "ODEBench 63: SEIR infection model (proportions)", "expected": "infinite", "deteq_time": 0.17, "blad_time": 0.03, "status": "ok", "chains": 4, "generic": ["infinite"], "special": [["infinite", ["c2"]], ["infinite", ["c2", "c0"]], ["infinite", ["c2", "c1", "c0"]]], "check": "agree", "time": 0.23}
+{"name": "ODEBench 7: Gompertz law for tumor growth", "expected": "infinite", "deteq_time": 0.07, "status": "unsupported", "check": "function log", "time": 0.08}
+{"name": "ODEBench 8: Logistic equation with Allee effect", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 4, "generic": ["infinite"], "special": [["infinite", ["c0"]], ["infinite", ["c1"]], ["infinite", ["c2"]]], "check": "agree", "time": 0.05}
+{"name": "ODEBench 9: Language death model for two languages", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["c1", "c0"]]], "check": "agree", "time": 0.03}
+{"name": "PDE-FIND: Burgers u_t + u u_x - u_xx = 0", "expected": 5, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.04}
+{"name": "PDE-FIND: KdV u_t + 6 u u_x + u_xxx = 0", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.05}
+{"name": "PDE-FIND: diffusion from a random walk f_t = f_xx/2", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "PDEBench: Fisher-KPP u_t = nu u_xx + rho u (1 - u)", "expected": 2, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [2], "special": [["infinite", ["nu"]], ["infinite", ["rho"]]], "check": "agree", "time": 0.05}
+{"name": "PDEBench: advection u_t + b u_x = 0", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["b"]]], "check": "agree", "time": 0.03}
+{"name": "PDEBench: diffusion-sorption u_t = D u_xx / (1 + c u**m)", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "power u**m", "time": 0.14}
+{"name": "PINNacle Burgers1D: u_t + u u_x = u_xx/(100 pi)", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["pi_"]]], "check": "agree", "time": 0.05}
+{"name": "PINNacle Heat2D_LongTime: u_t = Laplace u/1000 + 5 sin(u**2)(1 + 2 sin(pi t/4)) sin(4 pi x) sin(2 pi y)", "expected": 0, "deteq_time": 0.44, "status": "unsupported", "check": "function sin", "time": 0.46}
+{"name": "PINNacle Heat2D_Multiscale: u_t = u_xx/(500 pi)**2 + u_yy/pi**2", "expected": "infinite", "deteq_time": 0.04, "blad_time": 0.02, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["pi_"]]], "check": "agree", "time": 0.07}
+{"name": "PINNacle HeatND: u_t = Laplace u/5 - |x|**2/5 exp(|x|**2/2 + t) in 5D", "expected": "infinite", "deteq_time": 1.13, "status": "unsupported", "check": "function exp", "time": 1.2}
+{"name": "PINNacle Helmholtz2D: Laplace u + u = (1 - 32 pi**2) sin(4 pi x) sin(4 pi y)", "expected": "infinite", "deteq_time": 0.26, "status": "unsupported", "check": "function sin", "time": 0.27}
+{"name": "PINNacle KuramotoSivashinskyEquation: u_t + 25/4 u u_x + 25/64 u_xx + 25/16384 u_xxxx = 0", "expected": 3, "deteq_time": 0.05, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.08}
+{"name": "PINNacle Poisson1D: u'' + sin(x) = 0", "expected": 8, "deteq_time": 0.07, "status": "unsupported", "check": "function sin", "time": 0.08}
+{"name": "PINNacle Poisson2D_Classic: Laplace u = 0", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "PINNacle PoissonBoltzmann2D: -Laplace u + 64 u = 10 (17 + x**2 + y**2) sin(pi x) sin(4 pi y)", "expected": "infinite", "deteq_time": 0.22, "status": "unsupported", "check": "function sin", "time": 0.24}
+{"name": "PINNacle PoissonND: Laplace u + pi**2/4 (sin(pi x1/2) + ... + sin(pi x5/2)) = 0 in 5D", "expected": "infinite", "deteq_time": 0.58, "status": "unsupported", "check": "function sin", "time": 0.63}
+{"name": "PINNacle Wave1D: u_tt = 4 u_xx", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "PINNacle Wave2D_LongTime: u_tt = u_xx + 2 u_yy", "expected": "infinite", "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.06}
+{"name": "Painlev\u00e9 I: y'' = x + 6 y**2", "expected": 0, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [0], "special": [], "check": "agree", "time": 0.03}
+{"name": "Painlev\u00e9 II: y'' = a + x y + 2 y**3", "expected": 0, "deteq_time": 0.02, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [0], "special": [], "check": "agree", "time": 0.04}
+{"name": "Painlev\u00e9 III: y'' = a y**2/x + b/x + c y**3 + d/y + y'**2/y - y'/x", "expected": 0, "status": "RuntimeError: out of time error", "time": 299.86}
+{"name": "Painlev\u00e9 IV: y'' = -2 a y + b/y + 2 x**2 y + 4 x y**2 + 3 y**3/2 + y'**2/(2 y)", "expected": 0, "deteq_time": 0.03, "blad_time": 0.15, "status": "ok", "chains": 1, "generic": [0], "special": [], "check": "agree", "time": 0.19}
+{"name": "Painlev\u00e9 V: y'' = (1/(2 y) + 1/(y - 1)) y'**2 - y'/x + (y - 1)**2 (a y + b/y)/x**2 + c y/x + d y (y + 1)/(y - 1)", "expected": 0, "status": "RuntimeError: out of memory error", "time": 70.18}
+{"name": "Schwarz Example 5.13", "expected": 3, "deteq_time": 0.05, "blad_time": 0.11, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.21}
+{"name": "Schwarz Example 5.15, (5.32)", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Schwarz Example 5.15, second equation", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.05}
+{"name": "Schwarz Example 5.16, (5.33)", "expected": 3, "deteq_time": 0.25, "status": "unsupported", "check": "function exp", "time": 0.26}
+{"name": "Schwarz Example 5.17", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "Schwarz Example 5.33", "expected": 3, "deteq_time": 0.04, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.08}
+{"name": "Schwarz Example 5.43", "expected": 4, "deteq_time": 0.04, "blad_time": 0.05, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.13}
+{"name": "Schwarz Example 5.45", "expected": 4, "deteq_time": 0.07, "blad_time": 0.19, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.35}
+{"name": "Schwarz Example 5.46", "expected": 5, "deteq_time": 0.06, "blad_time": 0.08, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.19}
+{"name": "Schwarz Example 5.49", "expected": 7, "deteq_time": 0.05, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.12}
+{"name": "The Well, helmholtz_staircase: Helmholtz equation Laplace u + omega**2 u = 0", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": ["infinite"], "special": [["infinite", ["omega"]]], "check": "agree", "time": 0.05}
+{"name": "The Well, helmholtz_staircase: wave equation U_tt = U_xx + U_yy", "expected": "infinite", "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.06}
+{"name": "Vaneeva, Bihlo, Popovych 10: u_tt = (eps x**2 exp(u)) u_xx + nu exp(u)", "expected": 3, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "Vaneeva, Bihlo, Popovych 12: u_tt = (eps exp(u)) u_xx + eps1 exp(q u)", "expected": 3, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "Vaneeva, Bihlo, Popovych 13: u_tt = (eps u**p) u_xx + eps1 u**q", "expected": 3, "deteq_time": 0.13, "status": "unsupported", "check": "power u**p", "time": 0.14}
+{"name": "Vaneeva, Bihlo, Popovych 14a: u_tt = (eps u**(-4)) u_xx + eps1 u**(-3)", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [4], "special": [["infinite", ["eps"]], [5, ["eps1"]]], "check": "agree", "time": 0.06}
+{"name": "Vaneeva, Bihlo, Popovych 14b: u_tt = (eps u**(-4)) u_xx + eps1 u**(-3) + u", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [4], "special": [["infinite", ["eps"]], [5, ["eps1"]]], "check": "agree", "time": 0.06}
+{"name": "Vaneeva, Bihlo, Popovych 14c: u_tt = (eps u**(-4)) u_xx + eps1 u**(-3) - u", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [4], "special": [["infinite", ["eps"]], [5, ["eps1"]]], "check": "agree", "time": 0.06}
+{"name": "Vaneeva, Bihlo, Popovych 14d: u_tt = (eps u**4) u_xx + eps1 u", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [4], "special": [["infinite", ["eps"]], [5, ["eps1"]]], "check": "agree", "time": 0.05}
+{"name": "Vaneeva, Bihlo, Popovych 15a: u_tt = (eps u**(-4)) u_xx + nu u**(-3)/x**2", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [4], "special": [["infinite", ["eps"]], [5, ["nu"]]], "check": "agree", "time": 0.06}
+{"name": "Vaneeva, Bihlo, Popovych 15b: u_tt = (eps u**(-4)) u_xx + nu u**(-3)/x**2 + u", "expected": 4, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [4], "special": [["infinite", ["eps"]], [5, ["nu"]]], "check": "agree", "time": 0.06}
+{"name": "Vaneeva, Bihlo, Popovych 15c: u_tt = (eps u**(-4)) u_xx + nu u**(-3)/x**2 - u", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 3, "generic": [4], "special": [["infinite", ["eps"]], [5, ["nu"]]], "check": "agree", "time": 0.06}
+{"name": "Vaneeva, Bihlo, Popovych 16: u_tt = (eps u**p) u_xx", "expected": 4, "deteq_time": 0.12, "status": "unsupported", "check": "power u**p", "time": 0.13}
+{"name": "Vaneeva, Bihlo, Popovych 17: u_tt = (eps exp(u)) u_xx", "expected": 4, "deteq_time": 0.1, "status": "unsupported", "check": "function exp", "time": 0.12}
+{"name": "Vaneeva, Bihlo, Popovych 18a: u_tt = eps u_xx + eps1 u**q", "expected": 4, "deteq_time": 0.12, "status": "unsupported", "check": "power u**q", "time": 0.14}
+{"name": "Vaneeva, Bihlo, Popovych 18b: u_tt = 1 u_xx + eps1 u**q exp(-2 x)", "expected": 4, "deteq_time": 0.14, "status": "unsupported", "check": "function exp", "time": 0.16}
+{"name": "Vaneeva, Bihlo, Popovych 18c: u_tt = -1 u_xx + eps1 u**q exp(-2 x)", "expected": 4, "deteq_time": 0.15, "status": "unsupported", "check": "function exp", "time": 0.16}
+{"name": "Vaneeva, Bihlo, Popovych 19a: u_tt = (eps u**(-4)) u_xx", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["eps"]]], "check": "agree", "time": 0.05}
+{"name": "Vaneeva, Bihlo, Popovych 19b: u_tt = (eps u**(-4)) u_xx + u", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["eps"]]], "check": "agree", "time": 0.06}
+{"name": "Vaneeva, Bihlo, Popovych 19c: u_tt = (eps u**(-4)) u_xx + -u", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["eps"]]], "check": "agree", "time": 0.06}
+{"name": "Vaneeva, Bihlo, Popovych 19d: u_tt = (eps u**4) u_xx", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 2, "generic": [5], "special": [["infinite", ["eps"]]], "check": "agree", "time": 0.05}
+{"name": "Vaneeva, Bihlo, Popovych 20: u_tt = eps u_xx + eps1 exp(u)", "expected": "infinite", "deteq_time": 0.11, "status": "unsupported", "check": "function exp", "time": 0.12}
+{"name": "Vaneeva, Bihlo, Popovych 9: u_tt = (eps exp(x) u**p) u_xx + nu exp(x) u**(p + 1)", "expected": 3, "deteq_time": 0.15, "status": "unsupported", "check": "function exp", "time": 0.17}
+{"name": "Yang et al.: Lotka-Volterra in canonical coordinates x1' = 2/3 - 4/3 exp(x2), x2' = exp(x1) - 1", "expected": "infinite", "deteq_time": 0.1, "status": "unsupported", "check": "function exp", "time": 0.12}
+{"name": "Yang et al.: SEIR with reinfection", "expected": "infinite", "deteq_time": 0.19, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.26}
+{"name": "Yang et al.: damped oscillator x1' = -x1/10 - x2, x2' = x1 - x2/10", "expected": "infinite", "deteq_time": 0.09, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.11}
+{"name": "Yang et al.: glycolytic oscillator (Sel'kov) x1' = 3/4 - x1/10 - x1 x2**2, x2' = -x2 + x1/10 + x1 x2**2", "expected": "infinite", "deteq_time": 0.11, "blad_time": 0.02, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.15}
+{"name": "Yang et al.: growth x1' = -3/10 x1 + x2**2/10, x2' = x2", "expected": "infinite", "deteq_time": 0.09, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.11}
+{"name": "Zhdanov 2005, dimension 5: u_t = u**(-4) u_xx - 2 u**(-5) u_x**2", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.05}
+{"name": "Zhdanov 2005, dimension 5: u_t = u_xx + u u_x/x - u**2/x**2 - 2 u/x**2", "expected": 5, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [5], "special": [], "check": "agree", "time": 0.06}
+{"name": "Zhdanov 2005: u_t = u_x**(-2) u_xx + 1/u_x", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "free particle in the plane", "expected": 15, "deteq_time": 0.07, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [15], "special": [], "check": "agree", "time": 0.09}
+{"name": "harmonic oscillator", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.03}
+{"name": "heat equation in the plane", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.05}
+{"name": "heat equation with exponential source", "expected": 3, "deteq_time": 0.12, "status": "unsupported", "check": "function exp", "time": 0.13}
+{"name": "heat equation with logarithmic source", "expected": 4, "deteq_time": 0.1, "status": "unsupported", "check": "function log", "time": 0.11}
+{"name": "heat equation with power source", "expected": 3, "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "isotropic harmonic oscillator in the plane", "expected": 15, "deteq_time": 0.13, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [15], "special": [], "check": "agree", "time": 0.16}
+{"name": "mGVE (D = d/dt + u d/dx): (D**2 u + p u**2/2 + be u)_x + q D u = 0", "expected": 3, "deteq_time": 0.07, "blad_time": 0.05, "status": "ok", "chains": 3, "generic": [3], "special": [[4, ["p", "be"]], ["infinite", ["q", "p"]]], "check": "agree", "time": 0.17}
+{"name": "mGVE, p = be = 0: (D**2 u)_x + q D u = 0", "expected": 4, "deteq_time": 0.06, "blad_time": 0.04, "status": "ok", "chains": 2, "generic": [4], "special": [["infinite", ["q"]]], "check": "agree", "time": 0.16}
+{"name": "mGVE, p = q = 0: (D**2 u + be u)_x = 0", "expected": "infinite", "deteq_time": 0.06, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.15}
+{"name": "mGVE, p = q = be = 0: (D**2 u)_x = 0", "expected": "infinite", "deteq_time": 0.06, "blad_time": 0.03, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.15}
+{"name": "minimal surface equation", "expected": 7, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.07}
+{"name": "modified Emden family, k = 1/3", "expected": 2, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [2], "special": [], "check": "agree", "time": 0.04}
+{"name": "modified KdV equation", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.06}
+{"name": "nonlinear Klein-Gordon equation", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.05}
+{"name": "nonlinear diffusion in the plane", "expected": 6, "deteq_time": 0.04, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [6], "special": [], "check": "agree", "time": 0.08}
+{"name": "nonlinear diffusion u_t = (u**(-4/3) u_x)_x", "expected": 5, "deteq_time": 0.14, "status": "unsupported", "check": "power u**(4/3)", "time": 0.15}
+{"name": "nonlinear diffusion u_t = (u**2 u_x)_x", "expected": 4, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [4], "special": [], "check": "agree", "time": 0.05}
+{"name": "pendulum", "expected": 1, "deteq_time": 0.07, "status": "unsupported", "check": "function sin", "time": 0.08}
+{"name": "potential Burgers equation", "expected": "infinite", "deteq_time": 0.03, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "sine-Gordon equation", "expected": 3, "deteq_time": 0.06, "status": "unsupported", "check": "function sin", "time": 0.07}
+{"name": "u_t = u_x**2", "expected": 10, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [10], "special": [], "check": "agree", "time": 0.03}
+{"name": "u_t = u_xx - 2u**3", "expected": 3, "deteq_time": 0.03, "blad_time": 0.01, "status": "ok", "chains": 1, "generic": [3], "special": [], "check": "agree", "time": 0.04}
+{"name": "wave equation in light-cone coordinates", "expected": "infinite", "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": ["infinite"], "special": [], "check": "agree", "time": 0.04}
+{"name": "y'' = 0", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.03}
+{"name": "y'' = exp(y)", "expected": 2, "deteq_time": 0.07, "status": "unsupported", "check": "function exp", "time": 0.08}
+{"name": "y''' = 0", "expected": 7, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.03}
+{"name": "y''' = 1", "expected": 7, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [7], "special": [], "check": "agree", "time": 0.04}
+{"name": "y'''' = 0", "expected": 8, "deteq_time": 0.02, "blad_time": 0.0, "status": "ok", "chains": 1, "generic": [8], "special": [], "check": "agree", "time": 0.04}

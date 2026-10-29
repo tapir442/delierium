@@ -689,3 +689,15 @@ def test_assumptions_of_the_basis_elements():
         "Derivative(z(x, y), x)": frozenset({x}),
     }
     assert janet.assumed_nonzero() == [x]
+
+
+def test_derivatives_of_an_arbitrary_function_of_an_expression():
+    """d/dx f(y/x) and d/dy f(y/x), unevaluated as other tools return them,
+    are both multiples of f'(y/x): x d/dx f + y d/dy f = 0, so the third
+    equation vanishes and Z is a constant (they were independent before)."""
+    x, y = symbols("x y")
+    f, Z = Function("f"), Function("Z")(x, y)
+    fx = Derivative(f(y / x), x, evaluate=False)
+    fy = Derivative(f(y / x), y, evaluate=False)
+    janet = JanetBasis([Z.diff(x), Z.diff(y), (x * fx + y * fy) * Z], [Z], [x, y])
+    assert janet.rank() == 1

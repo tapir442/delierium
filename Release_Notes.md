@@ -1,6 +1,14 @@
 # Release notes
 
-Details are in the issues referenced.
+Details are in the issues referenced. How delierium compares with other tools (SymPy,
+sympy-extras, REDUCE's LIEPDE, ReLie, DIMSYM and SPDE, MathLie, symmgrp2020, BLAD, CoCoA,
+Singular, GAP), entry by entry: [BENCHMARK.md](BENCHMARK.md).
+
+### Not released yet
+
+* Fixed: unevaluated derivatives of an arbitrary function of an expression (d/dx f(y/x), as
+  other tools return them) were independent coefficients, so the Janet basis came out too
+  small; found by the comparison in [BENCHMARK.md](BENCHMARK.md).
 
 ### 2.7.0
 
