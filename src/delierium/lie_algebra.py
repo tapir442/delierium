@@ -37,6 +37,7 @@ from sympy import (
     count_ops,
     csc,
     denom,
+    expand,
     expand_power_exp,
     expand_trig,
     ilcm,
@@ -530,7 +531,10 @@ class LieAlgebra:
         rows = [row[:-1] for row in values]
         rhs = [row[-1] for row in values]
         A = Matrix(rows).row_join(Matrix(rhs))
-        back: dict[Expr, Expr] = {}
+        # exp(c q) for rational c (exp(3 a/2), exp(12 a/35) at the points) as powers of one
+        # t = exp(q/L): a small domain instead of one symbol per number, whose gcds can
+        # exceed GMP's limits and abort the process (LIEPDE's generators of Kamke 6.93)
+        A, back = _exponentials_as_powers(A)
         if not exact:
             transcendental = {
                 e: Dummy()
@@ -538,7 +542,13 @@ class LieAlgebra:
                 if isinstance(e, Function) or not e.exp.is_Integer
             }
             A = A.xreplace(transcendental)
-            back = {d: e for e, d in transcendental.items()}
+            # the a_k do not depend on the points, so the identity holds for every value
+            # of these numbers: random rationals keep the domain small (the result is
+            # verified exactly); polynomials of high degree in them made rref slow
+            rng = random.Random(len(back) + len(transcendental))
+            numbers = [*back, *transcendental.values()]
+            A = A.xreplace({d: Rational(rng.randint(2, 97), rng.randint(2, 97)) for d in numbers})
+            back = {}
         try:
             M = DomainMatrix.from_Matrix(A).to_field()
             reduced, pivots = M.rref()
@@ -884,6 +894,40 @@ def _row_basis(vectors: list[list[Expr]], r: int) -> Matrix:
         return zeros(0, r)
     reduced, pivots = Matrix(vectors).rref(simplify=True)
     return reduced[: len(pivots), :]
+
+
+def _exponentials_as_powers(A: Matrix) -> tuple[Matrix, dict[Expr, Expr]]:
+    """A with exp(c q), c rational, as t**(c L), t = exp(q/L) a new symbol per q, and
+    the substitution back (exact).
+
+    >>> from sympy import Matrix, Rational, exp, symbols
+    >>> a = symbols("a")
+    >>> B, back = _exponentials_as_powers(Matrix([[exp(3 * a / 2), exp(a / 3)]]))
+    >>> len(B.free_symbols - {a}), B.xreplace(back) == Matrix([[exp(3 * a / 2), exp(a / 3)]])
+    (1, True)
+    """
+    # one normal form for the products of exponentials: exp(e2 t (1 - m - n)) and
+    # exp(e2 t) exp(-e2 m t) exp(-e2 n t) (SymPy merges products of exp) are the same number,
+    # and with the atoms replaced the relation would be lost (AIMS 2026 I-(4))
+    A = A.applyfunc(
+        lambda c: expand_power_exp(
+            c.replace(lambda f: isinstance(f, exp_), lambda f: exp_(expand(f.args[0])))
+        )
+    )
+    groups: dict[Expr, list[tuple[Rational, Expr]]] = {}
+    for e in A.atoms(exp_):
+        c, q = e.args[0].as_coeff_Mul(rational=True)
+        groups.setdefault(q, []).append((c, e))
+    replacement: dict[Expr, Expr] = {}
+    back: dict[Expr, Expr] = {}
+    for q, members in groups.items():
+        if len(members) < 2:
+            continue
+        L = ilcm(1, 1, *[c.q for c, _ in members])
+        t = Dummy()
+        back[t] = exp_(q / L)
+        replacement |= {e: t ** int(c * L) for c, e in members}
+    return A.xreplace(replacement), back
 
 
 def _values_at_points(
