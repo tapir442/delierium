@@ -451,10 +451,11 @@ def section_mathlie():
                      "parameters and misses the generators whose exponents or factors combine "
                      "them.", "Parameters: " + ", ".join(params) + ".")
         elif e.name.startswith("Bluman-Anco Exercise 3.5-3"):
-            cause = ("Not traced",
-                     "", "MathLie finds d/dx only; the equation is linearizable (dimension 8); "
-                     "LIEPDE, ReLie and DIMSYM fail on it as well, through the trigonometric "
-                     "functions.")
+            cause = ("Solutions of the determining equations lost",
+                     "MathLie's determining equations are right (delierium's Janet basis of "
+                     "them, from DeterminingEquations, has rank 8: the equation is "
+                     "linearizable), but its solver returns xi = k1, eta = 0 only: it loses the "
+                     "solutions of the system with trigonometric coefficients.", "")
         else:
             cause = ("Determining equations not solved completely",
                      "MathLie does not solve the determining equations completely; the "
@@ -558,8 +559,12 @@ def section_extras():
                       "`check_symmetry` does not evaluate the outer derivative of an equation in "
                       "divergence form (Upabjojr/sympy-extras#71).", "") if divergence_form(e) else
                      EXTRAS_BRANCH if nonlinear_first_order(e) else
-                     ("Not traced", "", "The residue has symbolic powers (((1 - x)/(1 + x))**A, "
-                      "(1 + x)**A); delierium's check simplifies them, sympy-extras' does not.")
+                     ("Simplification without assumptions",
+                      "The residue has ((1 - x)/(1 + x))**A next to (1 + x)**(A + 2) "
+                      "(1 - x)**(2 - A); it vanishes once the power is split, which holds on "
+                      "-1 < x < 1, where c(x) is real (checked with x = (1 - q)/(1 + q), q > 0). "
+                      "sympy-extras' `check_symmetry` simplifies without assumptions on x; "
+                      "delierium checks locally, for positive bases.", "")
                      if e.name.startswith("Bluman-Anco (4.64)") else ("Not traced", "", ""))
             listed_gens = ", ".join(fmt_gen(g) for g in rejected)
             para = paragraph(e, "Rejected by `check_symmetry`: " + listed_gens + ".", cause)

@@ -286,11 +286,13 @@ sympy-extras' `check_symmetry` rejects published generators that delierium confi
 | AIMS 2026 II-(1) | -(u<sub>x</sub><sup>n</sup> exp(u))<sub>x</sub> - e2 exp(q u) + u<sub>t</sub> = 0 | 3 | 3 | 1 | (x (1 - q)/(n + 1), -q t, 1) |
 | AIMS 2026 II-(2) | -(u<sub>x</sub><sup>n</sup> exp(u))<sub>x</sub> - e2 exp(u) + e3 + u<sub>t</sub> = 0 | 3 | 3 | 1 | (0, exp(e3 t), -e3 exp(e3 t)) |
 
-#### Not traced (1)
+#### Simplification without assumptions (1)
 
-| entry | equation | dimension | result | note |
-|---|---|---|---|---|
-| Bluman-Anco (4.64) | u<sub>tt</sub> - u<sub>xx</sub> (1 - x)<sup>2 - A</sup> (x + 1)<sup>A + 2</sup> = 0 | infinite | Rejected by `check_symmetry`: (t (1 - x<sup>2</sup>), -A t<sup>2</sup>/2 - ((1 - x)/(x + 1))<sup>A</sup>/(2 A), t u (A/2 - x)) | The residue has symbolic powers (((1 - x)/(1 + x))<sup>A</sup>, (1 + x)<sup>A</sup>); delierium's check simplifies them, sympy-extras' does not. |
+The residue has ((1 - x)/(1 + x))<sup>A</sup> next to (1 + x)<sup>A + 2</sup> (1 - x)<sup>2 - A</sup>; it vanishes once the power is split, which holds on -1 < x < 1, where c(x) is real (checked with x = (1 - q)/(1 + q), q > 0). sympy-extras' `check_symmetry` simplifies without assumptions on x; delierium checks locally, for positive bases.
+
+| entry | equation | dimension | published | rejected | rejected generators |
+|---|---|---|---|---|---|
+| Bluman-Anco (4.64) | u<sub>tt</sub> - u<sub>xx</sub> (1 - x)<sup>2 - A</sup> (x + 1)<sup>A + 2</sup> = 0 | infinite | 4 | 1 | (t (1 - x<sup>2</sup>), -A t<sup>2</sup>/2 - ((1 - x)/(x + 1))<sup>A</sup>/(2 A), t u (A/2 - x)) |
 
 #### One branch of y' (1)
 
@@ -1040,11 +1042,13 @@ MathLie leaves too few conditions (ξ, η partly unresolved), so the algebra com
 | Kamke 6.133 | y'<sup>2</sup> - y' + y'' (x + y) = 0 | 3 | dimension infinite |
 | Kamke 6.228 | y'' (x y' - y) - (y'<sup>2</sup> + 1)<sup>2</sup> = 0 | 2 | dimension infinite |
 
-#### Not traced (1)
+#### Solutions of the determining equations lost (1)
 
-| entry | equation | dimension | result | note |
-|---|---|---|---|---|
-| Bluman-Anco Exercise 3.5-3 | -2 y'<sup>2</sup> cot(y) + y'' - sin(y) cos(y) = 0 | 8 | dimension 1 | MathLie finds d/dx only; the equation is linearizable (dimension 8); LIEPDE, ReLie and DIMSYM fail on it as well, through the trigonometric functions. |
+MathLie's determining equations are right (delierium's Janet basis of them, from DeterminingEquations, has rank 8: the equation is linearizable), but its solver returns ξ = k1, η = 0 only: it loses the solutions of the system with trigonometric coefficients.
+
+| entry | equation | dimension | result |
+|---|---|---|---|
+| Bluman-Anco Exercise 3.5-3 | -2 y'<sup>2</sup> cot(y) + y'' - sin(y) cos(y) = 0 | 8 | dimension 1 |
 
 #### Indeterminate in the generators (1)
 
