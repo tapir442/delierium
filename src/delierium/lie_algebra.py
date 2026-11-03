@@ -77,7 +77,7 @@ class NotClosedError(ValueError):
 class VectorField:
     """X = sum_i coefficients[i] d/dcoordinates[i].
 
-    >>> x, y = Symbol('x'), Symbol('y')
+    >>> x, y = Symbol("x"), Symbol("y")
     >>> rotation = VectorField([-y, x], [x, y])
     >>> rotation(x**2 + y**2)
     0
@@ -116,7 +116,7 @@ class VectorField:
     def commutator(self, other: "VectorField") -> "VectorField":
         """[X, Y] with the components X(Y^k) - Y(X^k).
 
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = Symbol("x"), Symbol("y")
         >>> VectorField([1, 0], [x, y]).commutator(VectorField([x, y], [x, y]))
         D(x)
         """
@@ -176,7 +176,7 @@ class _RationalAtPoints:
     sin(5/3), cos(5/3) or (8/5)**a, (8/5)**(2 a) would lose them.
 
     >>> from sympy import exp
-    >>> x, a = Symbol('x'), Symbol('a')
+    >>> x, a = Symbol("x"), Symbol("a")
     >>> r = _RationalAtPoints([x])
     >>> r(sin(2 * x) + x ** (a + 1) * exp(-2 * a * x))
     _p_x_a*x/_w_x_a**2 + 4*_t_x*(1 - _t_x**2)/(_t_x**2 + 1)**2
@@ -311,7 +311,7 @@ class LieAlgebra:
 
     The rotations of the plane and of space:
 
-    >>> x, y, z = Symbol('x'), Symbol('y'), Symbol('z')
+    >>> x, y, z = Symbol("x"), Symbol("y"), Symbol("z")
     >>> so3 = LieAlgebra([[0, -z, y], [z, 0, -x], [-y, x, 0]], [x, y, z])
     >>> so3.commutator_table()
     Matrix([
@@ -410,8 +410,8 @@ class LieAlgebra:
 
         >>> from sympy import Function, diff
         >>> from delierium.janet_basis import JanetBasis
-        >>> x, y = Symbol('x'), Symbol('y')
-        >>> xi, eta = Function('xi')(x, y), Function('eta')(x, y)
+        >>> x, y = Symbol("x"), Symbol("y")
+        >>> xi, eta = Function("xi")(x, y), Function("eta")(x, y)
         >>> killing = [diff(xi, x), diff(eta, y), diff(xi, y) + diff(eta, x)]
         >>> e2 = LieAlgebra.from_janet_basis(JanetBasis(killing, [xi, eta], [x, y]))
         >>> e2.dimension, e2.derived_series(), e2.is_nilpotent()
@@ -726,7 +726,7 @@ class LieAlgebra:
         dimension at most 4, with Schwarz's names (section 3.4), None above
         (delierium.lie_algebra_types).
 
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = Symbol("x"), Symbol("y")
         >>> print(LieAlgebra([[1, 0], [0, 1], [y, -x]], [x, y]).type())  # e(2)
         l3,2(c = -1)
         >>> print(LieAlgebra([[1, 0], [0, 1], [0, y]], [x, y]).type())
@@ -744,7 +744,7 @@ class LieAlgebra:
         adjoint action. The Euclidean algebra e(2): rotations and
         translations.
 
-        >>> x, y = Symbol('x'), Symbol('y')
+        >>> x, y = Symbol("x"), Symbol("y")
         >>> LieAlgebra([[1, 0], [0, 1], [-y, x]], [x, y]).optimal_system().representatives
         [X2, X3]
         """

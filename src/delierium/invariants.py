@@ -43,11 +43,16 @@ from sympy import (
 from delierium.helpers import generic_case, numeric_value, plain_symbol, random_point
 from delierium.lie_algebra import VectorField
 
-__all__ = ["canonical_coordinates", "differential_invariants", "invariants"]
+__all__ = [
+    "FAST_HINTS",
+    "canonical_coordinates",
+    "differential_invariants",
+    "invariants",
+]
 
 type Generator = VectorField | Sequence[Any]
 
-_FAST_HINTS = (
+FAST_HINTS = (
     "separable",
     "1st_linear",
     "Bernoulli",
@@ -216,7 +221,7 @@ def _solutions(ode: Eq, g: Expr) -> Iterator[list[Eq]]:
     """
     hints: list[str] = ["default"]
     with suppress(NotImplementedError, ValueError, RecursionError):
-        hints += [h for h in classify_ode(ode, g) if h in _FAST_HINTS]
+        hints += [h for h in classify_ode(ode, g) if h in FAST_HINTS]
     for hint in dict.fromkeys(hints):
         try:
             solution = dsolve(ode, g, hint=hint)

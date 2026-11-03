@@ -47,9 +47,9 @@ def assert_equal(actual, expected):
 # ODEs, y = y(x): Arrigo Chapter 2
 # ---------------------------------------------------------------------------
 
-x_, y_ = Symbol('x'), Symbol('y')
-X_, Y_ = Function('X')(x_, y_), Function('Y')(x_, y_)
-y1, y2, y3 = Symbol('y_x'), Symbol('y_xx'), Symbol('y_xxx')
+x_, y_ = Symbol("x"), Symbol("y")
+X_, Y_ = Function("X")(x_, y_), Function("Y")(x_, y_)
+y1, y2, y3 = Symbol("y_x"), Symbol("y_xx"), Symbol("y_xxx")
 
 
 def d(f, *vs):
@@ -57,8 +57,8 @@ def d(f, *vs):
 
 
 def ode_setup():
-    x = Symbol('x')
-    y = Function('y')(x)
+    x = Symbol("x")
+    y = Function("y")(x)
     return x, y
 
 
@@ -131,15 +131,15 @@ def test_example_2_18():
 # PDEs, u = u(x, t): Arrigo Chapter 3
 # ---------------------------------------------------------------------------
 
-t_, u_ = Symbol('t'), Symbol('u')
-Xp, Tp, Up = (Function(n)(x_, t_, u_) for n in 'XTU')
-ux, ut = Symbol('u_x'), Symbol('u_t')
-uxx, uxt = Symbol('u_xx'), Symbol('u_xt')
+t_, u_ = Symbol("t"), Symbol("u")
+Xp, Tp, Up = (Function(n)(x_, t_, u_) for n in "XTU")
+ux, ut = Symbol("u_x"), Symbol("u_t")
+uxx, uxt = Symbol("u_xx"), Symbol("u_xt")
 
 
 def pde_setup():
-    x, t = Symbol('x'), Symbol('t')
-    u = Function('u')(x, t)
+    x, t = Symbol("x"), Symbol("t")
+    u = Function("u")(x, t)
     return x, t, u
 
 

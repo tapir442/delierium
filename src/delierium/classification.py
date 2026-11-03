@@ -39,12 +39,12 @@ from sympy.solvers.solvers import unrad
 
 from delierium.helpers import finish_substitution, plain_symbol
 from delierium.infinitesimals import (
-    _checked_arguments,
-    _initial,
+    checked_arguments,
     create_infinitesimals,
     determining_condition,
     determining_janet_basis,
     jet_power_conditions,
+    leading_initial,
     split_jet_coefficients,
 )
 from delierium.janet_basis import LHDP, JanetBasis, nonzero_factors, split_assumptions
@@ -159,7 +159,7 @@ def group_classification(
     (n = -1 is linearizable by a hodograph transformation.)
     """
     independent = list(independent)
-    _checked_arguments(eq, dependent, independent)
+    checked_arguments(eq, dependent, independent)
     variables = [*independent, plain_symbol(dependent)]
 
     def build(rule: dict[Basic, Expr]) -> tuple[JanetBasis, list[list[Expr]]]:
@@ -247,7 +247,7 @@ def _initial_conditions(eq: Expr, dependent: Basic, independent: list[Basic]) ->
     >>> _initial_conditions(y.diff(x, 2) + a * y, y, [x])
     []
     """
-    initial = _initial(eq, [dependent], independent)
+    initial = leading_initial(eq, [dependent], independent)
     if initial is None:
         return []
     # the jet variables and the dependent variable are variables as well

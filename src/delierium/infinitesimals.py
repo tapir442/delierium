@@ -74,9 +74,9 @@ from delierium.helpers import (
 )
 from delierium.janet_basis import (
     LHDP,
+    Dterm,
     JanetBasis,
     LHDPList,
-    _Dterm,
     is_janet_basis_of,
     nonzero_factors,
     reorder,
@@ -85,16 +85,21 @@ from delierium.matrix_order import Context, Mgrevlex, WeightFunction
 
 __all__ = [
     "VerificationResult",
+    "checked_arguments",
     "create_infinitesimals",
     "determining_janet_basis",
+    "determining_system",
+    "initials",
     "is_janet_basis_of_ode",
     "is_janet_basis_of_odes",
     "janet_basis_from_ode",
     "janet_basis_from_odes",
+    "leading_initial",
     "overdetermined_system_ode",
     "overdetermined_system_odes",
     "overdetermined_system_pde",
     "prolongation",
+    "simplified_residue",
     "verify_symmetries",
     "verify_symmetry",
 ]
@@ -112,7 +117,7 @@ type InfinitesimalNames = Mapping[Basic, str | Expr] | None
 def variable_combinations(variables: list[Symbol], max_order: int) -> list[list[Symbol]]:
     """All non-decreasing multi-indices of `variables` of length 1..max_order.
 
-    >>> x, t, u = Symbol('x'), Symbol('t'), Symbol('u')
+    >>> x, t, u = Symbol("x"), Symbol("t"), Symbol("u")
     >>> variable_combinations([x, t], 2)
     [[x], [t], [x, x], [x, t], [t, t]]
     >>> variable_combinations([x], 3)
@@ -182,10 +187,10 @@ def prolonged_infinitesimals(
     D_J Q from D_{J-i} Q (each multi-index once). Then x, u, u_J are put
     back: u(x), Derivative(u(x), ...), Derivative(X(x, u(x)), u(x)).
 
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
-    >>> X = make_infinitesimal(x, x, y, name='X')
-    >>> Y = make_infinitesimal(y, x, y, name='Y')
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
+    >>> X = make_infinitesimal(x, x, y, name="X")
+    >>> Y = make_infinitesimal(y, x, y, name="Y")
     >>> from delierium.helpers import ltf
     >>> etas = prolonged_infinitesimals([y], [x], {x: X, y: Y}, 2)
     >>> list(etas)
@@ -199,11 +204,11 @@ def prolonged_infinitesimals(
 
     Two independent variables (PDE case): eta^t for u(x, t):
 
-    >>> t = Symbol('t')
-    >>> u = Function('u')(x, t)
-    >>> Xi = make_infinitesimal(x, x, t, u, name='X')
-    >>> T = make_infinitesimal(t, x, t, u, name='T')
-    >>> U = make_infinitesimal(u, x, t, u, name='U')
+    >>> t = Symbol("t")
+    >>> u = Function("u")(x, t)
+    >>> Xi = make_infinitesimal(x, x, t, u, name="X")
+    >>> T = make_infinitesimal(t, x, t, u, name="T")
+    >>> U = make_infinitesimal(u, x, t, u, name="U")
     >>> etas = prolonged_infinitesimals([u], [x, t], {x: Xi, t: T, u: U}, 2)
     >>> list(etas)  # doctest: +NORMALIZE_WHITESPACE
     [Derivative(u(x, t), x), Derivative(u(x, t), t), Derivative(u(x, t), (x, 2)),
@@ -235,8 +240,8 @@ class _JetSpace:
     def __init__(self, dep: list[Expr], indep: list[Symbol]) -> None:
         """No jets yet but u for every dependent variable u(x).
 
-        >>> x = Symbol('x')
-        >>> space = _JetSpace([Function('y')(x)], [x])
+        >>> x = Symbol("x")
+        >>> space = _JetSpace([Function("y")(x)], [x])
         >>> list(space.base.values())
         [_y]
         """
@@ -259,8 +264,8 @@ class _JetSpace:
         """The symbol for the derivative of the a-th dependent variable by
         the independent variables with the indices multi.
 
-        >>> x, t = symbols('x t')
-        >>> space = _JetSpace([Function('u')(x, t)], [x, t])
+        >>> x, t = symbols("x t")
+        >>> space = _JetSpace([Function("u")(x, t)], [x, t])
         >>> space.jet(0, (1, 0)), space.jet(0, (0, 1)) == space.jet(0, (1, 0))
         (_u_xt, True)
         """
@@ -279,9 +284,9 @@ class _JetSpace:
         """The symbol for the partial derivative of f with the counts by
         argument.
 
-        >>> x = Symbol('x')
-        >>> space = _JetSpace([Function('y')(x)], [x])
-        >>> X = Function('X')(x, space.base[space.dep[0]])
+        >>> x = Symbol("x")
+        >>> space = _JetSpace([Function("y")(x)], [x])
+        >>> X = Function("X")(x, space.base[space.dep[0]])
         >>> space.partial_symbol(X, (1, 0))
         _X(1, 0)
         """
@@ -294,10 +299,10 @@ class _JetSpace:
         """The infinitesimals with u for u(x) and with symbols for the
         functions of x and u (none if they hold derivatives already).
 
-        >>> x = Symbol('x')
-        >>> y = Function('y')(x)
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
         >>> space = _JetSpace([y], [x])
-        >>> space.symbolic([Function('X')(x, y), x * y])
+        >>> space.symbolic([Function("X")(x, y), x * y])
         [_X(0, 0), _y*x]
         """
         plain = {d: self.base[d] for d in self.dep}
@@ -317,9 +322,9 @@ class _JetSpace:
     def partial(self, F: Expr, c: Basic) -> Expr:
         """dF/dc for a coordinate c (x or u), also through the X_K.
 
-        >>> x = Symbol('x')
-        >>> space = _JetSpace([Function('y')(x)], [x])
-        >>> (X,) = space.symbolic([Function('X')(x, Function('y')(x))])
+        >>> x = Symbol("x")
+        >>> space = _JetSpace([Function("y")(x)], [x])
+        >>> (X,) = space.symbolic([Function("X")(x, Function("y")(x))])
         >>> space.partial(x * X, x)
         _X(0, 0) + _X(1, 0)*x
         """
@@ -335,9 +340,9 @@ class _JetSpace:
     def total(self, F: Expr, i: int) -> Expr:
         """D_i F, F depending on x, u, finitely many u_J and X_K.
 
-        >>> x = Symbol('x')
-        >>> space = _JetSpace([Function('y')(x)], [x])
-        >>> (X,) = space.symbolic([Function('X')(x, Function('y')(x))])
+        >>> x = Symbol("x")
+        >>> space = _JetSpace([Function("y")(x)], [x])
+        >>> (X,) = space.symbolic([Function("X")(x, Function("y")(x))])
         >>> space.total(X, 0)
         _X(0, 1)*_y_x + _X(1, 0)
         """
@@ -360,8 +365,8 @@ class _JetSpace:
         coordinates (from symbolic or in_ring), J up to max_order in the
         order of variable_combinations, see prolonged_infinitesimals.
 
-        >>> x = Symbol('x')
-        >>> y = Function('y')(x)
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
         >>> space = _JetSpace([y], [x])
         >>> list(space.prolonged(space.symbolic([Integer(1), Integer(0)]), 2).values())
         [0, 0]
@@ -387,8 +392,8 @@ class _JetSpace:
     def coordinates(self, e: Expr) -> Expr:
         """e with u for u(x) and the jet symbols for its derivatives.
 
-        >>> x = Symbol('x')
-        >>> y = Function('y')(x)
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
         >>> _JetSpace([y], [x]).coordinates(x * y.diff(x, 2) + y)
         _y + _y_xx*x
         """
@@ -406,10 +411,10 @@ class _JetSpace:
         max_order, the other symbols (parameters) as constants; unchanged
         if they are no polynomials in them (concrete infinitesimals, 1/x).
 
-        >>> x = Symbol('x')
-        >>> y = Function('y')(x)
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
         >>> space = _JetSpace([y], [x])
-        >>> X, Y = space.in_ring(space.symbolic([Function('X')(x, y), y]), 1)
+        >>> X, Y = space.in_ring(space.symbolic([Function("X")(x, y), y]), 1)
         >>> space.ring is not None, space.as_expr(Y)
         (True, _y)
         >>> space = _JetSpace([y], [x])
@@ -444,8 +449,8 @@ class _JetSpace:
     def as_expr(self, e: Any) -> Expr:
         """e as a SymPy expression, also if it is a ring element.
 
-        >>> x = Symbol('x')
-        >>> space = _JetSpace([Function('y')(x)], [x])
+        >>> x = Symbol("x")
+        >>> space = _JetSpace([Function("y")(x)], [x])
         >>> (Y,) = space.in_ring([x**2], 1)
         >>> space.as_expr(Y), space.as_expr(x)
         (x**2, x)
@@ -457,10 +462,10 @@ class _JetSpace:
         variables, u_{J,i} for u_J, X_{K+i} + sum_a X_{K+u_a} u_{a,i} for
         X_K, 0 for the parameters.
 
-        >>> x = Symbol('x')
-        >>> y = Function('y')(x)
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
         >>> space = _JetSpace([y], [x])
-        >>> (X,) = space.in_ring(space.symbolic([Function('X')(x, y)]), 1)
+        >>> (X,) = space.in_ring(space.symbolic([Function("X")(x, y)]), 1)
         >>> space.as_expr(space._total_of_generator(space.base[y], 0))
         _y_x
         """
@@ -489,10 +494,10 @@ class _JetSpace:
         """D_i F for F in the ring: the sum of dF/dg * D_i g over its
         generators g.
 
-        >>> x = Symbol('x')
-        >>> y = Function('y')(x)
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
         >>> space = _JetSpace([y], [x])
-        >>> (X,) = space.in_ring(space.symbolic([x * Function('X')(x, y)]), 1)
+        >>> (X,) = space.in_ring(space.symbolic([x * Function("X")(x, y)]), 1)
         >>> space.as_expr(space._ring_total(X, 0))
         _X(0, 0) + _X(0, 1)*_y_x*x + _X(1, 0)*x
         """
@@ -511,10 +516,10 @@ class _JetSpace:
         and its derivatives, these in the order of the arguments as in
         _partials_in_argument_order.
 
-        >>> x = Symbol('x')
-        >>> y = Function('y')(x)
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
         >>> space = _JetSpace([y], [x])
-        >>> (X,) = space.symbolic([Function('X')(x, y)])
+        >>> (X,) = space.symbolic([Function("X")(x, y)])
         >>> sorted(space.total(X, 0).xreplace(space.back()).args, key=str)
         [Derivative(X(x, y(x)), x), Derivative(X(x, y(x)), y(x))*Derivative(y(x), x)]
         """
@@ -533,10 +538,10 @@ class _JetSpace:
         the partials in SymPy's canonical order as in split_jet_coefficients
         (Derivative(X(x, y), y, x).doit() with y for y(x)).
 
-        >>> x = Symbol('x')
-        >>> y = Function('y')(x)
+        >>> x = Symbol("x")
+        >>> y = Function("y")(x)
         >>> space = _JetSpace([y], [x])
-        >>> (X,) = space.symbolic([Function('X')(x, y)])
+        >>> (X,) = space.symbolic([Function("X")(x, y)])
         >>> F = space.total(X, 0)
         >>> sorted(space.canonical_back(F.free_symbols).values(), key=str)
         [Derivative(X(x, y(x)), x), Derivative(X(x, y(x)), y(x))]
@@ -565,9 +570,9 @@ def _partials_in_argument_order(e: Expr, dep: list[Expr]) -> Expr:
     dependent variables stay in SymPy's canonical order, u_tx, as in the
     equation.
 
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
-    >>> X = Function('X')(y, x)
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
+    >>> X = Function("X")(y, x)
     >>> _partials_in_argument_order(Derivative(X, x, y) + Derivative(y, x), [y]).args[1].variables
     (y(x), x)
     """
@@ -599,10 +604,10 @@ def prolongation(
     derivatives are computed here from the ones for dep and indep, so
     `infinitesimals` only needs those; it is not modified.
 
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
-    >>> X = make_infinitesimal(x, x, y, name='X')
-    >>> Y = make_infinitesimal(y, x, y, name='Y')
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
+    >>> X = make_infinitesimal(x, x, y, name="X")
+    >>> Y = make_infinitesimal(y, x, y, name="Y")
     >>> inf = {x: X, y: Y}
 
     On the base variables Gamma just picks the infinitesimal:
@@ -633,11 +638,11 @@ def prolongation(
 
     Two independent variables (PDE case), eta^t for u(x, t):
 
-    >>> t = Symbol('t')
-    >>> u = Function('u')(x, t)
-    >>> Xi = make_infinitesimal(x, x, t, u, name='X')
-    >>> T = make_infinitesimal(t, x, t, u, name='T')
-    >>> U = make_infinitesimal(u, x, t, u, name='U')
+    >>> t = Symbol("t")
+    >>> u = Function("u")(x, t)
+    >>> Xi = make_infinitesimal(x, x, t, u, name="X")
+    >>> T = make_infinitesimal(t, x, t, u, name="T")
+    >>> U = make_infinitesimal(u, x, t, u, name="U")
     >>> inf_pde = {x: Xi, t: T, u: U}
     >>> from delierium.helpers import ltf
     >>> r = prolongation(diff(u, t), inf_pde, [u], [x, t])
@@ -714,8 +719,8 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     dependent variables occurring in it. Denominators are cleared, zero
     and duplicate coefficients dropped.
 
-    >>> x, t = Symbol('x'), Symbol('t')
-    >>> y = Function('y')(x)
+    >>> x, t = Symbol("x"), Symbol("t")
+    >>> y = Function("y")(x)
     >>> d1, d2 = Derivative(y, x), Derivative(y, x, 2)
     >>> split_jet_coefficients(2 * x * d1**2 * d2 + 3 * d1 + x * d1 + 5 * x**2 + d2**3 + 7, [y])
     [1, x, x + 3, 5*x**2 + 7]
@@ -723,7 +728,7 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     Mixed jet variables of a PDE are split as well, and coefficients
     depending on u itself (not a jet variable) stay together:
 
-    >>> u = Function('u')(x, t)
+    >>> u = Function("u")(x, t)
     >>> ux, ut = Derivative(u, x), Derivative(u, t)
     >>> split_jet_coefficients(u * ux * ut + x * ux * ut + ux**2 / u - x, [u])
     [1, x, x + u(x, t)]
@@ -743,7 +748,7 @@ def split_jet_coefficients(expr: Expr, dep: Sequence[Expr]) -> list[Expr]:
     So are powers of jet variables with a symbolic exponent, the exponent
     being generic (Kamke 6.57, y'' = a (x y' - y)**r):
 
-    >>> r = Symbol('r')
+    >>> r = Symbol("r")
     >>> split_jet_coefficients(x * (x * d1 - y) ** r + (x * d1 - y) ** (r - 1) + d1, [y])
     [x, x**2, -x*y(x) + 1, y(x)]
     """
@@ -808,8 +813,8 @@ def _polynomial_coefficients(e: Expr, gens: Sequence[Basic]) -> list[Expr] | Non
     symbols, functions and derivatives; None if e is no polynomial in
     them (1/x).
 
-    >>> x, a, p = Symbol('x'), Symbol('a'), Symbol('p')
-    >>> f = Function('f')(x)
+    >>> x, a, p = Symbol("x"), Symbol("a"), Symbol("p")
+    >>> f = Function("f")(x)
     >>> sorted(_polynomial_coefficients(p**2 * x / 2 + p * (a * f.diff(x) + 1) - x, [p]), key=str)
     [-x, a*Derivative(f(x), x) + 1, x]
     >>> _polynomial_coefficients(p / x, [p]) is None
@@ -838,7 +843,7 @@ def _leaves(exprs: Iterable[Expr]) -> set[Expr]:
     """The factors of exprs that are no numbers, sums, products or positive
     integer powers.
 
-    >>> x, y = Symbol('x'), Symbol('y')
+    >>> x, y = Symbol("x"), Symbol("y")
     >>> sorted(_leaves([(x + 1) ** 2 * exp(y) / x]), key=str)
     [1/x, exp(y), x]
     """
@@ -868,7 +873,7 @@ def _ring_elements(exprs: Sequence[Expr], domain: Any = QQ) -> tuple[Any, list[A
     sring sees on the expanded expressions. CoercionFailed for a rational
     number not in domain.
 
-    >>> x, y = Symbol('x'), Symbol('y')
+    >>> x, y = Symbol("x"), Symbol("y")
     >>> _ring_elements([(x + y) ** 2 / 2])[1]
     [1/2*x**2 + x*y + 1/2*y**2]
     """
@@ -903,8 +908,8 @@ def _numerator(c: Expr) -> Expr:
     functions as symbols: cancel() took 15 s for a coefficient of 2000
     terms of the apoptosis model (ODEBench 53), the sparse field 0.7 s.
 
-    >>> x, a = Symbol('x'), Symbol('a')
-    >>> f = Function('f')(x)
+    >>> x, a = Symbol("x"), Symbol("a")
+    >>> f = Function("f")(x)
     >>> _numerator(x / (x + a) + a * f.diff(x) / x)
     a**2*Derivative(f(x), x) + a*x*Derivative(f(x), x) + x**2
     """
@@ -941,7 +946,7 @@ def _numerators_and_denominators(e: Expr) -> list[Expr]:
     """n1, d1, n2, d2, ...: e = n1/d1 + n2/d2 + ..., the terms of e grouped by
     their denominator.
 
-    >>> x, y = Symbol('x'), Symbol('y')
+    >>> x, y = Symbol("x"), Symbol("y")
     >>> _numerators_and_denominators(x / y + 1 / y + x)
     [x, 1, x + 1, y]
     """
@@ -963,7 +968,7 @@ def _power_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[Dumm
     each other form one family: b**n and b**(-n) after solving for a
     derivative are G and 1/G (#39), b**(n/2) and b**n are G and G**2.
 
-    >>> p, n = Symbol('p'), Symbol('n')
+    >>> p, n = Symbol("p"), Symbol("n")
     >>> e, (g,) = _power_generators(p**n * p + p ** (-n) + p ** (n / 2), [p])
     >>> e == g**2 * p + g**-2 + g
     True
@@ -993,7 +998,7 @@ def _algebraic_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[
     functions of the jet variables (#5: w_tt = k w_xx**(-1/3), Kamke 7.13
     u'' u''' = a sqrt(1 + b**2 u''**2)).
 
-    >>> p = Symbol('p')
+    >>> p = Symbol("p")
     >>> e, (g,), (r,) = _algebraic_generators(p ** Rational(-1, 3) + p ** Rational(2, 3), [p])
     >>> e == g**-1 + g**2, r == g**3 - p
     (True, True)
@@ -1033,8 +1038,8 @@ def _function_generators(expr: Expr, jet: Sequence[Basic]) -> tuple[Expr, list[D
     the generic case of a group classification (#5: CRC Vol. 1, 10.3
     v_t = k(v_x) v_xx). Exponentials are left to _exp_generators.
 
-    >>> p = Symbol('p')
-    >>> F = Function('F')
+    >>> p = Symbol("p")
+    >>> F = Function("F")
     >>> e, gens = _function_generators(p * log(p) + F(p) + 1, [p])
     >>> len(gens), e.has(log, F)
     (2, False)
@@ -1121,9 +1126,9 @@ def canonical_derivatives(expr: Expr, dep: Iterable[Expr]) -> Expr:
     sympy's canonical order, so that e.g. X_{x y} and X_{y x} compare
     equal. Derivatives w.r.t. y(x) are not reordered by sympy itself.
 
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
-    >>> X = Function('X')(x, y)
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
+    >>> X = Function("X")(x, y)
     >>> canonical_derivatives(Derivative(X, y, x) - Derivative(X, x, y), [y])
     0
     """
@@ -1146,8 +1151,8 @@ def _canonical_derivatives_of(expr: Expr, dep: Variables) -> Expr:
     unknown function, as Derivative(0, x) after a parameter is set to 0.
 
     >>> from sympy import sin
-    >>> x, t = Symbol('x'), Symbol('t')
-    >>> u = Function('u')(x, t)
+    >>> x, t = Symbol("x"), Symbol("t")
+    >>> u = Function("u")(x, t)
     >>> _canonical_derivatives_of(Derivative(u, x, t) - sin(u), [u])
     -sin(u(x, t)) + Derivative(u(x, t), t, x)
     >>> _canonical_derivatives_of(Derivative(u**2 * Derivative(u, x), x), [u])
@@ -1170,7 +1175,7 @@ def _exact_numbers(expr: Expr) -> Expr:
     full decimal instead gave exponents like 166666666666667/100000000000000
     (Kamke 1.624), on which GMP aborts.
 
-    >>> x = Symbol('x')
+    >>> x = Symbol("x")
     >>> _exact_numbers(0.5 * x + 1.25 + x**1.66666666666667)
     x**(5/3) + x/2 + 5/4
     """
@@ -1185,8 +1190,8 @@ def _local_signs(expr: Expr) -> Expr:
     a complex symbol into re, im and sign, which the determining equations
     and the Janet basis cannot use.
 
-    >>> t = Symbol('t')
-    >>> v = Function('v')(t)
+    >>> t = Symbol("t")
+    >>> v = Function("v")(t)
     >>> e = _local_signs(v.diff(t) + v * Abs(v))
     >>> sorted(e.free_symbols - {t}, key=str)
     [_sign]
@@ -1230,8 +1235,8 @@ def create_infinitesimals(
       infinitesimal to create; any other value (typically an already
       built Function expression) is used verbatim, unchanged.
 
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
 
     Default naming:
 
@@ -1240,12 +1245,12 @@ def create_infinitesimals(
 
     Custom names:
 
-    >>> create_infinitesimals(y, x, {x: 'A', y: 'B'})
+    >>> create_infinitesimals(y, x, {x: "A", y: "B"})
     OrderedDict({x: A(y(x), x), y(x): B(y(x), x)})
 
     Passing already-built infinitesimals through unchanged:
 
-    >>> X = make_infinitesimal(x, x, y, name='X')
+    >>> X = make_infinitesimal(x, x, y, name="X")
     >>> create_infinitesimals(y, x, {x: X}) == OrderedDict({x: X})
     True
     """
@@ -1254,7 +1259,7 @@ def create_infinitesimals(
     infinitesimals: Infinitesimals = OrderedDict()
     if inf is None:
         for d in dep + indep:
-            infinitesimals[d] = make_infinitesimal(d, *(dep + indep), name=d.name.swapcase())
+            infinitesimals[d] = make_infinitesimal(d, *(dep + indep))
     else:
         for v, i in inf.items():
             if isinstance(i, str):
@@ -1283,7 +1288,7 @@ def _polynomial_in(eq: Expr, d: Basic) -> Poly | None:
         return None
 
 
-def _initial(eq: Expr, dep: list[Basic], indep: list[Basic]) -> Expr | None:
+def leading_initial(eq: Expr, dep: list[Basic], indep: list[Basic]) -> Expr | None:
     """The initial of eq: the coefficient of its leading derivative (see
     _leading_derivative) in its numerator; None without a derivative or if
     eq is no polynomial in it.
@@ -1291,7 +1296,7 @@ def _initial(eq: Expr, dep: list[Basic], indep: list[Basic]) -> Expr | None:
     >>> from sympy import Function, symbols
     >>> x, a = symbols("x a")
     >>> y = Function("y")(x)
-    >>> _initial(a * x * y.diff(x, 2) + y, [y], [x]), _initial(y, [y], [x])
+    >>> leading_initial(a * x * y.diff(x, 2) + y, [y], [x]), leading_initial(y, [y], [x])
     (a*x, None)
     """
     _, highest = order(eq, dep, indep)
@@ -1309,8 +1314,8 @@ def _leading_derivative(eq: Expr, candidates: set[Expr], dep: list[Function]) ->
     no jet variable), then one in which eq is linear at all; ties are broken by
     the canonical order of SymPy expressions.
 
-    >>> x, t, tau0, k0, n = symbols('x t tau0 k0 n')
-    >>> u = Function('u')(x, t)
+    >>> x, t, tau0, k0, n = symbols("x t tau0 k0 n")
+    >>> u = Function("u")(x, t)
     >>> eq = tau0 * u.diff(t, 2) + u.diff(t) - k0 * u.diff(x) ** n * u.diff(x, 2)
     >>> _leading_derivative(eq, {u.diff(t, 2), u.diff(x, 2)}, [u])
     Derivative(u(x, t), (t, 2))
@@ -1526,8 +1531,8 @@ def compute_overdetermined_system_of_infinitesimals(
     An ODE that is not linear in its highest derivative, y''**2 = y',
     with the symmetries d/dx, d/dy and x d/dx + 3 y d/dy:
 
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
     >>> for _ in janet_basis_from_ode(diff(y, x, 2) ** 2 - diff(y, x), y, x):
     ...     print(_)
     D(Y(y(x), x), (y(x), 2))
@@ -1556,8 +1561,8 @@ def _ring_determining_equations(
     jet variables. None if eq or the infinitesimals are no polynomials in
     these (1/x, sin(y), arbitrary functions f(x)).
 
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
     >>> for e in _ring_determining_equations(y.diff(x, 2), y, x):
     ...     print(e)
     -Derivative(X(y(x), x), (x, 2)) + 2*Derivative(Y(y(x), x), x, y(x))
@@ -1608,10 +1613,10 @@ def _jet_coefficients(space: "_JetSpace", condition: Any) -> list[Expr]:
     variables, each with coprime integer coefficients, as expressions in
     the functions and derivatives (_ring_determining_equations).
 
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
     >>> space = _JetSpace([y], [x])
-    >>> (X,) = space.in_ring(space.symbolic([Function('X')(x, y)]), 1)
+    >>> (X,) = space.in_ring(space.symbolic([Function("X")(x, y)]), 1)
     >>> _jet_coefficients(space, space.total(X, 0) * 2 + 4 * X)
     [2*X(x, y(x)) + Derivative(X(x, y(x)), x), Derivative(X(x, y(x)), y(x))]
     """
@@ -1648,11 +1653,11 @@ def overdetermined_system_ode(  # pylint: disable=keyword-arg-before-vararg,unus
     """
     >>> # Arrigo Example 2.20
     >>> from delierium.helpers import ltf
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
     >>> ode = diff(y, x, 3) + y * diff(y, x, 2)
     >>> infinitesimals = OrderedDict(
-    ...     {x: make_infinitesimal(x, x, y, name='X'), y: make_infinitesimal(y, x, y, name='Y')}
+    ...     {x: make_infinitesimal(x, x, y, name="X"), y: make_infinitesimal(y, x, y, name="Y")}
     ... )
     >>> inf = overdetermined_system_ode(ode, [y], [x], infinitesimals=infinitesimals)
     >>> inf = [str(ltf(_, [infinitesimals[y]], [infinitesimals[x]], printer=False)) for _ in inf]
@@ -1683,7 +1688,7 @@ def _determining_equations(
     >>> len(_determining_equations(y.diff(x, 2), y, x, None))
     4
     """
-    _checked_arguments(eq, dependent, independent)
+    checked_arguments(eq, dependent, independent)
     result = compute_overdetermined_system_of_infinitesimals(
         eq, dependent, independent, infinitesimals=infinitesimals
     )
@@ -1708,10 +1713,10 @@ def overdetermined_system_odes(  # pylint: disable=keyword-arg-before-vararg
 
     >>> # Arrigo, Example 2.21
     >>> from delierium.helpers import ltf
-    >>> t = Symbol('t')
-    >>> x, y = Function('x')(t), Function('y')(t)
+    >>> t = Symbol("t")
+    >>> x, y = Function("x")(t), Function("y")(t)
     >>> infinitesimals = OrderedDict(
-    ...     (v, make_infinitesimal(v, t, x, y, name=n)) for v, n in [(t, 'T'), (x, 'X'), (y, 'Y')]
+    ...     (v, make_infinitesimal(v, t, x, y, name=n)) for v, n in [(t, "T"), (x, "X"), (y, "Y")]
     ... )
     >>> odes = [diff(x, t) - 2 * x * y, diff(y, t) - x**2 - y**2]
     >>> inf = overdetermined_system_odes(odes, [x, y], [t], infinitesimals=infinitesimals)
@@ -1724,7 +1729,7 @@ def overdetermined_system_odes(  # pylint: disable=keyword-arg-before-vararg
     -T_t*x**2 - T_t*y**2 - 2*T_x*x**3*y - 2*T_x*x*y**3 - T_y*x**4 - 2*T_y*x**2*y**2 - T_y*y**4 -
     2*X*x - 2*Y*y + Y_t + 2*Y_x*x*y + Y_y*x**2 + Y_y*y**2
     """
-    _checked_arguments(eqs, dependent, independent)
+    checked_arguments(eqs, dependent, independent)
     eqs = [_local_signs(_exact_numbers(_canonical_derivatives_of(eq, dependent))) for eq in eqs]
     dep = convert_to_iterable(dependent)
     indep = convert_to_iterable(independent)
@@ -1861,10 +1866,10 @@ def overdetermined_system_pde(  # pylint: disable=keyword-arg-before-vararg,unus
 
     >>> # Arrigo, heat equation, eq 3.34
     >>> from delierium.helpers import ltf
-    >>> x, t = Symbol('x'), Symbol('t')
-    >>> u = Function('u')(x, t)
+    >>> x, t = Symbol("x"), Symbol("t")
+    >>> u = Function("u")(x, t)
     >>> infinitesimals = OrderedDict(
-    ...     (v, make_infinitesimal(v, x, t, u, name=n)) for v, n in [(x, 'X'), (t, 'T'), (u, 'U')]
+    ...     (v, make_infinitesimal(v, x, t, u, name=n)) for v, n in [(x, "X"), (t, "T"), (u, "U")]
     ... )
     >>> pde = diff(u, t) - diff(u, x, 2)
     >>> inf = overdetermined_system_pde(pde, [u], [x, t], infinitesimals=infinitesimals)
@@ -1935,19 +1940,19 @@ def determining_janet_basis(
     The Blasius equation has the translation d/dx and the scaling
     x d/dx - y d/dy; y' = y has infinitely many symmetries:
 
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
     >>> blasius = 2 * diff(y, x, 3) + y * diff(y, x, 2)
     >>> determining_janet_basis(blasius, y, x).rank()
     2
     >>> determining_janet_basis(diff(y, x) - y, y, x).rank()
     oo
     """
-    system, functions, variables = _determining_system(equations, dependent, independent)
+    system, functions, variables = determining_system(equations, dependent, independent)
     return JanetBasis(system, functions, variables, sort_order=sort_order)
 
 
-def _checked_arguments(
+def checked_arguments(
     equations: Expr | Iterable[Expr], dependent: Variables, independent: Variables
 ) -> tuple[list[Expr], list[Expr], list[Basic]]:
     """equations, dependent and independent variables as lists, checked: the
@@ -1960,7 +1965,7 @@ def _checked_arguments(
     >>> x = symbols("x")
     >>> y = Function("y")(x)
     >>> from sympy import Eq
-    >>> _checked_arguments(Eq(y.diff(x), y), y, x)
+    >>> checked_arguments(Eq(y.diff(x), y), y, x)
     ([-y(x) + Derivative(y(x), x)], [y(x)], [x])
     """
     eqs = [equations] if isinstance(equations, (Basic, int, float)) else list(equations)
@@ -2047,7 +2052,7 @@ def _check_equation(e: Expr, dep: list[Any], indep: list[Any]) -> None:
             )
 
 
-def _determining_system(
+def determining_system(
     equations: Expr | Iterable[Expr], dependent: Variables, independent: Variables
 ) -> tuple[list[Expr], list[Expr], list[Basic]]:
     """(determining equations, infinitesimals, coordinates) of a scalar ODE,
@@ -2057,11 +2062,11 @@ def _determining_system(
     >>> from sympy import Function, symbols
     >>> x = symbols("x")
     >>> y = Function("y")(x)
-    >>> system, functions, coordinates = _determining_system(y.diff(x, 2), y, x)
+    >>> system, functions, coordinates = determining_system(y.diff(x, 2), y, x)
     >>> len(system), functions, coordinates
     (4, [X(y, x), Y(y, x)], [x, y])
     """
-    eqs, dep, indep = _checked_arguments(equations, dependent, independent)
+    eqs, dep, indep = checked_arguments(equations, dependent, independent)
     if len(indep) == 1:
         system, functions, variables, _ = _linear_system_odes(eqs, dep, indep)
         return system, functions, variables
@@ -2127,8 +2132,8 @@ def verify_symmetry(
     The Blasius equation: x d/dx - y d/dy is a symmetry, x d/dx + y d/dy is
     not:
 
-    >>> x, y_ = Symbol('x'), Symbol('y')
-    >>> y = Function('y')(x)
+    >>> x, y_ = Symbol("x"), Symbol("y")
+    >>> y = Function("y")(x)
     >>> blasius = diff(y, x, 3) + y * diff(y, x, 2)
     >>> bool(verify_symmetry(blasius, y, x, (x, -y_)))
     True
@@ -2157,8 +2162,8 @@ def verify_symmetries(
     eqs = [equations] if isinstance(equations, Basic) else list(equations)
     dep = convert_to_iterable(dependent)
     indep = convert_to_iterable(independent)
-    system, functions, variables = _determining_system(eqs, dep, indep)
-    assumptions = _initials(eqs, dep, indep)
+    system, functions, variables = determining_system(eqs, dep, indep)
+    assumptions = initials(eqs, dep, indep)
     results = []
     for generator in generators:
         components = tuple(_exact_numbers(sympify(c)) for c in generator)
@@ -2168,31 +2173,31 @@ def verify_symmetries(
         solution = {
             f.func: Lambda(f.args, values[v]) for f, v in zip(functions, variables, strict=True)
         }
-        residues = [_simplified_residue(e.subs(solution).doit()) for e in system]
+        residues = [simplified_residue(e.subs(solution).doit()) for e in system]
         results.append(VerificationResult(components, residues, assumptions))
     return results
 
 
-def _initials(eqs: list[Expr], dep: list[Basic], indep: list[Basic]) -> list[Expr]:
+def initials(eqs: list[Expr], dep: list[Basic], indep: list[Basic]) -> list[Expr]:
     """The coefficients of the highest derivatives of the equations that are
     not constants: the determining equations divide by them.
 
     >>> from sympy import Function, symbols
     >>> x = symbols("x")
     >>> y = Function("y")(x)
-    >>> _initials([x * y.diff(x, 2) + y, y.diff(x) - 1], [y], [x])
+    >>> initials([x * y.diff(x, 2) + y, y.diff(x) - 1], [y], [x])
     [x]
     """
     result = []
     for eq in eqs:
         eq = _exact_numbers(_canonical_derivatives_of(eq, dep))  # as determining_condition
-        initial = _initial(eq, dep, indep)
+        initial = leading_initial(eq, dep, indep)
         if initial is not None and not initial.is_number and initial not in result:
             result.append(initial)
     return result
 
 
-def _simplified_residue(residue: Expr) -> Expr:
+def simplified_residue(residue: Expr) -> Expr:
     """residue simplified, 0 if it vanishes: simplify(), or else with every
     power b**(s + n), s symbolic and n a number, written as G*b**n, G a new
     symbol for b**s. simplify misses (u + mu)**2*(u + mu)**(nu - 1) -
@@ -2202,9 +2207,9 @@ def _simplified_residue(residue: Expr) -> Expr:
 
     >>> from sympy import sqrt, symbols
     >>> x, u, mu, nu = symbols("x u mu nu")
-    >>> _simplified_residue((u + mu) ** 2 * (u + mu) ** (nu - 1) - (u + mu) ** (nu + 1))
+    >>> simplified_residue((u + mu) ** 2 * (u + mu) ** (nu - 1) - (u + mu) ** (nu + 1))
     0
-    >>> _simplified_residue(sqrt(x**2) - x), _simplified_residue(x - 1)
+    >>> simplified_residue(sqrt(x**2) - x), simplified_residue(x - 1)
     (0, x - 1)
     """
     residue = simplify(residue)
@@ -2305,7 +2310,7 @@ def _back_substituted(
         for term in lhdp.terms:
             coeff = back_substitute(term.coeff.as_expr())
             d = back_substitute(term.derivative)
-            p.append(_Dterm(derivative=d, coeff=coeff, context=ctx))
+            p.append(Dterm(derivative=d, coeff=coeff, context=ctx))
         res.append(LHDP(e=0, context=ctx, dterms=p))
 
     def assumptions() -> tuple[list[Expr], list[list[Expr]], list[Expr]]:
@@ -2366,8 +2371,8 @@ def janet_basis_from_odes(  # pylint: disable=keyword-arg-before-vararg,unused-a
     Free particle in the plane, x'' = y'' = 0; its 15 point symmetries
     (sl(4)) are the solutions of these 18 equations:
 
-    >>> t = Symbol('t')
-    >>> x, y = Function('x')(t), Function('y')(t)
+    >>> t = Symbol("t")
+    >>> x, y = Function("x")(t), Function("y")(t)
     >>> B = janet_basis_from_odes([diff(x, t, 2), diff(y, t, 2)], [x, y], [t])
     >>> len(B)
     18
@@ -2408,12 +2413,12 @@ def is_janet_basis_of_ode(
     (e.g. [ys, x]); the default is the one of janet_basis_from_ode,
     [X, Y] and [x, y]. Infinitesimals may be given by name as well.
 
-    >>> x = Symbol('x')
-    >>> y = Function('y')(x)
+    >>> x = Symbol("x")
+    >>> y = Function("y")(x)
     >>> # Schwarz, Example 5.17
     >>> d1, d2 = diff(y, x), diff(y, x, 2)
     >>> ode = 8 * x * d2 * y**6 - 9 * x**5 * d1**4 - 16 * x * d1**2 * y**5 + 16 * d1 * y**6
-    >>> ys = Symbol('y')
+    >>> ys = Symbol("y")
     >>> X, Y = Function("X")(ys, x), Function("Y")(ys, x)
     >>> B = [
     ...     diff(Y, ys, 2) - 2 * diff(Y, ys) / ys + 2 * Y / ys**2,
@@ -2486,12 +2491,12 @@ def is_janet_basis_of_odes(
     point symmetries are time translation, rotation and the scaling of
     Kepler's third law:
 
-    >>> t = Symbol('t')
-    >>> x, y = Function('x')(t), Function('y')(t)
+    >>> t = Symbol("t")
+    >>> x, y = Function("x")(t), Function("y")(t)
     >>> r3 = (x**2 + y**2) ** Rational(3, 2)
     >>> odes = [diff(x, t, 2) + x / r3, diff(y, t, 2) + y / r3]
-    >>> xs, ys = Symbol('x'), Symbol('y')
-    >>> T, X, Y = [Function(_)(t, xs, ys) for _ in 'TXY']
+    >>> xs, ys = Symbol("x"), Symbol("y")
+    >>> T, X, Y = [Function(_)(t, xs, ys) for _ in "TXY"]
     >>> r2 = xs**2 + ys**2
     >>> B = [
     ...     diff(T, t) - 3 * (xs * X + ys * Y) / (2 * r2),

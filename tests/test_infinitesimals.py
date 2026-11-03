@@ -72,8 +72,8 @@ def assert_same_system(computed, expected, dependents):
 
 
 def test_example_2_17():
-    x = Symbol('x')
-    y = Function('y')(x)
+    x = Symbol("x")
+    y = Function("y")(x)
 
     independents = [x]
     dependents = [y]
@@ -96,8 +96,8 @@ def test_example_2_17():
 
 
 def test_example_2_18():
-    x = Symbol('x')
-    y = Function('y')(x)
+    x = Symbol("x")
+    y = Function("y")(x)
 
     independents = [x]
     dependents = [y]
@@ -127,8 +127,8 @@ def test_example_2_18():
 
 
 def test_example_2_19():
-    x = Symbol('x')
-    y = Function('y')(x)
+    x = Symbol("x")
+    y = Function("y")(x)
 
     independents = [x]
     dependents = [y]
@@ -165,8 +165,8 @@ def test_example_2_19():
 
 
 def test_example_2_20():
-    x = Symbol('x')
-    y = Function('y')(x)
+    x = Symbol("x")
+    y = Function("y")(x)
 
     independents = [x]
     dependents = [y]
@@ -196,9 +196,9 @@ def test_example_2_20():
 
 
 def test_example_2_21():
-    t = Symbol('t')
-    x = Function('x')(t)
-    y = Function('y')(t)
+    t = Symbol("t")
+    x = Function("x")(t)
+    y = Function("y")(t)
 
     independents = [t]
     dependents = [x, y]
@@ -236,9 +236,9 @@ def test_example_2_21():
 
 
 def test_heat_equation():
-    x = Symbol('x')
-    t = Symbol('t')
-    u = Function('u')(x, t)
+    x = Symbol("x")
+    t = Symbol("t")
+    u = Function("u")(x, t)
 
     independents = [x, t]
     dependents = [u]
@@ -270,9 +270,9 @@ def test_heat_equation():
 
 def test_free_particle_2d():
     # x'' = 0, y'' = 0: the point symmetries are the 15-dimensional sl(4)
-    t = Symbol('t')
-    x = Function('x')(t)
-    y = Function('y')(t)
+    t = Symbol("t")
+    x = Function("x")(t)
+    y = Function("y")(t)
     dependents = [x, y]
 
     T = make_infinitesimal(t, t, x, y)
@@ -283,7 +283,7 @@ def test_free_particle_2d():
         [D(x, t, t), D(y, t, t)], dependents, [t], infinitesimals=OrderedDict({t: T, x: X, y: Y})
     )
 
-    ts, xs, ys = Symbol('t'), Symbol('x'), Symbol('y')
+    ts, xs, ys = Symbol("t"), Symbol("x"), Symbol("y")
 
     def is_symmetry(tau, xi, eta):
         solution = {f.func: Lambda((ts, xs, ys), g) for f, g in [(T, tau), (X, xi), (Y, eta)]}
@@ -316,13 +316,13 @@ def test_example_2_22():
     # The book gives the general solution (2.186) of the determining
     # equations, not the equations themselves:
     # T = k2 t**2 + 2 k1 t + k0, X = (k2 t + k1) x + k3 y, Y = -k3 x + (k2 t + k1) y
-    t = Symbol('t')
-    x = Function('x')(t)
-    y = Function('y')(t)
+    t = Symbol("t")
+    x = Function("x")(t)
+    y = Function("y")(t)
     r4 = (x**2 + y**2) ** 2
     B = janet_basis_from_odes([D(x, t, t) - x / r4, D(y, t, t) - y / r4], [x, y], [t])
     assert parametric_dimension(B, [t, x, y]) == 4
-    ts, xs, ys = Symbol('t'), Symbol('x'), Symbol('y')
+    ts, xs, ys = Symbol("t"), Symbol("x"), Symbol("y")
     for g in [
         (1, 0, 0),  # k0
         (2 * ts, xs, ys),  # k1
@@ -336,9 +336,9 @@ def test_example_2_22():
 
 def test_harry_dym_baumann_226():
     # u_t = u^3 u_xxx
-    x = Symbol('x')
-    t = Symbol('t')
-    u = Function('u')(x, t)
+    x = Symbol("x")
+    t = Symbol("t")
+    u = Function("u")(x, t)
     independents = [x, t]
     dependents = [u]
 
@@ -375,8 +375,8 @@ def test_harry_dym_baumann_226():
 
     # general solution: the five-dimensional symmetry algebra
     # d_x, d_t, x d_x + u d_u, x^2 d_x + 2 x u d_u, 3 t d_t - u d_u
-    c1, c2, c3, c4, c5 = Symbol('c1'), Symbol('c2'), Symbol('c3'), Symbol('c4'), Symbol('c5')
-    us = Symbol('u')
+    c1, c2, c3, c4, c5 = Symbol("c1"), Symbol("c2"), Symbol("c3"), Symbol("c4"), Symbol("c5")
+    us = Symbol("u")
     solution = {
         X.func: Lambda((x, t, us), c1 + c2 * x + c3 * x**2),
         T.func: Lambda((x, t, us), c4 + 3 * c5 * t),
@@ -415,9 +415,9 @@ def parametric_dimension(B, variables, bound=6):
 
 
 def satisfies_janet_basis(B, generator, t, x, y):
-    ts, xs, ys = Symbol('t'), Symbol('x'), Symbol('y')
+    ts, xs, ys = Symbol("t"), Symbol("x"), Symbol("y")
     solution = {
-        Function(name): Lambda((xs, ys, ts), g) for name, g in zip('TXY', generator, strict=True)
+        Function(name): Lambda((xs, ys, ts), g) for name, g in zip("TXY", generator, strict=True)
     }
     return all(
         simplify(b.expression().xreplace({x: xs, y: ys}).subs(solution).doit()) == 0 for b in B
@@ -425,12 +425,12 @@ def satisfies_janet_basis(B, generator, t, x, y):
 
 
 def test_janet_basis_free_particle_2d():
-    t = Symbol('t')
-    x = Function('x')(t)
-    y = Function('y')(t)
+    t = Symbol("t")
+    x = Function("x")(t)
+    y = Function("y")(t)
     B = janet_basis_from_odes([D(x, t, t), D(y, t, t)], [x, y], [t])
     assert parametric_dimension(B, [t, x, y]) == 15
-    ts, xs, ys = Symbol('t'), Symbol('x'), Symbol('y')
+    ts, xs, ys = Symbol("t"), Symbol("x"), Symbol("y")
     generators = [
         (1, 0, 0),
         (0, 1, 0),
@@ -455,27 +455,27 @@ def test_janet_basis_free_particle_2d():
 def test_janet_basis_kepler():
     # x'' = -x/r**3, y'' = -y/r**3: time translation, rotation, and the
     # scaling of Kepler's third law
-    t = Symbol('t')
-    x = Function('x')(t)
-    y = Function('y')(t)
+    t = Symbol("t")
+    x = Function("x")(t)
+    y = Function("y")(t)
     r3 = (x**2 + y**2) ** Rational(3, 2)
     B = janet_basis_from_odes([D(x, t, t) + x / r3, D(y, t, t) + y / r3], [x, y], [t])
     assert parametric_dimension(B, [t, x, y]) == 3
-    ts, xs, ys = Symbol('t'), Symbol('x'), Symbol('y')
+    ts, xs, ys = Symbol("t"), Symbol("x"), Symbol("y")
     for g in [(1, 0, 0), (0, -ys, xs), (3 * ts, 2 * xs, 2 * ys)]:
         assert satisfies_janet_basis(B, g, t, x, y)
     assert not satisfies_janet_basis(B, (0, xs, ys), t, x, y)
 
 
 def test_is_janet_basis_of_odes_ranking():
-    t = Symbol('t')
-    x = Function('x')(t)
-    y = Function('y')(t)
+    t = Symbol("t")
+    x = Function("x")(t)
+    y = Function("y")(t)
     free = [D(x, t, t), D(y, t, t)]
     B = janet_basis_from_odes(free, [x, y], [t])
     assert is_janet_basis_of_odes(B, free, [x, y], [t])
     # e.g. T_tt - 2 Y_ty: which term leads depends on the ranking of T and Y
-    assert not is_janet_basis_of_odes(B, free, [x, y], [t], dependent_order=['Y', 'X', 'T'])
+    assert not is_janet_basis_of_odes(B, free, [x, y], [t], dependent_order=["Y", "X", "T"])
     assert not is_janet_basis_of_odes(B[1:], free, [x, y], [t])
 
     # all leaders of the Kepler basis are first derivatives, whatever the ranking
@@ -483,7 +483,7 @@ def test_is_janet_basis_of_odes_ranking():
     kepler = [D(x, t, t) + x / r3, D(y, t, t) + y / r3]
     B = janet_basis_from_odes(kepler, [x, y], [t])
     assert is_janet_basis_of_odes(
-        B, kepler, [x, y], [t], dependent_order=['Y', 'X', 'T'], independent_order=['y', 'x', t]
+        B, kepler, [x, y], [t], dependent_order=["Y", "X", "T"], independent_order=["y", "x", t]
     )
 
 
@@ -492,10 +492,10 @@ def test_symbolic_power_of_a_derivative():
     # v_x**(-n) are one family (G and 1/G), not two independent generators.
     # The scalings (x, 2t, v) and (0, n t, -v) are symmetries (CRC Handbook,
     # Vol. 1, 10.3)
-    x, t, n, V = Symbol('x'), Symbol('t'), Symbol('n'), Symbol('v')
-    v = Function('v')(x, t)
-    infinitesimals = OrderedDict({v: make_infinitesimal(v, v, x, t, name='V')})
-    for s, name in ((x, 'X'), (t, 'T')):
+    x, t, n, V = Symbol("x"), Symbol("t"), Symbol("n"), Symbol("v")
+    v = Function("v")(x, t)
+    infinitesimals = OrderedDict({v: make_infinitesimal(v, v, x, t, name="V")})
+    for s, name in ((x, "X"), (t, "T")):
         infinitesimals[s] = make_infinitesimal(s, v, x, t, name=name)
     det = overdetermined_system_pde(
         Derivative(v, t) - Derivative(v, x) ** n * Derivative(v, x, 2),
@@ -517,10 +517,10 @@ def test_float_in_the_equation():
     # equation into floats, so the determining equation carried
     # sqrt(4*x**2*y + 1) and sqrt(4.0*x**2*y + 1.0) as different roots, and
     # the symmetry (1/x**2, 1/(2*x**5)) left a residue zero only numerically
-    x, Y = Symbol('x'), Symbol('y')
-    y = Function('y')(x)
+    x, Y = Symbol("x"), Symbol("y")
+    y = Function("y")(x)
     infinitesimals = OrderedDict(
-        {x: make_infinitesimal(x, y, x, name='X'), y: make_infinitesimal(y, y, x, name='Y')}
+        {x: make_infinitesimal(x, y, x, name="X"), y: make_infinitesimal(y, y, x, name="Y")}
     )
     ode = Derivative(y, x) - (x**4 * (4 * x**2 * y + 1) ** Rational(1, 2) + 0.5) / x**3
     det = overdetermined_system_ode(ode, [y], [x], infinitesimals=infinitesimals)
@@ -535,8 +535,8 @@ def test_absolute_value_of_a_dependent_variable():
     # #51: x1' = c - sin(x0) - x1 |x1| (ODEBench 44, pendulum with quadratic
     # damping). Abs(x1) used to become re, im and sign, and the Janet basis
     # stopped at an assertion; |x1| is now s*x1 with a constant sign s
-    t, c = Symbol('t'), Symbol('c')
-    x0, x1 = Function('x0')(t), Function('x1')(t)
+    t, c = Symbol("t"), Symbol("c")
+    x0, x1 = Function("x0")(t), Function("x1")(t)
     system = [Derivative(x0, t) - x1, Derivative(x1, t) - c + sin(x0) + x1 * Abs(x1)]
     det = overdetermined_system_odes(system, [x0, x1], [t])
     assert not any(e.has(re, im, Abs, sign) for e in det)
@@ -572,8 +572,8 @@ def test_not_polynomial_in_the_derivatives(name):
 def test_square_root_of_the_highest_derivative():
     # #5: Kamke 1.558, a x sqrt(y'**2 + 1) + x y' - y = 0: the root contains
     # the highest derivative; homogeneous, so (x, y) is a symmetry
-    x, a, Y = Symbol('x'), Symbol('a'), Symbol('y')
-    y = Function('y')(x)
+    x, a, Y = Symbol("x"), Symbol("a"), Symbol("y")
+    y = Function("y")(x)
     ode = a * x * (Derivative(y, x) ** 2 + 1) ** Rational(1, 2) + x * Derivative(y, x) - y
     assert verify_symmetry(ode, y, x, (x, Y))
     assert not verify_symmetry(ode, y, x, (1, 0))
@@ -582,12 +582,12 @@ def test_square_root_of_the_highest_derivative():
 def test_trigonometric_function_of_a_derivative():
     # #5: y'' = sin(y'), written with exponentials and split into real and
     # imaginary parts; the translations are symmetries, the scaling (x, y) not
-    x = Symbol('x')
-    y = Function('y')(x)
+    x = Symbol("x")
+    y = Function("y")(x)
     ode = Derivative(y, x, 2) - sin(Derivative(y, x))
     assert verify_symmetry(ode, y, x, (1, 0))
     assert verify_symmetry(ode, y, x, (0, 1))
-    assert not verify_symmetry(ode, y, x, (x, Symbol('y')))
+    assert not verify_symmetry(ode, y, x, (x, Symbol("y")))
 
 
 def test_exponent_with_a_parameter_in_a_denominator():

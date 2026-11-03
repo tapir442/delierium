@@ -22,7 +22,7 @@ WeightFunction = Callable[[Sequence[Basic], Sequence[Basic]], Matrix]
 
 
 def Mlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
-    '''Generates the "cotes" according to Riquier for the lex ordering
+    """Generates the "cotes" according to Riquier for the lex ordering
     INPUT : funcs: a tuple of functions (tuple for caching reasons)
             variables: a tuple of variables
             these are not used directly , just their length is interesting, but
@@ -45,7 +45,7 @@ def Mlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa:
     >>> z = Function("z")(x, y)
     >>> print(Mlex((z, w), (x, y)))
     Matrix([[0, 0, 2, 1], [1, 0, 0, 0], [0, 1, 0, 0]])
-    '''
+    """
     no_funcs = len(funcs)
     no_vars = len(variables)
     i = eye(no_vars)
@@ -56,7 +56,7 @@ def Mlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa:
 
 
 def Mgrlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
-    '''Generates the "cotes" according to Riquier for the grlex ordering
+    """Generates the "cotes" according to Riquier for the grlex ordering
     >>> from sympy import Function, symbols
     >>> x,y,z = symbols("x y z")
     >>> f = Function("f")(x,y,z)
@@ -65,14 +65,14 @@ def Mgrlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noq
     >>> print(Mgrlex((f,g,h), [x,y,z])) # doctest: +NORMALIZE_WHITESPACE
     Matrix([[1, 1, 1, 0, 0, 0], [0, 0, 0, 3, 2, 1], [1, 0, 0, 0, 0, 0], \
 [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]])
-    '''
+    """
     m = Mlex(funcs, variables)
     first_row = Matrix(1, len(variables) + len(funcs), [1] * len(variables) + [0] * len(funcs))
     return m.row_insert(0, first_row)
 
 
 def Mgrevlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # noqa: N802  # pylint: disable=invalid-name
-    '''Generates the "cotes" according to Riquier for the grevlex ordering
+    """Generates the "cotes" according to Riquier for the grevlex ordering
     >>> from sympy import Function, symbols
     >>> x, y, z = symbols("x y z")
     >>> f = Function("f")(x, y, z)
@@ -81,7 +81,7 @@ def Mgrevlex(funcs: Sequence[Basic], variables: Sequence[Basic]) -> Matrix:  # n
     >>> print(Mgrevlex ((f,g,h), [x,y,z]))
     Matrix([[1, 1, 1, 0, 0, 0], [0, 0, 0, 3, 2, 1], \
 [0, 0, -1, 0, 0, 0], [0, -1, 0, 0, 0, 0], [-1, 0, 0, 0, 0, 0]])
-    '''
+    """
     no_funcs = len(funcs)
     no_vars = len(variables)
     cols = no_funcs + no_vars
