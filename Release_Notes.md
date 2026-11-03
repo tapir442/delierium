@@ -4,6 +4,11 @@ Details are in the issues referenced. How delierium compares with other tools (S
 sympy-extras, REDUCE's LIEPDE, ReLie, DIMSYM and SPDE, MathLie, symmgrp2020, BLAD, CoCoA,
 Singular, GAP), entry by entry: [BENCHMARK.md](BENCHMARK.md).
 
+### Not released yet
+
+* Internal code quality improvements
+  ([#115](https://github.com/tapir442/delierium/pull/115)).
+
 ### 2.7.1
 
 * Fixed: unevaluated derivatives of an arbitrary function of an expression (d/dx f(y/x), as
