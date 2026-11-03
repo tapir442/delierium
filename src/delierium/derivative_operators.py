@@ -43,7 +43,7 @@ def derivative_orders_of(expr: Basic, u: Expr) -> Iterator[int]:
     >>> sorted(derivative_orders_of(u.diff(x, 3) + u * u.diff(x), u))
     [1, 3]
     """
-    if hasattr(expr, 'args') and expr.args:
+    if hasattr(expr, "args") and expr.args:
         for sub_expr in expr.args:
             if sub_expr == []:
                 continue
@@ -69,7 +69,7 @@ def variational_derivative(L: Expr, u_in: Expr) -> Expr:
         u = Function(u_in.func.__name__)(x)  # pylint: disable=not-callable
     else:
         raise TypeError("Input function must have exactly one variable.")
-    t = symbols('tapir')  # dummy variable
+    t = symbols("tapir")  # dummy variable
     result = S(0)
     orders = set(derivative_orders_of(L, u)).union((0,))
     for c in orders:
@@ -127,8 +127,8 @@ def euler_operator(
 
     >>> from sympy import symbols, Function, diff
     >>> t = symbols("t")
-    >>> u = Function('u')
-    >>> v = Function('v')
+    >>> u = Function("u")
+    >>> v = Function("v")
     >>> L = u(t) * v(t) + diff(u(t), t) ** 2 + diff(v(t), t) ** 2 - u(t) ** 2 - v(t) ** 2
     >>> euler_operator(L, (u, v), t)
     [-2*u(t) + v(t) - 2*Derivative(u(t), (t, 2)), u(t) - 2*v(t) - 2*Derivative(v(t), (t, 2))]

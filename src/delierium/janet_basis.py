@@ -40,6 +40,7 @@ from delierium.multipliers import (
 __all__ = [
     "LHDP",
     "SCHWARZ_TYPES",
+    "Dterm",
     "JanetBasis",
     "JanetType",
     "LHDPList",
@@ -110,7 +111,7 @@ def compute_order(
     return [0] * len(independent)
 
 
-class _Dterm:
+class Dterm:
     __slots__ = ["coeff", "comparison_vector", "context", "derivative", "function", "order"]
     coeff: Coeff
     comparison_vector: ComparisonVector
@@ -126,7 +127,7 @@ class _Dterm:
         >>> x, y = symbols("x y")
         >>> z = Function("z")(x, y)
         >>> ctx = Context([z], [x, y])
-        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t = Dterm(x, z.diff(x), ctx)
         >>> t.coeff, t.function, t.order, t.comparison_vector
         (x, z(x, y), [1, 0], (1, 0, 1))
         """
@@ -141,20 +142,20 @@ class _Dterm:
         self.order = self._compute_order()
         self.comparison_vector = self._compute_comparison_vector()
 
-    def copy(self) -> "_Dterm":
+    def copy(self) -> "Dterm":
         """Shallow copy; coefficients are changed in place elsewhere, so
-        a _Dterm must not be shared between differential polynomials.
+        a Dterm must not be shared between differential polynomials.
 
         >>> from sympy import Function, symbols
         >>> x, y = symbols("x y")
         >>> z = Function("z")(x, y)
         >>> ctx = Context([z], [x, y])
-        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t = Dterm(x, z.diff(x), ctx)
         >>> c = t.copy()
         >>> c is t, c == t
         (False, True)
         """
-        new = object.__new__(_Dterm)
+        new = object.__new__(Dterm)
         for slot in self.__slots__:
             setattr(new, slot, getattr(self, slot))
         return new
@@ -166,7 +167,7 @@ class _Dterm:
         >>> x, y = symbols("x y")
         >>> z = Function("z")(x, y)
         >>> ctx = Context([z], [x, y])
-        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t = Dterm(x, z.diff(x), ctx)
         >>> t.expression()
         x*Derivative(z(x, y), x)
         """
@@ -179,9 +180,9 @@ class _Dterm:
         >>> x, y = symbols("x y")
         >>> w, z = Function("w")(x, y), Function("z")(x, y)
         >>> ctx = Context([w, z], [x, y])
-        >>> _Dterm(coeff=1, derivative=z.diff(x, x, y), context=ctx).comparison_vector
+        >>> Dterm(coeff=1, derivative=z.diff(x, x, y), context=ctx).comparison_vector
         (2, 1, 0, 1)
-        >>> _Dterm(coeff=y, derivative=w, context=ctx).comparison_vector
+        >>> Dterm(coeff=y, derivative=w, context=ctx).comparison_vector
         (0, 0, 1, 0)
         """
         iv = function_marker(self.context.dependent, self.function)
@@ -194,8 +195,8 @@ class _Dterm:
         >>> x, y = symbols("x y")
         >>> z = Function("z")(x, y)
         >>> ctx = Context([z], [x, y])
-        >>> t = _Dterm(x, z.diff(x), ctx)
-        >>> str(t), str(_Dterm(1, z, ctx))
+        >>> t = Dterm(x, z.diff(x), ctx)
+        >>> str(t), str(Dterm(1, z, ctx))
         ('(x) * D(z(x, y), x)', 'z(x, y)')
         """
         result = f"{self.derivative}" if self.coeff == 1 else f"({self.coeff}) * {self.derivative}"
@@ -208,7 +209,7 @@ class _Dterm:
         >>> x, y = symbols("x y")
         >>> z = Function("z")(x, y)
         >>> ctx = Context([z], [x, y])
-        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t = Dterm(x, z.diff(x), ctx)
         >>> t._compute_order()
         [1, 0]
         """
@@ -216,7 +217,7 @@ class _Dterm:
             self.derivative, self.context.independent, self.context.order_of_derivative
         )
 
-    def __lt__(self, other: "_Dterm") -> bool:
+    def __lt__(self, other: "Dterm") -> bool:
         """
         >>> from sympy import *
         >>> from delierium.matrix_order import Mlex
@@ -225,8 +226,8 @@ class _Dterm:
         >>> h = Function("h")(x, y, z)
         >>> f = Function("f")(x, y, z)
         >>> ctx = Context((f, g, h), (x, y, z), Mlex)
-        >>> dterm1 = _Dterm(derivative=Derivative(f, x, y), coeff=x**2, context=ctx)
-        >>> dterm2 = _Dterm(derivative=Derivative(f, x, y, z), coeff=1, context=ctx)
+        >>> dterm1 = Dterm(derivative=Derivative(f, x, y), coeff=x**2, context=ctx)
+        >>> dterm2 = Dterm(derivative=Derivative(f, x, y, z), coeff=1, context=ctx)
         >>> print(dterm1 < dterm2)
         True
         """
@@ -241,11 +242,11 @@ class _Dterm:
         >>> x, y = symbols("x y")
         >>> z = Function("z")(x, y)
         >>> ctx = Context([z], [x, y])
-        >>> t = _Dterm(x, z.diff(x), ctx)
-        >>> t == _Dterm(x, z.diff(x), ctx), t == _Dterm(2, z.diff(x), ctx)
+        >>> t = Dterm(x, z.diff(x), ctx)
+        >>> t == Dterm(x, z.diff(x), ctx), t == Dterm(2, z.diff(x), ctx)
         (True, False)
         """
-        if not isinstance(other, _Dterm):
+        if not isinstance(other, Dterm):
             return NotImplemented
         return self is other or (
             self.comparison_vector == other.comparison_vector and self.coeff == other.coeff
@@ -258,7 +259,7 @@ class _Dterm:
         >>> x, y = symbols("x y")
         >>> z = Function("z")(x, y)
         >>> ctx = Context([z], [x, y])
-        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t = Dterm(x, z.diff(x), ctx)
         >>> t.show(rich=False), t.show()
         ('(x) * D(z(x, y), x)', x*z_x)
         """
@@ -268,7 +269,7 @@ class _Dterm:
             self.expression(), self.context.dependent, self.context.independent, printer=False
         )
 
-    def diff(self, *variables: Basic) -> list["_Dterm"]:
+    def diff(self, *variables: Basic) -> list["Dterm"]:
         """The derivative by the variables, a list of terms (product rule).
         Key optimization within janet_basis. Avoids long intermediate results
 
@@ -276,7 +277,7 @@ class _Dterm:
         >>> x, y = symbols("x y")
         >>> z = Function("z")(x, y)
         >>> ctx = Context([z], [x, y])
-        >>> t = _Dterm(x, z.diff(x), ctx)
+        >>> t = Dterm(x, z.diff(x), ctx)
         >>> [str(d) for d in t.diff(x)]
         ['D(z(x, y), x)', '(x) * D(z(x, y), (x, 2))']
         """
@@ -290,11 +291,11 @@ class _Dterm:
         f = self.coeff
         g = self.derivative
         fprime = f.diff(*variables)
-        result: list[_Dterm] = []
+        result: list[Dterm] = []
         if fprime:
-            result = [_Dterm(coeff=fprime, derivative=g, context=self.context)]
+            result = [Dterm(coeff=fprime, derivative=g, context=self.context)]
         gprime = _derivative_by(g, variables[0])
-        d2 = _Dterm(coeff=f, derivative=gprime, context=self.context)
+        d2 = Dterm(coeff=f, derivative=gprime, context=self.context)
         if d2:
             result.append(d2)
         return result
@@ -309,8 +310,8 @@ class _Dterm:
         >>> x, y = symbols("x y")
         >>> z = Function("z")(x, y)
         >>> ctx = Context([z], [x, y])
-        >>> t = _Dterm(x, z.diff(x), ctx)
-        >>> hash(t) == hash(_Dterm(2, z.diff(x), ctx))
+        >>> t = Dterm(x, z.diff(x), ctx)
+        >>> hash(t) == hash(Dterm(2, z.diff(x), ctx))
         True
         """
         return hash(self.comparison_vector)
@@ -351,8 +352,8 @@ def _canonical_derivatives(e: Basic) -> Basic:
     Derivative(X, x, y) and Derivative(X, y, x) must not differ.
 
     >>> from sympy import Function, symbols
-    >>> x, t = symbols('x t')
-    >>> T = Function('T')(x, t)
+    >>> x, t = symbols("x t")
+    >>> T = Function("T")(x, t)
     >>> _canonical_derivatives(Derivative(T, x, t)) == Derivative(T, x, t).doit()
     True
     >>> _canonical_derivatives(Derivative(T, x, t))
@@ -423,7 +424,7 @@ class LHDP:
         self,
         e: Basic | int,
         context: Context,
-        dterms: Iterable[_Dterm] = (),
+        dterms: Iterable[Dterm] = (),
         assumptions: Iterable[Expr | _Factor] = frozenset(),
     ) -> None:
         """The linear homogeneous differential polynomial e (or the terms
@@ -438,7 +439,7 @@ class LHDP:
         (D(z(x, y), x) + (-1/x) * z(x, y), frozenset({x}))
         """
         self.context = context
-        self.terms: list[_Dterm] = []
+        self.terms: list[Dterm] = []
         self.multipliers: list[int] = []
         self.nonmultipliers: list[int] = []
         # the factors assumed nonzero in deriving this equation: those of the
@@ -521,9 +522,7 @@ class LHDP:
         # sigma u**sigma/u)
         if rest and sp.simplify(Add(*rest)) != 0:
             analyze_term(self.context, rest[0])  # raises the ValueError
-        self.terms = [
-            _Dterm(derivative=d, coeff=c, context=self.context) for d, c in dterms.items()
-        ]
+        self.terms = [Dterm(derivative=d, coeff=c, context=self.context) for d, c in dterms.items()]
 
     def expression(self) -> Expr:
         """The polynomial as a SymPy expression.
@@ -718,7 +717,7 @@ class LHDP:
         >>> p.diff(y)
         D(z(x, y), x, y) + (-1/x) * D(z(x, y), y)
         """
-        new_dterms: dict[ComparisonVector, _Dterm] = {}
+        new_dterms: dict[ComparisonVector, Dterm] = {}
         for dterm in self.terms:
             for new_dterm in dterm.diff(*args):
                 if new_dterm.comparison_vector in new_dterms:
@@ -764,7 +763,7 @@ class LHDP:
         return str(self)
 
     def __hash__(self) -> int:
-        # the derivatives of the terms, see _Dterm.__hash__; not cached, the
+        # the derivatives of the terms, see Dterm.__hash__; not cached, the
         # coefficients change in place
         """The hash of the derivatives of the terms.
 
@@ -908,9 +907,9 @@ def _reduce_inner(e1: LHDP, e2: LHDP, context: Context) -> LHDP:
 
     Schwarz, Example 2.33, p. 48
     >>> from sympy import Function, Symbol, simplify
-    >>> x = Symbol('x')
-    >>> y = Symbol('y')
-    >>> z = Function('z')(x, y)
+    >>> x = Symbol("x")
+    >>> y = Symbol("y")
+    >>> z = Function("z")(x, y)
     >>> ctx = Context([z], [x, y])
     >>> e1 = LHDP(Derivative(z, y) - ((x**2) / (y**2)) * Derivative(z, x) - z * (x - y) / y**2, ctx)
     >>> e2 = LHDP(Derivative(z, x) + z / x, ctx)
@@ -946,8 +945,8 @@ def _subtract_derivative(e1: LHDP, e2: LHDP, factor: Coeff, variables: Sequence[
     from (-x/H**2) * Y; the two contributions cancel (Schwarz, Example 5.16):
 
     >>> from sympy import Function, Symbol, diff
-    >>> x, H = Symbol('x'), Symbol('H')
-    >>> X, Y = Function('X')(H, x), Function('Y')(H, x)
+    >>> x, H = Symbol("x"), Symbol("H")
+    >>> X, Y = Function("X")(H, x), Function("Y")(H, x)
     >>> ctx = Context([X, Y], [x, H])
     >>> e1 = LHDP(diff(Y, H, x) + diff(Y, x) / H, ctx)
     >>> e2 = LHDP(diff(Y, x) - x * diff(Y, H) / H - X / (2 * H * x) - x * Y / H**2, ctx)
@@ -956,7 +955,7 @@ def _subtract_derivative(e1: LHDP, e2: LHDP, factor: Coeff, variables: Sequence[
     """
     e2_terms = [dterm for t in e2.terms for dterm in t.diff(*variables)] if variables else e2.terms
     # copies of e1's terms: `hit.coeff -= product` below creates a new
-    # coefficient (they are immutable) but rebinds it on the _Dterm, which
+    # coefficient (they are immutable) but rebinds it on the Dterm, which
     # without the copy would be e1's own, changing e1 behind the caller's back.
     # Differentiating e2 may give several terms with the same derivative
     # (product rule), so they must be added up, not kept side by side
@@ -999,8 +998,8 @@ def _vanished(context: Context, assumptions: Iterable[Expr | _Factor]) -> LHDP:
 
 
 def _subtract_terms(
-    remaining: dict[ComparisonVector, _Dterm],
-    dterms: Iterable[_Dterm],
+    remaining: dict[ComparisonVector, Dterm],
+    dterms: Iterable[Dterm],
     factor: Coeff,
     context: Context,
 ) -> None:
@@ -1024,7 +1023,7 @@ def _subtract_terms(
         key = dterm.comparison_vector
         hit = remaining.get(key)
         if hit is None:
-            remaining[key] = _Dterm(coeff=-subtrahend, derivative=dterm.derivative, context=context)
+            remaining[key] = Dterm(coeff=-subtrahend, derivative=dterm.derivative, context=context)
         elif hit.coeff == subtrahend:
             del remaining[key]
         else:
@@ -1909,7 +1908,7 @@ class JanetBasis:
         """
         context = self.context
         lead = [(b.function, tuple(b.order)) for b in self.S]
-        terms: list[tuple[_Dterm, bool]] = []
+        terms: list[tuple[Dterm, bool]] = []
         for f in context.dependent:
             orders = [o for g, o in lead if g == f]
             for o in product(range(max_order + 1), repeat=len(context.independent)):
@@ -1919,7 +1918,7 @@ class JanetBasis:
                     )
                     derivative = _derivative(f, o, context)
                     terms.append(
-                        (_Dterm(coeff=1, derivative=derivative, context=context), principal)
+                        (Dterm(coeff=1, derivative=derivative, context=context), principal)
                     )
         terms.sort(key=lambda t: t[0], reverse=True)
         return [(t.derivative, principal) for t, principal in terms]
@@ -2091,7 +2090,7 @@ class LHDPList(list[LHDP]):
         return self._computed[2]
 
 
-def _divisor(t: _Dterm, S: Sequence[LHDP]) -> int | None:
+def _divisor(t: Dterm, S: Sequence[LHDP]) -> int | None:
     """Index of an element of S whose leading derivative t's derivative is a
     derivative of, or None.
 
@@ -2100,7 +2099,7 @@ def _divisor(t: _Dterm, S: Sequence[LHDP]) -> int | None:
     >>> z = Function("z")(x, y)
     >>> ctx = Context([z], [x, y])
     >>> S = [LHDP(z.diff(y), ctx)]
-    >>> _divisor(_Dterm(1, z.diff(x, y), ctx), S), _divisor(_Dterm(1, z.diff(x), ctx), S)
+    >>> _divisor(Dterm(1, z.diff(x, y), ctx), S), _divisor(Dterm(1, z.diff(x), ctx), S)
     (0, None)
     """
     for j, b in enumerate(S):
@@ -2111,7 +2110,7 @@ def _divisor(t: _Dterm, S: Sequence[LHDP]) -> int | None:
 
 def _reduce_with_cofactors(
     e: Expr, S: Sequence[LHDP], context: Context
-) -> tuple[OrderedDict[tuple[tuple[Basic, ...], int], Coeff], dict[ComparisonVector, _Dterm]]:
+) -> tuple[OrderedDict[tuple[tuple[Basic, ...], int], Coeff], dict[ComparisonVector, Dterm]]:
     """Reduce e (an expression) modulo the normalized LHDPs S, eliminating
     the highest reducible term first. Returns (terms, remaining):
     terms[(variables, j)] is the coefficient (a Coeff) of S[j] differentiated
@@ -2259,7 +2258,7 @@ def janet_type(S: Iterable[LHDP], context: Context) -> JanetType:
         t.derivative
         for t in sorted(
             (
-                _Dterm(coeff=1, derivative=_derivative(f, o, context), context=context)
+                Dterm(coeff=1, derivative=_derivative(f, o, context), context=context)
                 for f, o in parametric
             ),
             reverse=True,

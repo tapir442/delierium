@@ -77,7 +77,7 @@ from sympy import (
 from sympy.core.function import AppliedUndef
 
 from delierium.helpers import commensurable_families, generic_case
-from delierium.infinitesimals import _simplified_residue
+from delierium.infinitesimals import simplified_residue
 
 __all__ = [
     "SolverState",
@@ -560,7 +560,7 @@ def _satisfies(
     substitution = {
         f.func: Lambda(f.args, c) for f, c in zip(infinitesimals, generator, strict=True)
     }
-    return all(_simplified_residue(e.subs(substitution).doit()) == 0 for e in system)
+    return all(simplified_residue(e.subs(substitution).doit()) == 0 for e in system)
 
 
 type _Attempt = Callable[[int, Sequence[Expr]], list[tuple[Expr, ...]]]

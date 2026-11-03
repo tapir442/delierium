@@ -72,7 +72,7 @@ from sympy import (
 )
 
 from delierium.helpers import numeric_value, plain_symbol, random_point
-from delierium.invariants import _FAST_HINTS, canonical_coordinates
+from delierium.invariants import FAST_HINTS, canonical_coordinates
 from delierium.lie_algebra import LieAlgebra, NotClosedError, VectorField
 
 __all__ = ["OrderReduction", "integrate_ode", "reduce_order"]
@@ -486,7 +486,7 @@ class _Integration:
         t, w0 = level.t, level.w[0]
         f = Function("f")(t)  # pylint: disable=not-callable
         ode = Eq(f.diff(t), level.rhs.subs(w0, f))
-        for hint in [h for h in classify_ode(ode, f) if h in _FAST_HINTS]:
+        for hint in [h for h in classify_ode(ode, f) if h in FAST_HINTS]:
             try:
                 solution = dsolve(ode, f, hint=hint)
             except (NotImplementedError, ValueError):

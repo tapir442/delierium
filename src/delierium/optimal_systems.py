@@ -117,7 +117,7 @@ class OptimalSystem:
     def __len__(self) -> int:
         """The number of representatives.
 
-        >>> len(OptimalSystem([Symbol('X1')]))
+        >>> len(OptimalSystem([Symbol("X1")]))
         1
         """
         return len(self.representatives)
@@ -129,7 +129,7 @@ def adjoint_matrix(algebra: "LieAlgebra", x: Sequence[Any], epsilon: Expr = _EPS
     j-th unit vector).
 
     >>> from delierium import LieAlgebra
-    >>> e = Symbol('e')
+    >>> e = Symbol("e")
     >>> sl2 = LieAlgebra.from_structure_constants(
     ...     [
     ...         [[0, 0, 0], [1, 0, 0], [0, 2, 0]],
@@ -212,7 +212,7 @@ def optimal_system(algebra: "LieAlgebra") -> OptimalSystem:
 def _parameters(families: list["_Family"]) -> list[Symbol]:
     """The parameters of the families, in order of appearance.
 
-    >>> p = Symbol('p')
+    >>> p = Symbol("p")
     >>> _parameters([_Family([1, p], [p]), _Family([0, 1], [])])
     [p]
     """
@@ -419,7 +419,7 @@ def _polynomial_invariants(
     coordinates (those of a quotient g / W), invariant under the adjoint
     action of g, up to max_degree.
 
-    >>> a = [Symbol(f'a{i}') for i in range(1, 5)]
+    >>> a = [Symbol(f"a{i}") for i in range(1, 5)]
     >>> _polynomial_invariants(_kdv(), [0, 1, 2, 3], a, 3)
     [a4]
     """
@@ -463,7 +463,7 @@ def _independent(functions: list[Expr], variables: list[Symbol]) -> bool:
     """Whether the functions are functionally independent (Jacobian of full
     rank at a random point).
 
-    >>> x, y = Symbol('x'), Symbol('y')
+    >>> x, y = Symbol("x"), Symbol("y")
     >>> _independent([x * y, x**2 * y**2], [x, y]), _independent([x, y], [x, y])
     (False, True)
     """
@@ -477,7 +477,7 @@ def _separated(p: list[Expr], q: list[Expr], invariants: list[Expr], a: list[Sym
     """Whether no real lambda != 0 gives phi(q) = lambda**deg(phi) phi(p) for
     all the (homogeneous) invariants phi: p and q are not equivalent.
 
-    >>> a1, a2, a3 = a = [Symbol('a1'), Symbol('a2'), Symbol('a3')]
+    >>> a1, a2, a3 = a = [Symbol("a1"), Symbol("a2"), Symbol("a3")]
     >>> killing = a2**2 - 4 * a1 * a3
     >>> (
     ...     _separated([1, 0, 1], [0, 1, 0], [killing], a),
@@ -522,7 +522,7 @@ class _Family:
 def _substitute(f: _Family, sub: dict[Symbol, Expr]) -> _Family | None:
     """f with parameter values; None if a condition fails.
 
-    >>> p, q = Symbol('p'), Symbol('q')
+    >>> p, q = Symbol("p"), Symbol("q")
     >>> _substitute(_Family([p, q], [p, q], [q]), {q: 0}) is None
     True
     """
@@ -540,7 +540,7 @@ def _substitute(f: _Family, sub: dict[Symbol, Expr]) -> _Family | None:
 def _zero_branch(f: _Family, e: Expr) -> _Family | None:
     """f with the condition e = 0 (solved for its last parameter).
 
-    >>> p, q = Symbol('p'), Symbol('q')
+    >>> p, q = Symbol("p"), Symbol("q")
     >>> _zero_branch(_Family([p, q], [p, q]), p - 2 * q).a
     [p, p/2]
     """
@@ -615,7 +615,7 @@ class _Classifier:
         fixes the coordinates of the levels above.
 
         >>> cl = _Classifier(_kdv())
-        >>> [g.a for g in cl.level(_Family([1, 0, 0, Symbol('p')], [Symbol('p')]), 1, [])]
+        >>> [g.a for g in cl.level(_Family([1, 0, 0, Symbol("p")], [Symbol("p")]), 1, [])]
         [[1, 0, 0, p]]
         """
         if k == len(self.levels):
@@ -638,7 +638,7 @@ class _Classifier:
         moves linear in eps or rotations, scaled to +-1.
 
         >>> cl = _Classifier(_kdv())
-        >>> p, q = Symbol('p'), Symbol('q')
+        >>> p, q = Symbol("p"), Symbol("q")
         >>> [g.a for g in cl.normalize(_Family([0, p, q, 0], [p, q]), [1, 2], cl.full)]
         [[0, 1, 1, 0], [0, 1, -1, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
 
@@ -676,7 +676,7 @@ class _Classifier:
         """Whether the move with matrix A leaves e unchanged on f.
 
         >>> cl = _Classifier(_kdv())
-        >>> p = Symbol('p')
+        >>> p = Symbol("p")
         >>> cl.invariant_under(_Family([p, 0, 0, 1], [p]), p, cl.matrix((1, 0, 0, 0, 0)))
         True
         """
@@ -693,7 +693,7 @@ class _Classifier:
         then moves changing many coordinates (the others do not undo them).
 
         >>> cl = _Classifier(_kdv())
-        >>> p = [Symbol(f'p{i}') for i in range(4)]
+        >>> p = [Symbol(f"p{i}") for i in range(4)]
         >>> [(k, pivot) for k, pivot, _ in cl.kills(_Family(p, p), [0], cl.full)]
         []
         """
@@ -725,7 +725,7 @@ class _Classifier:
         the zeros of the level; a rotation can always make it 0.
 
         >>> cl = _Classifier(_so3())
-        >>> p = [Symbol(f'p{i}') for i in range(3)]
+        >>> p = [Symbol(f"p{i}") for i in range(3)]
         >>> next(cl.rotations(_Family(p, p), [0, 1, 2], cl.full))[0]
         1
         """
@@ -746,7 +746,7 @@ class _Classifier:
         by exponentials on it can; numbers of the level stay fixed.
 
         >>> cl = _Classifier(_kdv())
-        >>> p = Symbol('p')
+        >>> p = Symbol("p")
         >>> [g.a for g in cl.scale(_Family([p, 0, 0, 0], [p]), [0], cl.full)]
         [[1, 0, 0, 0], [0, 0, 0, 0]]
         """
@@ -773,7 +773,7 @@ class _Classifier:
         scaling moves change while keeping its numbers.
 
         >>> cl = _Classifier(_kdv())
-        >>> p = Symbol('p')
+        >>> p = Symbol("p")
         >>> cl.scalable(_Family([p, 0, 0, 0], [p]), [0], cl.full)
         [0]
         """
@@ -806,7 +806,7 @@ class _Classifier:
         not act so.
 
         >>> cl = _Classifier(_kdv())
-        >>> p = Symbol('p')
+        >>> p = Symbol("p")
         >>> f = _Family([p, 0, 0, 0], [p])
         >>> cl.exponents(f, Matrix([f.a]) * cl.matrix((0, 0, 0, 0, 1)), [0])
         [1]
@@ -841,7 +841,7 @@ class _Classifier:
         branches where the parameters change the rank.
 
         >>> cl = _Classifier(_kdv())
-        >>> f = _Family([1, 0, 0, Symbol('p')], [Symbol('p')])
+        >>> f = _Family([1, 0, 0, Symbol("p")], [Symbol("p")])
         >>> [len(s) for _, s in cl.stabilizer(f, [0], cl.full)]
         [4]
         """
@@ -965,7 +965,7 @@ def _nullspace_cases(A: Matrix, f: _Family) -> list[tuple[_Family, list[Matrix]]
     """Nullspaces of A for f and for the special parameter values where a
     pivot vanishes (fraction free elimination).
 
-    >>> p = Symbol('p')
+    >>> p = Symbol("p")
     >>> [
     ...     (g.a, len(null))
     ...     for g, null in _nullspace_cases(Matrix([[p, 1], [0, 0]]), _Family([p], [p]))
@@ -1014,7 +1014,7 @@ def _nullspace_cases(A: Matrix, f: _Family) -> list[tuple[_Family, list[Matrix]]
 def _parameter_values(f: _Family, g: _Family) -> dict[Symbol, Expr]:
     """The values of the parameters of f that are no parameters of g.
 
-    >>> p, q = Symbol('p'), Symbol('q')
+    >>> p, q = Symbol("p"), Symbol("q")
     >>> _parameter_values(_Family([p, q], [p, q]), _Family([p, 2 * p], [p]))
     {q: 2*p}
     """
@@ -1027,7 +1027,7 @@ def _numerically_equivalent(
     """Whether start * A_1(e_1) * ... * A_m(e_m) has the target values for
     some real e (Levenberg-Marquardt from random starts).
 
-    >>> e = Symbol('epsilon', real=True)
+    >>> e = Symbol("epsilon", real=True)
     >>> A = Matrix([[1, e], [0, 1]])
     >>> _numerically_equivalent([A], [1, 0], {1: 3}, 4)
     True

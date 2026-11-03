@@ -33,7 +33,7 @@ from sympy import Derivative, Function, Pow, Symbol, oo, pi
 from sympy.core.function import AppliedUndef
 from sympy.parsing.sympy_parser import parse_expr
 
-from delierium.infinitesimals import _determining_system
+from delierium.infinitesimals import determining_system
 from tests.symmetry_catalog import CATALOG, INFINITE
 
 HERE = Path(__file__).resolve().parent
@@ -91,7 +91,7 @@ def compare_one(entry, timeout):
     row = {"name": entry.name, "expected": entry.dimension}
     indep, dep = entry.variables()
     t0 = time.time()
-    system, functions, variables = _determining_system(entry.parsed_equations(), dep, indep)
+    system, functions, variables = determining_system(entry.parsed_equations(), dep, indep)
     row["deteq_time"] = round(time.time() - t0, 2)
     # BLAD wants the arguments in the order of the derivations
     canon = {f: f.func(*variables) for f in functions}
@@ -152,7 +152,7 @@ def special_one(entry, timeout, case):
     solutions = solve(conds, list({s for c in conds for s in c.free_symbols}), dict=True)
     if not solutions:
         return row | {"status": "unsolved"}
-    system, functions, variables = _determining_system(equations, dep, indep)
+    system, functions, variables = determining_system(equations, dep, indep)
     cases = []
     for sol in solutions:
         sub = [e for e in (s.subs(sol) for s in system) if e != 0]

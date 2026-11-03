@@ -13,9 +13,9 @@ from sympy import Basic, Expr, oo
 from delierium.infinitesimals import (
     Variables,
     VerificationResult,
-    _determining_system,
-    _initials,
     convert_to_iterable,
+    determining_system,
+    initials,
     verify_symmetries,
 )
 from delierium.janet_basis import JanetBasis
@@ -65,7 +65,7 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
         self.dependent = convert_to_iterable(dependent)
         self.independent = convert_to_iterable(independent)
         self.sort_order = sort_order
-        system, functions, coordinates = _determining_system(
+        system, functions, coordinates = determining_system(
             self.equations, self.dependent, self.independent
         )
         self.determining_equations: list[Expr] = system
@@ -126,7 +126,7 @@ class LieSymmetries:  # pylint: disable=too-many-instance-attributes
         >>> s.assumptions
         [y]
         """
-        result = _initials(self.equations, self.dependent, self.independent)
+        result = initials(self.equations, self.dependent, self.independent)
         for e in self.janet_basis.assumed_nonzero():
             if e not in result:
                 result.append(e)

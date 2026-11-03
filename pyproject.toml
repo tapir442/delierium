@@ -161,7 +161,7 @@ max-complexity = 10
 "tests/*" = ["F401", "F403", "F405", "B011"]
 
 [tool.ruff.format]
-quote-style = "preserve"
+quote-style = "double"
 docstring-code-format = true
 
 # --------------------------------------------------------------------------

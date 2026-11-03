@@ -12,7 +12,7 @@ def test_derivative_patch_keeps_sympy_behaviour():
 
     import delierium.helpers
 
-    x, y = symbols('x y')
+    x, y = symbols("x y")
     assert diff(x**2) == 2 * x
     assert diff(sin(x) * x) == x * cos(x) + sin(x)
     assert diff(Integer(3)) == 0
@@ -25,14 +25,14 @@ def test_derivative_patch_keeps_sympy_behaviour():
 def test_lie_derivative_printer_notation_and_outputs(capsys):
     from delierium.helpers import lie_derivative_printer, lie_form
 
-    x, t = Symbol('x'), Symbol('t')
-    y = Function('y')(x)
-    X, Y = Function('X')(x, y), Function('Y')(x, y)
+    x, t = Symbol("x"), Symbol("t")
+    y = Function("y")(x)
+    X, Y = Function("X")(x, y), Function("Y")(x, y)
     # an unknown of one variable gets primes, everything else subscripts
     assert str(lie_form(diff(y, x, 3) + y * diff(y, x, 2), [y], [x])) == "y*y'' + y'''"
     assert str(lie_form(diff(y, x, 5), [y], [x])) == "y^(5)"
     assert str(lie_form(Derivative(X, x, y) + Derivative(Y, y, 2), [y], [x])) == "X_xy + Y_yy"
-    u = Function('u')(x, t)
+    u = Function("u")(x, t)
     assert str(lie_form(Derivative(u, t, x), [u], [x, t])) == "u_xt"
     assert str(lie_form(Derivative(u, t, x), [u], [t, x])) == "u_tx"
     e = -9 * Derivative(X, x, y) + Derivative(Y, y) / x
@@ -54,8 +54,8 @@ def test_arbitrary_function_of_an_expression():
     # #36: y' = x F(y/x) + y/x (Kamke 1.610) failed with "Can't calculate
     # derivative wrt y(x)/x": the Subs for F'(y/x) has to stay. With v = y/x
     # it is v' = F(v), so (1, y/x) is a symmetry and (0, 1) is not
-    x, Y = Symbol('x'), Symbol('y')
-    y, F = Function('y')(x), Function('F')
+    x, Y = Symbol("x"), Symbol("y")
+    y, F = Function("y")(x), Function("F")
     infinitesimals = create_infinitesimals([y], [x])
     det = overdetermined_system_ode(
         Derivative(y, x) - (x**2 * F(y / x) + y) / x, [y], [x], infinitesimals=infinitesimals

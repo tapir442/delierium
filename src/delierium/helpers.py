@@ -29,19 +29,19 @@ __all__ = [
     "make_infinitesimal",
 ]
 
-_in_ipython_session = hasattr(builtins, "__IPYTHON__")
 
-
-# fast solution für Profiling:
 def profile_if_enabled[F: Callable[..., Any]](func: F) -> F:
     """func, wrapped by line_profiler's profile if JANET_PROFILE=true.
+
+    JANET_PROFILE is read when the decorator is applied, i.e. when the
+    decorated module is imported: set it before ``import delierium``.
 
     >>> def f():
     ...     return 1
     >>> profile_if_enabled(f) is f  # JANET_PROFILE not set
     True
     """
-    if os.environ.get('JANET_PROFILE', 'false').lower() == 'true':
+    if os.environ.get("JANET_PROFILE", "false").lower() == "true":
         from line_profiler import profile
 
         return cast(F, profile(func))
@@ -62,7 +62,7 @@ def func_diff(fun: Expr, var: Symbol | Function) -> Expr:
     x**2*Derivative(y(x), x) + 2*x*y(x)
     """
     if var.is_Function or var.is_Derivative:
-        d = Symbol('d')
+        d = Symbol("d")
         r = fun.xreplace({var: d}).diff(d, simplify=False).xreplace({d: var})
         r = r.doit(simplify=False)
     else:
@@ -77,8 +77,8 @@ def finish_substitution(expr: Basic) -> Basic:
     derivative with respect to y/x, and differentiates the Subs correctly
     (#36).
 
-    >>> x, xi = Symbol('x'), Symbol('xi')
-    >>> y, F = Function('y')(x), Function('F')
+    >>> x, xi = Symbol("x"), Symbol("xi")
+    >>> y, F = Function("y")(x), Function("F")
     >>> finish_substitution(Subs(Derivative(F(xi), xi), xi, y))
     Derivative(F(y(x)), y(x))
     >>> finish_substitution(Subs(Derivative(F(xi), xi), xi, y / x))
@@ -126,7 +126,7 @@ def show_output(obj: object) -> None:
     >>> show_output("Janet basis")
     Janet basis
     """
-    if _in_ipython_session:
+    if hasattr(builtins, "__IPYTHON__"):
         from IPython.display import display
 
         display(obj)
@@ -135,14 +135,20 @@ def show_output(obj: object) -> None:
 
 
 def make_infinitesimal(v: Basic, *variables: Basic, name: str = "") -> Expr:
-    """
-    >>> x = Symbol('x')
-    >>> f = Function('f')(x)
-    >>> i = make_infinitesimal(f, f, x, name="phi")
-    >>> i
+    """The function name(*variables); without name, the name of v in the
+    other case (x: X, Y: y), or with its first letter swapped if mixed (Phi: phi).
+
+    >>> x = Symbol("x")
+    >>> f = Function("f")(x)
+    >>> make_infinitesimal(f, f, x, name="phi")
     phi(f(x), x)
+    >>> [make_infinitesimal(Symbol(n), x) for n in ("xi", "Y2", "Phi")]
+    [XI(x), y2(x), phi(x)]
     """
-    return Function(f'{name or v.name.swapcase()}')(*variables)  # pylint: disable=not-callable
+    if not name:
+        n = v.name
+        name = n.swapcase() if n.islower() or n.isupper() else n[0].swapcase() + n[1:]
+    return Function(name)(*variables)  # pylint: disable=not-callable
 
 
 def is_jupyter_lab() -> bool:
@@ -286,10 +292,11 @@ def lie_form(
     """
     expr = finish_substitution(sympify(expr))
     dependent_vars = list(dependent_vars)
-    order = [_function_name(v) for v in (*independent_vars, *dependent_vars)]
+    names = [_function_name(v) for v in (*independent_vars, *dependent_vars)]
+    order = {n: i for i, n in reversed(list(enumerate(names)))}  # first index
 
     def position(name: str) -> tuple[int, str]:
-        return (order.index(name), "") if name in order else (len(order), name)
+        return (order[name], "") if name in order else (len(order), name)
 
     replacements = {}
     for d in expr.atoms(Derivative):
