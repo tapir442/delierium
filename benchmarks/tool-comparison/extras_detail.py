@@ -2,7 +2,8 @@
 or a published generator rejected by its check_symmetry), each checked with delierium.
 One fork per entry, 60 s, 4 GB, 1 at a time.
 
-    nice -n 19 uv run --with sympy-extras==0.0.2 python benchmarks/tool-comparison/extras_detail.py
+    G="sympy-extras @ git+https://github.com/Upabjojr/sympy-extras@fbca643a"
+    nice -n 19 uv run --with "$G" python benchmarks/tool-comparison/extras_detail.py
 """
 import json, multiprocessing as mp, resource, sys
 from pathlib import Path

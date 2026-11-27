@@ -35,7 +35,7 @@ paragraph.
 | tool | computes | entries compared | same as delierium | differ |
 |---|---|---|---|---|
 | SymPy 1.14 | some generators of first order ODEs | first order ODEs only | see below | see below |
-| sympy-extras 0.0.2 | generators, polynomial ansatz of degree ≤ 2 | 608 | 363 | 72 wrong; fewer by design |
+| sympy-extras fbca643a | generators, polynomial ansatz of degree ≤ 2 | 610 | 411 | 0 wrong; fewer by design |
 | LIEPDE (REDUCE) | generators (CRACK) | 723 | 689 | 34 |
 | ReLie 3.0 (REDUCE) | generators (CRACK) | 715 | 691 | 24 |
 | DIMSYM 2.3 (REDUCE) | generators | 714 | 713 | 1 |
@@ -138,155 +138,49 @@ SymPy's heuristic returns (nan, nan).
 
 ## sympy-extras
 
-sympy-extras 0.0.2 (`symmetries`, `check_symmetry`): explicit generators by a polynomial ansatz of total degree ≤ 2, so a lower bound of the dimension (`benchmarks/sympy_symmetries.py`, 60 s per task).
+sympy-extras fbca643a (master after 0.0.3; `symmetries`, `check_symmetry`): explicit generators by a polynomial ansatz of total degree ≤ 2, so a lower bound of the dimension (`benchmarks/sympy_symmetries.py`, 60 s per task).
 
 | | entries |
 |---|---|
-| finite catalogue entries answered | 608 of 611 |
-| as many generators as the dimension | 363 |
-| fewer, all correct (degree ≤ 2) | 173 |
-| wrong generators | 72 |
-| published generators rejected by `check_symmetry` | 43 entries |
+| finite catalogue entries answered | 610 of 611 |
+| as many generators as the dimension | 411 |
+| fewer, all correct (degree ≤ 2) | 199 |
+| wrong generators | 0 |
+| published generators rejected by `check_symmetry` | 20 entries |
 
-### Wrong generators (72)
+### Wrong generators (0)
 
-#### Divergence form (69)
+None.
 
-The equation is in divergence form, e.g. (u<sup>s</sup> u<sub>x</sub>)<sub>x</sub> as an unevaluated Derivative of a product; sympy-extras does not evaluate it and returns transformations that are no symmetries (Upabjojr/sympy-extras#71).
-
-| entry | equation | dimension | generators | rejected | examples of rejected |
-|---|---|---|---|---|---|
-| Arrigo Exercises 2.6, 3 | ((y/y')'' y y')' = 0 | 3 | 12 | 9 | (y, 0), (x<sup>2</sup>, 0) ... |
-| nonlinear diffusion in the plane | -(u u<sub>x</sub>)<sub>x</sub> - (u u<sub>y</sub>)<sub>y</sub> + u<sub>t</sub> = 0 | 6 | 27 | 24 | (x, 0, 0, 0), (y, 0, 0, 0) ... |
-| nonlinear diffusion u<sub>t</sub> = (u<sup>2</sup> u<sub>x</sub>)<sub>x</sub> | -(u<sup>2</sup> u<sub>x</sub>)<sub>x</sub> + u<sub>t</sub> = 0 | 4 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| nonlinear diffusion u<sub>t</sub> = (u<sup>-4/3</sup> u<sub>x</sub>)<sub>x</sub> | -(u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> + u<sub>t</sub> = 0 | 5 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| Bluman-Anco (3.194) | ((y/y')'' y y')' = 0 | 3 | 12 | 9 | (y, 0), (x<sup>2</sup>, 0) ... |
-| CRC 1, 10.2 | -(u<sub>x</sub> k(u))<sub>x</sub> + u<sub>t</sub> = 0 | 3 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.2 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> + u<sub>t</sub> = 0 | 4 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.5 | -(u<sub>x</sub> k(u))<sub>x</sub> + u<sub>t</sub> - q(u) = 0 | 2 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.5 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> - a e<sup>m u</sup> + u<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.5 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> - d + u<sub>t</sub> = 0 | 4 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.5 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> - a u<sup>n</sup> + u<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.5 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> - d u + u<sub>t</sub> = 0 | 4 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.5 | -(u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> - a u<sup>n</sup> + u<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.5 | -(u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> - a/u<sup>1/3</sup> + u<sub>t</sub> = 0 | 5 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.5 | -(u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> - d u + u<sub>t</sub> = 0 | 5 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.7 | -(u<sub>x</sub> k(u))<sub>x</sub> - (u<sub>y</sub> k(u))<sub>y</sub> + u<sub>t</sub> - q(u) = 0 | 4 | 18 | 15 | (x, 0, 0, 0), (y, 0, 0, 0) ... |
-| CRC 1, 10.7 | -(u<sub>x</sub> k(u))<sub>x</sub> - (u<sub>y</sub> k(u))<sub>y</sub> + u<sub>t</sub> = 0 | 5 | 27 | 24 | (x, 0, 0, 0), (y, 0, 0, 0) ... |
-| CRC 1, 10.7 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> - (u<sub>y</sub> e<sup>u</sup>)<sub>y</sub> + u<sub>t</sub> = 0 | 6 | 27 | 24 | (x, 0, 0, 0), (y, 0, 0, 0) ... |
-| CRC 1, 10.7 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>σ</sup> u<sub>y</sub>)<sub>y</sub> + u<sub>t</sub> = 0 | 6 | 27 | 24 | (x, 0, 0, 0), (y, 0, 0, 0) ... |
-| CRC 1, 10.7 | -(u<sub>x</sub>/u<sup>4/5</sup>)<sub>x</sub> - (u<sub>y</sub>/u<sup>4/5</sup>)<sub>y</sub> - (u<sub>z</sub>/u<sup>4/5</sup>)<sub>z</sub> + u<sub>t</sub> = 0 | 12 | 54 | 50 | (x, 0, 0, 0, 0), (y, 0, 0, 0, 0) ... |
-| CRC 1, 10.8 | -(u<sub>x</sub> k1(u))<sub>x</sub> - (u<sub>y</sub> k2(u))<sub>y</sub> + u<sub>t</sub> = 0 | 4 | 27 | 24 | (x, 0, 0, 0), (y, 0, 0, 0) ... |
-| CRC 1, 10.8 | -(u<sub>x</sub> e<sup>a1 u</sup>)<sub>x</sub> - (u<sub>y</sub> e<sup>a2 u</sup>)<sub>y</sub> + u<sub>t</sub> = 0 | 5 | 27 | 24 | (x, 0, 0, 0), (y, 0, 0, 0) ... |
-| CRC 1, 10.8 | -(u<sup>s1</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>s2</sup> u<sub>y</sub>)<sub>y</sub> + u<sub>t</sub> = 0 | 5 | 27 | 24 | (x, 0, 0, 0), (y, 0, 0, 0) ... |
-| CRC 1, 10.11 | -(u<sub>x</sub> k(u))<sub>x</sub> + u<sub>t</sub> + u<sub>tt</sub> = 0 | 2 | 9 | 7 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.11 | -(lam u<sub>x</sub> e<sup>ν u</sup>)<sub>x</sub> + u<sub>t</sub> + u<sub>tt</sub> = 0 | 3 | 9 | 7 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.11 | -(lam u<sub>x</sub> (μ + u)<sup>ν</sup>)<sub>x</sub> + u<sub>t</sub> + u<sub>tt</sub> = 0 | 3 | 9 | 7 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.11 | -(lam u<sub>x</sub>/(μ + u)<sup>4/3</sup>)<sub>x</sub> + u<sub>t</sub> + u<sub>tt</sub> = 0 | 4 | 9 | 7 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 10.11 | -(lam u<sub>x</sub>/(μ + u)<sup>2</sup>)<sub>x</sub> + u<sub>t</sub> + u<sub>tt</sub> = 0 | 4 | 9 | 7 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 11.6 | -(u<sub>x</sub> k(u))<sub>x</sub> + u u<sub>x</sub> + u<sub>t</sub> = 0 | 2 | 4 | 2 | (t, 0, 1), (x, t/2, u/2) |
-| CRC 1, 11.6 | -(u<sup>2 m</sup> u<sub>x</sub>)<sub>x</sub> + u u<sub>x</sub> + u<sub>t</sub> = 0 | 3 | 4 | 2 | (t, 0, 1), (x, t/2, u/2) |
-| CRC 1, 12.4 | -(u<sub>x</sub> φ(u))<sub>x</sub> + u<sub>tt</sub> = 0 | 3 | 13 | 11 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 12.4 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>tt</sub> = 0 | 4 | 13 | 11 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 12.4 | -(k u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> + u<sub>tt</sub> = 0 | 4 | 13 | 11 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 12.4 | -(k u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> + u<sub>tt</sub> = 0 | 5 | 13 | 11 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| CRC 1, 12.4 | -(k u<sub>x</sub>/u<sup>4</sup>)<sub>x</sub> + u<sub>tt</sub> = 0 | 5 | 13 | 11 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| Gabel et al. 4 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> = 0 | 4 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| Gabel et al. 8 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> - e<sup>-2 u</sup> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| Gabel et al. 9 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> - e<sup>-u</sup> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| Gabel et al. 10 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> + e<sup>u</sup> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| Gabel et al. 11 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> + e<sup>2 u</sup> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| Gabel et al. 12 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> - 1 = 0 | 4 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| Gabel et al. 13 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> + 1 = 0 | 4 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| Gabel et al. 24 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u u<sub>x</sub> + u<sub>t</sub> = 0 | 3 | 4 | 2 | (t, 0, 1), (x, t/2, u/2) |
-| EqWorld 1.2.1 | -(w<sup>m</sup> w<sub>x</sub>)<sub>x</sub> a + w<sub>t</sub> = 0 | 4 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 1.2.2 | -(w<sup>m</sup> w<sub>x</sub>)<sub>x</sub> a - b w + w<sub>t</sub> = 0 | 4 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 1.2.3 | -(w<sup>m</sup> w<sub>x</sub>)<sub>x</sub> a - b w<sup>m + 1</sup> + w<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 1.2.4 | -(w<sup>m</sup> w<sub>x</sub>)<sub>x</sub> a - b w<sup>1 - m</sup> + w<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 1.2.5 | -(w<sup>2 n</sup> w<sub>x</sub>)<sub>x</sub> a - b w<sup>1 - n</sup> + w<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 1.2.6 | -(w<sup>n</sup> w<sub>x</sub>)<sub>x</sub> a - b w - c<sub>1</sub> w<sup>m</sup> - c<sub>2</sub> w<sup>k</sup> + w<sub>t</sub> = 0 | 2 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 1.2.7 | -(w<sub>x</sub> e<sup>lam w</sup>)<sub>x</sub> a + w<sub>t</sub> = 0 | 4 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 1.2.8 | -(w<sub>x</sub> e<sup>lam w</sup>)<sub>x</sub> a - b - c<sub>1</sub> e<sup>be w</sup> - c<sub>2</sub> e<sup>sig w</sup> + w<sub>t</sub> = 0 | 2 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 1.2.9 | -(w<sub>x</sub> f(w))<sub>x</sub> + w<sub>t</sub> = 0 | 3 | 11 | 9 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 1.2.10 | -(w<sub>x</sub> f(w))<sub>x</sub> + w<sub>t</sub> - g(w) = 0 | 2 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 1.3.4 | -(w<sub>x</sub><sup>n</sup> f(w))<sub>x</sub> + w<sub>t</sub> - g(w) = 0 | 2 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 2.2.1 | -(w w<sub>x</sub>)<sub>x</sub> a + w<sub>tt</sub> = 0 | 4 | 13 | 11 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 2.2.2 | -(w<sup>n</sup> w<sub>x</sub>)<sub>x</sub> a - b w<sup>k</sup> + w<sub>tt</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 2.2.3 | -(w<sub>x</sub> e<sup>lam w</sup>)<sub>x</sub> a + w<sub>tt</sub> = 0 | 4 | 13 | 11 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 2.2.7 | -(w<sub>x</sub> f(w))<sub>x</sub> + w<sub>tt</sub> = 0 | 3 | 13 | 11 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| EqWorld 3.3.1 | (w<sub>y</sub> (al w + be))<sub>y</sub> + w<sub>xx</sub> = 0 | 4 | 13 | 11 | (x, 0, 2 w), (y, 0, 0) ... |
-| EqWorld 3.3.2 | (a w<sub>y</sub> e<sup>be w</sup>)<sub>y</sub> + w<sub>xx</sub> = 0 | 4 | 13 | 11 | (x, 0, 2 w), (y, 0, 0) ... |
-| EqWorld 3.3.3 | (w<sub>x</sub> f(w))<sub>x</sub> + (w<sub>y</sub> g(w))<sub>y</sub> = 0 | 3 | 30 | 28 | (w, 0, 0), (x, 0, 0) ... |
-| EqWorld 6.1.1 | (w w<sub>x</sub>)<sub>x</sub> + w<sub>tt</sub> + w<sub>xxxx</sub> = 0 | 3 | 8 | 6 | (x, 2 t, 4 w), (0, 0, 1) ... |
-| AIMS 2026 I-(1) | -(u<sup>m</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e u<sup>r</sup> + u<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| AIMS 2026 I-(2) | -(u<sup>m</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u<sup>m + n</sup> + e<sub>3</sub> u/(m + n - 1) + u<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| AIMS 2026 I-(3) | -(u<sup>1 - n</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u log(u) + u<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| AIMS 2026 I-(4) | -(u<sup>m</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u + u<sub>t</sub> = 0 | 4 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| AIMS 2026 I-(5) | -(u<sup>1 - n</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u + u<sub>t</sub> = 0 | 4 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| AIMS 2026 II-(1) | -(u<sub>x</sub><sup>n</sup> e<sup>u</sup>)<sub>x</sub> - e<sub>2</sub> e<sup>q u</sup> + u<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-| AIMS 2026 II-(2) | -(u<sub>x</sub><sup>n</sup> e<sup>u</sup>)<sub>x</sub> - e<sub>2</sub> e<sup>u</sup> + e<sub>3</sub> + u<sub>t</sub> = 0 | 3 | 6 | 4 | (x, 0, 0), (x<sup>2</sup>, 0, 0) ... |
-
-#### One branch of y' (3)
-
-The equation is of degree ≥ 2 in y'; sympy-extras' generators and its check are those of one branch only (Upabjojr/sympy-extras#72).
-
-| entry | equation | dimension | generators | rejected | examples of rejected |
-|---|---|---|---|---|---|
-| Kamke 1.526 | -x<sup>3</sup> y<sup>3</sup> + y'<sup>3</sup> - y'<sup>2</sup> (x<sup>2</sup> + x y + y<sup>2</sup>) + y' (x<sup>3</sup> y + x<sup>2</sup> y<sup>2</sup> + x y<sup>3</sup>) = 0 | 0 | 3 | 3 | (1, x<sup>2</sup>), (x, 3 y) ... |
-| Kamke 1.527 | -x y<sup>4</sup> y' - y<sup>5</sup> + y'<sup>3</sup> = 0 | 3 | 1 | 1 | (nan, nan) |
-| Kamke 1.540 | 2 x y' - x + 2 y y'<sup>3</sup> - y y'<sup>2</sup> = 0 | 1 | 9 | 9 | (1, 0), (x, x/2) ... |
-
-### Published generators rejected (43)
+### Published generators rejected (20)
 
 sympy-extras' `check_symmetry` rejects published generators that delierium confirms.
 
-#### Divergence form (41)
+#### Regression after 0.0.3 (19)
 
-`check_symmetry` does not evaluate the outer derivative of an equation in divergence form (Upabjojr/sympy-extras#71).
+sympy-extras 0.0.3 accepts these generators, fbca643a rejects them; most equations have an arbitrary function of a compound argument, e.g. y'' = f(x + y) with (1, -1).
 
 | entry | equation | dimension | published | rejected | rejected generators |
 |---|---|---|---|---|---|
-| nonlinear diffusion in the plane | -(u u<sub>x</sub>)<sub>x</sub> - (u u<sub>y</sub>)<sub>y</sub> + u<sub>t</sub> = 0 | 6 | 6 | 2 | (0, 0, t, -u), (x, y, 0, 2 u) |
-| nonlinear diffusion u<sub>t</sub> = (u<sup>2</sup> u<sub>x</sub>)<sub>x</sub> | -(u<sup>2</sup> u<sub>x</sub>)<sub>x</sub> + u<sub>t</sub> = 0 | 4 | 4 | 2 | (x, 2 t, 0), (x, 0, u) |
-| nonlinear diffusion u<sub>t</sub> = (u<sup>-4/3</sup> u<sub>x</sub>)<sub>x</sub> | -(u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> + u<sub>t</sub> = 0 | 5 | 5 | 3 | (x, 2 t, 0), (-4 x, 0, 6 u), (x<sup>2</sup>, 0, -3 u x) |
-| CRC 1, 10.2 | -(u<sub>x</sub> k(u))<sub>x</sub> + u<sub>t</sub> = 0 | 3 | 3 | 1 | (x, 2 t, 0) |
-| CRC 1, 10.2 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> + u<sub>t</sub> = 0 | 4 | 4 | 2 | (x, 2 t, 0), (σ x/2, 0, u) |
-| CRC 1, 10.5 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> - a e<sup>m u</sup> + u<sub>t</sub> = 0 | 3 | 3 | 1 | (x (m - 1)/2, m t, -1) |
-| CRC 1, 10.5 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> - d + u<sub>t</sub> = 0 | 4 | 4 | 1 | (0, e<sup>-d t</sup>, d e<sup>-d t</sup>) |
-| CRC 1, 10.5 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> - a u<sup>n</sup> + u<sub>t</sub> = 0 | 3 | 3 | 1 | (x (n - σ - 1), t (2 n - 2), -2 u) |
-| CRC 1, 10.5 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> - d u + u<sub>t</sub> = 0 | 4 | 4 | 2 | (σ x, 0, 2 u), (0, e<sup>-d σ t</sup>, d u e<sup>-d σ t</sup>) |
-| CRC 1, 10.5 | -(u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> - a u<sup>n</sup> + u<sub>t</sub> = 0 | 3 | 3 | 1 | (x (n + 1/3), t (2 n - 2), -2 u) |
-| CRC 1, 10.5 | -(u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> - a/u<sup>1/3</sup> + u<sub>t</sub> = 0 | 5 | 5 | 3 | (0, 4 t/3, u), (e<sup>2 √3 √a x/3</sup>, 0, -√3 √a u e<sup>2 √3 √a x/3</sup>), (e<sup>-2 √3 √a x/3</sup>, 0, √3 √a u e<sup>-2 √3 √a x/3</sup>) |
-| CRC 1, 10.5 | -(u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> - d u + u<sub>t</sub> = 0 | 5 | 5 | 3 | (-2 x/3, 0, u), (0, e<sup>4 d t/3</sup>, d u e<sup>4 d t/3</sup>), (-x<sup>2</sup>, 0, 3 u x) |
-| CRC 1, 10.7 | -(u<sub>x</sub> k(u))<sub>x</sub> - (u<sub>y</sub> k(u))<sub>y</sub> + u<sub>t</sub> = 0 | 5 | 5 | 1 | (x, y, 2 t, 0) |
-| CRC 1, 10.7 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> - (u<sub>y</sub> e<sup>u</sup>)<sub>y</sub> + u<sub>t</sub> = 0 | 6 | 6 | 2 | (x, y, 2 t, 0), (0, 0, t, -1) |
-| CRC 1, 10.7 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>σ</sup> u<sub>y</sub>)<sub>y</sub> + u<sub>t</sub> = 0 | 6 | 6 | 2 | (x, y, 2 t, 0), (σ x, σ y, 0, 2 u) |
-| CRC 1, 10.7 | -(u<sub>x</sub>/u)<sub>x</sub> - (u<sub>y</sub>/u)<sub>y</sub> + u<sub>t</sub> = 0 | infinite | 6 | 2 | (x, y, 2 t, 0), (-x, -y, 0, 2 u) |
-| CRC 1, 10.7 | -(u<sub>x</sub>/u<sup>4/5</sup>)<sub>x</sub> - (u<sub>y</sub>/u<sup>4/5</sup>)<sub>y</sub> - (u<sub>z</sub>/u<sup>4/5</sup>)<sub>z</sub> + u<sub>t</sub> = 0 | 12 | 12 | 5 | (x, y, z, 2 t, 0), (-4 x/5, -4 y/5, -4 z/5, 0, 2 u), (x<sup>2</sup> - y<sup>2</sup> - z<sup>2</sup>, 2 x y, 2 x z, 0, -5 u x), (2 x y, -x<sup>2</sup> + y<sup>2</sup> - z<sup>2</sup>, 2 y z, 0, -5 u y), (2 x z, 2 y z, -x<sup>2</sup> - y<sup>2</sup> + z<sup>2</sup>, 0, -5 u z) |
-| CRC 1, 10.8 | -(u<sub>x</sub> k1(u))<sub>x</sub> - (u<sub>y</sub> k2(u))<sub>y</sub> + u<sub>t</sub> = 0 | 4 | 4 | 1 | (x, y, 2 t, 0) |
-| CRC 1, 10.8 | -(u<sub>x</sub> e<sup>a1 u</sup>)<sub>x</sub> - (u<sub>y</sub> e<sup>a2 u</sup>)<sub>y</sub> + u<sub>t</sub> = 0 | 5 | 5 | 1 | (x, y, 2 t, 0) |
-| CRC 1, 10.8 | -(u<sup>s1</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>s2</sup> u<sub>y</sub>)<sub>y</sub> + u<sub>t</sub> = 0 | 5 | 5 | 2 | (x, y, 2 t, 0), (s1 x, s2 y, 0, 2 u) |
-| Gabel et al. 4 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> = 0 | 4 | 4 | 1 | (x, 2 t, 0) |
-| Gabel et al. 8 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> - e<sup>-2 u</sup> = 0 | 3 | 1 | 1 | (3 x/2, 2 t, 1) |
-| Gabel et al. 9 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> - e<sup>-u</sup> = 0 | 3 | 1 | 1 | (x, t, 1) |
-| Gabel et al. 10 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> + e<sup>u</sup> = 0 | 3 | 1 | 1 | (0, t, -1) |
-| Gabel et al. 11 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> + e<sup>2 u</sup> = 0 | 3 | 1 | 1 | (x/2, 2 t, -1) |
-| Gabel et al. 12 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> - 1 = 0 | 4 | 2 | 1 | (0, e<sup>-t</sup>, e<sup>-t</sup>) |
-| Gabel et al. 13 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> + 1 = 0 | 4 | 2 | 1 | (0, e<sup>t</sup>, -e<sup>t</sup>) |
-| EqWorld 1.2.1 | -(w<sup>m</sup> w<sub>x</sub>)<sub>x</sub> a + w<sub>t</sub> = 0 | 4 | 4 | 2 | (x, 2 t, 0), (m x, 0, 2 w) |
-| EqWorld 1.2.2 | -(w<sup>m</sup> w<sub>x</sub>)<sub>x</sub> a - b w + w<sub>t</sub> = 0 | 4 | 4 | 2 | (m x, 0, 2 w), (0, e<sup>-b m t</sup>, b w e<sup>-b m t</sup>) |
-| EqWorld 1.2.3 | -(w<sup>m</sup> w<sub>x</sub>)<sub>x</sub> a - b w<sup>m + 1</sup> + w<sub>t</sub> = 0 | 3 | 3 | 1 | (0, -m t, w) |
-| EqWorld 1.2.4 | -(w<sup>m</sup> w<sub>x</sub>)<sub>x</sub> a - b w<sup>1 - m</sup> + w<sub>t</sub> = 0 | 3 | 3 | 1 | (m x, m t, w) |
-| EqWorld 1.2.5 | -(w<sup>2 n</sup> w<sub>x</sub>)<sub>x</sub> a - b w<sup>1 - n</sup> + w<sub>t</sub> = 0 | 3 | 3 | 1 | (3 n x, 2 n t, 2 w) |
-| EqWorld 1.2.7 | -(w<sub>x</sub> e<sup>lam w</sup>)<sub>x</sub> a + w<sub>t</sub> = 0 | 4 | 4 | 1 | (x, 2 t, 0) |
-| EqWorld 1.2.9 | -(w<sub>x</sub> f(w))<sub>x</sub> + w<sub>t</sub> = 0 | 3 | 3 | 1 | (x, 2 t, 0) |
-| AIMS 2026 I-(1) | -(u<sup>m</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e u<sup>r</sup> + u<sub>t</sub> = 0 | 3 | 3 | 1 | (x (m + n - r), t (1 - r) (n + 1), u (n + 1)) |
-| AIMS 2026 I-(2) | -(u<sup>m</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u<sup>m + n</sup> + e<sub>3</sub> u/(m + n - 1) + u<sub>t</sub> = 0 | 3 | 3 | 1 | (0, e<sup>e<sub>3</sub> t</sup>, -e<sub>3</sub> u e<sup>e<sub>3</sub> t</sup>/(m + n - 1)) |
-| AIMS 2026 I-(3) | -(u<sup>1 - n</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u log(u) + u<sub>t</sub> = 0 | 3 | 3 | 1 | (0, 0, u e<sup>e<sub>2</sub> t</sup>) |
-| AIMS 2026 I-(4) | -(u<sup>m</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u + u<sub>t</sub> = 0 | 4 | 4 | 2 | (x (m + n - 1)/(n + 1), 0, u), (0, e<sup>e<sub>2</sub> t (-m - n + 1)</sup>, e<sub>2</sub> u e<sup>e<sub>2</sub> t (-m - n + 1)</sup>) |
-| AIMS 2026 I-(5) | -(u<sup>1 - n</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u + u<sub>t</sub> = 0 | 4 | 4 | 2 | (0, 0, u), (x, t (n + 1), e<sub>2</sub> t u (n + 1)) |
-| AIMS 2026 II-(1) | -(u<sub>x</sub><sup>n</sup> e<sup>u</sup>)<sub>x</sub> - e<sub>2</sub> e<sup>q u</sup> + u<sub>t</sub> = 0 | 3 | 3 | 1 | (x (1 - q)/(n + 1), -q t, 1) |
-| AIMS 2026 II-(2) | -(u<sub>x</sub><sup>n</sup> e<sup>u</sup>)<sub>x</sub> - e<sub>2</sub> e<sup>u</sup> + e<sub>3</sub> + u<sub>t</sub> = 0 | 3 | 3 | 1 | (0, e<sup>e<sub>3</sub> t</sup>, -e<sub>3</sub> e<sup>e<sub>3</sub> t</sup>) |
+| CRC 1, 10.11 | -(lam u<sub>x</sub> (μ + u)<sup>ν</sup>)<sub>x</sub> + u<sub>t</sub> + u<sub>tt</sub> = 0 | 3 | 3 | 1 | (ν x, 0, 2 μ + 2 u) |
+| EqWorld ODE 3.4 | y'' - f(a y + b x + c) = 0 | 1 | 1 | 1 | (-a/b, 1) |
+| EqWorld ODE 3.5 | y'' - f(a x<sup>2</sup> + b x + c + y) = 0 | 1 | 1 | 1 | (-1, 2 a x + b) |
+| EqWorld ODE 3.6 | y'' - f(y/x)/x = 0 | 1 | 1 | 1 | (x, y) |
+| EqWorld ODE 3.7 | y'' - f(y/x)/x<sup>3</sup> = 0 | 1 | 1 | 1 | (x<sup>2</sup>, x y) |
+| EqWorld ODE 3.8 | y'' - f(y/√x)/x<sup>3/2</sup> = 0 | 1 | 1 | 1 | (2 x, y) |
+| EqWorld ODE 3.9 | -x<sup>k - 2</sup> f(y/x<sup>k</sup>) + y'' = 0 | 1 | 1 | 1 | (x/k, y) |
+| EqWorld ODE 3.10 | y'' - y f(x<sup>n</sup> y<sup>m</sup>)/x<sup>2</sup> = 0 | 1 | 1 | 1 | (-m x/n, y) |
+| EqWorld ODE 3.12 | y'' - f(y e<sup>a x</sup>) e<sup>-a x</sup> = 0 | 1 | 1 | 1 | (-1/a, y) |
+| EqWorld ODE 3.13 | -y f(y<sup>m</sup> e<sup>a x</sup>) + y'' = 0 | 1 | 1 | 1 | (-m/a, y) |
+| EqWorld ODE 3.14 | y'' - f(x<sup>n</sup> e<sup>a y</sup>)/x<sup>2</sup> = 0 | 1 | 1 | 1 | (-a x/n, 1) |
+| EqWorld ODE 3.15 | -ψ''(x) y/ψ(x) + y'' - f(y/ψ(x))/ψ(x)<sup>3</sup> = 0 | 1 | 1 | 1 | (ψ(x)<sup>2</sup>, ψ'(x) y ψ(x)) |
+| EqWorld ODE 3.29 | x y'' - x<sup>n - 1</sup> f(x<sup>n</sup> y) + y' (n + 1) = 0 | 1 | 1 | 1 | (-x/(n x<sup>n</sup>), y/x<sup>n</sup>) |
+| EqWorld ODE 3.31 | a y' + y'' - f(y e<sup>a x</sup>) e<sup>a x</sup> = 0 | 1 | 1 | 1 | (-e<sup>-a x</sup>/a, y e<sup>-a x</sup>) |
+| EqWorld ODE 3.32 | x y'' - y' f(x<sup>n</sup> e<sup>a y</sup>) = 0 | 1 | 1 | 1 | (-a x/n, 1) |
+| EqWorld ODE 3.33 | x<sup>2</sup> y'' + x y' - f(x<sup>n</sup> e<sup>a y</sup>) = 0 | 1 | 1 | 1 | (-a x/n, 1) |
+| EqWorld ODE 3.48 | y'' - f(x) g(x y' - y) = 0 | 1 | 1 | 1 | (0, x) |
+| EqWorld ODE 3.49 | y'' - y f(x y'/y)/x<sup>2</sup> = 0 | 2 | 2 | 2 | (0, y), (x, 0) |
+| EqWorld ODE 3.50 | g'(x) y'/2 + y'' g(x) - f(y) h(y' √(g(x))) = 0 | 1 | 1 | 1 | (√(g(x)), 0) |
 
 #### Simplification without assumptions (1)
 
@@ -296,17 +190,9 @@ The residue has ((1 - x)/(1 + x))<sup>A</sup> next to (1 + x)<sup>A + 2</sup> (1
 |---|---|---|---|---|---|
 | Bluman-Anco (4.64) | u<sub>tt</sub> - u<sub>xx</sub> (1 - x)<sup>2 - A</sup> (x + 1)<sup>A + 2</sup> = 0 | infinite | 4 | 1 | (t (1 - x<sup>2</sup>), -A t<sup>2</sup>/2 - ((1 - x)/(x + 1))<sup>A</sup>/(2 A), t u (A/2 - x)) |
 
-#### One branch of y' (1)
+### Fewer generators than the dimension (199)
 
-The equation is of degree ≥ 2 in y'; sympy-extras' generators and its check are those of one branch only (Upabjojr/sympy-extras#72).
-
-| entry | equation | dimension | published | rejected | rejected generators |
-|---|---|---|---|---|---|
-| Kamke 1.547 | -4 y (x y' - 2 y)<sup>2</sup> + y'<sup>4</sup> = 0 | 1 | 1 | 1 | (x, 4 y) |
-
-### Fewer generators than the dimension (173)
-
-#### Polynomial ansatz of degree ≤ 2 (173)
+#### Polynomial ansatz of degree ≤ 2 (199)
 
 sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the generators of higher degree or with other functions; the ones it finds are correct. Where the published list has the missing generators, they are named.
 
@@ -337,19 +223,31 @@ sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the gene
 | Hydon Exercise 6.6 | -y'<sup>3</sup> (y<sup>2</sup>/2 + 1) + y''' - 3 y''<sup>2</sup>/(2 y') = 0 | 6 | 3 | – |
 | Bluman-Anco (3.413) | y'' - (y'<sup>2</sup> + 1) (2 x y' - 2 y)/(x<sup>2</sup> + y<sup>2</sup>) = 0 | 8 | 4 | – |
 | Bluman-Anco Exercise 3.5-3 | -2 y'<sup>2</sup> cot(y) + y'' - sin(y) cos(y) = 0 | 8 | 1 | – |
+| CRC 1, 10.5 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> - d + u<sub>t</sub> = 0 | 4 | 3 | (0, e<sup>-d t</sup>, d e<sup>-d t</sup>) |
+| CRC 1, 10.5 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> - d u + u<sub>t</sub> = 0 | 4 | 3 | (0, e<sup>-d σ t</sup>, d u e<sup>-d σ t</sup>) |
+| CRC 1, 10.5 | -(u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> - a/u<sup>1/3</sup> + u<sub>t</sub> = 0 | 5 | 3 | (e<sup>2 √3 √a x/3</sup>, 0, -√3 √a u e<sup>2 √3 √a x/3</sup>), (e<sup>-2 √3 √a x/3</sup>, 0, √3 √a u e<sup>-2 √3 √a x/3</sup>) |
+| CRC 1, 10.5 | -(u<sub>x</sub>/u<sup>4/3</sup>)<sub>x</sub> - d u + u<sub>t</sub> = 0 | 5 | 4 | (0, e<sup>4 d t/3</sup>, d u e<sup>4 d t/3</sup>) |
 | CRC 1, 10.10 | τ0 u<sub>tt</sub> + u<sub>t</sub> - u<sub>xx</sub> k(u<sub>x</sub>) = 0 | 4 | 3 | (0, 0, e<sup>-t/τ0</sup>) |
 | CRC 1, 10.10 | -k0 u<sub>x</sub><sup>n</sup> u<sub>xx</sub> + τ0 u<sub>tt</sub> + u<sub>t</sub> = 0 | 5 | 4 | – |
 | CRC 1, 10.10 | -k0 u<sub>xx</sub> e<sup>m u<sub>x</sub></sup> + τ0 u<sub>tt</sub> + u<sub>t</sub> = 0 | 5 | 4 | – |
+| CRC 1, 10.11 | -(lam u<sub>x</sub>/(μ + u)<sup>2</sup>)<sub>x</sub> + u<sub>t</sub> + u<sub>tt</sub> = 0 | 4 | 3 | (0, e<sup>-t</sup>, -(μ + u) e<sup>-t</sup>) |
 | CRC 1, 11.8 | -μ u<sub>xx</sub> + u u<sub>x</sub> + u<sub>t</sub> + u/(2 t) = 0 | 3 | 2 | (2 √t, 0, 1/√t) |
 | CRC 1, 11.8 | -μ u<sub>xx</sub> + u u<sub>x</sub> + u<sub>t</sub> + u/t = 0 | 3 | 2 | (log(t), 0, 1/t) |
+| Gabel et al. 12 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> - 1 = 0 | 4 | 3 | (0, e<sup>-t</sup>, e<sup>-t</sup>) |
+| Gabel et al. 13 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> + u<sub>t</sub> + 1 = 0 | 4 | 3 | (0, e<sup>t</sup>, -e<sup>t</sup>) |
 | Ko, Kim, Lee | u u<sub>x</sub> + u<sub>t</sub> e<sup>-t/t0</sup> + u<sub>xxx</sub> = 0 | 4 | 2 | (0, e<sup>-t/t0</sup>, 0), (t0 (e<sup>t/t0</sup> - 1), 0, 1), (x, 3 t0 (1 - e<sup>-t/t0</sup>), -2 u) |
 | Ko, Kim, Lee | u u<sub>x</sub> + u/(2 t + 2) + u<sub>t</sub> + u<sub>xxx</sub> = 0 | 4 | 2 | (2 √(t + 1), 0, 1/√(t + 1)), (x √(t + 1)/2, (t + 1)<sup>3/2</sup>, (-u (4 t + 4) + x)/(4 √(t + 1))) |
 | EqWorld 1.1.6 | -a w log(w) + w<sub>t</sub> - w<sub>xx</sub> = 0 | 4 | 2 | (0, 0, w e<sup>a t</sup>), (e<sup>a t</sup>, 0, -a w x e<sup>a t</sup>/2) |
+| EqWorld 1.2.2 | -(w<sup>m</sup> w<sub>x</sub>)<sub>x</sub> a - b w + w<sub>t</sub> = 0 | 4 | 3 | (0, e<sup>-b m t</sup>, b w e<sup>-b m t</sup>) |
 | EqWorld 4.1.2 | a w<sub>y</sub>/y + b w<sub>x</sub> w<sub>xx</sub> + w<sub>yy</sub> = 0 | 5 | 4 | (0, 0, y<sup>1 - a</sup>) |
 | EqWorld 5.1.2 | -6 w w<sub>x</sub> + w<sub>t</sub> + w<sub>xxx</sub> + w/(2 t) = 0 | 4 | 2 | (√t x/2, t<sup>3/2</sup>, (-24 t w - x)/(24 √t)), (2 √t, 0, -1/(6 √t)) |
 | PINNacle Poisson1D | u'' + sin(x) = 0 | 8 | 2 | (1, cos(x)), (0, u - sin(x)), (x, x cos(x)) ... |
 | Cherniha, King, Kovalenko 5 | -e<sub>1</sub> u<sup>k + 1</sup> - e<sub>2</sub> u + u<sub>t</sub> - u<sub>x</sub><sup>k</sup> u<sub>xx</sub> = 0 | 3 | 2 | (0, e<sup>-e<sub>2</sub> k t</sup>, e<sub>2</sub> u e<sup>-e<sub>2</sub> k t</sup>) |
 | Cherniha, King, Kovalenko 10 | -e<sub>2</sub> u + u<sub>t</sub> - u<sub>x</sub><sup>k</sup> u<sub>xx</sub> = 0 | 5 | 3 | (0, e<sup>-e<sub>2</sub> k t</sup>, e<sub>2</sub> u e<sup>-e<sub>2</sub> k t</sup>), (0, 0, e<sup>e<sub>2</sub> t</sup>) |
+| AIMS 2026 I-(2) | -(u<sup>m</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u<sup>m + n</sup> + e<sub>3</sub> u/(m + n - 1) + u<sub>t</sub> = 0 | 3 | 2 | (0, e<sup>e<sub>3</sub> t</sup>, -e<sub>3</sub> u e<sup>e<sub>3</sub> t</sup>/(m + n - 1)) |
+| AIMS 2026 I-(3) | -(u<sup>1 - n</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u log(u) + u<sub>t</sub> = 0 | 3 | 2 | (0, 0, u e<sup>e<sub>2</sub> t</sup>) |
+| AIMS 2026 I-(4) | -(u<sup>m</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u + u<sub>t</sub> = 0 | 4 | 3 | (0, e<sup>e<sub>2</sub> t (-m - n + 1)</sup>, e<sub>2</sub> u e<sup>e<sub>2</sub> t (-m - n + 1)</sup>) |
+| AIMS 2026 II-(2) | -(u<sub>x</sub><sup>n</sup> e<sup>u</sup>)<sub>x</sub> - e<sub>2</sub> e<sup>u</sup> + e<sub>3</sub> + u<sub>t</sub> = 0 | 3 | 2 | (0, e<sup>e<sub>3</sub> t</sup>, -e<sub>3</sub> e<sup>e<sub>3</sub> t</sup>) |
 | BGL 5.3-3 | -f<sub>0</sub> t<sup>2</sup> (u<sub>xxx</sub>/u<sub>x</sub><sup>3</sup> - 3 u<sub>xx</sub><sup>2</sup>/(2 u<sub>x</sub><sup>4</sup>)) - g0 + u<sub>t</sub> = 0 | 6 | 5 | (0, t<sup>-2</sup>, g0/t<sup>2</sup>) |
 | Vaneeva, Bihlo, Popovych 14b | -ε u<sub>xx</sub>/u<sup>4</sup> - ε1/u<sup>3</sup> - u + u<sub>tt</sub> = 0 | 4 | 2 | (0, e<sup>2 t</sup>, u e<sup>2 t</sup>), (0, e<sup>-2 t</sup>, -u e<sup>-2 t</sup>) |
 | Vaneeva, Bihlo, Popovych 14c | -ε u<sub>xx</sub>/u<sup>4</sup> - ε1/u<sup>3</sup> + u + u<sub>tt</sub> = 0 | 4 | 2 | (0, cos(2 t), -u sin(2 t)), (0, sin(2 t), u cos(2 t)) |
@@ -363,6 +261,7 @@ sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the gene
 | Kamke 1.518 | y'<sup>3</sup> - (-a + y)<sup>2</sup> (-b + y)<sup>2</sup> = 0 | 3 | 1 | – |
 | Kamke 1.521 | x y' - y + y'<sup>3</sup> = 0 | 3 | 1 | – |
 | Kamke 1.522 | y + y'<sup>3</sup> + y' (-x - 5) = 0 | 3 | 1 | – |
+| Kamke 1.527 | -x y<sup>4</sup> y' - y<sup>5</sup> + y'<sup>3</sup> = 0 | 3 | 1 | – |
 | Kamke 1.533 | a + x y'<sup>3</sup> - y y'<sup>2</sup> = 0 | 3 | 1 | – |
 | Kamke 1.537 | -2 x<sup>5</sup> y + x<sup>3</sup> y'<sup>3</sup> - 3 x<sup>2</sup> y y'<sup>2</sup> - y<sup>3</sup> + y' (x<sup>6</sup> + 3 x y<sup>2</sup>) = 0 | 3 | 1 | – |
 | Kamke 1.541 | 2 x y' + y<sup>2</sup> y'<sup>3</sup> - y = 0 | 3 | 1 | – |
@@ -370,7 +269,6 @@ sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the gene
 | Kamke 1.543 | -x<sup>2</sup> y + x y<sup>2</sup> y'<sup>3</sup> + x y' (x<sup>2</sup> + 1) - y<sup>3</sup> y'<sup>2</sup> = 0 | 3 | 0 | – |
 | Kamke 1.544 | x<sup>7</sup> y<sup>2</sup> y'<sup>3</sup> + 3 x<sup>5</sup> y<sup>4</sup> y' - x<sup>4</sup> y<sup>5</sup> - y'<sup>2</sup> (3 x<sup>6</sup> y<sup>3</sup> - 1) = 0 | 3 | 1 | – |
 | Kamke 1.545 | y'<sup>4</sup> - (-a + y)<sup>3</sup> (-b + y)<sup>2</sup> = 0 | 3 | 1 | – |
-| Kamke 1.547 | -4 y (x y' - 2 y)<sup>2</sup> + y'<sup>4</sup> = 0 | 1 | 0 | – |
 | Kamke 1.548 | y'<sup>6</sup> - (-a + y)<sup>4</sup> (-b + y)<sup>3</sup> = 0 | 3 | 1 | – |
 | Kamke 3.1 | -λ y + y''' = 0 | 5 | 2 | – |
 | Kamke 3.2 | a x<sup>3</sup> y - b x + y''' = 0 | 4 | 0 | – |
@@ -463,6 +361,16 @@ sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the gene
 | Kamke 7.8 | 4 y<sup>2</sup> y''' - 18 y y' y'' + 15 y'<sup>3</sup> = 0 | 7 | 4 | – |
 | Kamke 7.9 | 9 y<sup>2</sup> y''' - 45 y y' y'' + 40 y'<sup>3</sup> = 0 | 7 | 4 | – |
 | EqWorld ODE 3.3 | -a/y<sup>3</sup> + y f(x) + y'' = 0 | 3 | 0 | – |
+| EqWorld ODE 3.4 | y'' - f(a y + b x + c) = 0 | 1 | 0 | – |
+| EqWorld ODE 3.5 | y'' - f(a x<sup>2</sup> + b x + c + y) = 0 | 1 | 0 | – |
+| EqWorld ODE 3.6 | y'' - f(y/x)/x = 0 | 1 | 0 | – |
+| EqWorld ODE 3.7 | y'' - f(y/x)/x<sup>3</sup> = 0 | 1 | 0 | – |
+| EqWorld ODE 3.8 | y'' - f(y/√x)/x<sup>3/2</sup> = 0 | 1 | 0 | – |
+| EqWorld ODE 3.9 | -x<sup>k - 2</sup> f(y/x<sup>k</sup>) + y'' = 0 | 1 | 0 | – |
+| EqWorld ODE 3.10 | y'' - y f(x<sup>n</sup> y<sup>m</sup>)/x<sup>2</sup> = 0 | 1 | 0 | – |
+| EqWorld ODE 3.12 | y'' - f(y e<sup>a x</sup>) e<sup>-a x</sup> = 0 | 1 | 0 | – |
+| EqWorld ODE 3.13 | -y f(y<sup>m</sup> e<sup>a x</sup>) + y'' = 0 | 1 | 0 | – |
+| EqWorld ODE 3.14 | y'' - f(x<sup>n</sup> e<sup>a y</sup>)/x<sup>2</sup> = 0 | 1 | 0 | – |
 | EqWorld ODE 3.15 | -ψ''(x) y/ψ(x) + y'' - f(y/ψ(x))/ψ(x)<sup>3</sup> = 0 | 1 | 0 | (ψ(x)<sup>2</sup>, ψ'(x) y ψ(x)) |
 | EqWorld ODE 3.20 | -a y' + y'' - f(y) e<sup>2 a x</sup> = 0 | 1 | 0 | (e<sup>-a x</sup>, 0) |
 | EqWorld ODE 3.22 | y' (-al - f(y) e<sup>al x</sup>) + y'' = 0 | 1 | 0 | (e<sup>-al x</sup>, 0) |
@@ -472,6 +380,8 @@ sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the gene
 | EqWorld ODE 3.29 | x y'' - x<sup>n - 1</sup> f(x<sup>n</sup> y) + y' (n + 1) = 0 | 1 | 0 | (-x/(n x<sup>n</sup>), y/x<sup>n</sup>) |
 | EqWorld ODE 3.30 | g'(x) y'/2 + y'' g(x) - f(y) = 0 | 1 | 0 | (√(g(x)), 0) |
 | EqWorld ODE 3.31 | a y' + y'' - f(y e<sup>a x</sup>) e<sup>a x</sup> = 0 | 1 | 0 | (-e<sup>-a x</sup>/a, y e<sup>-a x</sup>) |
+| EqWorld ODE 3.32 | x y'' - y' f(x<sup>n</sup> e<sup>a y</sup>) = 0 | 1 | 0 | – |
+| EqWorld ODE 3.33 | x<sup>2</sup> y'' + x y' - f(x<sup>n</sup> e<sup>a y</sup>) = 0 | 1 | 0 | – |
 | EqWorld ODE 3.34 | y y' f(x) + y y'' + y'<sup>2</sup> + g(x) = 0 | 8 | 0 | (0, 1/y) |
 | EqWorld ODE 3.35 | y<sup>2</sup> g(x) + y y' f(x) + y y'' - y'<sup>2</sup> = 0 | 8 | 1 | – |
 | EqWorld ODE 3.36 | a y<sup>4 n - 2</sup> - n y'<sup>2</sup> + y<sup>2</sup> f(x) + y y'' = 0 | 3 | 0 | – |
@@ -484,33 +394,13 @@ sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the gene
 | EqWorld ODE 3.45 | y'<sup>2</sup> f(y) - y'/2 + y'' - g(y) e<sup>x</sup> = 0 | 1 | 0 | (e<sup>-x/2</sup>, 0) |
 | EqWorld ODE 3.46 | -x y'<sup>3</sup> f(y) + y'' = 0 | 8 | 1 | – |
 | EqWorld ODE 3.47 | -y'<sup>2</sup> f(y) - y' g(x) + y'' = 0 | 8 | 0 | – |
+| EqWorld ODE 3.48 | y'' - f(x) g(x y' - y) = 0 | 1 | 0 | – |
+| EqWorld ODE 3.49 | y'' - y f(x y'/y)/x<sup>2</sup> = 0 | 2 | 0 | – |
 | EqWorld ODE 3.50 | g'(x) y'/2 + y'' g(x) - f(y) h(y' √(g(x))) = 0 | 1 | 0 | (√(g(x)), 0) |
 
 ### Kamke chapters 1 and 2
 
-sympy-extras' generators of the first order ODEs, checked by delierium 2.7.0: 1132 generators, 55 rejected, all in equations of degree ≥ 2 in y'.
-
-#### One branch of y' (15)
-
-The ODE is of degree ≥ 2 in y'; sympy-extras solves it for y' and uses one root, so its generators are symmetries of one branch only, not of the equation (Upabjojr/sympy-extras#72). delierium works with the equation as given.
-
-| entry | equation | generators | rejected |
-|---|---|---|---|
-| Kamke 1.391 | a b x y + y'<sup>2</sup> + y' (a y + b x) = 0 | 4 | (1, 0), (x, -a x y), (y, -a y<sup>2</sup>) ... |
-| Kamke 1.396 | -x y<sup>3</sup> + y y' (-x + y) + y'<sup>2</sup> = 0 | 4 | (1, 0), (x, -y), (x<sup>2</sup>, -2 x y + 1) ... |
-| Kamke 1.438 | x<sup>2</sup> y'<sup>2</sup> + 3 x y y' + 2 y<sup>2</sup> = 0 | 4 | (x<sup>2</sup>, -2 x y), (x y, -2 y<sup>2</sup>) |
-| Kamke 1.439 | x<sup>2</sup> y'<sup>2</sup> + 3 x y y' + 3 y<sup>2</sup> = 0 | 4 | (x<sup>2</sup>, -19766123228938883788950534717005268217019238601687045979401946115267427834105193477257762194788640190401304639326116750756405900693125192321831115114579149352478036620694996344617276729443037162919032678461504448319151050042886196295766384186626444668392723095190513689582967079725841221357121705129326845183712514570541127181 √3 x y/(4793948308133376050809356626790417130505696435385974610321006254196991189002939694090860515724206166552105643226582238650788994659192951900093458262499459229014829159542806380400945870314497034072243619514142687329172392466149123649695429897712948450032452801705995628312351763364213575030154444034770765224379668565267353027 I + 11579432716581463842363904269073373101177593589329372449494295325445954826402482420141554624617691404750167878475217087620674268909019144247856257322219613158647081360615728769611202529523859097255273912469622069769709902539874422980612446158513313628917664462891677250284527465362489622561362988741294308381015120191938300445 √3) + 10178226612672131687331821463424433956007845730915096758759933606873445456099314089076041163340227857297093352872952273454827911374739288521644198589580230894448378301609383583815384988814043094774545439433219073660806265110587948996375524391200547768327817491778522432958263552997414071296812817059785314734953177440006421127 I x y/(4793948308133376050809356626790417130505696435385974610321006254196991189002939694090860515724206166552105643226582238650788994659192951900093458262499459229014829159542806380400945870314497034072243619514142687329172392466149123649695429897712948450032452801705995628312351763364213575030154444034770765224379668565267353027 I + 11579432716581463842363904269073373101177593589329372449494295325445954826402482420141554624617691404750167878475217087620674268909019144247856257322219613158647081360615728769611202529523859097255273912469622069769709902539874422980612446158513313628917664462891677250284527465362489622561362988741294308381015120191938300445 √3)), (x y, -83268111227483531620898387284967890303586197981991010989810869616787239447330278902227589162986951403964442134111261445523162675375340336465960636656234744202508255659799020935856559539901596659118316132955226781603315112459404207135776302048444076255340433294101519210310660055998591539222137335561834361673035886537960146678 √3 y<sup>2</sup>/(-60479029679627410538277820570703004041050621525347433014441680542761209658502449833561926848149551619589678050817925844575717546192082346408407909472900072930271549827132530679878816684699209542017214436194380742962376110485237992281268481751428635741703993062304603421416021291715497506544372973368468104123525224330566811689 I + 75671750711531491260024865046879594882741005829776484998021139925445229517721002546005701724707818142506187439680149578540680965647587673113443060928456520445096020382243524183863978588167467620084615567368278102056335445134682135517607028616105596084128286550169213947345780467904226861662882548164045609156532332468829035015 √3) + 204226170586738352697454028426373898385687441032685877018694230702309658764335178569351442859286054643143798235747113134674597767759505029282776455602034890063051355314064082295614192909300015743152745005343988267528067333429880191698313265551301347738748419418710726053142702639429586552310883282298770569920086335199093770056 I y<sup>2</sup>/(-60479029679627410538277820570703004041050621525347433014441680542761209658502449833561926848149551619589678050817925844575717546192082346408407909472900072930271549827132530679878816684699209542017214436194380742962376110485237992281268481751428635741703993062304603421416021291715497506544372973368468104123525224330566811689 I + 75671750711531491260024865046879594882741005829776484998021139925445229517721002546005701724707818142506187439680149578540680965647587673113443060928456520445096020382243524183863978588167467620084615567368278102056335445134682135517607028616105596084128286550169213947345780467904226861662882548164045609156532332468829035015 √3)) |
-| Kamke 1.440 | x<sup>2</sup> y'<sup>2</sup> + 4 x y y' - 5 y<sup>2</sup> = 0 | 4 | (x<sup>2</sup>, -5 x y), (x y, -5 y<sup>2</sup>) |
-| Kamke 1.442 | x<sup>2</sup> y'<sup>2</sup> + y' (x<sup>3</sup> + x<sup>2</sup> y - 2 x y) + (1 - x) (-x<sup>2</sup> y + y<sup>2</sup>) = 0 | 4 | (x, -2 x<sup>2</sup>), (-x<sup>2</sup> + y, -4 x y), (0, x<sup>2</sup> + y) ... |
-| Kamke 1.445 | a b y<sup>3</sup> + x<sup>2</sup> y'<sup>2</sup> + y' (a x<sup>2</sup> y<sup>3</sup> + b) = 0 | 2 | (1, 0), (x, -y/2) |
-| Kamke 1.449 | 2 x y y' + y<sup>2</sup> + y'<sup>2</sup> (-a<sup>2</sup> + x<sup>2</sup>) = 0 | 4 | (x - x<sup>2</sup>/a, x y/a), (y - x y/a, y<sup>2</sup>/a) |
-| Kamke 1.471 | -x + y y'<sup>2</sup> - y' (-x + y) = 0 | 9 | (1, 0), (x, x), (y, x) ... |
-| Kamke 1.481 | x y y'<sup>2</sup> + x y + y' (x<sup>2</sup> + y<sup>2</sup>) = 0 | 4 | (x, 0), (x<sup>2</sup>, -x y), (x y, -y<sup>2</sup>) ... |
-| Kamke 1.505 | -x<sup>3</sup> + x y<sup>2</sup> y'<sup>2</sup> + 2 x y<sup>2</sup> - 2 y<sup>3</sup> y' = 0 | 4 | (y, x), (x y, x<sup>2</sup>), (y<sup>2</sup>, x y) |
-| Kamke 1.526 | -x<sup>3</sup> y<sup>3</sup> + y'<sup>3</sup> - y'<sup>2</sup> (x<sup>2</sup> + x y + y<sup>2</sup>) + y' (x<sup>3</sup> y + x<sup>2</sup> y<sup>2</sup> + x y<sup>3</sup>) = 0 | 3 | (1, x<sup>2</sup>), (x, 3 y), (0, 1) |
-| Kamke 1.527 | -x y<sup>4</sup> y' - y<sup>5</sup> + y'<sup>3</sup> = 0 | 1 | (nan, nan) |
-| Kamke 1.539 | y sin(x) + y'<sup>3</sup> sin(x) + y'<sup>2</sup> (-y sin(x) + cos(x)<sup>2</sup>) - y' (y cos(x)<sup>2</sup> + sin(x)) = 0 | 4 | (1, 0), (x, x y), (y, y<sup>2</sup>) ... |
-| Kamke 1.540 | 2 x y' - x + 2 y y'<sup>3</sup> - y y'<sup>2</sup> = 0 | 9 | (1, 0), (x, x/2), (y, x/4) ... |
+sympy-extras' generators of the first order ODEs, checked by delierium 2.7.0: 1059 generators, 0 rejected (0.0.2: 55, one branch of y', Upabjojr/sympy-extras#72, fixed in fbca643a).
 
 
 ---
@@ -1166,9 +1056,11 @@ None.
 
     benchmarks/tool-comparison/pipeline.sh     # all tools, about 4.5 hours at 3 processes
     benchmarks/tool-comparison/rerun.sh        # the stages repeated after the fix
+    benchmarks/tool-comparison/extras-update.sh  # sympy-extras fbca643a
     uv run python benchmarks/tool-comparison/report.py > BENCHMARK.md
 
 The tools need local installations: REDUCE (with LIEPDE and SPDE; ReLie and DIMSYM from
 their authors), Mathematica with MathLie, Maxima with symmgrp2020, CoCoA 5, Singular, GAP;
-SymPy, sympy-extras and DifferentialAlgebra come from PyPI (`uv run --with ...`).
+SymPy and DifferentialAlgebra come from PyPI, sympy-extras from its git repository
+(`uv run --with ...`).
 
