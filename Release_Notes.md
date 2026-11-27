@@ -4,8 +4,15 @@ Details are in the issues referenced. How delierium compares with other tools (S
 sympy-extras, REDUCE's LIEPDE, ReLie, DIMSYM and SPDE, MathLie, symmgrp2020, BLAD, CoCoA,
 Singular, GAP), entry by entry: [BENCHMARK.md](BENCHMARK.md).
 
-### Not released yet
+### 2.7.2
 
+* Fixed: `LieAlgebra` could abort the process (GMP overflow) on generators with products of
+  exponentials ([#113](https://github.com/tapir442/delierium/pull/113)).
+* Fixed: `scaling_symmetries` failed on the derivative of an arbitrary function of an
+  expression, such as Φ′(σ) ([#118](https://github.com/tapir442/delierium/pull/118)).
+* Symmetry catalogue: 185 equations from the CRC Handbook, Vols. 2 and 3
+  ([#118](https://github.com/tapir442/delierium/pull/118)); BENCHMARK.md against
+  sympy-extras master ([#117](https://github.com/tapir442/delierium/pull/117)).
 * Internal code quality improvements
   ([#115](https://github.com/tapir442/delierium/pull/115)).
 
