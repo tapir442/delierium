@@ -502,10 +502,16 @@ def section_symmgrp():
     return "\n".join(text + grouped(out, header=["entry", "equation", "dimension", "symmgrp"]))
 
 
+EXTRAS = "sympy-extras fbca643a"  # master after 0.0.3, with the fixes of #71 and #72
+
 DIVERGENCE = ("Divergence form",
               "The equation is in divergence form, e.g. (u^s u_x)_x as an unevaluated Derivative "
               "of a product; sympy-extras does not evaluate it and returns transformations that "
               "are no symmetries (Upabjojr/sympy-extras#71).", "")
+EXTRAS_REGRESSION = ("Regression after 0.0.3",
+                     "sympy-extras 0.0.3 accepts these generators, fbca643a rejects them; most "
+                     "equations have an arbitrary function of a compound argument, e.g. "
+                     "y'' = f(x + y) with (1, -1).", "")
 EXTRAS_BRANCH = ("One branch of y'",
                  "The equation is of degree >= 2 in y'; sympy-extras' generators and its check "
                  "are those of one branch only (Upabjojr/sympy-extras#72).", "")
@@ -555,17 +561,13 @@ def section_extras():
                     or "–")
                 fewer_p.append(para)
         if rejected:
-            cause = (("Divergence form",
-                      "`check_symmetry` does not evaluate the outer derivative of an equation in "
-                      "divergence form (Upabjojr/sympy-extras#71).", "") if divergence_form(e) else
-                     EXTRAS_BRANCH if nonlinear_first_order(e) else
-                     ("Simplification without assumptions",
+            cause = (("Simplification without assumptions",
                       "The residue has ((1 - x)/(1 + x))**A next to (1 + x)**(A + 2) "
                       "(1 - x)**(2 - A); it vanishes once the power is split, which holds on "
                       "-1 < x < 1, where c(x) is real (checked with x = (1 - q)/(1 + q), q > 0). "
                       "sympy-extras' `check_symmetry` simplifies without assumptions on x; "
                       "delierium checks locally, for positive bases.", "")
-                     if e.name.startswith("Bluman-Anco (4.64)") else ("Not traced", "", ""))
+                     if e.name.startswith("Bluman-Anco (4.64)") else EXTRAS_REGRESSION)
             listed_gens = ", ".join(fmt_gen(g) for g in rejected)
             para = paragraph(e, "Rejected by `check_symmetry`: " + listed_gens + ".", cause)
             if not cause[2]:  # a detail of the entry needs the paragraph form
@@ -576,7 +578,8 @@ def section_extras():
     ok = [e for e in finite if x.get(e.name, {}).get("status") == "ok"]
     same = sum(int(x[e.name]["n"]) == e.dimension for e in ok)
     text = ["## sympy-extras\n",
-            "sympy-extras 0.0.2 (`symmetries`, `check_symmetry`): explicit generators by a "
+            f"{EXTRAS} (master after 0.0.3; `symmetries`, `check_symmetry`): explicit "
+            "generators by a "
             "polynomial ansatz of total degree <= 2, so a lower bound of the dimension "
             "(`benchmarks/sympy_symmetries.py`, 60 s per task).\n",
             "| | entries |", "|---|---|",
@@ -598,9 +601,12 @@ def section_extras():
                                       "published generators outside the ansatz"])]
     tot, rej, kparas = extras_kamke()
     text += [f"### Kamke chapters 1 and 2\n",
-             f"sympy-extras' generators of the first order ODEs, checked by delierium 2.7.0: "
-             f"{tot} generators, {rej} rejected, all "
-             f"in equations of degree >= 2 in y'.\n", *grouped(kparas, header=["entry", "equation", "generators", "rejected", "note"])]
+             f"sympy-extras' generators of the first order ODEs, checked by delierium 2.7.1: "
+             f"{tot} generators, {rej} rejected"
+             + (", all in equations of degree >= 2 in y'.\n" if rej else
+                " (0.0.2: 55, one branch of y', Upabjojr/sympy-extras#72, fixed in fbca643a).\n"),
+             *(grouped(kparas, header=["entry", "equation", "generators", "rejected", "note"])
+               if kparas else [])]
     return "\n".join(text)
 
 
@@ -705,8 +711,8 @@ def section_sympy():
 
 def extras_kamke():
     K = kamke()
-    gens = old_generators(HERE.parent / "sympy_extras-2026-09-30.jsonl", "extras")
-    cross = [r for r in load("cross-kamke.jsonl") if r.get("tool") == "cross_extras"]
+    gens = old_generators(HERE / "extras-kamke.jsonl", "extras")
+    cross = [r for r in load("extras-kamke.jsonl") if r.get("tool") == "cross_extras"]
     paras, tot, rej = [], 0, 0
     for r in sorted(cross, key=lambda r: [int(t) for t in r["name"].split(".")]):
         if r.get("status") != "ok":
@@ -751,7 +757,7 @@ def tool_counts():
     ok = [e for e in finite if x.get(e.name, {}).get("status") == "ok"]
     detail = by_name(load("extras-detail.jsonl"))
     wrong = sum(1 for d in detail.values() if "error" not in d and (d["wrong"] or d["n"] > CAT[d["name"]].dimension))
-    out.append(("sympy-extras 0.0.2", "generators, polynomial ansatz of degree <= 2", len(ok),
+    out.append((EXTRAS, "generators, polynomial ansatz of degree <= 2", len(ok),
                 sum(int(x[e.name]["n"]) == e.dimension for e in ok), f"{wrong} wrong; fewer by design"))
     for tool, label, what in [
         ("reduce", "LIEPDE (REDUCE)", "generators (CRACK)"),
@@ -849,11 +855,13 @@ REPRO = """## Reproduction
 
     benchmarks/tool-comparison/pipeline.sh     # all tools, about 4.5 hours at 3 processes
     benchmarks/tool-comparison/rerun.sh        # the stages repeated after the fix
+    benchmarks/tool-comparison/extras-update.sh  # sympy-extras fbca643a
     uv run python benchmarks/tool-comparison/report.py > BENCHMARK.md
 
 The tools need local installations: REDUCE (with LIEPDE and SPDE; ReLie and DIMSYM from
 their authors), Mathematica with MathLie, Maxima with symmgrp2020, CoCoA 5, Singular, GAP;
-SymPy, sympy-extras and DifferentialAlgebra come from PyPI (`uv run --with ...`).
+SymPy and DifferentialAlgebra come from PyPI, sympy-extras from its git repository
+(`uv run --with ...`).
 """
 
 

@@ -113,20 +113,38 @@ def sympy_extras():
     return lie
 
 
+def extras_interop():
+    """(from_sympy, to_sympy): since 0.0.3 (master) sympy-extras has a core of
+    its own and takes its own expressions only; before, SymPy's."""
+    try:
+        from sympy_extras.interop import from_sympy, to_sympy
+    except ImportError:
+        return (lambda e: e), (lambda e: e)
+    return from_sympy, to_sympy
+
+
 def extras_symmetries(eqs, dep):
     """sympy-extras' generators (xi..., eta...) as strings, in plain symbols."""
     lie = sympy_extras()
+    fs, ts = extras_interop()
+    eqs, dep = [fs(e) for e in eqs], [fs(f) for f in dep]
     found = lie.symmetries(eqs if len(eqs) > 1 else eqs[0], dep if len(dep) > 1 else dep[0], 2)
-    gens = [[srepr(c) for c in (*X.xi, *X.eta)] for X in found]
+    gens = [[srepr(ts(c)) for c in (*X.xi, *X.eta)] for X in found]
     return {"n": len(found), "generators": gens}
 
 
 def extras_verify(eqs, dep, indep, generators):
     lie = sympy_extras()
-    jets = lie.JetSpace(list(dep))
+    fs, _ = extras_interop()
+    eqs, dep = [fs(e) for e in eqs], [fs(f) for f in dep]
+    jets = lie.JetSpace(dep)
     k = len(indep)
     return [
-        bool(lie.check_symmetry(eqs, list(dep), lie.Symmetry(jets, list(g[:k]), list(g[k:]))))
+        bool(
+            lie.check_symmetry(
+                eqs, dep, lie.Symmetry(jets, [fs(c) for c in g[:k]], [fs(c) for c in g[k:]])
+            )
+        )
         for g in generators
     ]
 
