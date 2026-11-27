@@ -25,6 +25,7 @@ from sympy import (
     simplify,
     sin,
     symbols,
+    sympify,
 )
 from sympy.core.function import AppliedUndef
 
@@ -728,3 +729,14 @@ def test_parameter_set_to_zero_in_a_derivative():
     y = Function("y")(x)
     ode = Derivative(y, x, 2) + Derivative(k * y**2, x)
     assert determining_janet_basis(ode.subs(k, 0), y, x).rank() == 8
+
+
+@pytest.mark.parametrize("exponent", ["1/(l + 2) - 1", "1/m - 1", "-2/3"])
+def test_symbolic_fraction_in_an_exponent(exponent):
+    """Issue #120: x**(l/(l + 2)) and x**(1/(l + 2)) are powers of the same
+    generator; as independent ones, x - x**(l/(l + 2))*x**(2/(l + 2)) was
+    assumed nonzero and the rank came out 1."""
+    x, t = symbols("x t")
+    H = Function("H")(x, t)
+    eq = D(H, t) - D((D(H, x) + x ** sympify(exponent)) * H, x)
+    assert determining_janet_basis(eq, H, [x, t]).rank() == 2
