@@ -29,6 +29,7 @@ from sympy import (
     Matrix,
     Mul,
     Pow,
+    Subs,
     cancel,
     denom,
     gcd_list,
@@ -211,6 +212,12 @@ class _Weights:
         {2: 1}
         >>> w._of_function(exp(x / t)), w.constraints
         ({}, [{0: 1, 1: -1}])
+        >>> from sympy import Subs
+        >>> k = Function("k")
+        >>> w._of_function(k(u * u.diff(x)).diff(x).atoms(Subs).pop())
+        {}
+        >>> w.constraints[-1]
+        {2: 2, 0: -1}
         >>> w._of_function(Integral(u, x))
         Traceback (most recent call last):
         ...
@@ -220,6 +227,10 @@ class _Weights:
             return self.of(cast(Expr, e.args[0]))  # for l > 0
         if isinstance(e, Derivative):  # k'(u) of an arbitrary k: like k(u)
             e = cast(Expr, e.expr)
+        if isinstance(e, Subs):  # k'(v) for an expression v: like k(v)
+            for point in e.point:
+                self._require(self.of(cast(Expr, point)))
+            return {}
         if isinstance(e, (Function, AppliedUndef)):
             for argument in e.args:
                 self._require(self.of(cast(Expr, argument)))
