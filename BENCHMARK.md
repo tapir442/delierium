@@ -400,7 +400,7 @@ sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the gene
 
 ### Kamke chapters 1 and 2
 
-sympy-extras' generators of the first order ODEs, checked by delierium 2.7.0: 1059 generators, 0 rejected (0.0.2: 55, one branch of y', Upabjojr/sympy-extras#72, fixed in fbca643a).
+sympy-extras' generators of the first order ODEs, checked by delierium 2.7.1: 1059 generators, 0 rejected (0.0.2: 55, one branch of y', Upabjojr/sympy-extras#72, fixed in fbca643a).
 
 
 ---

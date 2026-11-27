@@ -601,7 +601,7 @@ def section_extras():
                                       "published generators outside the ansatz"])]
     tot, rej, kparas = extras_kamke()
     text += [f"### Kamke chapters 1 and 2\n",
-             f"sympy-extras' generators of the first order ODEs, checked by delierium 2.7.0: "
+             f"sympy-extras' generators of the first order ODEs, checked by delierium 2.7.1: "
              f"{tot} generators, {rej} rejected"
              + (", all in equations of degree >= 2 in y'.\n" if rej else
                 " (0.0.2: 55, one branch of y', Upabjojr/sympy-extras#72, fixed in fbca643a).\n"),
