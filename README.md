@@ -22,7 +22,7 @@ delierium computes
 * **pictures**: the staircase of a Janet basis, symmetry generators as vector fields with
   solution curves, their flows as animations.
 
-A catalogue of about 660 equations with known symmetries from the literature checks it
+A catalogue of about 970 equations with known symmetries from the literature checks it
 (see *Tests*). Solving the determining equations for the infinitesimals themselves is not
 part of it yet ([#9](https://github.com/tapir442/delierium/issues/9)).
 
@@ -378,7 +378,7 @@ The public interface is what `delierium` exports; `help(delierium)` lists it:
 
 ### Tests and the symmetry catalogue
 
-`tests/symmetry_catalog.py` is a catalogue of about 660 ODEs, systems of ODEs and PDEs with
+`tests/symmetry_catalog.py` is a catalogue of about 970 ODEs, systems of ODEs and PDEs with
 their known symmetries: Kamke's collection, the examples and exercises of textbooks
 (Arrigo, Schwarz, Hydon, Baumann, Bluman and others), group classifications and benchmark
 data sets. For each, the listed generators have to solve the determining equations and the
@@ -387,7 +387,7 @@ rank of their Janet basis has to be the dimension of the symmetry algebra.
 included.
 
     uv run pytest                    # the fast tests, including the doctests of this README
-    uv run pytest -m slow -n 3       # the whole catalogue, about 6 min with 3 workers
+    uv run pytest -m slow -n 3       # the whole catalogue, about 8 min with 3 workers
 
 ### Notebooks
 
@@ -447,7 +447,7 @@ is known, and ways forward. They are skipped by default; run them with
 * George W. Bluman, Sukeyuki Kumei: Symmetries and Differential Equations, Springer New York
   1989 (Applied Mathematical Sciences 81).
 * Nail H. Ibragimov (ed.): CRC Handbook of Lie Group Analysis of Differential Equations,
-  Vol. 1, CRC Press 1994.
+  Vol. 1, CRC Press 1994; Vol. 2, CRC Press 1995; Vol. 3, CRC Press 1996.
 * Mir Sajjad Hashemi, Dumitru Baleanu: Lie Symmetry Analysis of Fractional Differential
   Equations, CRC Press 2020.
 * Xiaorui Hu, Yuqi Li, Yong Chen: A direct algorithm of one-dimensional optimal system for
