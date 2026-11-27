@@ -4,6 +4,11 @@ Details are in the issues referenced. How delierium compares with other tools (S
 sympy-extras, REDUCE's LIEPDE, ReLie, DIMSYM and SPDE, MathLie, symmgrp2020, BLAD, CoCoA,
 Singular, GAP), entry by entry: [BENCHMARK.md](BENCHMARK.md).
 
+### Not released yet
+
+* Fixed: a fraction of parameters in an exponent (x**(1/(l + 2) - 1)) could make the
+  Janet basis too small ([#120](https://github.com/tapir442/delierium/issues/120)).
+
 ### 2.7.2
 
 * Fixed: `LieAlgebra` could abort the process (GMP overflow) on generators with products of

@@ -77,6 +77,7 @@ from sympy import (
     S,
     Subs,
     Symbol,
+    apart,
     cancel,
     default_sort_key,
     expand_power_exp,
@@ -565,9 +566,37 @@ def _prepare(e: Any) -> Expr:
     floats = e.atoms(Float)
     if floats:
         e = e.xreplace({f: nsimplify(f, rational=True) for f in floats})
+    e = _exponents_in_partial_fractions(e)
     if e.has(sin, cos, tan, cot, sec, csc, sinh, cosh, tanh, coth, sech, csch):
         return expand_power_exp(_trigonometric_normal(e))
     return expand_power_exp(e)
+
+
+def _exponents_in_partial_fractions(e: Expr) -> Expr:
+    """e with every exponent that is a fraction of parameters in partial
+    fractions (l/(l + 2) -> 1 - 2/(l + 2)): split into products by
+    expand_power_exp, all powers of x are then integer powers of the same
+    generators. As l/(l + 2) and 1/(l + 2), x**(l/(l + 2)) and x**(1/(l + 2))
+    would be independent generators, and x - x**(l/(l + 2))*x**(2/(l + 2)),
+    identically 0, nonzero (issue #120: rank 1 instead of 2).
+
+    >>> from sympy import symbols
+    >>> x, l = symbols("x l")
+    >>> _exponents_in_partial_fractions(x ** (l / (l + 2)))
+    x**(1 - 2/(l + 2))
+    >>> _exponents_in_partial_fractions(x ** (l - 1))
+    x**(l - 1)
+    """
+    powers = {}
+    for p in e.atoms(Pow):
+        exponent = p.exp
+        if exponent.is_number or cancel(exponent).as_numer_denom()[1].is_number:
+            continue
+        main = min(exponent.free_symbols, key=default_sort_key)
+        normal = apart(exponent, main).expand()
+        if normal != exponent:
+            powers[p] = Pow(p.base, normal)
+    return e.xreplace(powers) if powers else e
 
 
 def _to_field(e: Expr) -> FracElement:

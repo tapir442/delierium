@@ -44,15 +44,7 @@ pytestmark = pytest.mark.slow
 # (xfail_strict), so remove the entry here when the problem is fixed.
 XFAIL: dict[str, str] = {}
 # Known problems of the Janet basis (dimension and its algebra; the generators are confirmed)
-GLACIER_4 = (
-    "CRC 2, 9.3.1, glacier case 4: H_t = (H**2 Phi(sigma))_x + F, Phi = sigma**alpha,"
-    " F = C H**(-lam (alpha + 1)), z0 = A x**(1/(lam + 2))"
-)
-XFAIL_DIMENSION: dict[str, str] = {
-    GLACIER_4: "rank 1 instead of 2 with the symbolic exponent 1/(lam + 2) - 1: both "
-    "generators verify, every numeric lam gives 2 and so does 1/m - 1 with m = lam + 2 "
-    "(minimal: H_t = ((H_x + x**(1/(l + 2) - 1)) H)_x)",
-}
+XFAIL_DIMENSION: dict[str, str] = {}
 # Dimension checks too slow for the catalogue run; the dimension was computed once.
 SLOW_DIMENSION: dict[str, str] = {}
 # Algebra checks too slow for the catalogue run (over 45 s each); the dimension
