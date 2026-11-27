@@ -511,7 +511,7 @@ DIVERGENCE = ("Divergence form",
 EXTRAS_REGRESSION = ("Regression after 0.0.3",
                      "sympy-extras 0.0.3 accepts these generators, fbca643a rejects them; most "
                      "equations have an arbitrary function of a compound argument, e.g. "
-                     "y'' = f(x + y) with (1, -1).", "")
+                     "y'' = f(x + y) with (1, -1) (Upabjojr/sympy-extras#76).", "")
 EXTRAS_BRANCH = ("One branch of y'",
                  "The equation is of degree >= 2 in y'; sympy-extras' generators and its check "
                  "are those of one branch only (Upabjojr/sympy-extras#72).", "")

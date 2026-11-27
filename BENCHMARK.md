@@ -158,7 +158,7 @@ sympy-extras' `check_symmetry` rejects published generators that delierium confi
 
 #### Regression after 0.0.3 (19)
 
-sympy-extras 0.0.3 accepts these generators, fbca643a rejects them; most equations have an arbitrary function of a compound argument, e.g. y'' = f(x + y) with (1, -1).
+sympy-extras 0.0.3 accepts these generators, fbca643a rejects them; most equations have an arbitrary function of a compound argument, e.g. y'' = f(x + y) with (1, -1) (Upabjojr/sympy-extras#76).
 
 | entry | equation | dimension | published | rejected | rejected generators |
 |---|---|---|---|---|---|
