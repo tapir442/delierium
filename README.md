@@ -387,7 +387,7 @@ rank of their Janet basis has to be the dimension of the symmetry algebra.
 included.
 
     uv run pytest                    # the fast tests, including the doctests of this README
-    uv run pytest -m slow -n 3       # the whole catalogue, about 6 min with 3 workers
+    uv run pytest -m slow -n 3       # the whole catalogue, about 8 min with 3 workers
 
 ### Notebooks
 
