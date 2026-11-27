@@ -566,7 +566,7 @@ def _prepare(e: Any) -> Expr:
     if floats:
         e = e.xreplace({f: nsimplify(f, rational=True) for f in floats})
     if e.has(sin, cos, tan, cot, sec, csc, sinh, cosh, tanh, coth, sech, csch):
-        e = _trigonometric_normal(e)
+        return expand_power_exp(_trigonometric_normal(e))
     return expand_power_exp(e)
 
 
