@@ -136,7 +136,7 @@ solve[en_] := Module[{name = en["index"], eqs, dep, indep, res, t0, rules, vec, 
         TIMEOUT, "timeout"],
       MEMORY 2^30, "out of memory"];
   ClearSystemCache[];
-  r = <|"index" -> en["index"], "name" -> en["name"], "ms" -> Round[1000 (AbsoluteTime[] - t0)]|>;
+  r = <|"index" -> en["index"], "ms" -> Round[1000 (AbsoluteTime[] - t0)]|>;
   If[res === "error" && r["ms"] >= 1000 TIMEOUT - 1000, res = "timeout"];
   If[MatchQ[res, {__Rule}], res = {res, {}}];
   Which[
@@ -248,11 +248,15 @@ def run(args):
         run_isolated(args, work, data, output)
     else:
         subprocess.run(["wolframscript", "-file", str(work / "run.wls")], check=False)
+    # the names from the input: Mathematica writes non-ASCII ones (Rössler) as invalid JSON
+    names = {d["index"]: d["name"] for d in data}
     with output.open("w") as out:
         for part in sorted(work.glob(output.name + ".*")):
             if part.suffix in (".json", ".wls"):
                 continue
-            out.write(part.read_text())
+            for line in part.read_text().splitlines():
+                row = json.loads(line)
+                out.write(json.dumps({"index": row["index"], "name": names[row["index"]], **row}) + "\n")
     print(f"{len(data)} entries in {time.time() - t0:.0f} s -> {output}")
 
 
