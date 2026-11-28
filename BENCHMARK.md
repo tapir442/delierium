@@ -48,6 +48,41 @@ paragraph.
 | GAP 4 | Lie algebra invariants | 531 algebras | 531 | 0 |
 
 
+## Performance
+
+Wall-clock seconds per entry, on the entries both the tool and delierium answered, from the same runs as above (3 processes at a time, nice 19, so the times are those of a loaded machine). REDUCE packages: the REDUCE process including its start (about 0.05 s); MathLie: inside the Mathematica kernel; delierium and the Python tools: inside the worker process, without Python's start and imports; CoCoA, Singular and GAP: the time of the computation inside one session for all systems. The times count every answer, right or not. *tool failed*: entries delierium answered and the tool did not within its limits.
+
+Generators: delierium's `lie_symmetries(...).generators()` (finite entries, 300 s limit; the tools did all entries, so only the finite ones count here).
+
+| tool | computes | entries | median s | 90 % s | total s | delierium median s | 90 % s | total s | tool faster | tool failed (limit) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| sympy-extras fbca643a | generators (ansatz) | 770 | 0.17 | 0.46 | 297 | 0.43 | 2.42 | 2120 | 625 | 4 (60 s) |
+| LIEPDE | generators | 764 | 0.090 | 0.31 | 232 | 0.42 | 2.10 | 1665 | 680 | 11 (120 s) |
+| ReLie 3.0 | generators | 762 | 0.12 | 0.55 | 322 | 0.42 | 1.93 | 1650 | 647 | 13 (120 s) |
+| DIMSYM 2.3 | generators | 692 | 0.13 | 0.38 | 277 | 0.43 | 2.10 | 1749 | 597 | 8 (120 s) |
+| SPDE 1986 | generators | 562 | 0.070 | 0.21 | 156 | 0.41 | 6.19 | 2002 | 486 | 173 (120 s) |
+| MathLie 3.0 | generators | 646 | 0.18 | 2.82 | 1617 | 0.38 | 1.63 | 1375 | 448 | 100 (120 s, 8 GB) |
+
+Determining equations and dimension: delierium's determining equations (`overdetermined_system_pde`) for symmgrp; delierium's determining equations and Janet basis (the dimension) for BLAD, whose time includes delierium's determining equations, its input.
+
+| tool | computes | entries | median s | 90 % s | total s | delierium median s | 90 % s | total s | tool faster | tool failed (limit) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| symmgrp2020 (Maxima) | determining equations | 922 | 0.18 | 0.24 | 228 | 0.050 | 0.24 | 121 | 124 | 38 (120 s) |
+| BLAD (DifferentialAlgebra) | dimension (Rosenfeld-Groebner) | 628 | 0.045 | 0.18 | 242 | 0.063 | 0.19 | 87 | 558 | 10 (300 s) |
+
+Janet bases and Lie algebras:
+
+| tool | computes | entries | median s | 90 % s | total s | delierium median s | 90 % s | total s | tool faster | tool failed (limit) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| CoCoA 5.4 (CPU time) | Janet basis of a polynomial ideal | 207 | < 0.001 | < 0.001 | 0.069 | 0.004 | 0.034 | 26 | 207 | 0 (–) |
+| Singular 4 `rJanet` | Janet basis of a polynomial ideal | 207 | < 0.001 | < 0.001 | 0.019 | 0.004 | 0.034 | 26 | 206 | 0 (–) |
+| Singular Plural | Groebner basis in the Weyl algebra | 199 | < 0.001 | 0.001 | 9.34 | 0.002 | 0.007 | 0.78 | 188 | 6 (60 s) |
+| GAP 4 (CPU time) | Lie algebra invariants (GAP: and Levi decomposition) | 531 | < 0.001 | 0.002 | 0.47 | 0.003 | 0.096 | 31 | 412 | 0 (–) |
+
+- SymPy 1.14 (`infinitesimals(hint="all")`, 60 s): 53 entries answered, median 0.52 s; for the others it raises at once (NotImplementedError and errors) or times out (26).
+- delierium's `integrate_ode` (300 s): the 140 solved ODEs median 1.00 s, 90 % 7.50 s.
+
+
 ---
 
 <div style="page-break-before: always"></div>
@@ -473,7 +508,7 @@ sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the gene
 
 ### Kamke chapters 1 and 2
 
-sympy-extras' generators of the first order ODEs, checked by delierium 2.7.1: 1059 generators, 0 rejected (0.0.2: 55, one branch of y', Upabjojr/sympy-extras#72, fixed in fbca643a).
+sympy-extras' generators of the first order ODEs, checked by delierium 2.7.2: 1059 generators, 0 rejected (0.0.2: 55, one branch of y', Upabjojr/sympy-extras#72, fixed in fbca643a).
 
 
 ---

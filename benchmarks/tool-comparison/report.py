@@ -8,6 +8,7 @@ differs from delierium.
 import collections
 import json
 import re
+import statistics
 import sys
 from pathlib import Path
 
@@ -615,8 +616,8 @@ def section_extras():
             *grouped(fewer_p, header=["entry", "equation", "dimension", "sympy-extras",
                                       "published generators outside the ansatz"])]
     tot, rej, kparas = extras_kamke()
-    text += [f"### Kamke chapters 1 and 2\n",
-             f"sympy-extras' generators of the first order ODEs, checked by delierium 2.7.1: "
+    text += ["### Kamke chapters 1 and 2\n",
+             f"sympy-extras' generators of the first order ODEs, checked by {DELI}: "
              f"{tot} generators, {rej} rejected"
              + (", all in equations of degree >= 2 in y'.\n" if rej else
                 " (0.0.2: 55, one branch of y', Upabjojr/sympy-extras#72, fixed in fbca643a).\n"),
@@ -800,6 +801,139 @@ def tool_counts():
                 sum(r.get("check") == "agree" for r in compared),
                 sum(r.get("check") != "agree" for r in compared)))
     return out
+
+
+def fmt_seconds(t):
+    if t < 0.001:
+        return "< 0.001"
+    return f"{t:.3f}" if t < 0.1 else f"{t:.2f}" if t < 10 else f"{t:.0f}"
+
+
+def quantile(ts, q):
+    ts = sorted(ts)
+    return ts[min(len(ts) - 1, int(q * len(ts)))]
+
+
+def perf_row(label, what, tool, deli, limit):
+    """A table row: tool and delierium on the entries both answered (name -> seconds;
+    None: the tool failed - timeout or out of memory; in deli, None: answered, not timed)."""
+    both = [n for n, t in tool.items() if t is not None and deli.get(n) is not None]
+    failed = sum(t is None and n in deli for n, t in tool.items())
+    a, b = [tool[n] for n in both], [deli[n] for n in both]
+    if not both:
+        return f"| {label} | {what} | 0 | | | | | | | |"
+    faster = sum(x < y for x, y in zip(a, b))
+    return (f"| {label} | {what} | {len(both)} | {fmt_seconds(statistics.median(a))} | "
+            f"{fmt_seconds(quantile(a, 0.9))} | {fmt_seconds(sum(a))} | "
+            f"{fmt_seconds(statistics.median(b))} | {fmt_seconds(quantile(b, 0.9))} | "
+            f"{fmt_seconds(sum(b))} | {faster} | {failed} ({limit}) |")
+
+
+def section_performance():
+    catalog = collections.defaultdict(dict)
+    for r in load("sympy-catalog.jsonl"):
+        if r.get("tool"):
+            catalog[r["tool"]][r["name"]] = r
+    janet = {n: r["time"] for n, r in catalog["deli_janet"].items() if r["status"] == "ok"}
+    solver = {r["name"]: r["t"] for r in load("solver.jsonl") if "error" not in r}
+    failed = ("timeout", "out of memory", "memory")
+
+    def times(rows, key, ok, timeout=lambda r: r.get("status") in failed):
+        out = {}
+        for r in rows:
+            if ok(r):
+                out[r["name"]] = key(r)
+            elif timeout(r):
+                out[r["name"]] = None
+        return out
+
+    gens = [
+        perf_row("sympy-extras fbca643a", "generators (ansatz)",
+                 times(catalog["extras"].values(), lambda r: r["time"],
+                       lambda r: r["status"] == "ok"), solver, "60 s"),
+    ]
+    for tool in ("reduce", "relie", "dimsym", "spde"):
+        gens.append(perf_row(
+            dict(reduce="LIEPDE", relie="ReLie 3.0", dimsym="DIMSYM 2.3", spde="SPDE 1986")[tool],
+            "generators", times(load(f"{tool}-raw.jsonl"), lambda r: r["time"],
+                                lambda r: "status" not in r), solver, "120 s"))
+    gens.append(perf_row("MathLie 3.0", "generators",
+                         times(load("mathlie.jsonl"), lambda r: r["ms"] / 1000,
+                               lambda r: r["status"] == "ok"), solver, "120 s, 8 GB"))
+    symmgrp = load("symmgrp.jsonl")
+    blad = load("blad.jsonl")
+    deteq = {r["name"]: r["deteq_time"] for r in blad if r.get("deteq_time") is not None}
+    dims = [
+        perf_row("symmgrp2020 (Maxima)", "determining equations",
+                 times(symmgrp, lambda r: r["symmgrp_time"], lambda r: "symmgrp_time" in r,
+                       lambda r: r["status"] == "symmgrp timeout"), deteq, "120 s"),
+        perf_row("BLAD (DifferentialAlgebra)", "dimension (Rosenfeld-Groebner)",
+                 times(blad, lambda r: r["deteq_time"] + r["blad_time"],
+                       lambda r: r["status"] == "ok",
+                       lambda r: "out of" in str(r.get("status"))), janet, "300 s"),
+    ]
+    weyl = load("weyl.jsonl")
+    plural = perf_row("Singular Plural", "Groebner basis in the Weyl algebra",
+                      times(weyl, lambda r: r["plural_time"], lambda r: r["status"] == "agree",
+                            lambda r: r["status"] == "Plural timeout"),
+                      {r["name"]: r["delierium_time"] for r in weyl if "delierium_time" in r}
+                      | {r["name"]: None for r in weyl if r["status"] == "Plural timeout"},
+                      "60 s")
+    cocoa = load("cocoa.jsonl")
+    deli_cocoa = {r["name"]: r["delierium"]["time"] for r in cocoa
+                  if r["delierium"].get("status") == "ok"}
+    janet_rows = [
+        perf_row("CoCoA 5.4 (CPU time)", "Janet basis of a polynomial ideal",
+                 {r["name"]: r["cocoa"]["time"] for r in cocoa if "cocoa" in r}, deli_cocoa, "–"),
+        perf_row("Singular 4 `rJanet`", "Janet basis of a polynomial ideal",
+                 {r["name"]: r["singular"]["time"] for r in cocoa if "singular" in r},
+                 deli_cocoa, "–"),
+        plural,
+    ]
+    gap_rows = load("gap.jsonl")
+    if any("gap_time" in r for r in gap_rows):
+        janet_rows.append(perf_row(
+            "GAP 4 (CPU time)", "Lie algebra invariants (GAP: and Levi decomposition)",
+            {r["name"]: r["gap_time"] for r in gap_rows if "gap_time" in r},
+            {r["name"]: r["delierium_time"] for r in gap_rows if "delierium_time" in r}, "–"))
+    sympy_ok = [r["time"] for r in catalog["sympy_all"].values() if r["status"] == "ok"]
+    integ = [r["time"] for r in load("integrate.jsonl") if r["status"] == "ok"]
+    gap = [r["delierium_time"] for r in load("gap.jsonl") if r.get("status") == "agree"]
+    head = ["| tool | computes | entries | median s | 90 % s | total s | delierium median s | "
+            "90 % s | total s | tool faster | tool failed (limit) |",
+            "|---|---|---|---|---|---|---|---|---|---|---|"]
+    return "\n".join([
+        "## Performance\n",
+        "Wall-clock seconds per entry, on the entries both the tool and delierium answered, "
+        "from the same runs as above (3 processes at a time, nice 19, so the times are those "
+        "of a loaded machine). REDUCE packages: the REDUCE process including its start "
+        "(about 0.05 s); MathLie: inside the Mathematica kernel; delierium and the Python "
+        "tools: inside the worker process, without Python's start and imports; CoCoA, Singular "
+        "and GAP: the time of the computation inside one session for all systems. The times count "
+        "every answer, right or not. *tool failed*: entries delierium answered and the tool "
+        "did not within its limits.\n",
+        "Generators: delierium's `lie_symmetries(...).generators()` (finite entries, 300 s "
+        "limit; the tools did all entries, so only the finite ones count here).\n",
+        *head, *gens, "",
+        "Determining equations and dimension: delierium's determining equations "
+        "(`overdetermined_system_pde`) for symmgrp; delierium's determining equations and "
+        "Janet basis (the dimension) for BLAD, whose time includes delierium's determining "
+        "equations, its input.\n",
+        *head, *dims, "",
+        "Janet bases and Lie algebras:\n",
+        *head, *janet_rows, "",
+        f"- SymPy 1.14 (`infinitesimals(hint=\"all\")`, 60 s): {len(sympy_ok)} entries "
+        f"answered, median {fmt_seconds(statistics.median(sympy_ok))} s; for the others it "
+        f"raises at once (NotImplementedError and errors) or times out "
+        f"({sum(r['status'] == 'timeout' for r in catalog['sympy_all'].values())}).",
+        *([] if any("gap_time" in r for r in gap_rows) else [
+            f"- GAP 4: its time is not recorded (from the next run on); delierium's invariants "
+            f"of the {len(gap)} algebras: median {fmt_seconds(statistics.median(gap))} s, "
+            f"total {fmt_seconds(sum(gap))} s."]),
+        f"- delierium's `integrate_ode` (300 s): the {len(integ)} solved ODEs median "
+        f"{fmt_seconds(statistics.median(integ))} s, 90 % {fmt_seconds(quantile(integ, 0.9))} s.",
+        "",
+    ])
 
 
 HEADER = """# delierium compared with other tools
@@ -1008,7 +1142,7 @@ def main():
     page = '---\n\n<div style="page-break-before: always"></div>\n\n'
     tools = [page + part for part in parts.values()]
     c = counts()
-    print(markup("\n\n".join([HEADER.format(**c), summary(), *tools, page + JANET.format(**c),
+    print(markup("\n\n".join([HEADER.format(**c), summary(), section_performance(), *tools, page + JANET.format(**c),
                                  TODAY.format(**c), REPRO])))
 
 
