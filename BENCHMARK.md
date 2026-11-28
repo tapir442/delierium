@@ -50,7 +50,7 @@ paragraph.
 
 ## Performance
 
-Wall-clock seconds per entry, on the entries both the tool and delierium answered, from the same runs as above (3 processes at a time, nice 19, so the times are those of a loaded machine). REDUCE packages: the REDUCE process including its start (about 0.05 s); MathLie: inside the Mathematica kernel; delierium and the Python tools: inside the worker process, without Python's start and imports. The times count every answer, right or not. *tool failed*: entries delierium answered and the tool did not within its limits.
+Wall-clock seconds per entry, on the entries both the tool and delierium answered, from the same runs as above (3 processes at a time, nice 19, so the times are those of a loaded machine). REDUCE packages: the REDUCE process including its start (about 0.05 s); MathLie: inside the Mathematica kernel; delierium and the Python tools: inside the worker process, without Python's start and imports; CoCoA, Singular and GAP: the time of the computation inside one session for all systems. The times count every answer, right or not. *tool failed*: entries delierium answered and the tool did not within its limits.
 
 Generators: delierium's `lie_symmetries(...).generators()` (finite entries, 300 s limit; the tools did all entries, so only the finite ones count here).
 
@@ -74,11 +74,12 @@ Janet bases and Lie algebras:
 
 | tool | computes | entries | median s | 90 % s | total s | delierium median s | 90 % s | total s | tool faster | tool failed (limit) |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Singular Plural | Groebner basis in the Weyl algebra | 199 | 0.000 | 0.001 | 9.34 | 0.002 | 0.007 | 0.78 | 188 | 6 (60 s) |
+| CoCoA 5.4 (CPU time) | Janet basis of a polynomial ideal | 207 | < 0.001 | < 0.001 | 0.069 | 0.004 | 0.034 | 26 | 207 | 0 (–) |
+| Singular 4 `rJanet` | Janet basis of a polynomial ideal | 207 | < 0.001 | < 0.001 | 0.019 | 0.004 | 0.034 | 26 | 206 | 0 (–) |
+| Singular Plural | Groebner basis in the Weyl algebra | 199 | < 0.001 | 0.001 | 9.34 | 0.002 | 0.007 | 0.78 | 188 | 6 (60 s) |
 
 - SymPy 1.14 (`infinitesimals(hint="all")`, 60 s): 53 entries answered, median 0.52 s; for the others it raises at once (NotImplementedError and errors) or times out (26).
-- CoCoA 5.4 and Singular `rJanet`: times not recorded (207 small systems).
-- GAP 4: its time is not recorded; delierium's structure constants for the 531 algebras: median 0.003 s, total 31 s.
+- GAP 4: its time is not recorded (from the next run on); delierium's invariants of the 531 algebras: median 0.003 s, total 31 s.
 - delierium's `integrate_ode` (300 s): the 140 solved ODEs median 1.00 s, 90 % 7.50 s.
 
 

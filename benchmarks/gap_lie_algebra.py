@@ -110,7 +110,10 @@ def gap_script(cases):
                 if entries:
                     lines.append(f"SetEntrySCTable(T, {a + 1}, {b + 1}, [{', '.join(entries)}]);;")
         lines.append("L := LieAlgebraByStructureConstants(Rationals, T);;")
+        # CPU time of the properties, in ms (Runtimes() of GAP's own process)
+        lines.append("t0 := Runtimes().user_time;;")
         lines.append(f"props({i}, L);;")
+        lines.append(f'Print("T {i} ", Runtimes().user_time - t0, "\\n");;')
     lines.append("QUIT;")
     return "\n".join(lines) + "\n"
 
@@ -136,6 +139,9 @@ def parse_gap(out):
             "radical_dimension": int(m.group(10)),
             "semisimple_type": m.group(11),
         }
+    for m in re.finditer(r"^T (\d+) (\d+)$", out, re.M):
+        if int(m.group(1)) in results:
+            results[int(m.group(1))]["time"] = int(m.group(2)) / 1000
     return results
 
 
@@ -190,6 +196,8 @@ def main():
         for i, row in rows.items():
             if i in gap:
                 row["gap"] = gap[i]
+                if "time" in row["gap"]:
+                    row["gap_time"] = row["gap"].pop("time")
                 d = row["delierium"]
                 differ = [k for k in keys if d[k] != gap[i][k]]
                 # semisimple: Killing form nondegenerate <=> radical 0

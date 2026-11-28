@@ -804,6 +804,8 @@ def tool_counts():
 
 
 def fmt_seconds(t):
+    if t < 0.001:
+        return "< 0.001"
     return f"{t:.3f}" if t < 0.1 else f"{t:.2f}" if t < 10 else f"{t:.0f}"
 
 
@@ -877,6 +879,23 @@ def section_performance():
                       {r["name"]: r["delierium_time"] for r in weyl if "delierium_time" in r}
                       | {r["name"]: None for r in weyl if r["status"] == "Plural timeout"},
                       "60 s")
+    cocoa = load("cocoa.jsonl")
+    deli_cocoa = {r["name"]: r["delierium"]["time"] for r in cocoa
+                  if r["delierium"].get("status") == "ok"}
+    janet_rows = [
+        perf_row("CoCoA 5.4 (CPU time)", "Janet basis of a polynomial ideal",
+                 {r["name"]: r["cocoa"]["time"] for r in cocoa if "cocoa" in r}, deli_cocoa, "–"),
+        perf_row("Singular 4 `rJanet`", "Janet basis of a polynomial ideal",
+                 {r["name"]: r["singular"]["time"] for r in cocoa if "singular" in r},
+                 deli_cocoa, "–"),
+        plural,
+    ]
+    gap_rows = load("gap.jsonl")
+    if any("gap_time" in r for r in gap_rows):
+        janet_rows.append(perf_row(
+            "GAP 4 (CPU time)", "Lie algebra invariants",
+            {r["name"]: r["gap_time"] for r in gap_rows if "gap_time" in r},
+            {r["name"]: r["delierium_time"] for r in gap_rows if "delierium_time" in r}, "–"))
     sympy_ok = [r["time"] for r in catalog["sympy_all"].values() if r["status"] == "ok"]
     integ = [r["time"] for r in load("integrate.jsonl") if r["status"] == "ok"]
     gap = [r["delierium_time"] for r in load("gap.jsonl") if r.get("status") == "agree"]
@@ -889,7 +908,8 @@ def section_performance():
         "from the same runs as above (3 processes at a time, nice 19, so the times are those "
         "of a loaded machine). REDUCE packages: the REDUCE process including its start "
         "(about 0.05 s); MathLie: inside the Mathematica kernel; delierium and the Python "
-        "tools: inside the worker process, without Python's start and imports. The times count "
+        "tools: inside the worker process, without Python's start and imports; CoCoA, Singular "
+        "and GAP: the time of the computation inside one session for all systems. The times count "
         "every answer, right or not. *tool failed*: entries delierium answered and the tool "
         "did not within its limits.\n",
         "Generators: delierium's `lie_symmetries(...).generators()` (finite entries, 300 s "
@@ -901,15 +921,15 @@ def section_performance():
         "equations, its input.\n",
         *head, *dims, "",
         "Janet bases and Lie algebras:\n",
-        *head, plural, "",
+        *head, *janet_rows, "",
         f"- SymPy 1.14 (`infinitesimals(hint=\"all\")`, 60 s): {len(sympy_ok)} entries "
         f"answered, median {fmt_seconds(statistics.median(sympy_ok))} s; for the others it "
         f"raises at once (NotImplementedError and errors) or times out "
         f"({sum(r['status'] == 'timeout' for r in catalog['sympy_all'].values())}).",
-        "- CoCoA 5.4 and Singular `rJanet`: times not recorded (207 small systems).",
-        f"- GAP 4: its time is not recorded; delierium's structure constants for the "
-        f"{len(gap)} algebras: median {fmt_seconds(statistics.median(gap))} s, total "
-        f"{fmt_seconds(sum(gap))} s.",
+        *([] if any("gap_time" in r for r in gap_rows) else [
+            f"- GAP 4: its time is not recorded (from the next run on); delierium's invariants "
+            f"of the {len(gap)} algebras: median {fmt_seconds(statistics.median(gap))} s, "
+            f"total {fmt_seconds(sum(gap))} s."]),
         f"- delierium's `integrate_ode` (300 s): the {len(integ)} solved ODEs median "
         f"{fmt_seconds(statistics.median(integ))} s, 90 % {fmt_seconds(quantile(integ, 0.9))} s.",
         "",
