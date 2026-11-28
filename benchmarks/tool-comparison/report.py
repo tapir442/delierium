@@ -893,7 +893,7 @@ def section_performance():
     gap_rows = load("gap.jsonl")
     if any("gap_time" in r for r in gap_rows):
         janet_rows.append(perf_row(
-            "GAP 4 (CPU time)", "Lie algebra invariants",
+            "GAP 4 (CPU time)", "Lie algebra invariants (GAP: and Levi decomposition)",
             {r["name"]: r["gap_time"] for r in gap_rows if "gap_time" in r},
             {r["name"]: r["delierium_time"] for r in gap_rows if "delierium_time" in r}, "–"))
     sympy_ok = [r["time"] for r in catalog["sympy_all"].values() if r["status"] == "ok"]

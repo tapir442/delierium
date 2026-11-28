@@ -77,9 +77,9 @@ Janet bases and Lie algebras:
 | CoCoA 5.4 (CPU time) | Janet basis of a polynomial ideal | 207 | < 0.001 | < 0.001 | 0.069 | 0.004 | 0.034 | 26 | 207 | 0 (–) |
 | Singular 4 `rJanet` | Janet basis of a polynomial ideal | 207 | < 0.001 | < 0.001 | 0.019 | 0.004 | 0.034 | 26 | 206 | 0 (–) |
 | Singular Plural | Groebner basis in the Weyl algebra | 199 | < 0.001 | 0.001 | 9.34 | 0.002 | 0.007 | 0.78 | 188 | 6 (60 s) |
+| GAP 4 (CPU time) | Lie algebra invariants (GAP: and Levi decomposition) | 531 | < 0.001 | 0.002 | 0.47 | 0.003 | 0.096 | 31 | 412 | 0 (–) |
 
 - SymPy 1.14 (`infinitesimals(hint="all")`, 60 s): 53 entries answered, median 0.52 s; for the others it raises at once (NotImplementedError and errors) or times out (26).
-- GAP 4: its time is not recorded (from the next run on); delierium's invariants of the 531 algebras: median 0.003 s, total 31 s.
 - delierium's `integrate_ode` (300 s): the 140 solved ODEs median 1.00 s, 90 % 7.50 s.
 
 

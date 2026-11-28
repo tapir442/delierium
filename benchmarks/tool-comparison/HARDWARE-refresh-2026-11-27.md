@@ -7,3 +7,4 @@
 - run: nice 19, at most 3 processes, per-task time and memory limits as in the scripts; idle machine (load 0.53 before start, 2026-11-28 09:07)
 - times: 2026-11-28 09:06-17:49 (sympy-catalog 22 min, REDUCE packages 5.5 h, MathLie 2.2 h, solver 20 min, integrate 30 min)
 - MathLie compare failed on names with non-ASCII letters (Rössler, Painlevé: garbled by Mathematica); names restored from the catalogue by index, compare rerun 17:51-18:14
+- gap stage rerun 2026-11-28 ~19:00 (68 s) to record GAP's CPU time per algebra (gap_time)
