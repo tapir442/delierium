@@ -1,5 +1,5 @@
-"""BENCHMARK.md from the results in this directory (the runs of 2026-10-28 against
-delierium 2.7.0): a summary per tool and one paragraph per catalogue entry where a tool
+"""BENCHMARK.md from the results in this directory (the run of 2026-11-28 against
+delierium 2.7.2 + #121, refresh.sh): a summary per tool and one paragraph per catalogue entry where a tool
 differs from delierium.
 
     uv run python benchmarks/tool-comparison/report.py > BENCHMARK.md
@@ -242,6 +242,12 @@ FRACTIONAL = {
     "Kamke 6.157": "x y**(5/3) d/dy is missing",
     "Hydon Example 5.8: y'''' = y'''**(4/3)": "the scaling x d/dx is missing",
 }
+# CRC entries with (...)**(3/2) of the derivatives (and sqrt(y') in L4;5 II)
+FRACTIONAL_CRC = (
+    "CRC 2, 8.16.1 (8.389):", "CRC 3, 8.2.2, L3;7:", "CRC 3, 8.2.2, L3;8 II:",
+    "CRC 3, 8.2.2, L3;8 III:", "CRC 3, 8.2.2, L3;9:", "CRC 3, 8.2.2, L3;8 III (Lie):",
+    "CRC 3, 8.3.3, L4;5 II:",
+)
 CRACK_RATIONAL = {
     "Kamke 6.186", "Kamke 6.195", "Bluman-Anco (3.413): y'' = 2 (x y' - y)(1 + y'**2)/(x**2 + y**2)",
 }
@@ -284,8 +290,11 @@ def reduce_cause(tool, e, row, has_abs):
                 f"REDUCE simplifies the power of a product with a fractional exponent in the input "
                 f"to an expression with abs(u1); abs breaks the scalings, and {label} finds only "
                 f"those that survive it.", "")
-    if name in FRACTIONAL or name.startswith("CRC 1, 10.5: u_t = (u**(-4/3)"):
-        detail = FRACTIONAL.get(name, "the generators with u**(-4/3) are missing")
+    if name in FRACTIONAL or name.startswith(("CRC 1, 10.5: u_t = (u**(-4/3)", *FRACTIONAL_CRC)):
+        detail = FRACTIONAL.get(
+            name, "the generators with u**(-4/3) are missing" if name.startswith("CRC 1, 10.5")
+            else "a power (...)**(3/2) of the derivatives; ReLie, also with CRACK, finds the "
+            "generators too")
         return ("Fractional powers missed by CRACK",
                 f"CRACK (used by {label}) misses generators with fractional powers of the "
                 f"dependent variable or of a derivative; DIMSYM finds them with the same input.",
@@ -301,6 +310,11 @@ def reduce_cause(tool, e, row, has_abs):
                 f"(DIMSYM's log: 'found special function: cot(u(1)) ... cos(2*u(1))'), without "
                 f"cot = cos/sin and sin**2 + cos**2 = 1, so its conditions are too strong; the "
                 f"equation is linearizable, dimension 8.", "")
+    if tool == "dimsym" and name.startswith("CRC 2, 9.8, soil water II.1, C = 0, B = A**2/4"):
+        return ("abs(A) in the generators",
+                "DIMSYM's generators contain abs(A); for every real A they are the published "
+                "ones times +-4/A (cos is even, sin odd), so they are right. delierium's check "
+                "takes abs(A) as a function of its own and rejects them.", "")
     if name.startswith("PINNacle HeatND"):
         return ("Infinite part of a linear PDE lost",
                 f"For a linear PDE the generators phi d/du, phi any solution of the equation, "
@@ -502,6 +516,7 @@ def section_symmgrp():
     return "\n".join(text + grouped(out, header=["entry", "equation", "dimension", "symmgrp"]))
 
 
+DELI = "delierium 2.7.2"
 EXTRAS = "sympy-extras fbca643a"  # master after 0.0.3, with the fixes of #71 and #72
 
 DIVERGENCE = ("Divergence form",
@@ -697,12 +712,12 @@ def section_sympy():
             "SymPy 1.14.0 (`infinitesimals`, `checkinfsol`): some generators of first order "
             "ODEs by heuristics; everything else raises NotImplementedError "
             "(`benchmarks/sympy_symmetries.py`, 60 s per task).\n",
-            "Catalogue (786 entries), `infinitesimals(hint=\"all\")`:\n",
+            f"Catalogue ({len(CATALOG)} entries), `infinitesimals(hint=\"all\")`:\n",
             "| result | entries |", "|---|---|",
             *[f"| {k} | {v} |" for k, v in c.most_common()], "",
             f"Kamke chapters 1 and 2: SymPy's generators of the first order ODEs (every "
             f"heuristic separately), checked by "
-            f"delierium 2.7.0: {tot} generators, {rej} rejected. Every rejection was checked "
+            f"{DELI}: {tot} generators, {rej} rejected. Every rejection was checked "
             f"independently of delierium (the textbook condition for y' = F, or the branches); "
             f"delierium was right in all of them.\n",
             f"### Entries that differ ({len(paras)})\n", *grouped(paras, header=["entry", "equation", "generators", "rejected", "note"])]
@@ -789,11 +804,11 @@ def tool_counts():
 
 HEADER = """# delierium compared with other tools
 
-How delierium 2.7.0 compares with other programs for Lie point symmetries, Janet bases and
-Lie algebras, on the 786 equations of its catalogue (`tests/symmetry_catalog.py`: 398 ODEs,
-59 ODE systems, 329 PDEs from textbooks, handbooks, EqWorld and machine-learning
+How {deli} compares with other programs for Lie point symmetries, Janet bases and
+Lie algebras, on the {entries} equations of its catalogue (`tests/symmetry_catalog.py`: {odes} ODEs,
+{systems} ODE systems, {pdes} PDEs from textbooks, handbooks, EqWorld and machine-learning
 benchmarks, each with the dimension of its symmetry algebra and the published generators,
-1790 in all; 611 entries have a finite algebra).
+{gens} in all; {finite} entries have a finite algebra).
 
 Every difference between a tool and delierium was checked against delierium's determining
 equations: a generator is a symmetry if and only if it satisfies them, and the dimension is
@@ -806,8 +821,8 @@ generators outside the span of the tool's generators; *not closed*: the tool's g
 not closed under commutators. The sources of the equations are in `tests/symmetry_catalog.py`;
 the Kamke equations of chapters 1 and 2 are those of SymPy's test suite.
 
-**Setup.** 2026-10-28; AMD Ryzen 9 7900X (12 cores, 24 threads), 29 GB, Linux 7.0;
-Python 3.14.4, SymPy 1.14.0, python-flint 0.9.0; delierium 2.7.0.
+**Setup.** 2026-11-28; AMD Ryzen 9 7900X (12 cores, 24 threads), 29 GB, Linux 7.0;
+Python 3.14.4, SymPy 1.14.0, python-flint 0.9.0; {deli} + #121.
 Every entry in its own process with a time limit (60 to 300 s, given per tool) and a memory
 limit, at most 3 processes at a time, nice 19. The scripts are in `benchmarks/`, the raw
 results in `benchmarks/tool-comparison/`; tools that may not be redistributed (MathLie,
@@ -824,28 +839,29 @@ JANET = """## Janet bases, Groebner bases, Lie algebras
 
 - **CoCoA 5.4 and Singular 4** (`benchmarks/cocoa_janet.py`): linear systems with constant
   coefficients are polynomial ideals, and the minimal reduced Janet basis of an ideal is
-  unique for a term order. 207 systems (7 from the literature, 200 random): delierium's
-  Janet basis, CoCoA's `JanetBasis` (JBMill) and Singular's `rJanet` are the same for all
-  207.
+  unique for a term order. {cocoa} systems (7 from the literature, 200 random): delierium's
+  Janet basis, CoCoA's `JanetBasis` (JBMill) and Singular's `rJanet` are the same for
+  {cocoa_same}.
 - **Singular Plural** (`benchmarks/weyl_janet.py`): systems with polynomial coefficients as
   left ideals of the Weyl algebra (the Leibniz rule); each basis reduces the other to zero,
-  and the leading derivatives agree. 205 systems: 199 agree, 0 differ, 6 Plural timeouts
-  (60 s; delierium needs at most 0.9 s for them).
-- **GAP 4** (`benchmarks/gap_lie_algebra.py`): for the 377 complete generator lists of finite
+  and the leading derivatives agree. {weyl} systems: {weyl_agree} agree, {weyl_differ} differ, {weyl_timeout} Plural timeouts
+  (60 s).
+- **GAP 4** (`benchmarks/gap_lie_algebra.py`): for the {gap} complete generator lists of finite
   algebras in the catalogue, delierium's structure constants as
   `LieAlgebraByStructureConstants`: derived and lower central series, solvability,
-  nilpotency, center and Killing form agree for all 376 that GAP can take (1 skipped: the
+  nilpotency, center and Killing form agree for all {gap_agree} that GAP can take ({gap_skip} skipped: the
   constants are not rational at the parameter values).
 """
 
 
 TODAY = """## delierium alone
 
-- Dimension: right for all 786 entries (`pytest -m slow`); all 1790 published generators
+- Dimension: right for all {entries} entries (`pytest -m slow`); all {gens} published generators
   confirmed by its determining equations.
-- Generators by its solver (`lie_symmetries(...).generators()`): complete for 525 of the 611
-  finite entries, all of them verified.
-- `integrate_ode` with the catalogue's generators: 121 of the 176 ODEs solved.
+- Generators by its solver (`lie_symmetries(...).generators()`): complete for {solver_complete} of the {finite}
+  finite entries; every generator it returns is verified ({solver_errors} errors).
+- `integrate_ode` with the catalogue's generators: {integrate_ok} of the {integrate} ODEs solved
+  ({integrate_unsolved} unsolved, {integrate_timeout} timeouts at 300 s, {integrate_error} errors).
 - Not supported: systems of PDEs (#21); Painleve VI and EqWorld ODE 3.11 (the Janet basis
   exceeds 6 GB).
 """
@@ -853,7 +869,8 @@ TODAY = """## delierium alone
 
 REPRO = """## Reproduction
 
-    benchmarks/tool-comparison/pipeline.sh     # all tools, about 4.5 hours at 3 processes
+    benchmarks/tool-comparison/refresh.sh      # everything below, about 8.7 hours at 3 processes
+    benchmarks/tool-comparison/pipeline.sh     # all tools
     benchmarks/tool-comparison/rerun.sh        # the stages repeated after the fix
     benchmarks/tool-comparison/extras-update.sh  # sympy-extras fbca643a
     uv run python benchmarks/tool-comparison/report.py > BENCHMARK.md
@@ -865,15 +882,42 @@ SymPy and DifferentialAlgebra come from PyPI, sympy-extras from its git reposito
 """
 
 
+def counts():
+    """The numbers of the header, the Janet section and delierium's own results."""
+    kinds = collections.Counter(e.kind for e in CATALOG)
+    solver = load("solver.jsonl")
+    integrate = collections.Counter(r["status"] for r in load("integrate.jsonl"))
+    weyl = load("weyl.jsonl")
+    gap = load("gap.jsonl")
+    return {
+        "deli": DELI, "entries": len(CATALOG), "odes": kinds["ode"], "systems": kinds["odes"],
+        "pdes": kinds["pde"], "gens": sum(len(e.generators) for e in CATALOG),
+        "finite": len(solver),
+        "solver_complete": sum(r.get("verified") is True and r["n"] == r["expected"] for r in solver),
+        "solver_errors": sum("error" in r for r in solver),
+        "integrate": sum(integrate.values()), "integrate_ok": integrate["ok"],
+        "integrate_unsolved": integrate["unsolved"], "integrate_timeout": integrate["timeout"],
+        "integrate_error": integrate["error"],
+        "cocoa": len(load("cocoa.jsonl")),
+        "cocoa_same": sum(r["verdict"] == "same Janet basis" for r in load("cocoa.jsonl")),
+        "weyl": len(weyl), "weyl_agree": sum(r["status"] == "agree" for r in weyl),
+        "weyl_timeout": sum(r["status"] == "Plural timeout" for r in weyl),
+        "weyl_differ": sum(r["status"] not in ("agree", "Plural timeout") for r in weyl),
+        "gap": len(gap), "gap_agree": sum(r.get("status") == "agree" for r in gap),
+        "gap_skip": sum(r.get("status") != "agree" for r in gap),
+    }
+
+
 def summary():
     lines = ["| tool | computes | entries compared | same as delierium | differ |",
              "|---|---|---|---|---|",
              "| SymPy 1.14 | some generators of first order ODEs | first order ODEs only | see below | see below |"]
     for label, what, n, same, differ in tool_counts():
         lines.append(f"| {label} | {what} | {n} | {same} | {differ} |")
-    lines += ["| CoCoA 5.4, Singular 4 | Janet bases of polynomial ideals | 207 systems | 207 | 0 |",
-              "| Singular Plural | Groebner bases in the Weyl algebra | 199 systems | 199 | 0 |",
-              "| GAP 4 | Lie algebra invariants | 376 algebras | 376 | 0 |"]
+    c = counts()
+    lines += [f"| CoCoA 5.4, Singular 4 | Janet bases of polynomial ideals | {c['cocoa']} systems | {c['cocoa_same']} | {c['cocoa'] - c['cocoa_same']} |",
+              f"| Singular Plural | Groebner bases in the Weyl algebra | {c['weyl_agree'] + c['weyl_differ']} systems | {c['weyl_agree']} | {c['weyl_differ']} |",
+              f"| GAP 4 | Lie algebra invariants | {c['gap_agree']} algebras | {c['gap_agree']} | 0 |"]
     return "## Summary\n\n" + "\n".join(lines) + "\n"
 
 
@@ -963,7 +1007,9 @@ def main():
     # a page break before each tool when printed (GitHub drops the style), a rule on screen
     page = '---\n\n<div style="page-break-before: always"></div>\n\n'
     tools = [page + part for part in parts.values()]
-    print(markup("\n\n".join([HEADER, summary(), *tools, page + JANET, TODAY, REPRO])))
+    c = counts()
+    print(markup("\n\n".join([HEADER.format(**c), summary(), *tools, page + JANET.format(**c),
+                                 TODAY.format(**c), REPRO])))
 
 
 if __name__ == "__main__":

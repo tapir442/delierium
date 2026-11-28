@@ -1,10 +1,10 @@
 # delierium compared with other tools
 
-How delierium 2.7.0 compares with other programs for Lie point symmetries, Janet bases and
-Lie algebras, on the 786 equations of its catalogue (`tests/symmetry_catalog.py`: 398 ODEs,
-59 ODE systems, 329 PDEs from textbooks, handbooks, EqWorld and machine-learning
+How delierium 2.7.2 compares with other programs for Lie point symmetries, Janet bases and
+Lie algebras, on the 971 equations of its catalogue (`tests/symmetry_catalog.py`: 456 ODEs,
+59 ODE systems, 456 PDEs from textbooks, handbooks, EqWorld and machine-learning
 benchmarks, each with the dimension of its symmetry algebra and the published generators,
-1790 in all; 611 entries have a finite algebra).
+2745 in all; 779 entries have a finite algebra).
 
 Every difference between a tool and delierium was checked against delierium's determining
 equations: a generator is a symmetry if and only if it satisfies them, and the dimension is
@@ -17,8 +17,8 @@ generators outside the span of the tool's generators; *not closed*: the tool's g
 not closed under commutators. The sources of the equations are in `tests/symmetry_catalog.py`;
 the Kamke equations of chapters 1 and 2 are those of SymPy's test suite.
 
-**Setup.** 2026-10-28; AMD Ryzen 9 7900X (12 cores, 24 threads), 29 GB, Linux 7.0;
-Python 3.14.4, SymPy 1.14.0, python-flint 0.9.0; delierium 2.7.0.
+**Setup.** 2026-11-28; AMD Ryzen 9 7900X (12 cores, 24 threads), 29 GB, Linux 7.0;
+Python 3.14.4, SymPy 1.14.0, python-flint 0.9.0; delierium 2.7.2 + #121.
 Every entry in its own process with a time limit (60 to 300 s, given per tool) and a memory
 limit, at most 3 processes at a time, nice 19. The scripts are in `benchmarks/`, the raw
 results in `benchmarks/tool-comparison/`; tools that may not be redistributed (MathLie,
@@ -35,17 +35,17 @@ paragraph.
 | tool | computes | entries compared | same as delierium | differ |
 |---|---|---|---|---|
 | SymPy 1.14 | some generators of first order ODEs | first order ODEs only | see below | see below |
-| sympy-extras fbca643a | generators, polynomial ansatz of degree ≤ 2 | 610 | 411 | 0 wrong; fewer by design |
-| LIEPDE (REDUCE) | generators (CRACK) | 723 | 689 | 34 |
-| ReLie 3.0 (REDUCE) | generators (CRACK) | 715 | 691 | 24 |
-| DIMSYM 2.3 (REDUCE) | generators | 714 | 713 | 1 |
-| SPDE 1986 (REDUCE) | generators | 644 | 492 | 152 |
-| MathLie 3.0 (Mathematica 15.0) | generators | 559 | 523 | 36 |
-| symmgrp2020 (Maxima) | determining equations | 694 | 676 | 18 |
-| BLAD (DifferentialAlgebra) | Rosenfeld-Groebner, dimension | 539 | 539 | 0 |
+| sympy-extras fbca643a | generators, polynomial ansatz of degree ≤ 2 | 774 | 520 | 0 wrong; fewer by design |
+| LIEPDE (REDUCE) | generators (CRACK) | 905 | 846 | 59 |
+| ReLie 3.0 (REDUCE) | generators (CRACK) | 894 | 854 | 40 |
+| DIMSYM 2.3 (REDUCE) | generators | 878 | 876 | 2 |
+| SPDE 1986 (REDUCE) | generators | 744 | 563 | 181 |
+| MathLie 3.0 (Mathematica 15.0) | generators | 688 | 631 | 57 |
+| symmgrp2020 (Maxima) | determining equations | 819 | 801 | 18 |
+| BLAD (DifferentialAlgebra) | Rosenfeld-Groebner, dimension | 628 | 628 | 0 |
 | CoCoA 5.4, Singular 4 | Janet bases of polynomial ideals | 207 systems | 207 | 0 |
 | Singular Plural | Groebner bases in the Weyl algebra | 199 systems | 199 | 0 |
-| GAP 4 | Lie algebra invariants | 376 algebras | 376 | 0 |
+| GAP 4 | Lie algebra invariants | 531 algebras | 531 | 0 |
 
 
 ---
@@ -56,16 +56,16 @@ paragraph.
 
 SymPy 1.14.0 (`infinitesimals`, `checkinfsol`): some generators of first order ODEs by heuristics; everything else raises NotImplementedError (`benchmarks/sympy_symmetries.py`, 60 s per task).
 
-Catalogue (786 entries), `infinitesimals(hint="all")`:
+Catalogue (971 entries), `infinitesimals(hint="all")`:
 
 | result | entries |
 |---|---|
-| error | 363 |
-| notimpl | 344 |
+| error | 490 |
+| notimpl | 402 |
 | ok | 53 |
 | timeout | 26 |
 
-Kamke chapters 1 and 2: SymPy's generators of the first order ODEs (every heuristic separately), checked by delierium 2.7.0: 761 generators, 76 rejected. Every rejection was checked independently of delierium (the textbook condition for y' = F, or the branches); delierium was right in all of them.
+Kamke chapters 1 and 2: SymPy's generators of the first order ODEs (every heuristic separately), checked by delierium 2.7.2: 761 generators, 76 rejected. Every rejection was checked independently of delierium (the textbook condition for y' = F, or the branches); delierium was right in all of them.
 
 ### Entries that differ (39)
 
@@ -142,21 +142,21 @@ sympy-extras fbca643a (master after 0.0.3; `symmetries`, `check_symmetry`): expl
 
 | | entries |
 |---|---|
-| finite catalogue entries answered | 610 of 611 |
-| as many generators as the dimension | 411 |
-| fewer, all correct (degree ≤ 2) | 199 |
+| finite catalogue entries answered | 774 of 779 |
+| as many generators as the dimension | 520 |
+| fewer, all correct (degree ≤ 2) | 254 |
 | wrong generators | 0 |
-| published generators rejected by `check_symmetry` | 20 entries |
+| published generators rejected by `check_symmetry` | 38 entries |
 
 ### Wrong generators (0)
 
 None.
 
-### Published generators rejected (20)
+### Published generators rejected (38)
 
 sympy-extras' `check_symmetry` rejects published generators that delierium confirms.
 
-#### Regression after 0.0.3 (19)
+#### Regression after 0.0.3 (37)
 
 sympy-extras 0.0.3 accepts these generators, fbca643a rejects them; most equations have an arbitrary function of a compound argument, e.g. y'' = f(x + y) with (1, -1) (Upabjojr/sympy-extras#76).
 
@@ -181,6 +181,24 @@ sympy-extras 0.0.3 accepts these generators, fbca643a rejects them; most equatio
 | EqWorld ODE 3.48 | y'' - f(x) g(x y' - y) = 0 | 1 | 1 | 1 | (0, x) |
 | EqWorld ODE 3.49 | y'' - y f(x y'/y)/x<sup>2</sup> = 0 | 2 | 2 | 2 | (0, y), (x, 0) |
 | EqWorld ODE 3.50 | g'(x) y'/2 + y'' g(x) - f(y) h(y' √(g(x))) = 0 | 1 | 1 | 1 | (√(g(x)), 0) |
+| CRC 2, 8.16.1 (8.385) | b (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>) + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) - f(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>)/u = 0 | 7 | 7 | 3 | (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0) |
+| CRC 2, 8.16.1 (8.386) | b (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>) + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) - f(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) = 0 | 7 | 7 | 3 | (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0) |
+| CRC 2, 8.16.1 (8.390) | u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub> + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) = 0 | 8 | 8 | 3 | (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0) |
+| CRC 2, 9.3.1, glacier case 2 | -(H<sup>2</sup> Φ(H ((A √x)<sub>x</sub> + H<sub>x</sub>)))<sub>x</sub> - C + H<sub>t</sub> = 0 | 2 | 2 | 1 | (2 x, t, H) |
+| CRC 2, 9.3.1, glacier case 2, A = 0 | -(H<sup>2</sup> Φ(H ((0)<sub>x</sub> + H<sub>x</sub>)))<sub>x</sub> - C + H<sub>t</sub> = 0 | 3 | 3 | 1 | (2 x, t, H) |
+| CRC 3, 8.3.3, L2;2 I | -y''<sup>2</sup> f(y', x y'') + y''' = 0 | 2 | 2 | 1 | (x, y) |
+| CRC 3, 8.3.3, L2;2 II | -y' f(x, y''/y') + y''' = 0 | 2 | 2 | 1 | (0, y) |
+| CRC 3, 8.3.3, L3;3 I | -y''<sup>2</sup> f(y'' e<sup>y'</sup>) + y''' = 0 | 3 | 3 | 1 | (x, x + y) |
+| CRC 3, 8.3.3, L3;3 II | -y'' f(e<sup>x</sup>/y'') + y''' = 0 | 3 | 3 | 1 | (1, y) |
+| CRC 3, 8.3.3, L3;4 I | -y''<sup>3/2</sup> f(y''/y'<sup>2</sup>) + y''' = 0 | 3 | 3 | 1 | (x, 0) |
+| CRC 3, 8.3.3, L3;4 II | -y''<sup>2</sup> f(x y'') + y''' = 0 | 3 | 3 | 1 | (x, y) |
+| CRC 3, 8.3.3, L3;6 I | -y''<sup>(a - 3)/(a - 2)</sup> f(y'<sup>a - 2</sup> y''<sup>1 - a</sup>) + y''' = 0 | 3 | 3 | 1 | (x, a y) |
+| CRC 3, 8.3.3, L3;6 II | -y''<sup>(2 - 3 a)/(1 - 2 a)</sup> f(x<sup>1 - 2 a</sup> y''<sup>1 - a</sup>) + y''' = 0 | 3 | 3 | 1 | (x (1 - a), y) |
+| CRC 3, 8.3.3, L3;7 I | -y''<sup>2</sup> (3 y' + f(y'' e<sup>-b atan(y')</sup>/(y'<sup>2</sup> + 1)<sup>3/2</sup>))/(y'<sup>2</sup> + 1) + y''' = 0 | 3 | 3 | 1 | (b x + y, b y - x) |
+| CRC 3, 8.3.3, L3;7 II | -y'' (-3 x + f(y'' (x<sup>2</sup> + 1)<sup>3/2</sup> e<sup>-b atan(x)</sup>))/(x<sup>2</sup> + 1) + y''' = 0 | 3 | 3 | 1 | (x<sup>2</sup> + 1, y (b + x)) |
+| CRC 3, 8.3.3, L3;8 I | y''' - 3 y''<sup>2</sup>/y' - y'<sup>4</sup> f((2 x y'' + y')/y'<sup>3</sup>)/x<sup>2</sup> = 0 | 3 | 3 | 2 | (x, y), (2 x y, y<sup>2</sup>) |
+| CRC 3, 8.3.3, L3;8 II | -3 y' y''<sup>2</sup>/(y'<sup>2</sup> + 1) + y''' - (y'<sup>2</sup> + 1)<sup>2</sup> f((x y'' - y'<sup>3</sup> - y')/(y'<sup>2</sup> + 1)<sup>3/2</sup>)/x<sup>2</sup> = 0 | 3 | 3 | 2 | (x, y), (2 x y, -x<sup>2</sup> + y<sup>2</sup>) |
+| CRC 3, 8.3.3, L3;8 III | -3 y' y''<sup>2</sup>/(y'<sup>2</sup> - 1) + y''' - (y'<sup>2</sup> - 1)<sup>2</sup> f((x y'' + y'<sup>3</sup> - y')/(1 - y'<sup>2</sup>)<sup>3/2</sup>)/x<sup>2</sup> = 0 | 3 | 3 | 2 | (x, y), (2 x y, x<sup>2</sup> + y<sup>2</sup>) |
 
 #### Simplification without assumptions (1)
 
@@ -190,9 +208,9 @@ The residue has ((1 - x)/(1 + x))<sup>A</sup> next to (1 + x)<sup>A + 2</sup> (1
 |---|---|---|---|---|---|
 | Bluman-Anco (4.64) | u<sub>tt</sub> - u<sub>xx</sub> (1 - x)<sup>2 - A</sup> (x + 1)<sup>A + 2</sup> = 0 | infinite | 4 | 1 | (t (1 - x<sup>2</sup>), -A t<sup>2</sup>/2 - ((1 - x)/(x + 1))<sup>A</sup>/(2 A), t u (A/2 - x)) |
 
-### Fewer generators than the dimension (199)
+### Fewer generators than the dimension (254)
 
-#### Polynomial ansatz of degree ≤ 2 (199)
+#### Polynomial ansatz of degree ≤ 2 (254)
 
 sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the generators of higher degree or with other functions; the ones it finds are correct. Where the published list has the missing generators, they are named.
 
@@ -397,6 +415,61 @@ sympy-extras' ansatz has polynomials of degree ≤ 2 only, so it misses the gene
 | EqWorld ODE 3.48 | y'' - f(x) g(x y' - y) = 0 | 1 | 0 | – |
 | EqWorld ODE 3.49 | y'' - y f(x y'/y)/x<sup>2</sup> = 0 | 2 | 0 | – |
 | EqWorld ODE 3.50 | g'(x) y'/2 + y'' g(x) - f(y) h(y' √(g(x))) = 0 | 1 | 0 | (√(g(x)), 0) |
+| CRC 2, 8.16.1 (8.385) | b (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>) + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) - f(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>)/u = 0 | 7 | 4 | – |
+| CRC 2, 8.16.1 (8.386) | b (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>) + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) - f(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) = 0 | 7 | 4 | – |
+| CRC 2, 8.16.1 (8.390) | u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub> + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) = 0 | 8 | 5 | – |
+| CRC 2, 9.3.1, glacier case 2 | -(H<sup>2</sup> Φ(H ((A √x)<sub>x</sub> + H<sub>x</sub>)))<sub>x</sub> - C + H<sub>t</sub> = 0 | 2 | 1 | – |
+| CRC 2, 9.3.1, glacier case 2, A = 0 | -(H<sup>2</sup> Φ(H ((0)<sub>x</sub> + H<sub>x</sub>)))<sub>x</sub> - C + H<sub>t</sub> = 0 | 3 | 2 | – |
+| CRC 2, 9.3.1, glacier case 6 | -(H<sup>2</sup> (H ((0)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> - C H<sup>2 α + 2</sup> - D H/(2 α + 1) + H<sub>t</sub> = 0 | 3 | 2 | (0, e<sup>-D t</sup>/D, H e<sup>-D t</sup>/(2 α + 1)) |
+| CRC 2, 9.3.1, glacier case 6, C = 0 | -(H<sup>2</sup> (H ((0)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> - D H/(2 α + 1) + H<sub>t</sub> = 0 | 4 | 3 | (0, e<sup>-D t</sup>/D, H e<sup>-D t</sup>/(2 α + 1)) |
+| CRC 2, 9.8, soil water II.1, C != 0 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> - (u<sub>z</sub> e<sup>u</sup>)<sub>z</sub> - A u<sub>z</sub> e<sup>u</sup> - Bc e<sup>u</sup> - C + u<sub>t</sub> = 0 | 4 | 3 | (e<sup>-C t</sup>, 0, 0, C e<sup>-C t</sup>) |
+| CRC 2, 9.8, soil water II.1, C = 0, B = A<sup>2</sup>/4 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> - (u<sub>z</sub> e<sup>u</sup>)<sub>z</sub> - A<sup>2</sup> e<sup>u</sup>/4 - A u<sub>z</sub> e<sup>u</sup> + u<sub>t</sub> = 0 | 6 | 4 | (0, e<sup>-A z/4</sup> sin(A x/4), -e<sup>-A z/4</sup> cos(A x/4), A e<sup>-A z/4</sup> cos(A x/4)/2), (0, e<sup>-A z/4</sup> cos(A x/4), e<sup>-A z/4</sup> sin(A x/4), -A e<sup>-A z/4</sup> sin(A x/4)/2) |
+| CRC 2, 9.8, soil water III.1, C != 0 | -(u<sup>s</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>s</sup> u<sub>z</sub>)<sub>z</sub> - A u<sup>s</sup> u<sub>z</sub> - Bc u<sup>s + 1</sup> + C u/s + u<sub>t</sub> = 0 | 4 | 3 | (e<sup>C t</sup>, 0, 0, -C u e<sup>C t</sup>/s) |
+| CRC 2, 9.8, soil water V.3 | -A u<sub>z</sub> log(u) - u (Bc log(u) + C) + u<sub>t</sub> - u<sub>xx</sub> - u<sub>zz</sub> = 0 | 4 | 3 | (0, 0, e<sup>Bc t</sup>, -Bc u e<sup>Bc t</sup>/A) |
+| CRC 2, 9.8, soil water V.4 | -A<sup>2</sup> u log(u)<sup>2</sup>/4 + A<sup>2</sup> u log(u)/4 - A u<sub>z</sub> log(u) - Bc u - C u log(u) + u<sub>t</sub> - u<sub>xx</sub> - u<sub>zz</sub> = 0 | 4 | 3 | (0, 0, 0, u e<sup>-A z/2 + C t</sup>) |
+| CRC 2, 9.8, soil water V.6 | -A u u<sub>z</sub> - Bc u - C + u<sub>t</sub> - u<sub>xx</sub> - u<sub>zz</sub> = 0 | 4 | 3 | (0, 0, e<sup>Bc t</sup>, -Bc e<sup>Bc t</sup>/A) |
+| CRC 3, 8.1.7 | a'(x) y/2 + y' a(x) + y''' = 0 | 7 | 1 | – |
+| CRC 3, 8.1.7 | a'(x) y' + y (3 a''(x)/10 + 9 a(x)<sup>2</sup>/100) + y'' a(x) + y'''' = 0 | 8 | 1 | – |
+| CRC 3, 8.1.7 | 3 a'(x) y''/2 + y (a'''(x)/5 + 4 a'(x) a(x)/25) + y' (9 a''(x)/10 + 4 a(x)<sup>2</sup>/25) + y''' a(x) + y<sup>5</sup> = 0 | 9 | 1 | – |
+| CRC 3, 8.1.7 | 2 a'(x) y''' + y (a''''(x)/7 + 31 a''(x) a(x)/245 + 26 a'(x)<sup>2</sup>/245 + 9 a(x)<sup>3</sup>/1715) + y' (4 a'''(x)/5 + 74 a'(x) a(x)/175) + y'' (9 a''(x)/5 + 37 a(x)<sup>2</sup>/175) + y'''' a(x) + y<sup>6</sup> = 0 | 10 | 1 | – |
+| CRC 3, 8.1.7 | 5 a'(x) y''''/2 + y (39 a'''(x) a(x)/392 + 177 a''(x) a'(x)/784 + 27 a'(x) a(x)<sup>2</sup>/1372 + 3 a<sup>5</sup>(x)/28) + y' (5 a''''(x)/7 + 22 a''(x) a(x)/49 + 295 a'(x)<sup>2</sup>/784 + 9 a(x)<sup>3</sup>/686) + y'' (2 a'''(x) + 3 a'(x) a(x)/4) + y''' (3 a''(x) + a(x)<sup>2</sup>/4) + y<sup>5</sup> a(x) + y<sup>7</sup> = 0 | 11 | 1 | – |
+| CRC 3, 8.1.7 | 3 a'(x) y<sup>5</sup> + y (5 a''''(x) a(x)/63 + 113 a'''(x) a'(x)/504 + 17 a''(x)<sup>2</sup>/112 + 827 a''(x) a(x)<sup>2</sup>/42336 + 347 a'(x)<sup>2</sup> a(x)/10584 + a<sup>6</sup>(x)/12 + 25 a(x)<sup>4</sup>/112896) + y' (131 a'''(x) a(x)/294 + 99 a''(x) a'(x)/98 + 3229 a'(x) a(x)<sup>2</sup>/49392 + 9 a<sup>5</sup>(x)/14) + y'' (15 a''''(x)/7 + 197 a''(x) a(x)/196 + 165 a'(x)<sup>2</sup>/196 + 3229 a(x)<sup>3</sup>/148176) + y''' (4 a'''(x) + 47 a'(x) a(x)/42) + y'''' (9 a''(x)/2 + 47 a(x)<sup>2</sup>/168) + y<sup>6</sup> a(x) + y<sup>8</sup> = 0 | 12 | 1 | – |
+| CRC 3, 8.1.9 | A0 y + A1 y' + y''' = 0 | 5 | 2 | – |
+| CRC 3, 8.1.9 | A0 y + A1 y' + A2 y'' + y'''' = 0 | 6 | 2 | – |
+| CRC 3, 8.2.2, L3;6 | -C y'<sup>(a - 2)/(a - 1)</sup> + y'' = 0 | 3 | 2 | – |
+| CRC 3, 8.2.2, L3;9 | -C ((y'<sup>2</sup> + (-x y' + y)<sup>2</sup> + 1)/(x<sup>2</sup> + y<sup>2</sup> + 1))<sup>3/2</sup> + y'' = 0 | 3 | 0 | – |
+| CRC 3, 8.2.2, L3;3 (Mahomed) | -C e<sup>-y'</sup> + x y'' + 1 = 0 | 3 | 2 | (1, -log(x)) |
+| CRC 3, 8.2.2, L3;6 (Mahomed) | -C y'<sup>(2 a - 1)/(a - 1)</sup> + x y'' - y' (a - 1) = 0 | 3 | 2 | (x<sup>1 - a</sup>, 0) |
+| CRC 3, 8.2.3 | -a y'<sup>3</sup> - b y'<sup>2</sup> + x y'' - y' (1 + b<sup>2</sup>/(3 a)) - b/(3 a) - b<sup>3</sup>/(27 a<sup>2</sup>) = 0 | 8 | 3 | – |
+| CRC 3, 8.2.3 | x y'' + y'<sup>3</sup> - 6 y'<sup>2</sup> + 11 y' - 6 = 0 | 8 | 3 | – |
+| CRC 3, 8.2.4 | -k/y<sup>3</sup> + y b(x) + y'' = 0 | 3 | 0 | – |
+| CRC 3, 8.2.4 | A'(x) y' - k e<sup>-2 A(x)</sup>/y<sup>3</sup> + y b(x) + y'' = 0 | 3 | 0 | – |
+| CRC 3, 8.3.3, L2;2 I | -y''<sup>2</sup> f(y', x y'') + y''' = 0 | 2 | 1 | – |
+| CRC 3, 8.3.3, L2;2 II | -y' f(x, y''/y') + y''' = 0 | 2 | 1 | – |
+| CRC 3, 8.3.3, L3;3 I | -y''<sup>2</sup> f(y'' e<sup>y'</sup>) + y''' = 0 | 3 | 2 | – |
+| CRC 3, 8.3.3, L3;3 II | -y'' f(e<sup>x</sup>/y'') + y''' = 0 | 3 | 2 | – |
+| CRC 3, 8.3.3, L3;4 I | -y''<sup>3/2</sup> f(y''/y'<sup>2</sup>) + y''' = 0 | 3 | 2 | – |
+| CRC 3, 8.3.3, L3;4 II | -y''<sup>2</sup> f(x y'') + y''' = 0 | 3 | 2 | – |
+| CRC 3, 8.3.3, L3;6 I | -y''<sup>(a - 3)/(a - 2)</sup> f(y'<sup>a - 2</sup> y''<sup>1 - a</sup>) + y''' = 0 | 3 | 2 | – |
+| CRC 3, 8.3.3, L3;6 II | -y''<sup>(2 - 3 a)/(1 - 2 a)</sup> f(x<sup>1 - 2 a</sup> y''<sup>1 - a</sup>) + y''' = 0 | 3 | 2 | – |
+| CRC 3, 8.3.3, L3;7 I | -y''<sup>2</sup> (3 y' + f(y'' e<sup>-b atan(y')</sup>/(y'<sup>2</sup> + 1)<sup>3/2</sup>))/(y'<sup>2</sup> + 1) + y''' = 0 | 3 | 2 | – |
+| CRC 3, 8.3.3, L3;7 II | -y'' (-3 x + f(y'' (x<sup>2</sup> + 1)<sup>3/2</sup> e<sup>-b atan(x)</sup>))/(x<sup>2</sup> + 1) + y''' = 0 | 3 | 2 | – |
+| CRC 3, 8.3.3, L3;8 I | y''' - 3 y''<sup>2</sup>/y' - y'<sup>4</sup> f((2 x y'' + y')/y'<sup>3</sup>)/x<sup>2</sup> = 0 | 3 | 1 | – |
+| CRC 3, 8.3.3, L3;8 II | -3 y' y''<sup>2</sup>/(y'<sup>2</sup> + 1) + y''' - (y'<sup>2</sup> + 1)<sup>2</sup> f((x y'' - y'<sup>3</sup> - y')/(y'<sup>2</sup> + 1)<sup>3/2</sup>)/x<sup>2</sup> = 0 | 3 | 1 | – |
+| CRC 3, 8.3.3, L3;8 III | -3 y' y''<sup>2</sup>/(y'<sup>2</sup> - 1) + y''' - (y'<sup>2</sup> - 1)<sup>2</sup> f((x y'' + y'<sup>3</sup> - y')/(1 - y'<sup>2</sup>)<sup>3/2</sup>)/x<sup>2</sup> = 0 | 3 | 1 | – |
+| CRC 3, 8.3.3, L3;8 IV | -y' f(x) + y''' - 3 y''<sup>2</sup>/(2 y') = 0 | 6 | 3 | – |
+| CRC 3, 8.3.3, L4;1 | -h'''(x) y''/h''(x) + y''' = 0 | 4 | 3 | (0, h(x)) |
+| CRC 3, 8.3.3, L4;3 | -C y''<sup>(b - 2)/(b - 1)</sup> + y''' = 0 | 4 | 3 | – |
+| CRC 3, 8.3.3, L4;5 I | 2 w<sup>2</sup> y' + y''' - 3 y''<sup>2</sup>/(2 y') = 0 | 6 | 4 | (e<sup>2 w x</sup>, 0), (e<sup>-2 w x</sup>, 0) |
+| CRC 3, 9.1.1.2 | -A/u<sup>3</sup> - u w<sup>2</sup> + u'' = 0 | 3 | 1 | (e<sup>2 θ w</sup>, u w e<sup>2 θ w</sup>), (e<sup>-2 θ w</sup>, -u w e<sup>-2 θ w</sup>) |
+| CRC 3, 9.2.1.3.2 | ε w<sub>t</sub> + w<sub>tt</sub> - F(w<sub>xx</sub>) = 0 | 6 | 4 | (0, 0, e<sup>-ε t</sup>), (0, 0, x e<sup>-ε t</sup>) |
+| CRC 3, 9.2.1.3.2 | ε w<sub>t</sub> + w<sub>tt</sub> - e<sup>w<sub>xx</sub></sup> = 0 | 7 | 5 | (0, 0, e<sup>-ε t</sup>), (0, 0, x e<sup>-ε t</sup>) |
+| CRC 3, 9.2.1.3.2 | ε w<sub>t</sub> + w<sub>tt</sub> - w<sub>xx</sub><sup>σ + 1</sup> = 0 | 7 | 5 | (0, 0, e<sup>-ε t</sup>), (0, 0, x e<sup>-ε t</sup>) |
+| CRC 3, 9.2.1.3.2 | ε w<sub>t</sub> + w<sub>tt</sub> - 1/w<sub>xx</sub> = 0 | 8 | 5 | (0, 0, e<sup>-ε t</sup>), (0, 0, x e<sup>-ε t</sup>), (0, e<sup>-ε t</sup>, -ε w e<sup>-ε t</sup>) |
+| CRC 3, 9.2.1.3.2 | ε w<sub>t</sub> + w<sub>tt</sub> - 1/w<sub>xx</sub><sup>1/3</sup> = 0 | 8 | 6 | (0, 0, e<sup>-ε t</sup>), (0, 0, x e<sup>-ε t</sup>) |
+| CRC 3, 9.2.1.3.2 | ε w<sub>t</sub> + w<sub>tt</sub> - log(w<sub>xx</sub>) = 0 | 7 | 5 | (0, 0, e<sup>-ε t</sup>), (0, 0, x e<sup>-ε t</sup>) |
+| CRC 3, 9.2.2.1.2 | -(u<sub>x</sub>/u<sup>2</sup>)<sub>x</sub> - (u<sub>y</sub>/u<sup>2</sup>)<sub>y</sub> + ε u<sub>t</sub> + u<sub>tt</sub> = 0 | 6 | 5 | (e<sup>-ε t</sup>, 0, 0, -ε u e<sup>-ε t</sup>) |
+| CRC 3, 9.2.3.1.2 | -(u<sub>x</sub>/u<sup>2</sup>)<sub>x</sub> - (u<sub>y</sub>/u<sup>2</sup>)<sub>y</sub> - (u<sub>z</sub>/u<sup>2</sup>)<sub>z</sub> + ε u<sub>t</sub> + u<sub>tt</sub> = 0 | 9 | 8 | (e<sup>-ε t</sup>, 0, 0, 0, -ε u e<sup>-ε t</sup>) |
 
 ### Kamke chapters 1 and 2
 
@@ -413,20 +486,21 @@ Thomas Wolf's LIEPDE, the determining equations solved by CRACK (REDUCE CSL rev.
 
 | result | entries |
 |---|---|
-| same dimension | 689 |
+| same dimension | 846 |
+| different dimension | 59 |
 | LIEPDE needs a solved form | 35 |
-| different dimension | 34 |
-| timeout | 13 |
+| timeout | 15 |
 | comparison crashed: exit code -9 | 8 |
 | comparison crashed: exit code -6 | 4 |
 | read back failed: RecursionError: Stack overflow (used 8156 kB) during compilation | 1 |
 | comparison timeout | 1 |
 | no result | 1 |
+| read back failed: ValueError: -u*Derivative(noint(g0038 - 64*t*c<sub>142</sub>(t, x, y, z, u) - 16*t*c<sub>62</sub>(t, x, y, z, u) | 1 |
 
 
-### Entries that differ (34)
+### Entries that differ (59)
 
-#### Arbitrary function of an expression (18)
+#### Arbitrary function of an expression (36)
 
 An arbitrary function of an expression (f(y/x), f(x y' - y), ...): LIEPDE takes it as an opaque operator of the variables, without the chain rule, and its splitting by the jet variables is too strong.
 
@@ -450,8 +524,26 @@ An arbitrary function of an expression (f(y/x), f(x y' - y), ...): LIEPDE takes 
 | EqWorld ODE 3.48 | y'' - f(x) g(x y' - y) = 0 | 1 | dimension 0 |
 | EqWorld ODE 3.49 | y'' - y f(x y'/y)/x<sup>2</sup> = 0 | 2 | dimension 0 |
 | EqWorld ODE 3.50 | g'(x) y'/2 + y'' g(x) - f(y) h(y' √(g(x))) = 0 | 1 | dimension 0 |
+| CRC 2, 8.16.1 (8.385) | b (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>) + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) - f(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>)/u = 0 | 7 | dimension 4. Missing: (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0) |
+| CRC 2, 8.16.1 (8.386) | b (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>) + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) - f(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) = 0 | 7 | dimension 4. Missing: (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0) |
+| CRC 2, 8.16.1 (8.390) | u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub> + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) = 0 | 8 | dimension 5. Missing: (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0) |
+| CRC 2, 9.3.1, glacier case 2 | -(H<sup>2</sup> Φ(H ((A √x)<sub>x</sub> + H<sub>x</sub>)))<sub>x</sub> - C + H<sub>t</sub> = 0 | 2 | dimension 1. Missing: (2 x, t, H) |
+| CRC 2, 9.3.1, glacier case 2, A = 0 | -(H<sup>2</sup> Φ(H ((0)<sub>x</sub> + H<sub>x</sub>)))<sub>x</sub> - C + H<sub>t</sub> = 0 | 3 | dimension 2. Missing: (2 x, t, H) |
+| CRC 3, 8.3.3, L2;2 I | -y''<sup>2</sup> f(y', x y'') + y''' = 0 | 2 | dimension 1. Missing: (x, y) |
+| CRC 3, 8.3.3, L2;2 II | -y' f(x, y''/y') + y''' = 0 | 2 | dimension 1. Missing: (0, y) |
+| CRC 3, 8.3.3, L3;3 I | -y''<sup>2</sup> f(y'' e<sup>y'</sup>) + y''' = 0 | 3 | dimension 2. Missing: (x, x + y) |
+| CRC 3, 8.3.3, L3;3 II | -y'' f(e<sup>x</sup>/y'') + y''' = 0 | 3 | dimension 2. Missing: (1, y) |
+| CRC 3, 8.3.3, L3;4 I | -y''<sup>3/2</sup> f(y''/y'<sup>2</sup>) + y''' = 0 | 3 | dimension 2. Missing: (x, 0) |
+| CRC 3, 8.3.3, L3;4 II | -y''<sup>2</sup> f(x y'') + y''' = 0 | 3 | dimension 2. Missing: (x, y) |
+| CRC 3, 8.3.3, L3;6 I | -y''<sup>(a - 3)/(a - 2)</sup> f(y'<sup>a - 2</sup> y''<sup>1 - a</sup>) + y''' = 0 | 3 | dimension 2. Missing: (x, a y) |
+| CRC 3, 8.3.3, L3;6 II | -y''<sup>(2 - 3 a)/(1 - 2 a)</sup> f(x<sup>1 - 2 a</sup> y''<sup>1 - a</sup>) + y''' = 0 | 3 | dimension 2. Missing: (x (1 - a), y) |
+| CRC 3, 8.3.3, L3;7 I | -y''<sup>2</sup> (3 y' + f(y'' e<sup>-b atan(y')</sup>/(y'<sup>2</sup> + 1)<sup>3/2</sup>))/(y'<sup>2</sup> + 1) + y''' = 0 | 3 | dimension 2. Missing: (b x + y, b y - x) |
+| CRC 3, 8.3.3, L3;7 II | -y'' (-3 x + f(y'' (x<sup>2</sup> + 1)<sup>3/2</sup> e<sup>-b atan(x)</sup>))/(x<sup>2</sup> + 1) + y''' = 0 | 3 | dimension 2. Missing: (x<sup>2</sup> + 1, y (b + x)) |
+| CRC 3, 8.3.3, L3;8 I | y''' - 3 y''<sup>2</sup>/y' - y'<sup>4</sup> f((2 x y'' + y')/y'<sup>3</sup>)/x<sup>2</sup> = 0 | 3 | dimension 1. Missing: (x, y), (2 x y, y<sup>2</sup>) |
+| CRC 3, 8.3.3, L3;8 II | -3 y' y''<sup>2</sup>/(y'<sup>2</sup> + 1) + y''' - (y'<sup>2</sup> + 1)<sup>2</sup> f((x y'' - y'<sup>3</sup> - y')/(y'<sup>2</sup> + 1)<sup>3/2</sup>)/x<sup>2</sup> = 0 | 3 | dimension 1. Missing: (x, y), (2 x y, -x<sup>2</sup> + y<sup>2</sup>) |
+| CRC 3, 8.3.3, L3;8 III | -3 y' y''<sup>2</sup>/(y'<sup>2</sup> - 1) + y''' - (y'<sup>2</sup> - 1)<sup>2</sup> f((x y'' + y'<sup>3</sup> - y')/(1 - y'<sup>2</sup>)<sup>3/2</sup>)/x<sup>2</sup> = 0 | 3 | dimension 1. Missing: (x, y), (2 x y, x<sup>2</sup> + y<sup>2</sup>) |
 
-#### Fractional powers missed by CRACK (6)
+#### Fractional powers missed by CRACK (13)
 
 CRACK (used by LIEPDE) misses generators with fractional powers of the dependent variable or of a derivative; DIMSYM finds them with the same input.
 
@@ -463,6 +555,13 @@ CRACK (used by LIEPDE) misses generators with fractional powers of the dependent
 | Kamke 6.157 | 3 y y'' - 5 y'<sup>2</sup> = 0 | 8 | dimension 7. Not closed | X y<sup>5/3</sup> d/dy is missing. |
 | Kamke 7.8 | 4 y<sup>2</sup> y''' - 18 y y' y'' + 15 y'<sup>3</sup> = 0 | 7 | dimension 4 | Y = v<sup>-2</sup> gives v''' = 0; the generators with y<sup>3/2</sup> are missing. |
 | Kamke 7.9 | 9 y<sup>2</sup> y''' - 45 y y' y'' + 40 y'<sup>3</sup> = 0 | 7 | dimension 4 | The generators with y<sup>5/3</sup> are missing. |
+| CRC 2, 8.16.1 (8.389) | -c (u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>)<sup>3/2</sup> - u<sub>t</sub><sup>2</sup> u<sub>tt</sub> + 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> + 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> - u<sub>x</sub><sup>2</sup> u<sub>xx</sub> - 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> - u<sub>y</sub><sup>2</sup> u<sub>yy</sub> + (u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) = 0 | infinite | dimension 7. Missing: (0, 0, 0, u<sup>2</sup>), (u, 0, 0, 0), (0, u<sup>2</sup>, 0, 0), (0, u y, -u x, 0) | A power (...)<sup>3/2</sup> of the derivatives; ReLie, also with CRACK, finds the generators too. |
+| CRC 3, 8.2.2, L3;7 | -C (y'<sup>2</sup> + 1)<sup>3/2</sup> e<sup>b atan(y')</sup> + y'' = 0 | 3 | dimension 2. Missing: (b x + y, b y - x) | A power (...)<sup>3/2</sup> of the derivatives; ReLie, also with CRACK, finds the generators too. |
+| CRC 3, 8.2.2, L3;8 II | -C (y'<sup>2</sup> + 1)<sup>3/2</sup> + x y'' - y'<sup>3</sup> - y' = 0 | 3 | dimension 2. Missing: (2 x y, -x<sup>2</sup> + y<sup>2</sup>) | A power (...)<sup>3/2</sup> of the derivatives; ReLie, also with CRACK, finds the generators too. |
+| CRC 3, 8.2.2, L3;8 III | -C (1 - y'<sup>2</sup>)<sup>3/2</sup> + x y'' + y'<sup>3</sup> - y' = 0 | 3 | dimension 2. Missing: (2 x y, x<sup>2</sup> + y<sup>2</sup>) | A power (...)<sup>3/2</sup> of the derivatives; ReLie, also with CRACK, finds the generators too. |
+| CRC 3, 8.2.2, L3;9 | -C ((y'<sup>2</sup> + (-x y' + y)<sup>2</sup> + 1)/(x<sup>2</sup> + y<sup>2</sup> + 1))<sup>3/2</sup> + y'' = 0 | 3 | dimension 0 | A power (...)<sup>3/2</sup> of the derivatives; ReLie, also with CRACK, finds the generators too. |
+| CRC 3, 8.2.2, L3;8 III (Lie) | y'' + (2 C y'<sup>3/2</sup> + 2 y'<sup>2</sup> + 2 y')/(x - y) = 0 | 3 | dimension 2. Missing: (x<sup>2</sup>, y<sup>2</sup>) | A power (...)<sup>3/2</sup> of the derivatives; ReLie, also with CRACK, finds the generators too. |
+| CRC 3, 8.3.3, L4;5 II | -C (2 x y'' + y')<sup>3/2</sup>/(x<sup>2</sup> √(y')) + y''' - 3 y''<sup>2</sup>/y' = 0 | 4 | dimension 2. Missing: (2 x y, y<sup>2</sup>), (x, 0) | A power (...)<sup>3/2</sup> of the derivatives; ReLie, also with CRACK, finds the generators too. |
 
 #### abs() from REDUCE's simplification (4)
 
@@ -520,19 +619,19 @@ Francesco Oliveri's ReLie 3.0, also with CRACK (`benchmarks/relie_symmetries.py`
 
 | result | entries |
 |---|---|
-| same dimension | 691 |
+| same dimension | 854 |
+| different dimension | 40 |
 | several roots for the leading derivative (one<sub>of</sub>), not solved | 25 |
-| different dimension | 24 |
-| timeout | 15 |
+| timeout | 17 |
+| no result | 14 |
 | comparison crashed: exit code -9 | 12 |
-| no result | 10 |
 | comparison crashed: exit code -6 | 6 |
 | comparison timeout | 3 |
 
 
-### Entries that differ (24)
+### Entries that differ (40)
 
-#### Arbitrary function of an expression (18)
+#### Arbitrary function of an expression (34)
 
 An arbitrary function of an expression (f(y/x), f(x y' - y), ...): ReLie takes it as an opaque operator of the variables, without the chain rule, and its splitting by the jet variables is too strong.
 
@@ -556,6 +655,22 @@ An arbitrary function of an expression (f(y/x), f(x y' - y), ...): ReLie takes i
 | EqWorld ODE 3.48 | y'' - f(x) g(x y' - y) = 0 | 1 | dimension 0 |
 | EqWorld ODE 3.49 | y'' - y f(x y'/y)/x<sup>2</sup> = 0 | 2 | dimension 0 |
 | EqWorld ODE 3.50 | g'(x) y'/2 + y'' g(x) - f(y) h(y' √(g(x))) = 0 | 1 | dimension 0 |
+| CRC 2, 8.16.1 (8.385) | b (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>) + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) - f(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>)/u = 0 | 7 | dimension 4. Missing: (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0) |
+| CRC 2, 8.16.1 (8.386) | b (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>) + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) - f(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) = 0 | 7 | dimension 4. Missing: (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0) |
+| CRC 2, 8.16.1 (8.390) | u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub> + (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) a(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) = 0 | 8 | dimension 5. Missing: (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0) |
+| CRC 3, 8.3.3, L2;2 I | -y''<sup>2</sup> f(y', x y'') + y''' = 0 | 2 | dimension 1. Missing: (x, y) |
+| CRC 3, 8.3.3, L2;2 II | -y' f(x, y''/y') + y''' = 0 | 2 | dimension 1. Missing: (0, y) |
+| CRC 3, 8.3.3, L3;3 I | -y''<sup>2</sup> f(y'' e<sup>y'</sup>) + y''' = 0 | 3 | dimension 2. Missing: (x, x + y) |
+| CRC 3, 8.3.3, L3;3 II | -y'' f(e<sup>x</sup>/y'') + y''' = 0 | 3 | dimension 2. Missing: (1, y) |
+| CRC 3, 8.3.3, L3;4 I | -y''<sup>3/2</sup> f(y''/y'<sup>2</sup>) + y''' = 0 | 3 | dimension 2. Missing: (x, 0) |
+| CRC 3, 8.3.3, L3;4 II | -y''<sup>2</sup> f(x y'') + y''' = 0 | 3 | dimension 2. Missing: (x, y) |
+| CRC 3, 8.3.3, L3;6 I | -y''<sup>(a - 3)/(a - 2)</sup> f(y'<sup>a - 2</sup> y''<sup>1 - a</sup>) + y''' = 0 | 3 | dimension 2. Missing: (x, a y) |
+| CRC 3, 8.3.3, L3;6 II | -y''<sup>(2 - 3 a)/(1 - 2 a)</sup> f(x<sup>1 - 2 a</sup> y''<sup>1 - a</sup>) + y''' = 0 | 3 | dimension 2. Missing: (x (1 - a), y) |
+| CRC 3, 8.3.3, L3;7 I | -y''<sup>2</sup> (3 y' + f(y'' e<sup>-b atan(y')</sup>/(y'<sup>2</sup> + 1)<sup>3/2</sup>))/(y'<sup>2</sup> + 1) + y''' = 0 | 3 | dimension 2. Missing: (b x + y, b y - x) |
+| CRC 3, 8.3.3, L3;7 II | -y'' (-3 x + f(y'' (x<sup>2</sup> + 1)<sup>3/2</sup> e<sup>-b atan(x)</sup>))/(x<sup>2</sup> + 1) + y''' = 0 | 3 | dimension 2. Missing: (x<sup>2</sup> + 1, y (b + x)) |
+| CRC 3, 8.3.3, L3;8 I | y''' - 3 y''<sup>2</sup>/y' - y'<sup>4</sup> f((2 x y'' + y')/y'<sup>3</sup>)/x<sup>2</sup> = 0 | 3 | dimension 1. Missing: (x, y), (2 x y, y<sup>2</sup>) |
+| CRC 3, 8.3.3, L3;8 II | -3 y' y''<sup>2</sup>/(y'<sup>2</sup> + 1) + y''' - (y'<sup>2</sup> + 1)<sup>2</sup> f((x y'' - y'<sup>3</sup> - y')/(y'<sup>2</sup> + 1)<sup>3/2</sup>)/x<sup>2</sup> = 0 | 3 | dimension 1. Missing: (x, y), (2 x y, -x<sup>2</sup> + y<sup>2</sup>) |
+| CRC 3, 8.3.3, L3;8 III | -3 y' y''<sup>2</sup>/(y'<sup>2</sup> - 1) + y''' - (y'<sup>2</sup> - 1)<sup>2</sup> f((x y'' + y'<sup>3</sup> - y')/(1 - y'<sup>2</sup>)<sup>3/2</sup>)/x<sup>2</sup> = 0 | 3 | dimension 1. Missing: (x, y), (2 x y, x<sup>2</sup> + y<sup>2</sup>) |
 
 #### Fractional powers missed by CRACK (3)
 
@@ -602,17 +717,20 @@ DIMSYM 2.3 (Sherring, Prince, Jerie), with its own solver (`benchmarks/dimsym_sy
 
 | result | entries |
 |---|---|
-| same dimension | 713 |
+| same dimension | 877 |
 | not converted: 3 solutions for the leading derivative | 23 |
-| timeout | 9 |
+| timeout | 10 |
 | not converted: 2 solutions for the leading derivative | 6 |
 | not converted: 4 solutions for the leading derivative | 4 |
 | comparison crashed: exit code -6 | 4 |
+| not converted: arbitrary function of _ξ_1 | 4 |
 | comparison crashed: exit code -9 | 3 |
 | not converted: arbitrary function of x<sup>n</sup> e<sup>a y</sup> | 3 |
+| not converted: arbitrary function of u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup> | 3 |
 | not converted: 6 solutions for the leading derivative | 2 |
 | not converted: arbitrary function of y/x | 2 |
 | not converted: arbitrary function of y e<sup>a x</sup> | 2 |
+| not converted: arbitrary function of x y'' | 2 |
 | not converted: arbitrary function of e t | 1 |
 | different dimension | 1 |
 | not converted: arbitrary function of a y + b x + c | 1 |
@@ -628,9 +746,20 @@ DIMSYM 2.3 (Sherring, Prince, Jerie), with its own solver (`benchmarks/dimsym_sy
 | not converted: arbitrary function of x y'/y | 1 |
 | not converted: arbitrary function of y' √(g(x)) | 1 |
 | not converted: arbitrary function of a y + y'<sup>2</sup> | 1 |
+| not converted: arbitrary function of y''/y' | 1 |
+| not converted: arbitrary function of y'' e<sup>y'</sup> | 1 |
+| not converted: arbitrary function of e<sup>x</sup>/y'' | 1 |
+| not converted: arbitrary function of y''/y'<sup>2</sup> | 1 |
+| not converted: arbitrary function of y'<sup>a - 2</sup> y''<sup>1 - a</sup> | 1 |
+| not converted: arbitrary function of x<sup>1 - 2 a</sup> y''<sup>1 - a</sup> | 1 |
+| not converted: arbitrary function of y'' e<sup>-b atan(y')</sup>/(y'<sup>2</sup> + 1)<sup>3/2</sup> | 1 |
+| not converted: arbitrary function of y'' (x<sup>2</sup> + 1)<sup>3/2</sup> e<sup>-b atan(x)</sup> | 1 |
+| not converted: arbitrary function of (2 x y'' + y')/y'<sup>3</sup> | 1 |
+| not converted: arbitrary function of (x y'' - y'<sup>3</sup> - y')/(y'<sup>2</sup> + 1)<sup>3/2</sup> | 1 |
+| not converted: arbitrary function of (x y'' + y'<sup>3</sup> - y')/(1 - y'<sup>2</sup>)<sup>3/2</sup> | 1 |
 
 
-### Entries that differ (1)
+### Entries that differ (2)
 
 #### Trigonometric functions taken as independent (1)
 
@@ -639,6 +768,14 @@ The equation has cot(y) and sin(y) cos(y) (REDUCE writes sin(2 u1)/2). DIMSYM sp
 | entry | equation | dimension | result |
 |---|---|---|---|
 | Bluman-Anco Exercise 3.5-3 | -2 y'<sup>2</sup> cot(y) + y'' - sin(y) cos(y) = 0 | 8 | dimension 1 |
+
+#### abs(A) in the generators (1)
+
+DIMSYM's generators contain abs(A); for every real A they are the published ones times +-4/A (cos is even, sin odd), so they are right. delierium's check takes abs(A) as a function of its own and rejects them.
+
+| entry | equation | dimension | result |
+|---|---|---|---|
+| CRC 2, 9.8, soil water II.1, C = 0, B = A<sup>2</sup>/4 | -(u<sub>x</sub> e<sup>u</sup>)<sub>x</sub> - (u<sub>z</sub> e<sup>u</sup>)<sub>z</sub> - A<sup>2</sup> e<sup>u</sup>/4 - A u<sub>z</sub> e<sup>u</sup> + u<sub>t</sub> = 0 | 6 | (0, 4 e<sup>-A z/4</sup> cos(x Abs(A)/4) Abs(A)/A<sup>2</sup>, 4 e<sup>-A z/4</sup> sin(x Abs(A)/4)/A, -2 e<sup>-A z/4</sup> sin(x Abs(A)/4) Abs(A)<sup>2</sup>/A<sup>2</sup>), (0, -4 e<sup>-A z/4</sup> sin(x Abs(A)/4) Abs(A)/A<sup>2</sup>, 4 e<sup>-A z/4</sup> cos(x Abs(A)/4)/A, -2 e<sup>-A z/4</sup> cos(x Abs(A)/4) Abs(A)<sup>2</sup>/A<sup>2</sup>). Missing: (0, e<sup>-A z/4</sup> sin(A x/4), -e<sup>-A z/4</sup> cos(A x/4), A e<sup>-A z/4</sup> cos(A x/4)/2), (0, e<sup>-A z/4</sup> cos(A x/4), e<sup>-A z/4</sup> sin(A x/4), -A e<sup>-A z/4</sup> sin(A x/4)/2). Not closed |
 
 
 ---
@@ -651,16 +788,19 @@ Fritz Schwarz's SPDE (1986), part of REDUCE (`benchmarks/spde_symmetries.py`); c
 
 | result | entries |
 |---|---|
-| same dimension | 582 |
-| timeout | 116 |
-| different dimension | 62 |
+| same dimension | 656 |
+| timeout | 179 |
+| different dimension | 88 |
+| not converted: arbitrary function of _ξ_1 | 4 |
 | comparison timeout | 3 |
 | not converted: arbitrary function of x<sup>n</sup> e<sup>a y</sup> | 3 |
+| not converted: arbitrary function of u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup> | 3 |
+| comparison crashed: exit code -9 | 2 |
 | not converted: arbitrary function of y/x | 2 |
 | not converted: arbitrary function of y e<sup>a x</sup> | 2 |
+| not converted: arbitrary function of x y'' | 2 |
 | not converted: arbitrary function of e t | 1 |
 | read back failed: SyntaxError: invalid syntax (<string>, line 1) | 1 |
-| comparison crashed: exit code -9 | 1 |
 | not converted: arbitrary function of a y + b x + c | 1 |
 | not converted: arbitrary function of a x<sup>2</sup> + b x + c + y | 1 |
 | not converted: arbitrary function of y/√x | 1 |
@@ -674,11 +814,23 @@ Fritz Schwarz's SPDE (1986), part of REDUCE (`benchmarks/spde_symmetries.py`); c
 | not converted: arbitrary function of x y'/y | 1 |
 | not converted: arbitrary function of y' √(g(x)) | 1 |
 | not converted: arbitrary function of a y + y'<sup>2</sup> | 1 |
+| not converted: arbitrary function of y''/y' | 1 |
+| not converted: arbitrary function of y'' e<sup>y'</sup> | 1 |
+| not converted: arbitrary function of e<sup>x</sup>/y'' | 1 |
+| not converted: arbitrary function of y''/y'<sup>2</sup> | 1 |
+| not converted: arbitrary function of y'<sup>a - 2</sup> y''<sup>1 - a</sup> | 1 |
+| not converted: arbitrary function of x<sup>1 - 2 a</sup> y''<sup>1 - a</sup> | 1 |
+| not converted: arbitrary function of y'' e<sup>-b atan(y')</sup>/(y'<sup>2</sup> + 1)<sup>3/2</sup> | 1 |
+| not converted: arbitrary function of y'' (x<sup>2</sup> + 1)<sup>3/2</sup> e<sup>-b atan(x)</sup> | 1 |
+| not converted: arbitrary function of (2 x y'' + y')/y'<sup>3</sup> | 1 |
+| not converted: arbitrary function of (x y'' - y'<sup>3</sup> - y')/(y'<sup>2</sup> + 1)<sup>3/2</sup> | 1 |
+| not converted: arbitrary function of (x y'' + y'<sup>3</sup> - y')/(1 - y'<sup>2</sup>)<sup>3/2</sup> | 1 |
+| read back failed: SyntaxError: expression cannot contain assignment, perhaps you meant "=="? (<string>, line 1) | 1 |
 
 
-### Entries that differ (152)
+### Entries that differ (181)
 
-#### Wrong η components (90)
+#### Wrong η components (93)
 
 SPDE (version of November 1986) computes wrong η components in today's REDUCE, by its own result(): y'' = 0 gives x<sup>2</sup> d/dx - x y d/dy instead of + x y d/dy. The dimension is right, the generators are not.
 
@@ -774,8 +926,11 @@ SPDE (version of November 1986) computes wrong η components in today's REDUCE, 
 | Kamke 7.3 | -y y'' + y'<sup>2</sup> + y''' = 0 | 2 | (-x, 1) | – | yes |
 | Kamke 7.4 | a y y'' + y''' = 0 | 2 | (x, 1) | – | yes |
 | Kamke 7.7 | y<sup>3</sup> y' + y y''' - y' y'' = 0 | 2 | (-x, 1) | – | yes |
+| CRC 2, 9.3.1, glacier with slipping, case 2(i) | -(H<sup>2</sup> (H ((A x)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup> + H k (H ((A x)<sub>x</sub> + H<sub>x</sub>))<sup>α + 1</sup>)<sub>x</sub> + H<sub>t</sub> = 0 | 3 | (x, -α t, 1) | (x, -α t, H) | yes |
+| CRC 3, 8.3.3, L4;3 | -C y''<sup>(b - 2)/(b - 1)</sup> + y''' = 0 | 4 | (2 b x - 4 x, -4 b y + x<sup>2</sup> + 8 y) | (x, y (b + 1)) | yes |
+| CRC 3, 9.1.1.2 | -A/u<sup>3</sup> + u'' = 0 | 3 | (-2 θ, 1), (-θ<sup>2</sup>, θ) | (θ<sup>2</sup>, θ u), (2 θ, u) | yes |
 
-#### Remaining conditions incomplete (39)
+#### Remaining conditions incomplete (45)
 
 SPDE's remaining conditions are incomplete, so it reports more generators than there are (its wrong η components enter too).
 
@@ -820,8 +975,14 @@ SPDE's remaining conditions are incomplete, so it reports more generators than t
 | Kamke 1.547 | -4 y (x y' - 2 y)<sup>2</sup> + y'<sup>4</sup> = 0 | 1 | dimension infinite |
 | Kamke 1.548 | y'<sup>6</sup> - (-a + y)<sup>4</sup> (-b + y)<sup>3</sup> = 0 | 3 | dimension infinite |
 | Kamke 1.549 | -a<sup>2</sup> + x<sup>2</sup> (y'<sup>2</sup> + 1)<sup>3</sup> = 0 | 1 | dimension infinite |
+| CRC 2, 8.16.1 (8.387) | a (u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) + b (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>) - c (u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>)<sup>k + 2</sup> = 0 | 8 | dimension 9 |
+| CRC 3, 8.2.2, L2;1 | y'' - f(y') = 0 | 2 | dimension 6 |
+| CRC 3, 8.2.2, L2;2 | x y'' - f(y') = 0 | 2 | dimension 6 |
+| CRC 3, 8.3.3, L2;1 I | y''' - f(y', y'') = 0 | 2 | dimension 4 |
+| CRC 3, 8.3.3, L2;1 II | y''' - f(x, y'') = 0 | 2 | dimension 5 |
+| CRC 3, 8.3.3, L3;2 | y''' - f(y'') = 0 | 3 | dimension 5 |
 
-#### Generators that depend on the parameters lost (21)
+#### Generators that depend on the parameters lost (41)
 
 SPDE solves the determining equations for generic values of the parameters and loses the generators that depend on them: scalings whose exponents combine the parameters, factors like e<sup>-b m t</sup>.
 
@@ -848,6 +1009,26 @@ SPDE solves the determining equations for generic values of the parameters and l
 | Bihlo, Dos Santos Cardoso-Bihlo, Popovych 7 | -δ u<sub>x</sub><sup>2 p</sup> u<sub>xx</sub> e<sup>2 x</sup> - ν u<sub>x</sub><sup>2 p + 1</sup> e<sup>2 x</sup> + u<sub>tt</sub> = 0 | 5 | dimension 4. Rejected: (1, t, 0). Missing: (p, 0, -u), (-1, t, 0) | Parameters: δ, ν, p. |
 | Bihlo, Dos Santos Cardoso-Bihlo, Popovych 15 | -δ u<sub>x</sub><sup>2 p</sup> u<sub>xx</sub> - ε u<sub>x</sub><sup>p + 1/2</sup> + u<sub>tt</sub> - 2 x = 0 | 5 | dimension 4. Rejected: (1, 0, -t<sup>2</sup>). Missing: (1, 0, t<sup>2</sup>), (x (2 p + 1), t, u (2 p + 3)) | Parameters: δ, ε, p. |
 | Kamke 6.128 | a y'<sup>2</sup> + b y y' + c y<sup>2</sup> + d y<sup>1 - a</sup> + y y'' = 0 | 8 | dimension 1 | Parameters: a, b, c, d. |
+| CRC 2, 8.16.1 (8.389) | -c (u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>)<sup>3/2</sup> - u<sub>t</sub><sup>2</sup> u<sub>tt</sub> + 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> + 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> - u<sub>x</sub><sup>2</sup> u<sub>xx</sub> - 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> - u<sub>y</sub><sup>2</sup> u<sub>yy</sub> + (u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup>) (u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub>) = 0 | infinite | dimension 4. Missing: (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0), (0, 0, 0, u<sup>2</sup>), (u, 0, 0, 0), (0, u<sup>2</sup>, 0, 0)  | Parameters: c. |
+| CRC 2, 8.16.1 (8.392) | u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub> - (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>)/(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup> + 1) - (-3 k √(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup> + 1) - 3)/u = 0 | 10 | dimension 4. Rejected: (t, x, y, 1). Missing: (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0), (t<sup>2</sup> - u<sup>2</sup> + x<sup>2</sup> + y<sup>2</sup>, 2 t x, 2 t y, 2 t u), (2 t x, t<sup>2</sup> + u<sup>2</sup> + x<sup>2</sup> - y<sup>2</sup>, 2 x y, 2 u x), (2 t y, 2 x y, t<sup>2</sup> + u<sup>2</sup> - x<sup>2</sup> + y<sup>2</sup>, 2 u y)  | Parameters: k. |
+| CRC 2, 8.16.1 (8.393) | -c √(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup> + 1) + u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub> - (u<sub>t</sub><sup>2</sup> u<sub>tt</sub> - 2 u<sub>t</sub> u<sub>tx</sub> u<sub>x</sub> - 2 u<sub>t</sub> u<sub>ty</sub> u<sub>y</sub> + u<sub>x</sub><sup>2</sup> u<sub>xx</sub> + 2 u<sub>x</sub> u<sub>xy</sub> u<sub>y</sub> + u<sub>y</sub><sup>2</sup> u<sub>yy</sub>)/(u<sub>t</sub><sup>2</sup> - u<sub>x</sub><sup>2</sup> - u<sub>y</sub><sup>2</sup> + 1) = 0 | 10 | dimension 4. Missing: (0, y, -x, 0), (x, t, 0, 0), (y, 0, t, 0), (u, 0, 0, -t), (0, u, 0, x), (0, 0, u, y) | Parameters: c. |
+| CRC 2, 9.3.1, glacier case 3 | -(H<sup>2</sup> (H ((A log(x))<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> + H<sub>t</sub> = 0 | 2 | dimension 1. Missing: (x, t (α + 1), 0) | Parameters: A, α. |
+| CRC 2, 9.3.1, glacier case 6 | -(H<sup>2</sup> (H ((0)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> - C H<sup>2 α + 2</sup> - D H/(2 α + 1) + H<sub>t</sub> = 0 | 3 | dimension 2. Missing: (0, e<sup>-D t</sup>/D, H e<sup>-D t</sup>/(2 α + 1)) | Parameters: C, D, α. |
+| CRC 2, 9.3.1, glacier case 6, C = 0 | -(H<sup>2</sup> (H ((0)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> - D H/(2 α + 1) + H<sub>t</sub> = 0 | 4 | dimension 2. Missing: (0, e<sup>-D t</sup>/D, H e<sup>-D t</sup>/(2 α + 1)), (x (2 α + 1), 0, H (α + 1)) | Parameters: D, α. |
+| CRC 2, 9.3.1, glacier case 7 | -(H<sup>2</sup> (H ((0)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> + H<sub>t</sub> = 0 | 4 | dimension 3. Rejected: (x, -α t, 1). Missing: (2 x, t, H), (x, t (α + 1), 0) | Parameters: α. |
+| CRC 2, 9.7 | (φ<sup>n</sup> (1 - (φ<sub>t</sub>/φ<sup>m</sup>)<sub>z</sub>))<sub>z</sub> + φ<sub>t</sub> = 0 | 3 | dimension 2 | Parameters: m, n. |
+| CRC 3, 8.2.2, L3;7 | -C (y'<sup>2</sup> + 1)<sup>3/2</sup> e<sup>b atan(y')</sup> + y'' = 0 | 3 | dimension 2. Missing: (b x + y, b y - x) | Parameters: C, b. |
+| CRC 3, 8.3.3, L4;5 II | -C (2 x y'' + y')<sup>3/2</sup>/(x<sup>2</sup> √(y')) + y''' - 3 y''<sup>2</sup>/y' = 0 | 4 | dimension 1. Missing: (x, y), (2 x y, y<sup>2</sup>), (x, 0) | Parameters: C. |
+| CRC 3, 9.2.1.4.1 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> + ε u<sup>ν</sup> u<sub>t</sub> + u<sub>tt</sub> = 0 | 3 | dimension 2. Missing: (x (1 - σ/(2 ν)), t, -u/ν) | Parameters: ε, ν, σ. |
+| CRC 3, 9.2.2.1.2 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>σ</sup> u<sub>y</sub>)<sub>y</sub> + ε u<sub>t</sub> + u<sub>tt</sub> = 0 | 5 | dimension 4. Rejected: (0, y/2, -x, 0). Missing: (0, y, -x, 0), (0, x, y, 2 u/σ) | Parameters: ε, σ. |
+| CRC 3, 9.2.2.2.1 | -(u<sup>m</sup> u<sub>y</sub>)<sub>y</sub> + u<sub>tt</sub> - u<sub>xx</sub> = 0 | 6 | dimension 5. Missing: (0, 0, y, 2 u/m) | Parameters: m. |
+| CRC 3, 9.2.2.2.2 | -(u<sup>m</sup> u<sub>y</sub>)<sub>y</sub> + ε u<sub>t</sub> + u<sub>tt</sub> - u<sub>xx</sub> = 0 | 4 | dimension 3. Missing: (0, 0, y, 2 u/m) | Parameters: ε, m. |
+| CRC 3, 9.2.3.1.1 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>σ</sup> u<sub>y</sub>)<sub>y</sub> - (u<sup>σ</sup> u<sub>z</sub>)<sub>z</sub> + u<sub>tt</sub> = 0 | 9 | dimension 8. Rejected: (t, -x, -y, -z, 0). Missing: (t, x, y, z, 0), (0, σ x, σ y, σ z, 2 u) | Parameters: σ. |
+| CRC 3, 9.2.3.1.2 | -(u<sup>σ</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>σ</sup> u<sub>y</sub>)<sub>y</sub> - (u<sup>σ</sup> u<sub>z</sub>)<sub>z</sub> + ε u<sub>t</sub> + u<sub>tt</sub> = 0 | 8 | dimension 7. Rejected: (0, y/2, x, 0, 0), (0, z/2, 0, x, 0). Missing: (0, y, -x, 0, 0), (0, z, 0, -x, 0), (0, σ x, σ y, σ z, 2 u) | Parameters: ε, σ. |
+| CRC 3, 9.2.3.2.1 | -(u<sup>ν</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>ν</sup> u<sub>y</sub>)<sub>y</sub> + u<sub>tt</sub> - u<sub>zz</sub> = 0 | 8 | dimension 7. Missing: (0, x, y, 0, 2 u/ν) | Parameters: ν. |
+| CRC 3, 9.2.3.2.1 | -(u<sup>m</sup> u<sub>z</sub>)<sub>z</sub> + u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub> = 0 | 9 | dimension 8. Rejected: (-t, -x, -y, z, 0). Missing: (t, x, y, z, 0), (0, 0, 0, z, 2 u/m) | Parameters: m. |
+| CRC 3, 9.2.3.2.2 | -(u<sup>ν</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>ν</sup> u<sub>y</sub>)<sub>y</sub> + ε u<sub>t</sub> + u<sub>tt</sub> - u<sub>zz</sub> = 0 | 6 | dimension 5. Rejected: (0, y/2, -x, 0, 0). Missing: (0, y, -x, 0, 0), (0, x, y, 0, 2 u/ν) | Parameters: ε, ν. |
+| CRC 3, 9.2.3.2.2 | -(u<sup>m</sup> u<sub>z</sub>)<sub>z</sub> + ε u<sub>t</sub> + u<sub>tt</sub> - u<sub>xx</sub> - u<sub>yy</sub> = 0 | 6 | dimension 5. Missing: (0, 0, 0, z, 2 u/m) | Parameters: ε, m. |
 
 #### Non-polynomial function of a derivative (2)
 
@@ -869,17 +1050,17 @@ Baumann's MathLie 3.0 under Mathematica 15.0, one kernel per entry, 120 s and 8 
 
 | result | entries |
 |---|---|
-| same dimension | 523 |
+| same dimension | 631 |
 | first order ODE: not supported | 125 |
-| timeout | 51 |
-| different | 36 |
-| remaining conditions not solvable for the comparison | 33 |
-| out of memory | 10 |
-| unexpected | 8 |
+| timeout | 88 |
+| different | 57 |
+| remaining conditions not solvable for the comparison | 36 |
+| out of memory | 25 |
+| unexpected | 9 |
 
-### Entries that differ (36)
+### Entries that differ (57)
 
-#### Generators that depend on the parameters lost (16)
+#### Generators that depend on the parameters lost (26)
 
 MathLie solves the determining equations for generic values of the parameters and misses the generators whose exponents or factors combine them.
 
@@ -901,8 +1082,18 @@ MathLie solves the determining equations for generic values of the parameters an
 | BGL 5.3-5: sl(2) + <d<sub>t</sub>, t d<sub>t</sub> + c u d<sub>u</sub>> | -f<sub>0</sub> (u<sub>xx</sub>/u<sup>5</sup> - 2 u<sub>x</sub><sup>2</sup>/u<sup>6</sup>)<sup>(1 - 6 c)/(4 c)</sup> (-9 u<sub>x</sub> u<sub>xx</sub>/u<sup>7</sup> + 12 u<sub>x</sub><sup>3</sup>/u<sup>8</sup>) - f<sub>0</sub> u<sub>xxx</sub> (u<sub>xx</sub>/u<sup>5</sup> - 2 u<sub>x</sub><sup>2</sup>/u<sup>6</sup>)<sup>(1 - 6 c)/(4 c)</sup>/u<sup>6</sup> - g0 u (u<sub>xx</sub>/u<sup>5</sup> - 2 u<sub>x</sub><sup>2</sup>/u<sup>6</sup>)<sup>1/(4 c)</sup> + u<sub>t</sub> = 0 | 5 | dimension 4. Missing: (0, t, c u) | Parameters: c, f<sub>0</sub>, g0. |
 | BGL A4.8 | -κ u<sub>x</sub> log(u<sub>x</sub>) - u u<sub>x</sub> + u<sub>t</sub> - u<sub>xxx</sub>/u<sub>x</sub><sup>2</sup> = 0 | 4 | dimension 3. Missing: (x, t, κ) | Parameters: κ. |
 | Bihlo, Dos Santos Cardoso-Bihlo, Popovych 14 | -δ u<sub>x</sub><sup>2 p</sup> u<sub>xx</sub> + u<sub>tt</sub> - u<sub>x</sub><sup>q</sup> = 0 | 5 | dimension 4. Missing: (x (2 p - q + 1), t (p - q + 1), u (2 p - q + 2)) | Parameters: δ, p, q. |
+| CRC 2, 9.3.1, glacier case 4 | -(H<sup>2</sup> (H ((A x<sup>1/(lam + 2)</sup>)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> - C/H<sup>lam (α + 1)</sup> + H<sub>t</sub> = 0 | 2 | dimension 1. Missing: (x (lam + 2), t (lam (α + 1) + 1), H) | Parameters: A, C, α, lam. |
+| CRC 2, 9.3.1, glacier case 5 | -(H<sup>2</sup> (H ((A e<sup>x/B</sup>)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> - C H<sup>2 α + 2</sup> + H<sub>t</sub> = 0 | 2 | dimension 1. Missing: (B, t (-2 α - 1), H) | Parameters: A, B, C, α. |
+| CRC 2, 9.3.1, glacier case 6 | -(H<sup>2</sup> (H ((0)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> - C H<sup>2 α + 2</sup> - D H/(2 α + 1) + H<sub>t</sub> = 0 | 3 | dimension 2. Missing: (0, e<sup>-D t</sup>/D, H e<sup>-D t</sup>/(2 α + 1)) | Parameters: C, D, α. |
+| CRC 2, 9.3.1, glacier case 6, C = 0 | -(H<sup>2</sup> (H ((0)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> - D H/(2 α + 1) + H<sub>t</sub> = 0 | 4 | dimension 2. Missing: (0, e<sup>-D t</sup>/D, H e<sup>-D t</sup>/(2 α + 1)), (x (2 α + 1), 0, H (α + 1)) | Parameters: D, α. |
+| CRC 2, 9.3.1, glacier case 7 | -(H<sup>2</sup> (H ((0)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup>)<sub>x</sub> + H<sub>t</sub> = 0 | 4 | dimension 3. Missing: (x, t (α + 1), 0) | Parameters: α. |
+| CRC 2, 9.3.1, glacier with slipping, case 2(i) | -(H<sup>2</sup> (H ((A x)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup> + H k (H ((A x)<sub>x</sub> + H<sub>x</sub>))<sup>α + 1</sup>)<sub>x</sub> + H<sub>t</sub> = 0 | 3 | dimension 2. Missing: (x, -α t, H) | Parameters: A, α, k. |
+| CRC 2, 9.3.1, glacier with slipping, case 2(ii) | -(H<sup>2</sup> (H ((0)<sub>x</sub> + H<sub>x</sub>))<sup>α</sup> + H k (H ((0)<sub>x</sub> + H<sub>x</sub>))<sup>b</sup>)<sub>x</sub> + H<sub>t</sub> = 0 | 3 | dimension 2. Missing: (x (-2 α + 2 b - 1), t (-2 α + b - 1), H (-α + b)) | Parameters: α, b, k. |
+| CRC 2, 9.8, soil water III.2 | -(u<sup>s</sup> u<sub>x</sub>)<sub>x</sub> - (u<sup>s</sup> u<sub>z</sub>)<sub>z</sub> - A u<sup>2 μ - s + 1</sup> - C u<sup>μ</sup> u<sub>z</sub> + u<sub>t</sub> = 0 | 4 | dimension 3. Missing: (t (2 μ - s), x (μ - s), z (μ - s), -u) | Parameters: A, C, μ, s. |
+| CRC 3, 9.2.1.3.2 | ε w<sub>t</sub> + w<sub>tt</sub> - 1/w<sub>xx</sub><sup>1/3</sup> = 0 | 8 | dimension 6. Missing: (0, 0, e<sup>-ε t</sup>), (0, 0, x e<sup>-ε t</sup>) | Parameters: ε. |
+| CRC 3, 9.2.1.3.2 | ε w<sub>t</sub> + w<sub>tt</sub> - log(w<sub>xx</sub>) = 0 | 7 | dimension 4. Missing: (0, 0, e<sup>-ε t</sup>), (0, 0, x e<sup>-ε t</sup>), (x, 0, -2 t/ε) | Parameters: ε. |
 
-#### Determining equations not solved completely (14)
+#### Determining equations not solved completely (20)
 
 MathLie does not solve the determining equations completely; the generators it returns are correct.
 
@@ -922,8 +1113,14 @@ MathLie does not solve the determining equations completely; the generators it r
 | Kamke 6.184 | a x<sup>2</sup> y y'' + b x<sup>2</sup> y'<sup>2</sup> + c x y y' + d y<sup>2</sup> = 0 | 8 | dimension 2 |
 | Kamke 6.206 | -x y' (a<sup>2</sup> - y<sup>2</sup>) + y y'<sup>2</sup> (a<sup>2</sup> - x<sup>2</sup>) + y'' (a<sup>2</sup> - x<sup>2</sup>) (a<sup>2</sup> - y<sup>2</sup>) = 0 | 8 | dimension 2 |
 | EqWorld ODE 3.38 | a y'<sup>2</sup> + y<sup>2</sup> g(x) + y y' f(x) + y y'' = 0 | 8 | dimension 4 |
+| CRC 3, 8.2.2, L3;7 | -C (y'<sup>2</sup> + 1)<sup>3/2</sup> e<sup>b atan(y')</sup> + y'' = 0 | 3 | dimension 2. Missing: (b x + y, b y - x) |
+| CRC 3, 8.2.2, L3;8 II | -C (y'<sup>2</sup> + 1)<sup>3/2</sup> + x y'' - y'<sup>3</sup> - y' = 0 | 3 | dimension 2. Missing: (2 x y, -x<sup>2</sup> + y<sup>2</sup>) |
+| CRC 3, 8.2.2, L3;8 III | -C (1 - y'<sup>2</sup>)<sup>3/2</sup> + x y'' + y'<sup>3</sup> - y' = 0 | 3 | dimension 2. Missing: (2 x y, x<sup>2</sup> + y<sup>2</sup>) |
+| CRC 3, 8.2.2, L3;9 | -C ((y'<sup>2</sup> + (-x y' + y)<sup>2</sup> + 1)/(x<sup>2</sup> + y<sup>2</sup> + 1))<sup>3/2</sup> + y'' = 0 | 3 | dimension 0 |
+| CRC 3, 8.2.3 | -a y'<sup>3</sup> - b y'<sup>2</sup> + x y'' - y' (1 + b<sup>2</sup>/(3 a)) - b/(3 a) - b<sup>3</sup>/(27 a<sup>2</sup>) = 0 | 8 | dimension 2 |
+| CRC 3, 8.3.3, L4;5 I | 2 w<sup>2</sup> y' + y''' - 3 y''<sup>2</sup>/(2 y') = 0 | 6 | dimension 4. Missing: (e<sup>2 w x</sup>, 0), (e<sup>-2 w x</sup>, 0) |
 
-#### Too few conditions, infinite algebra (4)
+#### Too few conditions, infinite algebra (9)
 
 MathLie leaves too few conditions (ξ, η partly unresolved), so the algebra comes out infinite.
 
@@ -933,6 +1130,11 @@ MathLie leaves too few conditions (ξ, η partly unresolved), so the algebra com
 | AIMS 2026 I-(2) | -(u<sup>m</sup> u<sub>x</sub><sup>n</sup>)<sub>x</sub> - e<sub>2</sub> u<sup>m + n</sup> + e<sub>3</sub> u/(m + n - 1) + u<sub>t</sub> = 0 | 3 | dimension infinite |
 | Kamke 6.133 | y'<sup>2</sup> - y' + y'' (x + y) = 0 | 3 | dimension infinite |
 | Kamke 6.228 | y'' (x y' - y) - (y'<sup>2</sup> + 1)<sup>2</sup> = 0 | 2 | dimension infinite |
+| CRC 2, 9.3.1, glacier case 1 | -(H<sup>2</sup> Φ(H ((A x + B)<sub>x</sub> + H<sub>x</sub>)))<sub>x</sub> + H<sub>t</sub> - F(H) = 0 | 2 | dimension infinite |
+| CRC 3, 8.2.2, L1 | y'' - f(y, y') = 0 | 1 | dimension infinite |
+| CRC 3, 8.3.3, L1 | y''' - f(y, y', y'') = 0 | 1 | dimension infinite |
+| CRC 3, 8.3.3, L2;1 II | y''' - f(x, y'') = 0 | 2 | dimension infinite |
+| CRC 3, 8.3.3, L3;8 II | -3 y' y''<sup>2</sup>/(y'<sup>2</sup> + 1) + y''' - (y'<sup>2</sup> + 1)<sup>2</sup> f((x y'' - y'<sup>3</sup> - y')/(y'<sup>2</sup> + 1)<sup>3/2</sup>)/x<sup>2</sup> = 0 | 3 | dimension infinite |
 
 #### Solutions of the determining equations lost (1)
 
@@ -961,9 +1163,9 @@ Hereman's symmgrp2020.max (Champagne, Hereman, Winternitz) computes the determin
 
 | result | entries |
 |---|---|
-| same dimension | 676 |
-| symmgrp left derivatives of u in its equations | 53 |
-| symmgrp timeout | 29 |
+| same dimension | 801 |
+| symmgrp left derivatives of u in its equations | 104 |
+| symmgrp timeout | 38 |
 | different dimension | 18 |
 | Janet basis timeout | 8 |
 | read back failed: TokenError: ('unexpected EOF in multi-line statement', (1, 89833)) | 1 |
@@ -1008,9 +1210,9 @@ Boulier's BLAD through DifferentialAlgebra: the Rosenfeld-Groebner decomposition
 
 | result | entries |
 |---|---|
-| agree | 539 |
-| not supported (function) | 174 |
-| not supported (power) | 63 |
+| agree | 628 |
+| not supported (function) | 233 |
+| not supported (power) | 100 |
 | RuntimeError: out of memory error | 6 |
 | RuntimeError: out of time error | 4 |
 
@@ -1028,33 +1230,35 @@ None.
 - **CoCoA 5.4 and Singular 4** (`benchmarks/cocoa_janet.py`): linear systems with constant
   coefficients are polynomial ideals, and the minimal reduced Janet basis of an ideal is
   unique for a term order. 207 systems (7 from the literature, 200 random): delierium's
-  Janet basis, CoCoA's `JanetBasis` (JBMill) and Singular's `rJanet` are the same for all
+  Janet basis, CoCoA's `JanetBasis` (JBMill) and Singular's `rJanet` are the same for
   207.
 - **Singular Plural** (`benchmarks/weyl_janet.py`): systems with polynomial coefficients as
   left ideals of the Weyl algebra (the Leibniz rule); each basis reduces the other to zero,
   and the leading derivatives agree. 205 systems: 199 agree, 0 differ, 6 Plural timeouts
-  (60 s; delierium needs at most 0.9 s for them).
-- **GAP 4** (`benchmarks/gap_lie_algebra.py`): for the 377 complete generator lists of finite
+  (60 s).
+- **GAP 4** (`benchmarks/gap_lie_algebra.py`): for the 532 complete generator lists of finite
   algebras in the catalogue, delierium's structure constants as
   `LieAlgebraByStructureConstants`: derived and lower central series, solvability,
-  nilpotency, center and Killing form agree for all 376 that GAP can take (1 skipped: the
+  nilpotency, center and Killing form agree for all 531 that GAP can take (1 skipped: the
   constants are not rational at the parameter values).
 
 
 ## delierium alone
 
-- Dimension: right for all 786 entries (`pytest -m slow`); all 1790 published generators
+- Dimension: right for all 971 entries (`pytest -m slow`); all 2745 published generators
   confirmed by its determining equations.
-- Generators by its solver (`lie_symmetries(...).generators()`): complete for 525 of the 611
-  finite entries, all of them verified.
-- `integrate_ode` with the catalogue's generators: 121 of the 176 ODEs solved.
+- Generators by its solver (`lie_symmetries(...).generators()`): complete for 679 of the 779
+  finite entries; every generator it returns is verified (4 errors).
+- `integrate_ode` with the catalogue's generators: 140 of the 231 ODEs solved
+  (77 unsolved, 11 timeouts at 300 s, 3 errors).
 - Not supported: systems of PDEs (#21); Painleve VI and EqWorld ODE 3.11 (the Janet basis
   exceeds 6 GB).
 
 
 ## Reproduction
 
-    benchmarks/tool-comparison/pipeline.sh     # all tools, about 4.5 hours at 3 processes
+    benchmarks/tool-comparison/refresh.sh      # everything below, about 8.7 hours at 3 processes
+    benchmarks/tool-comparison/pipeline.sh     # all tools
     benchmarks/tool-comparison/rerun.sh        # the stages repeated after the fix
     benchmarks/tool-comparison/extras-update.sh  # sympy-extras fbca643a
     uv run python benchmarks/tool-comparison/report.py > BENCHMARK.md
