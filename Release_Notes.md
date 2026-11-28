@@ -4,10 +4,13 @@ Details are in the issues referenced. How delierium compares with other tools (S
 sympy-extras, REDUCE's LIEPDE, ReLie, DIMSYM and SPDE, MathLie, symmgrp2020, BLAD, CoCoA,
 Singular, GAP), entry by entry: [BENCHMARK.md](BENCHMARK.md).
 
-### Not released yet
+### 2.7.3
 
 * Fixed: a fraction of parameters in an exponent (x**(1/(l + 2) - 1)) could make the
   Janet basis too small ([#120](https://github.com/tapir442/delierium/issues/120)).
+* BENCHMARK.md: all tools rerun on the 971-entry catalogue, with a performance section
+  ([#123](https://github.com/tapir442/delierium/pull/123),
+  [#124](https://github.com/tapir442/delierium/pull/124)).
 
 ### 2.7.2
 
