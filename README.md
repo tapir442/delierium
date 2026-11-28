@@ -276,8 +276,8 @@ What it does:
   ODE, the canonical coordinates r and s of X, and the symmetries that go down.
 
 Not yet: parametric solutions where the reduced solution cannot be solved for the
-derivative (y'' = tan(y')), and algebras that are not solvable (sl(2)). Of the 134 scalar
-ODEs with generators in the catalogue, 82 are solved completely.
+derivative (y'' = tan(y')), and algebras that are not solvable (sl(2)). Of the 231 scalar
+ODEs with generators in the catalogue, 140 are solved ([BENCHMARK.md](BENCHMARK.md)).
 
 ### Optimal systems (experimental)
 
